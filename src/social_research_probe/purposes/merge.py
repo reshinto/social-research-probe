@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from social_research_probe.errors import ValidationError
 
@@ -12,7 +13,7 @@ class MergedPurpose:
     names: tuple[str, ...]
     method: str
     evidence_priorities: tuple[str, ...]
-    scoring_overrides: dict[str, float] = field(default_factory=dict)
+    scoring_overrides: Mapping[str, float] = field(default_factory=dict)
 
 
 def merge_purposes(purposes: dict[str, dict[str, Any]], selected: list[str]) -> MergedPurpose:
@@ -28,7 +29,9 @@ def merge_purposes(purposes: dict[str, dict[str, Any]], selected: list[str]) -> 
 
     for name in selected:
         entry = purposes[name]
-        method = entry["method"]
+        method = entry.get("method")
+        if method is None:
+            raise ValidationError(f"purpose {name!r} is missing required key 'method'")
         if method not in seen_methods:
             method_lines.append(method)
             seen_methods.add(method)
@@ -44,5 +47,5 @@ def merge_purposes(purposes: dict[str, dict[str, Any]], selected: list[str]) -> 
         names=tuple(selected),
         method="\n".join(method_lines),
         evidence_priorities=tuple(evidence),
-        scoring_overrides=overrides,
+        scoring_overrides=MappingProxyType(overrides),
     )
