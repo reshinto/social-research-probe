@@ -1,7 +1,3 @@
-# suggest-topics
-
-<!-- Filled in Phase P4. -->
-
-1. Invoke: `srp suggest-topics --mode skill --output json`.
-2. If CLI returns a packet with `kind=suggestions`, enhance per schema and pipe back:
-   `echo '<json>' | srp stage-suggestions --from-stdin`.
+1. `srp suggest-topics --output json` — generates rule-based candidates and auto-stages them.
+2. Enhance: produce improved candidates as JSON matching `{"topic_candidates":[{"value":"...","reason":"..."}]}`.
+3. `echo '<json>' | srp stage-suggestions --from-stdin`
