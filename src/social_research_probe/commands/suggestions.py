@@ -7,7 +7,7 @@ from typing import Any, Literal
 from social_research_probe.commands.purposes import add_purpose
 from social_research_probe.commands.topics import add_topics
 from social_research_probe.dedupe import DuplicateStatus, classify
-from social_research_probe.errors import ValidationError
+from social_research_probe.errors import DuplicateError, ValidationError
 from social_research_probe.state.migrate import migrate_to_current
 from social_research_probe.state.schemas import (
     PENDING_SUGGESTIONS_SCHEMA,
@@ -93,25 +93,28 @@ def stage_suggestions(
     existing_topics = show_topics(data_dir)
     existing_purposes = list(show_purposes(data_dir).keys())
 
+    next_topic_id = _next_id(pending["pending_topic_suggestions"])
     for cand in topic_candidates:
         if "value" not in cand:
             raise ValidationError(f"topic candidate missing 'value': {cand}")
         result = classify(cand["value"], existing_topics)
         entry = {
-            "id": _next_id(pending["pending_topic_suggestions"]),
+            "id": next_topic_id,
             "value": cand["value"],
             "reason": cand.get("reason", "gap"),
             "duplicate_status": result.status.value,
             "matches": list(result.matches),
         }
         pending["pending_topic_suggestions"].append(entry)
+        next_topic_id += 1
 
+    next_purpose_id = _next_id(pending["pending_purpose_suggestions"])
     for cand in purpose_candidates:
         if "name" not in cand or "method" not in cand:
             raise ValidationError(f"purpose candidate missing name/method: {cand}")
         result = classify(cand["name"], existing_purposes)
         entry = {
-            "id": _next_id(pending["pending_purpose_suggestions"]),
+            "id": next_purpose_id,
             "name": cand["name"],
             "method": cand["method"],
             "evidence_priorities": list(cand.get("evidence_priorities", [])),
@@ -119,6 +122,7 @@ def stage_suggestions(
             "matches": list(result.matches),
         }
         pending["pending_purpose_suggestions"].append(entry)
+        next_purpose_id += 1
 
     _save_pending(data_dir, pending)
     return pending
@@ -149,13 +153,13 @@ def apply_pending(data_dir: Path, *, topic_ids: IdSelector, purpose_ids: IdSelec
     for entry in topic_chosen:
         try:
             add_topics(data_dir, [entry["value"]], force=False)
-        except Exception:
+        except DuplicateError:
             topic_rest.append(entry)
 
     for entry in purpose_chosen:
         try:
             add_purpose(data_dir, name=entry["name"], method=entry["method"], force=False)
-        except Exception:
+        except DuplicateError:
             purpose_rest.append(entry)
 
     pending["pending_topic_suggestions"] = topic_rest
