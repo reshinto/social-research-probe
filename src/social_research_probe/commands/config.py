@@ -86,7 +86,7 @@ def unset_secret(data_dir: Path, name: str) -> None:
 
 def mask_secret(value: str) -> str:
     if len(value) < 8:
-        return "*" * min(len(value), 3) or "***"
+        return "***"
     return f"{value[:4]}...{value[-4:]}"
 
 
