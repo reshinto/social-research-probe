@@ -22,8 +22,11 @@ def _load(data_dir: Path) -> dict:
 
 
 def _save(data_dir: Path, data: dict) -> None:
+    topics = data["topics"]
+    if len(topics) != len(set(topics)):
+        raise DuplicateError("internal error: attempted to save duplicate topics")
+    data["topics"] = sorted(topics)
     validate(data, TOPICS_SCHEMA)
-    data["topics"] = sorted(set(data["topics"]))
     atomic_write_json(data_dir / _FILENAME, data)
 
 
@@ -50,7 +53,15 @@ def add_topics(data_dir: Path, values: list[str], *, force: bool) -> None:
         descriptions = "; ".join(f"{v!r} ~ {m}" for v, m in conflicts)
         raise DuplicateError(f"duplicate/near-duplicate topics: {descriptions} (use --force to override)")
 
-    data["topics"] = existing + to_add
+    # Deduplicate to_add against existing and within itself before saving
+    seen = set(existing)
+    deduped_to_add = []
+    for v in to_add:
+        if v not in seen:
+            deduped_to_add.append(v)
+            seen.add(v)
+
+    data["topics"] = existing + deduped_to_add
     _save(data_dir, data)
 
 
@@ -63,6 +74,11 @@ def remove_topics(data_dir: Path, values: list[str]) -> None:
 
 def rename_topic(data_dir: Path, old: str, new: str) -> None:
     data = _load(data_dir)
-    topics = [new if t == old else t for t in data["topics"]]
-    data["topics"] = topics
+    existing = list(data["topics"])
+    if old not in existing:
+        from social_research_probe.errors import SrpError
+        raise SrpError(f"topic {old!r} not found")
+    if new in existing:
+        raise DuplicateError(f"{new!r} already exists; rename would cause a duplicate")
+    data["topics"] = [new if t == old else t for t in existing]
     _save(data_dir, data)

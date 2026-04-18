@@ -12,7 +12,7 @@ from social_research_probe.commands.topics import (
     rename_topic,
     show_topics,
 )
-from social_research_probe.errors import DuplicateError
+from social_research_probe.errors import DuplicateError, SrpError
 
 
 def _read(data_dir: Path) -> dict:
@@ -76,3 +76,15 @@ def test_rename(tmp_data_dir: Path):
 def test_show_returns_list(tmp_data_dir: Path):
     add_topics(tmp_data_dir, ["ai agents"], force=False)
     assert show_topics(tmp_data_dir) == ["ai agents"]
+
+
+def test_rename_onto_existing_raises(tmp_data_dir: Path):
+    add_topics(tmp_data_dir, ["ai agents", "robotics"], force=False)
+    with pytest.raises(DuplicateError):
+        rename_topic(tmp_data_dir, "robotics", "ai agents")
+
+
+def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
+    add_topics(tmp_data_dir, ["ai agents"], force=False)
+    with pytest.raises(SrpError):
+        rename_topic(tmp_data_dir, "nonexistent", "something new")
