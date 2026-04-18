@@ -1,4 +1,5 @@
 """Social Research Probe — Evidence-first social-media research CLI + Claude Code skill."""
+
 from importlib.metadata import PackageNotFoundError, version
 
 try:

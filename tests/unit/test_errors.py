@@ -1,4 +1,5 @@
 """Exit codes map to the spec §9 table."""
+
 from __future__ import annotations
 
 import pytest

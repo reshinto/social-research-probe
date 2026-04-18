@@ -4,6 +4,7 @@ Rationale: the skill must never bundle a Python LLM client. Skill mode uses the
 host LLM; CLI mode subprocesses external LLM CLIs. Any import of these packages
 is a spec violation.
 """
+
 from __future__ import annotations
 
 import re

@@ -1,4 +1,5 @@
 """CLI entry point. Subcommands are registered here and dispatched by name."""
+
 from __future__ import annotations
 
 import argparse
@@ -8,7 +9,9 @@ from collections.abc import Callable
 from social_research_probe.errors import SrpError
 
 # Registry populated by subcommand modules in later tasks.
-_SUBCOMMANDS: dict[str, tuple[Callable[[argparse.ArgumentParser], None], Callable[[argparse.Namespace], int]]] = {}
+_SUBCOMMANDS: dict[
+    str, tuple[Callable[[argparse.ArgumentParser], None], Callable[[argparse.Namespace], int]]
+] = {}
 
 
 def register_subcommand(
@@ -20,7 +23,9 @@ def register_subcommand(
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="srp", description="Evidence-first social-media research.")
+    parser = argparse.ArgumentParser(
+        prog="srp", description="Evidence-first social-media research."
+    )
     parser.add_argument("--mode", choices=["skill", "cli"], default="cli")
     parser.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     parser.add_argument("--data-dir", default=None)

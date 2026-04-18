@@ -1,4 +1,5 @@
 """Allow running social_research_probe as a module."""
+
 from __future__ import annotations
 
 import sys

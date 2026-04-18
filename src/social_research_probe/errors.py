@@ -1,4 +1,5 @@
 """Exception hierarchy. Each subclass carries its spec §9 exit code."""
+
 from __future__ import annotations
 
 

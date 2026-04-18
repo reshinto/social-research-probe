@@ -1,4 +1,5 @@
 """CLI stub: --help works, unknown subcommand exits 2, no subcommand exits 2."""
+
 from __future__ import annotations
 
 import subprocess
