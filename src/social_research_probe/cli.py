@@ -70,6 +70,11 @@ def _global_parser() -> argparse.ArgumentParser:
     ss.add_argument("--from-stdin", action="store_true")
     ss.add_argument("--output", choices=["text", "json", "markdown"], default="text")
 
+    rr = sub.add_parser("run-research")
+    rr.add_argument("--platform", required=True)
+    rr.add_argument("--mode", choices=["skill", "cli"], default="cli")
+    rr.add_argument("dsl", nargs="+")
+
     cfg = sub.add_parser("config")
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
     cfg_show = cfg_sub.add_parser("show")
@@ -211,6 +216,13 @@ def _dispatch(args: argparse.Namespace) -> int:
             purpose_candidates=payload.get("purpose_candidates", []),
         )
         _emit({"ok": True}, args.output)
+        return 0
+
+    if args.command == "run-research":
+        from social_research_probe.commands.parse import parse
+        from social_research_probe.pipeline import run_research
+        raw = f"run-research platform:{args.platform} " + " ".join(args.dsl)
+        run_research(parse(raw), data_dir, args.mode)
         return 0
 
     if args.command == "config":
