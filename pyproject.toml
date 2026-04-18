@@ -30,6 +30,10 @@ srp = "social_research_probe.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["social_research_probe"]
 
+[tool.hatch.build.targets.wheel.shared-data]
+"social_research_probe/skill/SKILL.md" = "share/social-research-probe/SKILL.md"
+"social_research_probe/skill/references" = "share/social-research-probe/references"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"

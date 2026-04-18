@@ -75,6 +75,9 @@ def _global_parser() -> argparse.ArgumentParser:
     rr.add_argument("--mode", choices=["skill", "cli"], default="cli")
     rr.add_argument("dsl", nargs="+")
 
+    ins = sub.add_parser("install-skill", help="Copy SKILL.md + references into a target directory")
+    ins.add_argument("--target", default=None, help="Destination directory (default: ~/.claude/skills/SocialResearchProbe)")
+
     cfg = sub.add_parser("config")
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
     cfg_show = cfg_sub.add_parser("show")
@@ -223,6 +226,17 @@ def _dispatch(args: argparse.Namespace) -> int:
         from social_research_probe.pipeline import run_research
         raw = f"run-research platform:{args.platform} " + " ".join(args.dsl)
         run_research(parse(raw), data_dir, args.mode)
+        return 0
+
+    if args.command == "install-skill":
+        import shutil
+        from pathlib import Path
+        src = Path(__file__).parent / "skill"
+        dest = Path(args.target) if args.target else Path.home() / ".claude" / "skills" / "SocialResearchProbe"
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+        print(f"Skill installed to {dest}")
         return 0
 
     if args.command == "config":
