@@ -26,7 +26,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", default=None)
     parser.add_argument("--verbose", action="store_true")
 
-    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
+    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND", required=True)
     for name, (configure, _handler) in _SUBCOMMANDS.items():
         sub = subparsers.add_parser(name)
         configure(sub)
@@ -37,17 +37,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    if args.command is None:
-        parser.print_help(sys.stderr)
-        return 2
-
     _configure, handler = _SUBCOMMANDS[args.command]
     try:
         return handler(args)
     except SrpError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return exc.exit_code
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
