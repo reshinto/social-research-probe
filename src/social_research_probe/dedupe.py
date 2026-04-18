@@ -1,6 +1,7 @@
 """Duplicate detection using rapidfuzz token_set_ratio."""
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 
@@ -19,7 +20,7 @@ class DuplicateStatus(str, Enum):
 @dataclass(frozen=True)
 class DedupeResult:
     status: DuplicateStatus
-    matches: list[str]
+    matches: tuple[str, ...]
 
 
 def _normalize(s: str) -> str:
@@ -29,24 +30,28 @@ def _normalize(s: str) -> str:
 def classify(candidate: str, existing: list[str]) -> DedupeResult:
     """Return DedupeResult comparing candidate to existing entries."""
     if not existing:
-        return DedupeResult(DuplicateStatus.NEW, [])
+        return DedupeResult(DuplicateStatus.NEW, ())
 
     norm_candidate = _normalize(candidate)
-    normalized = {_normalize(e): e for e in existing}
+    norm_to_originals: dict[str, list[str]] = defaultdict(list)
+    for e in existing:
+        norm_to_originals[_normalize(e)].append(e)
 
     scored = process.extract(
         norm_candidate,
-        list(normalized.keys()),
+        list(norm_to_originals.keys()),
         scorer=fuzz.token_set_ratio,
-        limit=len(normalized),
+        limit=None,
     )
 
-    dup = [normalized[name] for name, score, _ in scored if score >= DUPLICATE_THRESHOLD]
+    dup = [orig for name, score, _ in scored if score >= DUPLICATE_THRESHOLD
+           for orig in norm_to_originals[name]]
     if dup:
-        return DedupeResult(DuplicateStatus.DUPLICATE, dup)
+        return DedupeResult(DuplicateStatus.DUPLICATE, tuple(dup))
 
-    near = [normalized[name] for name, score, _ in scored if score >= NEAR_DUPLICATE_THRESHOLD]
+    near = [orig for name, score, _ in scored if score >= NEAR_DUPLICATE_THRESHOLD
+            for orig in norm_to_originals[name]]
     if near:
-        return DedupeResult(DuplicateStatus.NEAR_DUPLICATE, near)
+        return DedupeResult(DuplicateStatus.NEAR_DUPLICATE, tuple(near))
 
-    return DedupeResult(DuplicateStatus.NEW, [])
+    return DedupeResult(DuplicateStatus.NEW, ())

@@ -7,7 +7,7 @@ from social_research_probe.dedupe import DuplicateStatus, classify
 def test_exact_match_is_duplicate():
     result = classify("ai agents", existing=["ai agents", "robotics"])
     assert result.status is DuplicateStatus.DUPLICATE
-    assert result.matches == ["ai agents"]
+    assert result.matches == ("ai agents",)
 
 
 def test_case_and_whitespace_insensitive():
@@ -24,7 +24,7 @@ def test_near_match_is_near_duplicate():
 def test_unrelated_is_new():
     result = classify("quantum computing", existing=["ai agents", "robotics"])
     assert result.status is DuplicateStatus.NEW
-    assert result.matches == []
+    assert result.matches == ()
 
 
 def test_empty_existing_is_new():
@@ -37,3 +37,11 @@ def test_threshold_is_documented():
     assert DUPLICATE_THRESHOLD == 95
     assert NEAR_DUPLICATE_THRESHOLD == 80
     assert NEAR_DUPLICATE_THRESHOLD < DUPLICATE_THRESHOLD
+
+
+def test_all_normalized_duplicates_returned():
+    result = classify("AI Agents", existing=["AI Agents", "ai agents"])
+    assert result.status is DuplicateStatus.DUPLICATE
+    assert len(result.matches) == 2
+    assert "AI Agents" in result.matches
+    assert "ai agents" in result.matches
