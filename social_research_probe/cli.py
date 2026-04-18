@@ -76,7 +76,7 @@ def _global_parser() -> argparse.ArgumentParser:
     rr.add_argument("dsl", nargs="+")
 
     ins = sub.add_parser("install-skill", help="Copy SKILL.md + references into a target directory")
-    ins.add_argument("--target", default=None, help="Destination directory (default: ~/.claude/skills/social-research-probe)")
+    ins.add_argument("--target", default=None, help="Destination directory (default: ~/.claude/skills/srp)")
 
     cfg = sub.add_parser("config")
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
@@ -232,7 +232,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         import shutil
         from pathlib import Path
         src = Path(__file__).parent / "skill"
-        dest = Path(args.target) if args.target else Path.home() / ".claude" / "skills" / "social-research-probe"
+        dest = Path(args.target) if args.target else Path.home() / ".claude" / "skills" / "srp"
         if dest.exists():
             shutil.rmtree(dest)
         shutil.copytree(src, dest)
