@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from social_research_probe.config import Config
+from social_research_probe.errors import ValidationError
 
 SECRET_FILENAME = "secrets.toml"
 CONFIG_FILENAME = "config.toml"
@@ -115,7 +116,7 @@ def show_config(data_dir: Path) -> str:
 def write_config_value(data_dir: Path, dotted_key: str, value: str) -> None:
     parts = dotted_key.split(".")
     if len(parts) != 2:
-        raise ValueError(f"config key must be section.key, got {dotted_key!r}")
+        raise ValidationError(f"config key must be section.key, got {dotted_key!r}")
     section, key = parts
 
     path = data_dir / CONFIG_FILENAME

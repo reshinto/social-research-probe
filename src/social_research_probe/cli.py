@@ -201,7 +201,10 @@ def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "stage-suggestions":
         if not args.from_stdin:
             raise ValidationError("stage-suggestions requires --from-stdin")
-        payload = json.loads(sys.stdin.read())
+        try:
+            payload = json.loads(sys.stdin.read())
+        except json.JSONDecodeError as exc:
+            raise ValidationError(f"invalid JSON from stdin: {exc}") from exc
         suggestions_cmd.stage_suggestions(
             data_dir,
             topic_candidates=payload.get("topic_candidates", []),
