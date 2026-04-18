@@ -1,6 +1,7 @@
 """Data-dir resolution + config.toml loading. Does NOT read secrets — see secrets.py."""
 from __future__ import annotations
 
+import copy
 import os
 import tomllib
 from dataclasses import dataclass, field
@@ -58,7 +59,7 @@ class Config:
     def load(cls, data_dir: Path) -> Config:
         data_dir.mkdir(parents=True, exist_ok=True)
         cfg_path = data_dir / "config.toml"
-        merged = dict(DEFAULT_CONFIG)
+        merged = copy.deepcopy(DEFAULT_CONFIG)
         if cfg_path.exists():
             with cfg_path.open("rb") as f:
                 user = tomllib.load(f)

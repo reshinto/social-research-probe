@@ -51,3 +51,17 @@ def test_config_load_reads_toml(tmp_data_dir: Path):
     cfg = Config.load(tmp_data_dir)
     assert cfg.llm_runner == "claude"
     assert cfg.llm_timeout_seconds == 30
+
+
+def test_config_deep_merge_preserves_defaults_for_absent_keys(tmp_data_dir: Path):
+    (tmp_data_dir / "config.toml").write_text(
+        '[llm]\nrunner = "claude"\n', encoding="utf-8"
+    )
+    cfg = Config.load(tmp_data_dir)
+    # Non-overridden sections still have defaults
+    assert cfg.corroboration_backend == "host"
+    assert cfg.platform_defaults("youtube")["max_items"] == 20
+    # Mutating cfg.raw must NOT corrupt DEFAULT_CONFIG
+    cfg.raw["corroboration"]["backend"] = "mutated"
+    cfg2 = Config.load(tmp_data_dir)
+    assert cfg2.corroboration_backend == "host"
