@@ -159,7 +159,9 @@ def _parse_update_topics(tail: str) -> ParsedUpdateTopics:
         old, pos = _take_quoted(rest, 0)
         if rest[pos : pos + 2] != "->":
             raise ParseError("expected '->' in rename")
-        new, _ = _take_quoted(rest, pos + 2)
+        new, end_pos = _take_quoted(rest, pos + 2)
+        if end_pos != len(rest):
+            raise ParseError(f"unexpected trailing content: {rest[end_pos:]!r}")
         return ParsedUpdateTopics(op="rename", rename_from=old, rename_to=new)
     raise ParseError(f"expected add:/remove:/rename:, got {tail!r}")
 
@@ -170,7 +172,9 @@ def _parse_update_purposes(tail: str) -> ParsedUpdatePurposes:
         name, pos = _take_quoted(rest, 0)
         if rest[pos : pos + 2] != '="':
             raise ParseError("expected '=' followed by quoted method")
-        method, _ = _take_quoted(rest, pos + 1)
+        method, end_pos = _take_quoted(rest, pos + 1)
+        if end_pos != len(rest):
+            raise ParseError(f"unexpected trailing content: {rest[end_pos:]!r}")
         return ParsedUpdatePurposes(op="add", name=name, method=method)
     if tail.startswith("remove:"):
         return ParsedUpdatePurposes(op="remove", values=_parse_quoted_list(tail[7:]))
@@ -179,7 +183,9 @@ def _parse_update_purposes(tail: str) -> ParsedUpdatePurposes:
         old, pos = _take_quoted(rest, 0)
         if rest[pos : pos + 2] != "->":
             raise ParseError("expected '->' in rename")
-        new, _ = _take_quoted(rest, pos + 2)
+        new, end_pos = _take_quoted(rest, pos + 2)
+        if end_pos != len(rest):
+            raise ParseError(f"unexpected trailing content: {rest[end_pos:]!r}")
         return ParsedUpdatePurposes(op="rename", rename_from=old, rename_to=new)
     raise ParseError(f"expected add:/remove:/rename:, got {tail!r}")
 
@@ -195,7 +201,17 @@ def _parse_discard_pending(tail: str) -> ParsedDiscardPending:
 
 
 def _parse_pending_selectors(tail: str) -> tuple[Union[Literal["all"], list[int]], Union[Literal["all"], list[int]]]:
-    parts = dict(_kv_pair(chunk) for chunk in tail.split())
+    # Rebuild tokens: a token without ':' is a continuation of the previous value
+    tokens = tail.split()
+    merged: list[str] = []
+    for token in tokens:
+        if ":" in token:
+            merged.append(token)
+        elif merged:
+            merged[-1] += token  # strip the space, join to previous
+        else:
+            raise ParseError(f"unexpected token: {token!r}")
+    parts = dict(_kv_pair(chunk) for chunk in merged)
     if "topics" not in parts or "purposes" not in parts:
         raise ParseError("apply/discard requires topics:... and purposes:...")
     return _parse_id_selector(parts["topics"]), _parse_id_selector(parts["purposes"])
@@ -227,6 +243,10 @@ def _parse_run_research(tail: str) -> ParsedRunResearch:
         purposes = [p.strip() for p in entry[pos + 2 :].split("+") if p.strip()]
         if not purposes:
             raise ParseError(f"topic {topic!r} has no purposes")
+        # Validate purpose names are valid identifiers (alphanumeric + hyphens + underscores)
+        for p in purposes:
+            if not all(c.isalnum() or c in "-_" for c in p):
+                raise ParseError(f"invalid purpose name {p!r}: use alphanumeric, hyphens, and underscores only")
         topics.append((topic, purposes))
 
     if not topics:

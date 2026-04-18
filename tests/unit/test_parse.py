@@ -100,3 +100,13 @@ def test_empty_raises():
 def test_unknown_command_raises():
     with pytest.raises(ParseError):
         parse('wobbulate "x"')
+
+
+def test_rename_trailing_garbage_raises():
+    with pytest.raises(ParseError, match="unexpected trailing content"):
+        parse('update-topics rename:"old"->"new"GARBAGE')
+
+
+def test_add_purpose_trailing_garbage_raises():
+    with pytest.raises(ParseError, match="unexpected trailing content"):
+        parse('update-purposes add:"trends"="method"GARBAGE')
