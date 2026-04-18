@@ -4,6 +4,7 @@ fixture's registration."""
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, ClassVar
 
 from social_research_probe.errors import AdapterError
@@ -43,23 +44,121 @@ class YouTubeAdapter(PlatformAdapter):
         self._api_key()
         return True
 
+    @staticmethod
+    def _parse_duration_seconds(duration: str) -> int:
+        m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
+        if not m:
+            return 0
+        h, mn, s = (int(v or 0) for v in m.groups())
+        return h * 3600 + mn * 60 + s
+
     def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:  # pragma: no cover — live
+        from datetime import datetime, timedelta, timezone
         from social_research_probe.platforms.youtube import fetch
         client = fetch.build_client(self._api_key())
-        items = fetch.search_videos(client, topic=topic, max_items=limits.max_items, published_after=None)
-        return self._stub_items_from_search(items)
+        published_after = None
+        if limits.recency_days:
+            dt = datetime.now(timezone.utc) - timedelta(days=limits.recency_days)
+            published_after = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        raw = fetch.search_videos(client, topic=topic, max_items=limits.max_items, published_after=published_after)
+        return self._items_from_search(raw)
 
-    def _stub_items_from_search(self, raw: list[dict]) -> list[RawItem]:  # pragma: no cover
-        raise NotImplementedError("populated in P7 live smoke test; tests use FakeYouTubeAdapter")
-
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:  # pragma: no cover
+    def _items_from_search(self, raw: list[dict]) -> list[RawItem]:  # pragma: no cover
+        from datetime import datetime, timezone
+        items = []
+        for r in raw:
+            vid_id = r.get("id", {}).get("videoId", "")
+            sn = r.get("snippet", {})
+            published_raw = sn.get("publishedAt", "")
+            try:
+                published_at = datetime.fromisoformat(published_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+            except Exception:
+                published_at = datetime.now(timezone.utc)
+            thumb = (sn.get("thumbnails") or {}).get("default", {}).get("url")
+            items.append(RawItem(
+                id=vid_id,
+                url=f"https://www.youtube.com/watch?v={vid_id}",
+                title=sn.get("title", ""),
+                author_id=sn.get("channelId", ""),
+                author_name=sn.get("channelTitle", ""),
+                published_at=published_at,
+                metrics={},
+                text_excerpt=sn.get("description") or None,
+                thumbnail=thumb,
+                extras={},
+            ))
         return items
 
+    def enrich(self, items: list[RawItem]) -> list[RawItem]:  # pragma: no cover
+        if not items:
+            return items
+        from social_research_probe.platforms.youtube import fetch
+        client = fetch.build_client(self._api_key())
+        video_ids = [it.id for it in items]
+        hydrated = {v["id"]: v for v in fetch.hydrate_videos(client, video_ids=video_ids)}
+        channel_ids = list({it.author_id for it in items if it.author_id})
+        channels = {c["id"]: c for c in fetch.hydrate_channels(client, channel_ids=channel_ids)}
+        enriched = []
+        for it in items:
+            vid = hydrated.get(it.id, {})
+            stats = vid.get("statistics", {})
+            ch = channels.get(it.author_id, {})
+            ch_stats = ch.get("statistics", {})
+            metrics = {
+                "views": int(stats.get("viewCount", 0) or 0),
+                "likes": int(stats.get("likeCount", 0) or 0),
+                "comments": int(stats.get("commentCount", 0) or 0),
+            }
+            extras = {
+                "channel_subscribers": int(ch_stats.get("subscriberCount", 0) or 0),
+                "channel_video_count": int(ch_stats.get("videoCount", 0) or 0),
+            }
+            duration_str = vid.get("contentDetails", {}).get("duration", "")
+            if duration_str:
+                secs = self._parse_duration_seconds(duration_str)
+                if 0 < secs < 90:
+                    continue  # skip Shorts
+            enriched.append(RawItem(
+                id=it.id, url=it.url, title=it.title,
+                author_id=it.author_id, author_name=it.author_name,
+                published_at=it.published_at,
+                metrics=metrics,
+                text_excerpt=it.text_excerpt,
+                thumbnail=it.thumbnail,
+                extras={**extras, "duration_seconds": self._parse_duration_seconds(duration_str)},
+            ))
+        return enriched
+
     def to_signals(self, items: list[RawItem]) -> list[SignalSet]:  # pragma: no cover
-        return []
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        signals = []
+        for it in items:
+            age_days = max(1, (now - it.published_at).days)
+            views = it.metrics.get("views", 0) or 0
+            likes = it.metrics.get("likes", 0) or 0
+            comments = it.metrics.get("comments", 0) or 0
+            signals.append(SignalSet(
+                views=views,
+                likes=likes,
+                comments=comments,
+                upload_date=it.published_at,
+                view_velocity=views / age_days,
+                engagement_ratio=(likes + comments) / max(1, views),
+                comment_velocity=comments / age_days,
+                cross_channel_repetition=0.0,
+                raw={},
+            ))
+        return signals
 
     def trust_hints(self, item: RawItem) -> TrustHints:  # pragma: no cover
-        return TrustHints(None, None, None, None, [])
+        return TrustHints(
+            account_age_days=None,
+            verified=None,
+            subscriber_count=item.extras.get("channel_subscribers"),
+            upload_cadence_days=None,
+            citation_markers=[],
+        )
 
     def url_normalize(self, url: str) -> str:
         from urllib.parse import parse_qs, urlparse, urlunparse

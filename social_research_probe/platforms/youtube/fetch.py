@@ -16,7 +16,7 @@ def search_videos(client: Any, *, topic: str, max_items: int, published_after: s
         resp = client.search().list(
             q=topic, part="snippet", type="video", maxResults=min(50, max_items),
             publishedAfter=published_after,
-            order="viewCount",
+            order="relevance",
         ).execute()
     except Exception as exc:
         raise AdapterError(f"youtube search failed: {exc}") from exc
