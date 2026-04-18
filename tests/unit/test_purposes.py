@@ -57,3 +57,15 @@ def test_rename(tmp_data_dir: Path):
 def test_show(tmp_data_dir: Path):
     add_purpose(tmp_data_dir, name="trends", method="x", force=False)
     assert show_purposes(tmp_data_dir) == {"trends": {"method": "x", "evidence_priorities": [], "scoring_overrides": {}}}
+
+
+def test_rename_onto_existing_raises(tmp_data_dir: Path):
+    add_purpose(tmp_data_dir, name="trends", method="x", force=False)
+    add_purpose(tmp_data_dir, name="career", method="y", force=False)
+    with pytest.raises(DuplicateError):
+        rename_purpose(tmp_data_dir, "trends", "career")
+
+
+def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
+    with pytest.raises(Exception):
+        rename_purpose(tmp_data_dir, "nonexistent", "something")
