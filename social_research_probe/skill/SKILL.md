@@ -1,6 +1,5 @@
 ---
-name: SocialResearchProbe
-description: Social-media research via `srp` CLI. Handles: update-topics, show-topics, update-purposes, show-purposes, suggest-topics, suggest-purposes, show-pending-suggestions, apply-pending-suggestions, discard-pending-suggestions, run-research.
+name: srp
 ---
 
 Shell to `srp`; never reimplement logic. Read the reference file for the command, follow it exactly. On non-zero exit surface stderr + exit code.
