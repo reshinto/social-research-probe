@@ -1,0 +1,19 @@
+"""Thin wrapper around jsonschema that raises SrpError.ValidationError on failure."""
+from __future__ import annotations
+
+from typing import Any
+
+import jsonschema
+from jsonschema import Draft7Validator
+
+from social_research_probe.errors import ValidationError
+
+
+def validate(data: Any, schema: dict[str, Any]) -> None:
+    """Strict validation; raises ValidationError listing all issues."""
+    validator = Draft7Validator(schema)
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
+    if not errors:
+        return
+    messages = [f"{'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}" for e in errors]
+    raise ValidationError("; ".join(messages))
