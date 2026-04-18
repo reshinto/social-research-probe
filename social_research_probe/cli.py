@@ -230,6 +230,7 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if args.command == "install-skill":
         import shutil
+        import subprocess
         from pathlib import Path
         src = Path(__file__).parent / "skill"
         dest = Path(args.target) if args.target else Path.home() / ".claude" / "skills" / "srp"
@@ -237,6 +238,16 @@ def _dispatch(args: argparse.Namespace) -> int:
             shutil.rmtree(dest)
         shutil.copytree(src, dest)
         print(f"Skill installed to {dest}")
+        pkg = "git+https://github.com/reshinto/social-research-probe"
+        if shutil.which("uv"):
+            subprocess.run(["uv", "tool", "install", "--reinstall", pkg], check=True)
+            print("srp CLI installed via uv tool")
+        elif shutil.which("pipx"):
+            subprocess.run(["pipx", "install", "--force", pkg], check=True)
+            print("srp CLI installed via pipx")
+        else:
+            print("warning: neither uv nor pipx found — srp CLI not permanently installed")
+            print(f"  run: pipx install \"{pkg}\"")
         return 0
 
     if args.command == "config":
