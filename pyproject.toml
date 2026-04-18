@@ -28,15 +28,15 @@ dev = [
 srp = "social_research_probe.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/social_research_probe"]
+packages = ["social_research_probe"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-pythonpath = ["src"]
+pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["src/social_research_probe"]
+source = ["social_research_probe"]
 branch = true
 
 [tool.coverage.report]
@@ -49,7 +49,7 @@ exclude_lines = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = [".", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
