@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import FetchLimits, RawItem
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+from social_research_probe.platforms.youtube.adapter import YouTubeAdapter, _as_int
 
 
 def _make_adapter(monkeypatch, api_key="test-key"):
@@ -94,6 +94,12 @@ def test_items_from_search_empty_raw(monkeypatch):
     """_items_from_search returns empty list for empty input."""
     adapter = _make_adapter(monkeypatch)
     assert adapter._items_from_search([]) == []
+
+
+def test_as_int_handles_bool_float_and_bad_string():
+    assert _as_int(True) == 1
+    assert _as_int(4.9) == 4
+    assert _as_int("oops") == 0
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal, TypeVar, cast
 
 from social_research_probe.commands.purposes import add_purpose
 from social_research_probe.commands.topics import add_topics
@@ -16,6 +16,14 @@ from social_research_probe.state.schemas import (
 )
 from social_research_probe.state.store import atomic_write_json, read_json
 from social_research_probe.state.validate import validate
+from social_research_probe.types import (
+    JSONObject,
+    PendingPurposeSuggestion,
+    PendingSuggestionsState,
+    PendingTopicSuggestion,
+    PurposeSuggestionCandidate,
+    TopicSuggestionCandidate,
+)
 
 _FILENAME = "pending_suggestions.json"
 
@@ -37,29 +45,38 @@ _PURPOSE_SEED_POOL = [
     ("job-opportunities", "Identify hiring signals and skill demand from creator content."),
 ]
 
+PendingEntry = TypeVar("PendingEntry", PendingTopicSuggestion, PendingPurposeSuggestion)
 
-def _load_pending(data_dir: Path) -> dict:
+
+def _load_pending(data_dir: Path) -> PendingSuggestionsState:
+    """Load, migrate, validate, and return pending_suggestions.json."""
     path = data_dir / _FILENAME
     data = read_json(path, default_factory=default_pending_suggestions)
-    data = migrate_to_current(path, data, kind="pending_suggestions")
+    data = cast(
+        PendingSuggestionsState,
+        migrate_to_current(path, cast(JSONObject, data), kind="pending_suggestions"),
+    )
     validate(data, PENDING_SUGGESTIONS_SCHEMA)
     return data
 
 
-def _save_pending(data_dir: Path, data: dict) -> None:
+def _save_pending(data_dir: Path, data: PendingSuggestionsState) -> None:
+    """Validate and persist pending_suggestions.json."""
     validate(data, PENDING_SUGGESTIONS_SCHEMA)
     atomic_write_json(data_dir / _FILENAME, data)
 
 
-def _next_id(entries: list[dict]) -> int:
+def _next_id(entries: list[PendingTopicSuggestion] | list[PendingPurposeSuggestion]) -> int:
+    """Return the next monotonically increasing suggestion id."""
     return max((e["id"] for e in entries), default=0) + 1
 
 
-def suggest_topics(data_dir: Path, count: int = 5) -> list[dict[str, Any]]:
+def suggest_topics(data_dir: Path, count: int = 5) -> list[TopicSuggestionCandidate]:
+    """Generate new topic suggestions from the fixed seed pool."""
     from social_research_probe.commands.topics import show_topics
 
     existing = show_topics(data_dir)
-    drafts: list[dict[str, Any]] = []
+    drafts: list[TopicSuggestionCandidate] = []
     for candidate in _TOPIC_SEED_POOL:
         if len(drafts) >= count:
             break
@@ -68,11 +85,12 @@ def suggest_topics(data_dir: Path, count: int = 5) -> list[dict[str, Any]]:
     return drafts
 
 
-def suggest_purposes(data_dir: Path, count: int = 5) -> list[dict[str, Any]]:
+def suggest_purposes(data_dir: Path, count: int = 5) -> list[PurposeSuggestionCandidate]:
+    """Generate new purpose suggestions from the fixed seed pool."""
     from social_research_probe.commands.purposes import show_purposes
 
     existing = list(show_purposes(data_dir).keys())
-    drafts: list[dict[str, Any]] = []
+    drafts: list[PurposeSuggestionCandidate] = []
     for name, method in _PURPOSE_SEED_POOL:
         if len(drafts) >= count:
             break
@@ -84,9 +102,10 @@ def suggest_purposes(data_dir: Path, count: int = 5) -> list[dict[str, Any]]:
 def stage_suggestions(
     data_dir: Path,
     *,
-    topic_candidates: list[dict[str, Any]],
-    purpose_candidates: list[dict[str, Any]],
-) -> dict[str, Any]:
+    topic_candidates: list[TopicSuggestionCandidate],
+    purpose_candidates: list[PurposeSuggestionCandidate],
+) -> PendingSuggestionsState:
+    """Stage topic and purpose candidates into pending_suggestions.json."""
     from social_research_probe.commands.purposes import show_purposes
     from social_research_probe.commands.topics import show_topics
 
@@ -99,7 +118,7 @@ def stage_suggestions(
         if "value" not in cand:
             raise ValidationError(f"topic candidate missing 'value': {cand}")
         result = classify(cand["value"], existing_topics)
-        entry = {
+        entry: PendingTopicSuggestion = {
             "id": next_topic_id,
             "value": cand["value"],
             "reason": cand.get("reason", "gap"),
@@ -114,7 +133,7 @@ def stage_suggestions(
         if "name" not in cand or "method" not in cand:
             raise ValidationError(f"purpose candidate missing name/method: {cand}")
         result = classify(cand["name"], existing_purposes)
-        entry = {
+        entry: PendingPurposeSuggestion = {
             "id": next_purpose_id,
             "name": cand["name"],
             "method": cand["method"],
@@ -129,14 +148,18 @@ def stage_suggestions(
     return pending
 
 
-def show_pending(data_dir: Path) -> dict:
+def show_pending(data_dir: Path) -> PendingSuggestionsState:
+    """Return the pending suggestions state file."""
     return _load_pending(data_dir)
 
 
 IdSelector = Literal["all"] | list[int]
 
 
-def _select(entries: list[dict], selector: IdSelector) -> tuple[list[dict], list[dict]]:
+def _select(
+    entries: list[PendingEntry], selector: IdSelector
+) -> tuple[list[PendingEntry], list[PendingEntry]]:
+    """Split entries into the chosen subset and the remaining subset."""
     if selector == "all":
         return entries, []
     ids = set(selector)

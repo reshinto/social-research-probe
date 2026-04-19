@@ -41,6 +41,18 @@ def _isolated_registry():
     registry_module._REGISTRY.update(original)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_runner_config(monkeypatch: pytest.MonkeyPatch):
+    """Keep runner argv construction independent from any real home config."""
+    import social_research_probe.llm.runners.cli_json_base as base_mod
+
+    class _FakeConfig:
+        def llm_settings(self, name: str) -> dict[str, object]:
+            return {}
+
+    monkeypatch.setattr(base_mod, "load_active_config", lambda: _FakeConfig())
+
+
 # ---------------------------------------------------------------------------
 # ClaudeRunner
 # ---------------------------------------------------------------------------
@@ -51,18 +63,18 @@ def test_claude_health_check_true_when_binary_found(monkeypatch: pytest.MonkeyPa
 
     Monkeypatches shutil.which in the claude module so no real binary is needed.
     """
-    import social_research_probe.llm.runners.claude as claude_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(claude_mod.shutil, "which", lambda name: "/usr/local/bin/claude")
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: "/usr/local/bin/claude")
     runner = ClaudeRunner()
     assert runner.health_check() is True
 
 
 def test_claude_health_check_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """health_check returns False when shutil.which cannot find the claude binary."""
-    import social_research_probe.llm.runners.claude as claude_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(claude_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: None)
     runner = ClaudeRunner()
     assert runner.health_check() is False
 
@@ -110,18 +122,18 @@ def test_claude_parse_response_invalid_json_raises_adapter_error() -> None:
 
 def test_gemini_health_check_true_when_binary_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """health_check returns True when shutil.which finds the gemini binary."""
-    import social_research_probe.llm.runners.gemini as gemini_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(gemini_mod.shutil, "which", lambda name: "/usr/local/bin/gemini")
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: "/usr/local/bin/gemini")
     runner = GeminiRunner()
     assert runner.health_check() is True
 
 
 def test_gemini_health_check_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """health_check returns False when shutil.which cannot find the gemini binary."""
-    import social_research_probe.llm.runners.gemini as gemini_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(gemini_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: None)
     runner = GeminiRunner()
     assert runner.health_check() is False
 
@@ -167,18 +179,18 @@ def test_gemini_parse_response_invalid_json_raises_adapter_error() -> None:
 
 def test_codex_health_check_true_when_binary_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """health_check returns True when shutil.which finds the codex binary."""
-    import social_research_probe.llm.runners.codex as codex_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(codex_mod.shutil, "which", lambda name: "/usr/local/bin/codex")
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: "/usr/local/bin/codex")
     runner = CodexRunner()
     assert runner.health_check() is True
 
 
 def test_codex_health_check_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """health_check returns False when shutil.which cannot find the codex binary."""
-    import social_research_probe.llm.runners.codex as codex_mod
+    import social_research_probe.llm.runners.cli_json_base as base_mod
 
-    monkeypatch.setattr(codex_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr(base_mod.shutil, "which", lambda name: None)
     runner = CodexRunner()
     assert runner.health_check() is False
 

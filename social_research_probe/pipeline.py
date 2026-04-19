@@ -4,9 +4,11 @@ import math
 import os
 import statistics
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Literal
 
 from social_research_probe.commands.parse import ParsedRunResearch
+from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.ensemble import multi_llm_prompt
 from social_research_probe.llm.host import emit_packet
@@ -40,6 +42,14 @@ from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.explain import explain as explain_stat
 from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.synthesize.warnings import detect as detect_warnings
+from social_research_probe.types import (
+    AdapterConfig,
+    MultiResearchPacket,
+    ResearchPacket,
+    ScoredItem,
+    SourceValidationSummary,
+    StatsSummary,
+)
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
 from social_research_probe.viz import heatmap as heatmap_viz
@@ -120,7 +130,7 @@ def _score_item(
     hints: TrustHints,
     z_view_velocity: float,
     z_engagement: float,
-) -> tuple[float, dict]:
+) -> tuple[float, ScoredItem]:
     src = classify_source(item, hints)
     trust = trust_score(
         source_class=_SRC_NUM[src.value],
@@ -169,14 +179,14 @@ def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
         "- The main topic and what the video is about\n"
         "- The key arguments, findings, demonstrations, or announcements\n"
         "- Who the target audience is and what they should take away\n"
-        "- Any specific claims, tools, people, companies, or data points mentioned\n\n"
+        "- Specific claims, tools, people, companies, or data points mentioned\n\n"
         "Be specific and factual. Do not start with 'This video' or 'In this video'.\n\n"
         f"Title: {title}\nChannel: {channel}\n\n"
         f"Transcript:\n{transcript}"
     )
 
 
-def _enrich_top5_with_transcripts(top5: list[dict]) -> None:
+def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
     """Fetch transcripts for top-5 items and generate 200-word AI summaries.
 
     Transcript sources tried in order:
@@ -229,7 +239,7 @@ def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:
         return None
 
 
-def _build_stats_summary(scored_items: list[dict]) -> dict:
+def _build_stats_summary(scored_items: list[ScoredItem]) -> StatsSummary:
     """Run all applicable stats analyses across the full scored dataset.
 
     Statistical confidence kicks in around n>=8 for moderate correlations,
@@ -293,7 +303,7 @@ def _build_stats_summary(scored_items: list[dict]) -> dict:
     }
 
 
-def _run_advanced_models(scored_items: list[dict]) -> list:
+def _run_advanced_models(scored_items: list[ScoredItem]) -> list:
     """Run batch-2 advanced models (logistic, k-means, PCA, survival, NB, Huber, Bayes).
 
     Each model short-circuits to an empty list when the dataset is too
@@ -350,7 +360,7 @@ def _stats_models_for(n: int) -> list[str]:
     return models
 
 
-def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
+def _render_charts(scored_items: list[ScoredItem], data_dir: Path) -> list[str]:
     """Render the full advanced-stats chart suite from the scored dataset.
 
     Produces: bar, line (rank decay), regression-scatter with fitted line
@@ -383,32 +393,32 @@ def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
     return captions
 
 
-def _render_bar(overall: list[float], charts_dir) -> str:
+def _render_bar(overall: list[float], charts_dir: Path) -> str:
     chart = bar_viz.render(overall, label="overall_score", output_dir=str(charts_dir))
     return chart.caption
 
 
-def _render_line(overall: list[float], charts_dir) -> str:
+def _render_line(overall: list[float], charts_dir: Path) -> str:
     chart = line_viz.render(overall, label="overall_score_by_rank", output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_scatter(x: list[float], y: list[float], label: str, charts_dir) -> str:
+def _render_scatter(x: list[float], y: list[float], label: str, charts_dir: Path) -> str:
     chart = scatter_viz.render(x, y, label=label, output_dir=str(charts_dir))
     return f"Scatter: {label.replace('_', ' ')} ({len(x)} items)\n_(see PNG: {chart.path})_"
 
 
-def _render_histogram(values: list[float], charts_dir) -> str:
+def _render_histogram(values: list[float], charts_dir: Path) -> str:
     chart = histogram_viz.render(values, label="overall_score", output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_regression(x: list[float], y: list[float], label: str, charts_dir) -> str:
+def _render_regression(x: list[float], y: list[float], label: str, charts_dir: Path) -> str:
     chart = regression_scatter_viz.render(x, y, label=label, output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_heatmap(scored_items: list[dict], charts_dir) -> str:
+def _render_heatmap(scored_items: list[ScoredItem], charts_dir: Path) -> str:
     features = {
         "trust": [d["scores"]["trust"] for d in scored_items],
         "trend": [d["scores"]["trend"] for d in scored_items],
@@ -422,12 +432,12 @@ def _render_heatmap(scored_items: list[dict], charts_dir) -> str:
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_residuals(x: list[float], y: list[float], label: str, charts_dir) -> str:
+def _render_residuals(x: list[float], y: list[float], label: str, charts_dir: Path) -> str:
     chart = residuals_viz.render(x, y, label=label, output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_table(top5: list[dict], charts_dir) -> str:
+def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
     rows = [
         {
             "rank": i + 1,
@@ -445,25 +455,35 @@ def _render_table(top5: list[dict], charts_dir) -> str:
 
 def run_research(
     cmd: ParsedRunResearch,
-    data_dir,
+    data_dir: Path,
     mode: Mode,
-    adapter_config: dict | None = None,
-) -> dict:
+    adapter_config: AdapterConfig | None = None,
+) -> ResearchPacket | MultiResearchPacket:
     _maybe_register_fake()
+    os.environ["SRP_DATA_DIR"] = str(data_dir)
     purposes = purpose_registry.load(data_dir)["purposes"]
-    config = {"data_dir": data_dir, **(adapter_config or {})}
-    adapter = get_adapter(cmd.platform, config)
+    cfg = Config.load(data_dir)
+    platform_config: AdapterConfig = {
+        **cfg.platform_defaults(cmd.platform),
+        "data_dir": data_dir,
+        **(adapter_config or {}),
+    }
+    limits = FetchLimits(
+        max_items=int(platform_config.get("max_items", FetchLimits.max_items)),
+        recency_days=platform_config.get("recency_days", FetchLimits.recency_days),
+    )
+    adapter = get_adapter(cmd.platform, platform_config)
     if not adapter.health_check():
         raise ValidationError(f"adapter {cmd.platform} failed health check")
 
-    packets: list[dict] = []
+    packets: list[ResearchPacket] = []
     for topic, purpose_names in cmd.topics:
         for n in purpose_names:
             if n not in purposes:
                 raise ValidationError(f"unknown purpose: {n!r}")
         merged = merge_purposes(purposes, list(purpose_names))
         search_topic = _enrich_query(topic, merged.method)
-        items = adapter.enrich(adapter.search(search_topic, FetchLimits()))
+        items = adapter.enrich(adapter.search(search_topic, limits))
         signals = adapter.to_signals(items)
         hints = [adapter.trust_hints(it) for it in items]
         z_vels = _zscore([s.view_velocity or 0.0 for s in signals])
@@ -477,9 +497,9 @@ def run_research(
         scored.sort(key=lambda x: x[0], reverse=True)
         all_scored = [d for _, d in scored]
         top5 = all_scored[:5]
-        if config.get("fetch_transcripts", True) and cmd.platform == "youtube":
+        if platform_config.get("fetch_transcripts", True) and cmd.platform == "youtube":
             _enrich_top5_with_transcripts(top5)
-        svs = {
+        svs: SourceValidationSummary = {
             "validated": 0,
             "partially": 0,
             "unverified": len(top5),

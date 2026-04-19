@@ -1,7 +1,7 @@
 """Hard Invariant #2: no LLM SDK imports anywhere in src/.
 
 Rationale: the skill must never bundle a Python LLM client. Skill mode uses the
-host LLM; CLI mode subprocesses external LLM CLIs. Any import of these packages
+host LLM; CLI mode subprocesses external LLM CLIs. Every import of these packages
 is a spec violation.
 """
 

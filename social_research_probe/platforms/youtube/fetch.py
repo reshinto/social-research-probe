@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Protocol
 
 from social_research_probe.errors import AdapterError
+from social_research_probe.types import JSONObject, JSONValue
 
 
 def build_client(api_key: str):
@@ -13,9 +15,49 @@ def build_client(api_key: str):
     return build("youtube", "v3", developerKey=api_key, cache_discovery=False)
 
 
+class _ExecutableRequest(Protocol):
+    """Protocol for google-api-python-client request objects."""
+
+    def execute(self) -> Mapping[str, JSONValue]:
+        """Return the decoded API response payload."""
+
+
+class _ListResource(Protocol):
+    """Protocol for resource wrappers exposing a .list(...).execute() chain."""
+
+    def list(self, **kwargs: object) -> _ExecutableRequest:
+        """Build a request object for one API call."""
+
+
+class YouTubeClient(Protocol):
+    """Small protocol surface the adapter needs from the YouTube client."""
+
+    def search(self) -> _ListResource:
+        """Return the search resource wrapper."""
+
+    def videos(self) -> _ListResource:
+        """Return the videos resource wrapper."""
+
+    def channels(self) -> _ListResource:
+        """Return the channels resource wrapper."""
+
+
+def _items_from_response(response: Mapping[str, JSONValue]) -> list[JSONObject]:
+    """Extract a list of object items from a YouTube API response payload."""
+    items = response.get("items", [])
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
 def search_videos(
-    client: Any, *, topic: str, max_items: int, published_after: str | None
-) -> list[dict]:
+    client: YouTubeClient,
+    *,
+    topic: str,
+    max_items: int,
+    published_after: str | None,
+) -> list[JSONObject]:
+    """Run the YouTube search.list call and return the raw item objects."""
     try:
         resp = (
             client.search()
@@ -31,10 +73,11 @@ def search_videos(
         )
     except Exception as exc:
         raise AdapterError(f"youtube search failed: {exc}") from exc
-    return resp.get("items", [])
+    return _items_from_response(resp)
 
 
-def hydrate_videos(client: Any, *, video_ids: list[str]) -> list[dict]:
+def hydrate_videos(client: YouTubeClient, *, video_ids: list[str]) -> list[JSONObject]:
+    """Hydrate video ids through videos.list and return the raw item objects."""
     try:
         resp = (
             client.videos()
@@ -46,10 +89,11 @@ def hydrate_videos(client: Any, *, video_ids: list[str]) -> list[dict]:
         )
     except Exception as exc:
         raise AdapterError(f"youtube videos.list failed: {exc}") from exc
-    return resp.get("items", [])
+    return _items_from_response(resp)
 
 
-def hydrate_channels(client: Any, *, channel_ids: list[str]) -> list[dict]:
+def hydrate_channels(client: YouTubeClient, *, channel_ids: list[str]) -> list[JSONObject]:
+    """Hydrate channel ids through channels.list and return the raw item objects."""
     try:
         resp = (
             client.channels()
@@ -61,4 +105,4 @@ def hydrate_channels(client: Any, *, channel_ids: list[str]) -> list[dict]:
         )
     except Exception as exc:
         raise AdapterError(f"youtube channels.list failed: {exc}") from exc
-    return resp.get("items", [])
+    return _items_from_response(resp)

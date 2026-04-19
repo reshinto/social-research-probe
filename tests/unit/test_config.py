@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.config import Config, resolve_data_dir
+from social_research_probe.config import Config, load_active_config, resolve_data_dir
 
 
 def test_data_dir_flag_wins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -42,6 +42,9 @@ def test_config_load_returns_defaults_when_missing(tmp_data_dir: Path):
     assert cfg.llm_runner == "none"
     assert cfg.corroboration_backend == "host"
     assert cfg.platform_defaults("youtube")["max_items"] == 20
+    assert cfg.llm_settings("codex")["binary"] == "codex"
+    assert cfg.preferred_free_text_runner is None
+    assert cfg.default_structured_runner == "claude"
 
 
 def test_config_load_reads_toml(tmp_data_dir: Path):
@@ -52,6 +55,20 @@ def test_config_load_reads_toml(tmp_data_dir: Path):
     cfg = Config.load(tmp_data_dir)
     assert cfg.llm_runner == "claude"
     assert cfg.llm_timeout_seconds == 30
+    assert cfg.preferred_free_text_runner == "claude"
+    assert cfg.default_structured_runner == "claude"
+
+
+def test_llm_settings_none_returns_empty_dict(tmp_data_dir: Path):
+    cfg = Config.load(tmp_data_dir)
+    assert cfg.llm_settings("none") == {}
+
+
+def test_load_active_config_uses_resolved_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    data_dir = tmp_path / "active"
+    monkeypatch.setenv("SRP_DATA_DIR", str(data_dir))
+    cfg = load_active_config()
+    assert cfg.data_dir == data_dir
 
 
 def test_config_deep_merge_preserves_defaults_for_absent_keys(tmp_data_dir: Path):

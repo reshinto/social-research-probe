@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -396,6 +397,9 @@ _HANDLERS = {
 def _dispatch(args: argparse.Namespace) -> int:
     """Route parsed args to the appropriate command handler."""
     data_dir = resolve_data_dir(args.data_dir)
+    # Make the resolved data dir visible to config-aware helpers that sit
+    # below the CLI dispatch layer, such as free-text LLM routing.
+    os.environ["SRP_DATA_DIR"] = str(data_dir)
     handler = _HANDLERS.get(args.command)
     if handler is None:
         return 2

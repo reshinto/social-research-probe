@@ -71,6 +71,13 @@ def test_search_videos_returns_items():
     assert result == items
 
 
+def test_search_videos_handles_non_list_items():
+    """search_videos returns an empty list when the API payload is malformed."""
+    client = _MockClient(search_resp={"items": "not-a-list"})
+    result = fetch.search_videos(client, topic="ai", max_items=5, published_after=None)
+    assert result == []
+
+
 def test_search_videos_raises_adapter_error_on_exception():
     """search_videos wraps API exceptions in AdapterError."""
 

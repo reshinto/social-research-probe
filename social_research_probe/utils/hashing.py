@@ -16,14 +16,14 @@ import json
 
 
 def stable_hash(obj: object) -> str:
-    """Return a deterministic SHA-256 hex digest for any JSON-serialisable object.
+    """Return a deterministic SHA-256 hex digest for an arbitrary JSON-serialisable object.
 
     The object is first serialised with ``json.dumps(sort_keys=True)`` so that
     dicts with the same keys in different insertion orders produce the same hash.
     The resulting UTF-8 bytes are then fed to SHA-256.
 
     Args:
-        obj: Any JSON-serialisable value — dict, list, str, int, float, or None.
+        obj: Arbitrary JSON-serialisable value — dict, list, str, int, float, or None.
 
     Returns:
         A 64-character lowercase hexadecimal string (SHA-256 digest).

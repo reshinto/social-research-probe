@@ -5,20 +5,23 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any
 
 from social_research_probe.errors import ValidationError
+from social_research_probe.types import PurposeEntry
 
 
 @dataclass(frozen=True)
 class MergedPurpose:
+    """Deterministic merged view of one or more named purposes."""
+
     names: tuple[str, ...]
     method: str
     evidence_priorities: tuple[str, ...]
     scoring_overrides: Mapping[str, float] = field(default_factory=dict)
 
 
-def merge_purposes(purposes: dict[str, dict[str, Any]], selected: list[str]) -> MergedPurpose:
+def merge_purposes(purposes: dict[str, PurposeEntry], selected: list[str]) -> MergedPurpose:
+    """Merge the selected purpose definitions into one execution-time view."""
     missing = [n for n in selected if n not in purposes]
     if missing:
         raise ValidationError(f"unknown purpose(s): {missing}")

@@ -10,6 +10,8 @@ import pytest
 
 from social_research_probe.commands.config import (
     SECRET_FILENAME,
+    _format_toml_value,
+    _parse_scalar_value,
     check_secrets,
     mask_secret,
     read_secret,
@@ -133,6 +135,30 @@ def test_write_config_value_reads_existing(tmp_data_dir: Path):
     assert 'model = "gpt-4"' in content
 
 
+def test_write_config_value_supports_nested_paths(tmp_data_dir: Path):
+    """Nested dotted keys should render nested TOML tables."""
+    write_config_value(tmp_data_dir, "llm.codex.model", "gpt-5")
+    content = (tmp_data_dir / "config.toml").read_text()
+    assert "[llm.codex]" in content
+    assert 'model = "gpt-5"' in content
+
+
+def test_format_toml_value_formats_lists():
+    assert _format_toml_value(["a", 2, True]) == '["a", 2, true]'
+
+
+def test_parse_scalar_value_handles_bools():
+    assert _parse_scalar_value("true") is True
+    assert _parse_scalar_value("false") is False
+
+
+def test_format_toml_value_rejects_unsupported_types():
+    from social_research_probe.errors import ValidationError
+
+    with pytest.raises(ValidationError, match="unsupported config value type"):
+        _format_toml_value(object())
+
+
 def test_write_config_value_bool_value(tmp_data_dir: Path):
     """Lines 136-139: write_config_value writes bool values as true/false."""
     # Manually inject a bool into the config by writing a toml that has one
@@ -170,9 +196,18 @@ def test_check_secrets_no_needed_for_skips_platform(tmp_data_dir: Path):
 
 
 def test_write_config_value_numeric_value(tmp_data_dir: Path):
-    """Lines 138-139: write_config_value writes non-bool non-str values as bare literals."""
+    """Numeric-looking scalar inputs are written as TOML numbers."""
     cfg_path = tmp_data_dir / "config.toml"
     cfg_path.write_text("[limits]\nmax_items = 20\n")
     write_config_value(tmp_data_dir, "limits.timeout", "30")
     content = cfg_path.read_text()
     assert "max_items = 20" in content
+    assert "timeout = 30" in content
+
+
+def test_write_config_value_rejects_top_level_scalar(tmp_data_dir: Path):
+    from social_research_probe.errors import ValidationError
+
+    (tmp_data_dir / "config.toml").write_text('runner = "claude"\n', encoding="utf-8")
+    with pytest.raises(ValidationError, match="must be a table"):
+        write_config_value(tmp_data_dir, "llm.runner", "gemini")

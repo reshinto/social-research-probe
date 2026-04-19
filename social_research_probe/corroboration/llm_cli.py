@@ -14,8 +14,10 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from social_research_probe.config import load_active_config
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
+from social_research_probe.types import RunnerName
 
 
 @register
@@ -34,14 +36,21 @@ class LLMCliBackend(CorroborationBackend):
 
     name: ClassVar[str] = "llm_cli"
 
-    def __init__(self, runner_name: str = "claude") -> None:
+    def __init__(self, runner_name: RunnerName | None = None) -> None:
         """Initialise the backend with the name of an LLM runner.
 
         Args:
             runner_name: Key used to look up the runner in the LLM registry.
-                Defaults to "claude". Override in tests to inject a stub.
+                When omitted, the backend reads the configured default runner.
+                Override in tests to inject a stub.
         """
         self._runner_name = runner_name
+
+    def _resolve_runner_name(self) -> RunnerName:
+        """Choose the configured structured runner unless a test overrides it."""
+        if self._runner_name is not None:
+            return self._runner_name
+        return load_active_config().default_structured_runner
 
     def health_check(self) -> bool:
         """Return True if the configured LLM runner passes its own health check.
@@ -55,10 +64,10 @@ class LLMCliBackend(CorroborationBackend):
         from social_research_probe.llm.registry import get_runner
 
         try:
-            runner = get_runner(self._runner_name)
+            runner = get_runner(self._resolve_runner_name())
             return runner.health_check()
         except Exception:
-            # Any registry or runner error means the backend is unavailable.
+            # All registry or runner errors mean the backend is unavailable.
             return False
 
     def _build_prompt(self, claim) -> str:
@@ -123,7 +132,7 @@ class LLMCliBackend(CorroborationBackend):
         """
         from social_research_probe.llm.registry import get_runner
 
-        runner = get_runner(self._runner_name)
+        runner = get_runner(self._resolve_runner_name())
         prompt = self._build_prompt(claim)
         raw = runner.run(
             prompt,

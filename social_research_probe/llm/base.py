@@ -1,7 +1,7 @@
 """Abstract base class for all LLM runner implementations.
 
 Why this exists: the pipeline and corroboration host need to call LLMs without
-knowing which vendor is behind the call. Any new LLM (Claude, Gemini, a local
+knowing which vendor is behind the call. Every new LLM (Claude, Gemini, a local
 model) can be added by subclassing LLMRunner and registering it — no calling
 code changes needed.
 

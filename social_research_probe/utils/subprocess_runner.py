@@ -46,7 +46,7 @@ def run(
     Raises:
         AdapterError: If the process exits with a non-zero return code, or if
             the timeout expires before the process finishes.
-        Any other exception raised by ``subprocess.run`` (e.g.
+        All other exceptions raised by ``subprocess.run`` (e.g.
             ``FileNotFoundError`` when the executable is not found) is *not*
             caught and propagates to the caller unchanged.
 

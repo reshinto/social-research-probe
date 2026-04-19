@@ -1,8 +1,9 @@
-"""Multi-LLM ensemble — the single place for all free-text LLM calls.
+"""Multi-LLM ensemble and config-aware free-text LLM routing.
 
-Queries Claude, Gemini, and Codex CLIs in parallel for any given prompt.
-Uses Claude to synthesize all collected responses into a single final answer.
-If Claude's synthesis fails, falls back to Gemini, then Codex.
+When config selects Claude, Gemini, or Codex as the default runner, this module
+uses that provider directly for free-text prompts. Otherwise it falls back to
+the legacy ensemble mode: query Claude, Gemini, and Codex in parallel, then
+synthesize the responses with the highest-priority available provider.
 
 Counterpart to ``llm/runners/``, which handles structured JSON-schema LLM
 calls (used by corroboration). This module handles free-text prompts used
@@ -19,11 +20,14 @@ from __future__ import annotations
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from social_research_probe.config import load_active_config
+from social_research_probe.types import FreeTextRunnerName
+
 # Seconds to wait for each provider before giving up.
 _TIMEOUT = 60
 
 # Ordered priority: Claude first for synthesis fallback.
-_PROVIDERS = ("claude", "gemini", "codex")
+_PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
 
 
 def _run_provider(name: str, prompt: str) -> str | None:
@@ -66,6 +70,11 @@ def _run_provider(name: str, prompt: str) -> str | None:
         return output if output else None
     except Exception:
         return None
+
+
+def _preferred_provider() -> FreeTextRunnerName | None:
+    """Return the configured free-text runner when config names one explicitly."""
+    return load_active_config().preferred_free_text_runner
 
 
 def _collect_responses(prompt: str) -> dict[str, str]:
@@ -121,10 +130,15 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
 
 
 def multi_llm_prompt(prompt: str) -> str | None:
-    """Query Claude, Gemini, and Codex in parallel; synthesize with Claude.
+    """Run a free-text prompt through the configured default runner or ensemble.
 
-    Fallback chain for synthesis: Claude → Gemini → Codex.
-    Returns None only if every provider fails at both query and synthesis.
+    When config chooses Claude, Gemini, or Codex, that provider is used
+    directly. Otherwise the legacy ensemble path fans out to all providers and
+    synthesizes the results. Returns None only when every eligible provider
+    fails.
     """
+    preferred = _preferred_provider()
+    if preferred is not None:
+        return _run_provider(preferred, prompt)
     responses = _collect_responses(prompt)
     return _synthesize(responses, prompt)

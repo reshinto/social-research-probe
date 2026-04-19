@@ -7,10 +7,10 @@ import os
 import stat
 import tomllib
 from pathlib import Path
-from typing import Any
 
 from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
+from social_research_probe.types import JSONObject, JSONScalar
 
 SECRET_FILENAME = "secrets.toml"
 CONFIG_FILENAME = "config.toml"
@@ -27,10 +27,12 @@ _CORROBORATION_SECRETS: dict[str, list[str]] = {
 
 
 def _env_key(name: str) -> str:
+    """Map a logical secret name to its environment-variable override name."""
     return f"SRP_{name.upper()}"
 
 
 def _read_secrets_file(data_dir: Path) -> dict[str, str]:
+    """Read secrets.toml when it exists and return a plain string mapping."""
     path = data_dir / SECRET_FILENAME
     if not path.exists():
         return {}
@@ -42,6 +44,7 @@ def _read_secrets_file(data_dir: Path) -> dict[str, str]:
 
 
 def _check_perms(path: Path) -> None:
+    """Warn when the secrets file is group- or world-readable."""
     mode = stat.S_IMODE(path.stat().st_mode)
     if mode & 0o077:
         import sys
@@ -53,6 +56,7 @@ def _check_perms(path: Path) -> None:
 
 
 def _write_secrets_file(data_dir: Path, secrets: dict[str, str]) -> None:
+    """Persist secrets.toml with restrictive permissions."""
     path = data_dir / SECRET_FILENAME
     data_dir.mkdir(parents=True, exist_ok=True)
     prev_umask = os.umask(0o077)
@@ -68,6 +72,7 @@ def _write_secrets_file(data_dir: Path, secrets: dict[str, str]) -> None:
 
 
 def read_secret(data_dir: Path, name: str) -> str | None:
+    """Read a secret, preferring an environment override when present."""
     env_val = os.environ.get(_env_key(name))
     if env_val:
         return env_val
@@ -76,24 +81,28 @@ def read_secret(data_dir: Path, name: str) -> str | None:
 
 
 def write_secret(data_dir: Path, name: str, value: str) -> None:
+    """Set or replace one secret value in secrets.toml."""
     secrets = _read_secrets_file(data_dir)
     secrets[name] = value
     _write_secrets_file(data_dir, secrets)
 
 
 def unset_secret(data_dir: Path, name: str) -> None:
+    """Remove one secret from secrets.toml if present."""
     secrets = _read_secrets_file(data_dir)
     secrets.pop(name, None)
     _write_secrets_file(data_dir, secrets)
 
 
 def mask_secret(value: str) -> str:
+    """Mask a secret so operators can confirm presence without leaking it."""
     if len(value) < 8:
         return "***"
     return f"{value[:4]}...{value[-4:]}"
 
 
 def show_config(data_dir: Path) -> str:
+    """Render the merged config plus masked secret status for CLI display."""
     cfg = Config.load(data_dir)
     secrets = _read_secrets_file(data_dir)
     lines = [
@@ -115,31 +124,85 @@ def show_config(data_dir: Path) -> str:
     return "\n".join(lines)
 
 
-def write_config_value(data_dir: Path, dotted_key: str, value: str) -> None:
-    parts = dotted_key.split(".")
-    if len(parts) != 2:
-        raise ValidationError(f"config key must be section.key, got {dotted_key!r}")
-    section, key = parts
+def _parse_scalar_value(value: str) -> JSONScalar:
+    """Best-effort parse of CLI scalar values before writing TOML."""
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
 
+
+def _format_toml_value(value: object) -> str:
+    """Serialise a supported scalar or list value into TOML syntax."""
+    if isinstance(value, str):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
+    raise ValidationError(f"unsupported config value type: {type(value).__name__}")
+
+
+def _emit_table(name: str, entries: JSONObject, lines: list[str]) -> None:
+    """Render one TOML table, recursing into nested tables afterwards."""
+    lines.append(f"[{name}]")
+    child_tables: list[tuple[str, JSONObject]] = []
+    for key, value in entries.items():
+        if isinstance(value, dict):
+            child_tables.append((key, value))
+            continue
+        lines.append(f"{key} = {_format_toml_value(value)}")
+    lines.append("")
+    for child_name, child_entries in child_tables:
+        _emit_table(f"{name}.{child_name}", child_entries, lines)
+
+
+def _set_nested_value(config: JSONObject, parts: list[str], value: JSONScalar) -> None:
+    """Create any missing tables and assign the final scalar value."""
+    current = config
+    for part in parts[:-1]:
+        next_value = current.get(part)
+        if not isinstance(next_value, dict):
+            next_value = {}
+            current[part] = next_value
+        current = next_value
+    current[parts[-1]] = value
+
+
+def write_config_value(data_dir: Path, dotted_key: str, value: str) -> None:
+    """Write one config value, supporting nested dotted keys like llm.codex.model."""
+    parts = dotted_key.split(".")
+    if len(parts) < 2 or any(not part for part in parts):
+        raise ValidationError(
+            f"config key must be dotted path like section.key, got {dotted_key!r}"
+        )
+
+    data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / CONFIG_FILENAME
-    existing: dict[str, dict[str, Any]] = {}
+    existing: JSONObject = {}
     if path.exists():
         with path.open("rb") as f:
             existing = tomllib.load(f)
 
-    existing.setdefault(section, {})[key] = value
+    _set_nested_value(existing, parts, _parse_scalar_value(value))
 
     lines: list[str] = []
     for sec, entries in existing.items():
-        lines.append(f"[{sec}]")
-        for k, v in entries.items():
-            if isinstance(v, str):
-                lines.append(f'{k} = "{v}"')
-            elif isinstance(v, bool):
-                lines.append(f"{k} = {'true' if v else 'false'}")
-            else:
-                lines.append(f"{k} = {v}")
-        lines.append("")
+        if not isinstance(entries, dict):
+            raise ValidationError(f"top-level config section {sec!r} must be a table")
+        _emit_table(sec, entries, lines)
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
@@ -150,6 +213,7 @@ def check_secrets(
     platform: str | None,
     corroboration: str | None,
 ) -> dict[str, list[str]]:
+    """Report which secrets are required, optional, present, and missing."""
     required: list[str] = []
 
     if needed_for == "run-research" and platform:

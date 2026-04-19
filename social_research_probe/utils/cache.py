@@ -21,7 +21,7 @@ from pathlib import Path
 from social_research_probe.utils.io import read_json, write_json
 
 # Only these characters are safe in filenames across all major filesystems.
-# Any other character in a cache key is replaced with an underscore.
+# All other characters in a cache key are replaced with an underscore.
 _SAFE_KEY_RE = re.compile(r"[^a-zA-Z0-9_\-]")
 
 

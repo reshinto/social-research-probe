@@ -119,6 +119,32 @@ def test_health_check_returns_false_on_exception(monkeypatch):
     assert backend.health_check() is False
 
 
+def test_default_runner_comes_from_config(monkeypatch):
+    """When runner_name is omitted, the backend uses the configured default runner."""
+    import social_research_probe.llm.registry as llm_reg
+
+    requested_names = []
+
+    class _FakeRunner:
+        def health_check(self) -> bool:
+            return True
+
+    class _FakeConfig:
+        default_structured_runner = "gemini"
+
+    monkeypatch.setattr(
+        llm_reg, "get_runner", lambda name: requested_names.append(name) or _FakeRunner()
+    )
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_cli.load_active_config",
+        lambda: _FakeConfig(),
+    )
+
+    backend = LLMCliBackend()
+    assert backend.health_check() is True
+    assert requested_names == ["gemini"]
+
+
 def test_corroborate_end_to_end(monkeypatch):
     """corroborate() calls the runner and parses the returned dict into a CorroborationResult."""
     import social_research_probe.llm.registry as llm_reg

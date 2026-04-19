@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from social_research_probe.types import (
+    JSONObject,
+    PendingSuggestionsState,
+    PurposesState,
+    TopicsState,
+)
 
 SCHEMA_VERSION = 1
 
-TOPICS_SCHEMA: dict[str, Any] = {
+TOPICS_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["schema_version", "topics"],
     "additionalProperties": False,
@@ -16,7 +21,7 @@ TOPICS_SCHEMA: dict[str, Any] = {
     },
 }
 
-PURPOSE_ENTRY_SCHEMA: dict[str, Any] = {
+PURPOSE_ENTRY_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["method", "evidence_priorities"],
     "additionalProperties": False,
@@ -27,7 +32,7 @@ PURPOSE_ENTRY_SCHEMA: dict[str, Any] = {
     },
 }
 
-PURPOSES_SCHEMA: dict[str, Any] = {
+PURPOSES_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["schema_version", "purposes"],
     "additionalProperties": False,
@@ -40,7 +45,7 @@ PURPOSES_SCHEMA: dict[str, Any] = {
     },
 }
 
-PENDING_TOPIC_ENTRY_SCHEMA: dict[str, Any] = {
+PENDING_TOPIC_ENTRY_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["id", "value", "reason", "duplicate_status", "matches"],
     "additionalProperties": False,
@@ -53,7 +58,7 @@ PENDING_TOPIC_ENTRY_SCHEMA: dict[str, Any] = {
     },
 }
 
-PENDING_PURPOSE_ENTRY_SCHEMA: dict[str, Any] = {
+PENDING_PURPOSE_ENTRY_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["id", "name", "method", "evidence_priorities", "duplicate_status", "matches"],
     "additionalProperties": False,
@@ -67,7 +72,7 @@ PENDING_PURPOSE_ENTRY_SCHEMA: dict[str, Any] = {
     },
 }
 
-PENDING_SUGGESTIONS_SCHEMA: dict[str, Any] = {
+PENDING_SUGGESTIONS_SCHEMA: JSONObject = {
     "type": "object",
     "required": ["schema_version", "pending_topic_suggestions", "pending_purpose_suggestions"],
     "additionalProperties": False,
@@ -79,15 +84,18 @@ PENDING_SUGGESTIONS_SCHEMA: dict[str, Any] = {
 }
 
 
-def default_topics() -> dict[str, Any]:
+def default_topics() -> TopicsState:
+    """Return the default structure for a new topics.json file."""
     return {"schema_version": SCHEMA_VERSION, "topics": []}
 
 
-def default_purposes() -> dict[str, Any]:
+def default_purposes() -> PurposesState:
+    """Return the default structure for a new purposes.json file."""
     return {"schema_version": SCHEMA_VERSION, "purposes": {}}
 
 
-def default_pending_suggestions() -> dict[str, Any]:
+def default_pending_suggestions() -> PendingSuggestionsState:
+    """Return the default structure for a new pending_suggestions.json file."""
     return {
         "schema_version": SCHEMA_VERSION,
         "pending_topic_suggestions": [],

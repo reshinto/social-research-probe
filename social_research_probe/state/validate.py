@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from jsonschema import Draft202012Validator
 
 from social_research_probe.errors import ValidationError
+from social_research_probe.types import JSONObject, JSONValue
 
 
-def validate(data: Any, schema: dict[str, Any]) -> None:
+def validate(data: JSONValue, schema: JSONObject) -> None:
     """Strict validation; raises ValidationError listing all issues."""
     validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))

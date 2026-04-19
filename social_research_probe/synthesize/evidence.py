@@ -14,12 +14,13 @@ import statistics
 from datetime import UTC, datetime
 
 from social_research_probe.platforms.base import RawItem, SignalSet
+from social_research_probe.types import ScoredItem
 
 
 def summarize(
     items: list[RawItem],
     signals: list[SignalSet],
-    top5: list[dict],
+    top5: list[ScoredItem],
     now: datetime | None = None,
 ) -> str:
     """Build an evidence sentence from fetched items, signals, and scored top-5.
@@ -110,7 +111,7 @@ def _mean_engagement(signals: list[SignalSet]) -> float | None:
     return statistics.mean(values) if values else None
 
 
-def _source_class_mix(top5: list[dict]) -> str:
+def _source_class_mix(top5: list[ScoredItem]) -> str:
     counts: dict[str, int] = {}
     for d in top5:
         cls = d.get("source_class", "unknown")

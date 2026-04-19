@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from social_research_probe.platforms.base import (
     FetchLimits,
@@ -13,6 +13,7 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import register
+from social_research_probe.types import AdapterConfig
 
 
 def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
@@ -45,7 +46,7 @@ class FakeYouTubeAdapter(PlatformAdapter):
     name: ClassVar[str] = "youtube"
     default_limits: ClassVar[FetchLimits] = FetchLimits()
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: AdapterConfig) -> None:
         self.config = config
 
     def health_check(self) -> bool:

@@ -1,101 +1,17 @@
-"""LLM runner that delegates to the OpenAI Codex CLI.
-
-Why this exists: wraps the `codex` command-line binary so the pipeline can
-send prompts to Codex without embedding API keys in Python. Registered
-automatically when this module is imported.
-
-Who calls it: llm.registry.get_runner("codex"), triggered by importing
-llm.runners.
-"""
+"""LLM runner that delegates to the OpenAI Codex CLI."""
 
 from __future__ import annotations
 
-import json
-import shutil
 from typing import ClassVar
 
-from social_research_probe.errors import AdapterError
-from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.registry import register
+from social_research_probe.llm.runners.cli_json_base import JsonCliRunner
 
 
 @register
-class CodexRunner(LLMRunner):
-    """Runner that shells out to the `codex` CLI binary.
-
-    Purpose: send a prompt to Codex and return the parsed JSON response.
-
-    Lifecycle: registered at import time via @register; instantiated on demand
-    by get_runner("codex").
-
-    Who instantiates it: llm.registry.get_runner().
-
-    ABC fulfilled: LLMRunner (health_check, run).
-    """
+class CodexRunner(JsonCliRunner):
+    """Structured JSON runner for the Codex CLI."""
 
     name: ClassVar[str] = "codex"
-
-    def health_check(self) -> bool:
-        """Return True if the 'codex' CLI binary is available on PATH.
-
-        Returns:
-            True if shutil.which finds the binary, False otherwise.
-        """
-        return shutil.which("codex") is not None
-
-    def _build_argv(self, schema: dict | None) -> list[str]:
-        """Build the argv list for the codex CLI invocation.
-
-        Why separate: allows unit testing the argument construction without
-        actually spawning a subprocess.
-
-        Args:
-            schema: Optional JSON schema to pass to the CLI via --schema.
-
-        Returns:
-            List of strings ready to pass to subprocess_runner.run().
-        """
-        # Base invocation: --json tells codex to emit machine-readable JSON output.
-        argv = ["codex", "--json"]
-        if schema:
-            # Serialise the schema dict to a JSON string for the CLI flag.
-            argv += ["--schema", json.dumps(schema)]
-        return argv
-
-    def _parse_response(self, stdout: str) -> dict:
-        """Parse the JSON stdout emitted by the codex CLI.
-
-        Why separate: unit-testable without a real subprocess call.
-
-        Args:
-            stdout: Raw stdout string from the CLI.
-
-        Returns:
-            Parsed dict from the JSON response.
-
-        Raises:
-            AdapterError: If stdout is not valid JSON.
-        """
-        try:
-            return json.loads(stdout)
-        except json.JSONDecodeError as exc:
-            raise AdapterError(f"codex returned non-JSON: {stdout[:200]!r}") from exc
-
-    def run(self, prompt: str, *, schema: dict | None = None) -> dict:
-        """Send prompt to the codex CLI and return parsed JSON response.
-
-        Args:
-            prompt: The full prompt string; passed to the CLI via stdin.
-            schema: Optional JSON schema the response must conform to.
-
-        Returns:
-            Parsed dict from the LLM's JSON response.
-
-        Raises:
-            AdapterError: If the subprocess fails or stdout is not valid JSON.
-        """
-        from social_research_probe.utils.subprocess_runner import run as sp_run
-
-        argv = self._build_argv(schema)
-        result = sp_run(argv, input=prompt)
-        return self._parse_response(result.stdout)
+    binary_name: ClassVar[str] = "codex"
+    base_argv: ClassVar[tuple[str, ...]] = ("--json",)

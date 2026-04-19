@@ -7,19 +7,28 @@ import os
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TypeVar, cast
+
+from social_research_probe.types import (
+    JSONObject,
+    PendingSuggestionsState,
+    PurposesState,
+    TopicsState,
+)
+
+StateDocument = TypeVar("StateDocument", TopicsState, PurposesState, PendingSuggestionsState)
 
 
-def read_json(path: Path, default_factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+def read_json(path: Path, default_factory: Callable[[], StateDocument]) -> StateDocument:
     """Read JSON; if file missing, seed with default_factory() and persist."""
     if not path.exists():
         data = default_factory()
         atomic_write_json(path, data)
         return data
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(StateDocument, json.loads(path.read_text(encoding="utf-8")))
 
 
-def atomic_write_json(path: Path, data: dict[str, Any]) -> None:
+def atomic_write_json(path: Path, data: JSONObject) -> None:
     """Write JSON atomically: tmp -> fsync -> os.replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(

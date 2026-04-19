@@ -11,9 +11,16 @@ calling LLM in skill mode; in CLI mode a placeholder is shown instead.
 from __future__ import annotations
 
 import re
-from typing import Any
 
-RESPONSE_SCHEMA = {
+from social_research_probe.types import (
+    ResearchPacket,
+    ResponseSchema,
+    ScoredItem,
+    SourceValidationSummary,
+    StatsSummary,
+)
+
+RESPONSE_SCHEMA: ResponseSchema = {
     "compiled_synthesis": "string ≤150 words",
     "opportunity_analysis": "string ≤150 words",
 }
@@ -24,14 +31,14 @@ def build_packet(
     topic: str,
     platform: str,
     purpose_set: list[str],
-    items_top5: list[dict],
-    source_validation_summary: dict,
+    items_top5: list[ScoredItem],
+    source_validation_summary: SourceValidationSummary,
     platform_signals_summary: str,
     evidence_summary: str,
-    stats_summary: dict,
+    stats_summary: StatsSummary,
     chart_captions: list[str],
     warnings: list[str],
-) -> dict:
+) -> ResearchPacket:
     """Assemble the canonical packet dict passed between pipeline and renderer."""
     return {
         "topic": topic,
@@ -48,7 +55,7 @@ def build_packet(
     }
 
 
-def _items_table(items: list[dict]) -> str:
+def _items_table(items: list[ScoredItem]) -> str:
     """Render the top items as a markdown table for compact scanning."""
     header = (
         "| # | Channel | Class | Trust | Trend | Opp | Overall | Title |\n"
@@ -67,7 +74,7 @@ def _items_table(items: list[dict]) -> str:
     return "\n".join([header, *rows])
 
 
-def _items_links_and_takeaways(items: list[dict]) -> str:
+def _items_links_and_takeaways(items: list[ScoredItem]) -> str:
     """Render per-item URL and takeaway as a bullet list below the score table."""
     bullets = []
     for i, it in enumerate(items, start=1):
@@ -578,7 +585,7 @@ def _bulletise(text: str) -> str:
 
 
 def render_full(
-    packet: dict[str, Any],
+    packet: ResearchPacket,
     compiled_synthesis: str | None = None,
     opportunity_analysis: str | None = None,
 ) -> str:
@@ -596,7 +603,7 @@ def render_full(
     return body
 
 
-def render_sections_1_9(packet: dict[str, Any]) -> str:
+def render_sections_1_9(packet: ResearchPacket) -> str:
     """Render sections 1-9 deterministically from packet data.
 
     Each section maps directly to a field in the packet. This function is

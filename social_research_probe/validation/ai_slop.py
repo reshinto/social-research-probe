@@ -137,7 +137,7 @@ def score(text: str) -> float:
            0.0 when fewer than 2 sentences are present).
 
     Args:
-        text: Any string of natural language. May be empty.
+        text: Arbitrary natural-language input. May be empty.
 
     Returns:
         A float in [0.0, 1.0]. Higher values indicate more likely AI slop

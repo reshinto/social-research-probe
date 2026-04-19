@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from social_research_probe.errors import ValidationError
@@ -15,6 +13,7 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import get_adapter, list_adapters, register
+from social_research_probe.types import AdapterConfig
 
 
 def test_register_and_get():
@@ -23,7 +22,7 @@ def test_register_and_get():
         name = "toy-registry-test"
         default_limits = FetchLimits()
 
-        def __init__(self, config: dict[str, Any]) -> None:
+        def __init__(self, config: AdapterConfig) -> None:
             self.config = config
 
         def health_check(self) -> bool:
@@ -65,8 +64,8 @@ def test_register_class_without_name_raises():
             # deliberately no 'name' class var
             default_limits = FetchLimits()
 
-            def __init__(self, config):
-                pass
+            def __init__(self, config: AdapterConfig):
+                self.config = config
 
             def health_check(self):
                 return True

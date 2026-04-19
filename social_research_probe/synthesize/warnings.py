@@ -14,6 +14,7 @@ import statistics
 from datetime import UTC, datetime
 
 from social_research_probe.platforms.base import RawItem, SignalSet
+from social_research_probe.types import ScoredItem
 
 _LOW_CHANNEL_THRESHOLD = 3
 _LOW_SCORE_THRESHOLD = 0.5
@@ -24,7 +25,7 @@ _SPARSE_FETCH_THRESHOLD = 3
 def detect(
     items: list[RawItem],
     signals: list[SignalSet],
-    top5: list[dict],
+    top5: list[ScoredItem],
     now: datetime | None = None,
 ) -> list[str]:
     """Return a list of warning strings about quality concerns.
@@ -58,7 +59,7 @@ def _check_channel_diversity(items: list[RawItem], notes: list[str]) -> None:
         notes.append(f"low channel diversity: only {unique} unique channels")
 
 
-def _check_top5_quality(top5: list[dict], notes: list[str]) -> None:
+def _check_top5_quality(top5: list[ScoredItem], notes: list[str]) -> None:
     if not top5:
         return
     if all(d.get("source_class") == "commentary" for d in top5):

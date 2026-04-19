@@ -6,15 +6,15 @@ import json
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from social_research_probe.errors import MigrationError
 from social_research_probe.state.schemas import SCHEMA_VERSION
+from social_research_probe.types import JSONObject
 
-Migrator = Callable[[dict[str, Any]], dict[str, Any]]
+Migrator = Callable[[JSONObject], JSONObject]
 
 
-def _tag_version_1(data: dict[str, Any]) -> dict[str, Any]:
+def _tag_version_1(data: JSONObject) -> JSONObject:
     """v0 -> v1: stamp schema_version=1 on bare legacy files."""
     out = dict(data)
     out["schema_version"] = 1
@@ -29,12 +29,14 @@ _MIGRATORS: dict[str, list[Migrator]] = {
 
 
 def migrators_for(kind: str) -> list[Migrator]:
+    """Return the forward-migration chain for one state-file kind."""
     if kind not in _MIGRATORS:
         raise MigrationError(f"no migrators registered for kind={kind!r}")
     return _MIGRATORS[kind]
 
 
-def _write_backup(path: Path, data: dict[str, Any], version: int) -> None:
+def _write_backup(path: Path, data: JSONObject, version: int) -> None:
+    """Persist the pre-migration payload before mutating the on-disk file."""
     backup_dir = path.parent / ".backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
     ts = int(time.time())
@@ -42,7 +44,7 @@ def _write_backup(path: Path, data: dict[str, Any], version: int) -> None:
     backup_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def migrate_to_current(path: Path, data: dict[str, Any], *, kind: str) -> dict[str, Any]:
+def migrate_to_current(path: Path, data: JSONObject, *, kind: str) -> JSONObject:
     """Run forward migrators until data.schema_version == SCHEMA_VERSION."""
     current = int(data.get("schema_version", 0))
     target = SCHEMA_VERSION

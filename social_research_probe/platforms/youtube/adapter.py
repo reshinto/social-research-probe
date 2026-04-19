@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import re
 from datetime import UTC
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from social_research_probe.errors import AdapterError
 from social_research_probe.platforms.base import (
@@ -18,6 +18,38 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import register
+from social_research_probe.types import AdapterConfig, JSONObject
+
+
+def _as_object(value: object) -> JSONObject:
+    """Return value when it is a dict-like object, otherwise an empty object."""
+    return value if isinstance(value, dict) else {}
+
+
+def _as_string(value: object) -> str:
+    """Return value when it is already a string, otherwise an empty string."""
+    return value if isinstance(value, str) else ""
+
+
+def _as_optional_string(value: object) -> str | None:
+    """Return value when it is a non-empty string, otherwise None."""
+    return value if isinstance(value, str) and value else None
+
+
+def _as_int(value: object) -> int:
+    """Coerce integer-like values from the API payload into plain ints."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
 @register
@@ -25,10 +57,12 @@ class YouTubeAdapter(PlatformAdapter):
     name: ClassVar[str] = "youtube"
     default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=50, recency_days=90)
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: AdapterConfig) -> None:
+        """Store the merged config built from config.toml and CLI overrides."""
         self.config = config
 
     def _api_key(self) -> str:
+        """Resolve the YouTube API key from env first, then the secrets file."""
         key = os.environ.get("SRP_YOUTUBE_API_KEY")
         if key:
             return key
@@ -44,11 +78,13 @@ class YouTubeAdapter(PlatformAdapter):
         )
 
     def health_check(self) -> bool:
+        """Return True when the adapter can resolve a usable API key."""
         self._api_key()
         return True
 
     @staticmethod
     def _parse_duration_seconds(duration: str) -> int:
+        """Parse an ISO 8601 YouTube duration string into seconds."""
         m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
         if not m:
             return 0
@@ -56,6 +92,7 @@ class YouTubeAdapter(PlatformAdapter):
         return h * 3600 + mn * 60 + s
 
     def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
+        """Search YouTube videos for a topic and normalise the result set."""
         from datetime import datetime, timedelta
 
         from social_research_probe.platforms.youtube import fetch
@@ -70,31 +107,35 @@ class YouTubeAdapter(PlatformAdapter):
         )
         return self._items_from_search(raw)
 
-    def _items_from_search(self, raw: list[dict]) -> list[RawItem]:
+    def _items_from_search(self, raw: list[JSONObject]) -> list[RawItem]:
+        """Convert raw search payload objects into the project's RawItem shape."""
         from datetime import datetime
 
-        items = []
+        items: list[RawItem] = []
         for r in raw:
-            vid_id = r.get("id", {}).get("videoId", "")
-            sn = r.get("snippet", {})
-            published_raw = sn.get("publishedAt", "")
+            id_block = _as_object(r.get("id"))
+            vid_id = _as_string(id_block.get("videoId"))
+            sn = _as_object(r.get("snippet"))
+            published_raw = _as_string(sn.get("publishedAt"))
             try:
                 published_at = datetime.fromisoformat(
                     published_raw.replace("Z", "+00:00")
                 ).astimezone(UTC)
             except ValueError:
                 published_at = datetime.now(UTC)
-            thumb = (sn.get("thumbnails") or {}).get("default", {}).get("url")
+            thumbnails = _as_object(sn.get("thumbnails"))
+            default_thumb = _as_object(thumbnails.get("default"))
+            thumb = _as_optional_string(default_thumb.get("url"))
             items.append(
                 RawItem(
                     id=vid_id,
                     url=f"https://www.youtube.com/watch?v={vid_id}",
-                    title=sn.get("title", ""),
-                    author_id=sn.get("channelId", ""),
-                    author_name=sn.get("channelTitle", ""),
+                    title=_as_string(sn.get("title")),
+                    author_id=_as_string(sn.get("channelId")),
+                    author_name=_as_string(sn.get("channelTitle")),
                     published_at=published_at,
                     metrics={},
-                    text_excerpt=sn.get("description") or None,
+                    text_excerpt=_as_optional_string(sn.get("description")),
                     thumbnail=thumb,
                     extras={},
                 )
@@ -102,31 +143,35 @@ class YouTubeAdapter(PlatformAdapter):
         return items
 
     def enrich(self, items: list[RawItem]) -> list[RawItem]:
+        """Hydrate search results with video and channel statistics."""
         if not items:
             return items
         from social_research_probe.platforms.youtube import fetch
 
         client = fetch.build_client(self._api_key())
         video_ids = [it.id for it in items]
-        hydrated = {v["id"]: v for v in fetch.hydrate_videos(client, video_ids=video_ids)}
+        hydrated = {str(v["id"]): v for v in fetch.hydrate_videos(client, video_ids=video_ids)}
         channel_ids = list({it.author_id for it in items if it.author_id})
-        channels = {c["id"]: c for c in fetch.hydrate_channels(client, channel_ids=channel_ids)}
-        enriched = []
+        channels = {
+            str(c["id"]): c for c in fetch.hydrate_channels(client, channel_ids=channel_ids)
+        }
+        enriched: list[RawItem] = []
         for it in items:
             vid = hydrated.get(it.id, {})
-            stats = vid.get("statistics", {})
+            stats = _as_object(vid.get("statistics"))
             ch = channels.get(it.author_id, {})
-            ch_stats = ch.get("statistics", {})
+            ch_stats = _as_object(ch.get("statistics"))
             metrics = {
-                "views": int(stats.get("viewCount", 0) or 0),
-                "likes": int(stats.get("likeCount", 0) or 0),
-                "comments": int(stats.get("commentCount", 0) or 0),
+                "views": _as_int(stats.get("viewCount")),
+                "likes": _as_int(stats.get("likeCount")),
+                "comments": _as_int(stats.get("commentCount")),
             }
             extras = {
-                "channel_subscribers": int(ch_stats.get("subscriberCount", 0) or 0),
-                "channel_video_count": int(ch_stats.get("videoCount", 0) or 0),
+                "channel_subscribers": _as_int(ch_stats.get("subscriberCount")),
+                "channel_video_count": _as_int(ch_stats.get("videoCount")),
             }
-            duration_str = vid.get("contentDetails", {}).get("duration", "")
+            content_details = _as_object(vid.get("contentDetails"))
+            duration_str = _as_string(content_details.get("duration"))
             secs = self._parse_duration_seconds(duration_str) if duration_str else 0
             is_short = 0 < secs < 90
             if is_short and not self.config.get("include_shorts", True):
@@ -152,15 +197,16 @@ class YouTubeAdapter(PlatformAdapter):
         return enriched
 
     def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
+        """Derive scoring signals directly from enriched item metrics."""
         from datetime import datetime
 
         now = datetime.now(UTC)
-        signals = []
+        signals: list[SignalSet] = []
         for it in items:
             age_days = max(1, (now - it.published_at).days)
-            views = it.metrics.get("views", 0) or 0
-            likes = it.metrics.get("likes", 0) or 0
-            comments = it.metrics.get("comments", 0) or 0
+            views = _as_int(it.metrics.get("views"))
+            likes = _as_int(it.metrics.get("likes"))
+            comments = _as_int(it.metrics.get("comments"))
             signals.append(
                 SignalSet(
                     views=views,
@@ -177,15 +223,17 @@ class YouTubeAdapter(PlatformAdapter):
         return signals
 
     def trust_hints(self, item: RawItem) -> TrustHints:
+        """Extract trust metadata from the enriched channel fields."""
         return TrustHints(
             account_age_days=None,
             verified=None,
-            subscriber_count=item.extras.get("channel_subscribers"),
+            subscriber_count=_as_int(item.extras.get("channel_subscribers")) or None,
             upload_cadence_days=None,
             citation_markers=[],
         )
 
     def url_normalize(self, url: str) -> str:
+        """Normalise a YouTube URL down to its canonical watch id."""
         from urllib.parse import parse_qs, urlparse, urlunparse
 
         parsed = urlparse(url)

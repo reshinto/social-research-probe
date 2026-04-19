@@ -10,6 +10,7 @@ excluded from the default test run (no marker required by CI config).
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 
@@ -17,6 +18,7 @@ import pytest
 
 _PING_PROMPT = "Reply with exactly one word: PONG"
 _TIMEOUT = 90  # seconds — Codex can be slow on first call
+_RUN_LIVE = os.environ.get("SRP_RUN_LLM_LIVE_TESTS") == "1"
 
 
 def _run(cmd: list[str], stdin_devnull: bool = False) -> tuple[int, str, str]:
@@ -31,7 +33,10 @@ def _run(cmd: list[str], stdin_devnull: bool = False) -> tuple[int, str, str]:
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
-@pytest.mark.skipif(shutil.which("claude") is None, reason="claude CLI not installed")
+@pytest.mark.skipif(
+    not _RUN_LIVE or shutil.which("claude") is None,
+    reason="set SRP_RUN_LLM_LIVE_TESTS=1 and install claude CLI",
+)
 def test_claude_cli_responds():
     """Claude Code CLI (`claude -p`) returns a non-empty response."""
     rc, out, err = _run(["claude", "-p", _PING_PROMPT], stdin_devnull=True)
@@ -40,7 +45,10 @@ def test_claude_cli_responds():
     print(f"\nclaude response: {out!r}")
 
 
-@pytest.mark.skipif(shutil.which("gemini") is None, reason="gemini CLI not installed")
+@pytest.mark.skipif(
+    not _RUN_LIVE or shutil.which("gemini") is None,
+    reason="set SRP_RUN_LLM_LIVE_TESTS=1 and install gemini CLI",
+)
 def test_gemini_cli_responds():
     """Gemini CLI (`gemini -p`) returns a non-empty response."""
     rc, out, err = _run(["gemini", "-p", _PING_PROMPT])
@@ -49,7 +57,10 @@ def test_gemini_cli_responds():
     print(f"\ngemini response: {out!r}")
 
 
-@pytest.mark.skipif(shutil.which("codex") is None, reason="codex CLI not installed")
+@pytest.mark.skipif(
+    not _RUN_LIVE or shutil.which("codex") is None,
+    reason="set SRP_RUN_LLM_LIVE_TESTS=1 and install codex CLI",
+)
 def test_codex_cli_responds():
     """Codex CLI (`codex exec`) returns a non-empty response on stdout."""
     rc, out, err = _run(["codex", "exec", _PING_PROMPT], stdin_devnull=True)
@@ -59,8 +70,8 @@ def test_codex_cli_responds():
 
 
 @pytest.mark.skipif(
-    all(shutil.which(cli) is None for cli in ("claude", "gemini", "codex")),
-    reason="no LLM CLIs installed",
+    not _RUN_LIVE or all(shutil.which(cli) is None for cli in ("claude", "gemini", "codex")),
+    reason="set SRP_RUN_LLM_LIVE_TESTS=1 and install at least one LLM CLI",
 )
 def test_ensemble_multi_llm_prompt_live():
     """End-to-end: multi_llm_prompt fans out to all available CLIs and synthesizes."""
