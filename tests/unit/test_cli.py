@@ -264,7 +264,7 @@ class TestResearchCommand:
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None: calls.append(mode) or _VALID_PACKET,
+            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: calls.append(mode) or _VALID_PACKET,
         )
         assert (
             main(
@@ -539,7 +539,7 @@ class TestDispatchFallthrough:
 
 class TestSimpleResearch:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, mode, adapter_config=None):
+        def fake(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
             captured.append((cmd, mode, adapter_config))
             return _VALID_PACKET
 
@@ -594,7 +594,7 @@ class TestSimpleResearch:
 
 class TestSimpleResearchTranscripts:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, mode, adapter_config=None):
+        def fake(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
             captured.append((cmd, mode, adapter_config))
             return _VALID_PACKET
 
@@ -834,7 +834,7 @@ class TestRunCliSynthesis:
     def test_synthesis_fields_passed_to_render_full(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None: _VALID_PACKET,
+            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
         )
         monkeypatch.setattr(
             "social_research_probe.cli._run_cli_synthesis",
@@ -850,7 +850,7 @@ class TestRunCliSynthesis:
     ):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None: _VALID_PACKET,
+            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
         )
         monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
         main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])

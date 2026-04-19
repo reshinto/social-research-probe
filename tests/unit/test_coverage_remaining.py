@@ -43,7 +43,7 @@ _VALID_PACKET = {
 def test_research_skill_mode_skips_render_full(monkeypatch, tmp_path):
     calls = []
 
-    def fake_run_research(cmd, data_dir, mode, adapter_config=None):
+    def fake_run_research(cmd, data_dir, mode, adapter_config=None, pre_emit_hook=None):
         calls.append((cmd, data_dir, mode, adapter_config))
         return _VALID_PACKET
 

@@ -160,6 +160,33 @@ def test_run_research_skill_mode_calls_emit_packet(monkeypatch, tmp_path):
     assert len(calls) == 1
 
 
+def test_run_research_skill_mode_calls_pre_emit_hook(monkeypatch, tmp_path):
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels for breaking news",
+                "evidence_priorities": [],
+            }
+        },
+    )
+    hook_calls = []
+
+    def fake_hook(pkt):
+        hook_calls.append(pkt)
+
+    def fake_emit(packet, kind):
+        raise SystemExit(0)
+
+    monkeypatch.setattr("social_research_probe.pipeline.emit_packet", fake_emit)
+    raw = 'run-research platform:youtube "AI"->latest-news'
+    cmd = parse(raw)
+    with pytest.raises(SystemExit):
+        run_research(cmd, tmp_path, mode="skill", pre_emit_hook=fake_hook)
+    assert len(hook_calls) == 1
+
+
 def test_run_research_multi_topic(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(

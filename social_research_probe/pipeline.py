@@ -4,6 +4,7 @@ import asyncio
 import math
 import os
 import statistics
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -620,6 +621,7 @@ def run_research(
     data_dir: Path,
     mode: Mode,
     adapter_config: AdapterConfig | None = None,
+    pre_emit_hook: Callable[[dict], None] | None = None,
 ) -> ResearchPacket | MultiResearchPacket:
     _maybe_register_fake()
     os.environ["SRP_DATA_DIR"] = str(data_dir)
@@ -688,5 +690,7 @@ def run_research(
         else {"multi": packets, "response_schema": packets[0]["response_schema"]}
     )
     if mode == "skill":
+        if pre_emit_hook is not None:
+            pre_emit_hook(combined)
         emit_packet(combined, kind="synthesis")  # exits 0
     return combined

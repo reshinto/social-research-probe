@@ -83,6 +83,11 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Skip transcript fetching for top-5 items (faster, less context)",
     )
+    rs.add_argument(
+        "--no-html",
+        action="store_true",
+        help="Skip writing the HTML report to the reports directory",
+    )
     cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
     cc.add_argument("--backends", default="llm_cli", help="Comma-separated backend names")
@@ -92,6 +97,11 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     rend.add_argument("--output-dir", default=None, help="Directory to save charts")
     ins = sub.add_parser("install-skill", help="Copy skill files into ~/.claude/skills/srp")
     ins.add_argument("--target", default=None, help="Destination (default: ~/.claude/skills/srp)")
+    rep = sub.add_parser("report", help="Re-render an HTML report from a saved packet file")
+    rep.add_argument("--packet", required=True, help="Path to packet JSON file")
+    rep.add_argument("--synthesis-10", default=None, dest="synthesis_10", help="File with compiled synthesis text")
+    rep.add_argument("--synthesis-11", default=None, dest="synthesis_11", help="File with opportunity analysis text")
+    rep.add_argument("--out", default=None, help="Output HTML path (default: stdout)")
 
 
 def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
@@ -286,6 +296,7 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
 
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
+    from social_research_probe.render.html import write_html_report
     from social_research_probe.synthesize.formatter import render_full
 
     platform, topic, purposes = _parse_simple_research_args(args.args)
@@ -294,15 +305,28 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         "fetch_transcripts": not args.no_transcripts,
     }
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
-    packet = run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
+    no_html = getattr(args, "no_html", False)
+
+    # In skill mode the pipeline calls emit_packet (sys.exit), so HTML must be
+    # written before that via the pre_emit_hook callback.
+    def _skill_pre_emit_hook(pkt: dict) -> None:
+        if no_html:
+            return
+        synthesis = _run_cli_synthesis(pkt)
+        write_html_report(pkt, synthesis, data_dir)
+
+    hook = _skill_pre_emit_hook if args.mode == "skill" else None
+    packet = run_research(
+        parse(raw), data_dir, args.mode, adapter_config=config_extras, pre_emit_hook=hook
+    )
+
     if args.mode == "cli":
-        compiled_synthesis = None
-        opportunity_analysis = None
         synthesis = _run_cli_synthesis(packet)
-        if synthesis:
-            compiled_synthesis = synthesis["compiled_synthesis"]
-            opportunity_analysis = synthesis["opportunity_analysis"]
-        sys.stdout.write(render_full(packet, compiled_synthesis, opportunity_analysis))
+        compiled = synthesis["compiled_synthesis"] if synthesis else None
+        opportunity = synthesis["opportunity_analysis"] if synthesis else None
+        if not no_html:
+            write_html_report(packet, synthesis, data_dir)
+        sys.stdout.write(render_full(packet, compiled, opportunity))
     return 0
 
 
@@ -370,6 +394,17 @@ def _handle_install_skill(args: argparse.Namespace, data_dir: Path) -> int:
     return install_skill.run(args.target)
 
 
+def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.commands import report as report_cmd
+
+    return report_cmd.run(
+        args.packet,
+        synthesis_10_path=args.synthesis_10,
+        synthesis_11_path=args.synthesis_11,
+        out_path=args.out,
+    )
+
+
 def _handle_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
     if args.from_stdin:
         value = sys.stdin.read().rstrip("\n")
@@ -427,6 +462,7 @@ _HANDLERS = {
     "corroborate-claims": _handle_corroborate_claims,
     "render": _handle_render,
     "install-skill": _handle_install_skill,
+    "report": _handle_report,
     "config": lambda args, data_dir: _dispatch_config(args, data_dir),
 }
 
