@@ -244,7 +244,7 @@ def test_build_stats_summary_two_items_skips_growth():
     assert summary["highlights"]
 
 
-def test_build_stats_summary_three_items_runs_all():
+def test_build_stats_summary_three_items_runs_all_models_but_low_confidence():
     summary = _build_stats_summary(_fake_top5(3))
     assert summary["models_run"] == [
         "descriptive",
@@ -254,6 +254,11 @@ def test_build_stats_summary_three_items_runs_all():
         "outliers",
         "correlation",
     ]
+    assert summary["low_confidence"] is True
+
+
+def test_build_stats_summary_eight_items_clears_low_confidence():
+    summary = _build_stats_summary(_fake_top5(8))
     assert summary["low_confidence"] is False
 
 

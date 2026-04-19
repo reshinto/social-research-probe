@@ -134,13 +134,18 @@ def _score_item(
     }
 
 
-def _build_stats_summary(top5: list[dict]) -> dict:
-    """Run all applicable stats analyses on each metric series in the top-5."""
-    if not top5:
+def _build_stats_summary(scored_items: list[dict]) -> dict:
+    """Run all applicable stats analyses across the full scored dataset.
+
+    Statistical confidence kicks in around n>=8 for moderate correlations,
+    so the pipeline now passes every fetched item rather than only the
+    top-5 — that lifts ``low_confidence`` to False once a real run lands.
+    """
+    if not scored_items:
         return {"models_run": [], "highlights": [], "low_confidence": True}
-    overall = [d["scores"]["overall"] for d in top5]
-    trust = [d["scores"]["trust"] for d in top5]
-    opportunity = [d["scores"]["opportunity"] for d in top5]
+    overall = [d["scores"]["overall"] for d in scored_items]
+    trust = [d["scores"]["trust"] for d in scored_items]
+    opportunity = [d["scores"]["opportunity"] for d in scored_items]
     results = select_and_run(overall, label="overall_score")
     results += select_and_run_correlation(
         trust, opportunity, label_a="trust", label_b="opportunity"
@@ -151,7 +156,7 @@ def _build_stats_summary(top5: list[dict]) -> dict:
     return {
         "models_run": models_run,
         "highlights": [explain_stat(r) for r in results],
-        "low_confidence": len(overall) < 3,
+        "low_confidence": len(overall) < 8,
     }
 
 
@@ -166,27 +171,29 @@ def _stats_models_for(n: int) -> list[str]:
     return models
 
 
-def _render_charts(top5: list[dict], data_dir) -> list[str]:
-    """Render every applicable chart type for the top-5 dataset.
+def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
+    """Render every applicable chart type using the full scored dataset.
 
-    Produces one of each viz module — bar, line, scatter, table — plus an
-    extra scatter for trust vs trend so two correlations are visible.
+    Stats and scatter plots benefit from larger n (statistical significance
+    only kicks in around n>=8 for moderate correlations), so all fetched
+    items feed bar/line/scatter. The table chart is capped at top-10 for
+    visual readability.
     """
-    if not top5:
+    if not scored_items:
         return []
     charts_dir = data_dir / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
-    overall = [d["scores"]["overall"] for d in top5]
-    trust = [d["scores"]["trust"] for d in top5]
-    trend = [d["scores"]["trend"] for d in top5]
-    opportunity = [d["scores"]["opportunity"] for d in top5]
+    overall = [d["scores"]["overall"] for d in scored_items]
+    trust = [d["scores"]["trust"] for d in scored_items]
+    trend = [d["scores"]["trend"] for d in scored_items]
+    opportunity = [d["scores"]["opportunity"] for d in scored_items]
 
     captions: list[str] = []
     captions.append(_render_bar(overall, charts_dir))
     captions.append(_render_line(overall, charts_dir))
     captions.append(_render_scatter(trust, opportunity, "trust_vs_opportunity", charts_dir))
     captions.append(_render_scatter(trust, trend, "trust_vs_trend", charts_dir))
-    captions.append(_render_table(top5, charts_dir))
+    captions.append(_render_table(scored_items[:10], charts_dir))
     return captions
 
 
@@ -255,7 +262,8 @@ def run_research(
             )
         ]
         scored.sort(key=lambda x: x[0], reverse=True)
-        top5 = [d for _, d in scored[:5]]
+        all_scored = [d for _, d in scored]
+        top5 = all_scored[:5]
         svs = {
             "validated": 0,
             "partially": 0,
@@ -266,8 +274,8 @@ def run_research(
             "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
             "notes": "corroboration not run; use 'srp corroborate-claims' for validation",
         }
-        stats_summary = _build_stats_summary(top5)
-        chart_captions = _render_charts(top5, data_dir)
+        stats_summary = _build_stats_summary(all_scored)
+        chart_captions = _render_charts(all_scored, data_dir)
         warnings = detect_warnings(items, signals, top5)
         packets.append(
             build_packet(
