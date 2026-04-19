@@ -67,12 +67,6 @@ def _add_suggestions_subparsers(sub: argparse._SubParsersAction) -> None:
 
 def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     """Register research, corroboration, render, and install-skill subcommands."""
-    rr = sub.add_parser(
-        "run-research", help="Advanced DSL form: --platform NAME 'topic->p1+p2;...'"
-    )
-    rr.add_argument("--platform", required=True)
-    rr.add_argument("--mode", choices=["skill", "cli"], default="cli")
-    rr.add_argument("dsl", nargs="+")
     rs = sub.add_parser(
         "research",
         help="Simple form: research [platform] TOPIC PURPOSES (purposes comma-separated)",
@@ -279,20 +273,6 @@ def _handle_stage_suggestions(args: argparse.Namespace, data_dir: Path) -> int:
     return 0
 
 
-def _handle_run_research(args: argparse.Namespace, data_dir: Path) -> int:
-    import sys
-
-    from social_research_probe.commands.parse import parse
-    from social_research_probe.pipeline import run_research
-    from social_research_probe.synthesize.formatter import render_full
-
-    raw = f"run-research platform:{args.platform} " + " ".join(args.dsl)
-    packet = run_research(parse(raw), data_dir, args.mode)
-    if args.mode == "cli":
-        sys.stdout.write(render_full(packet))
-    return 0
-
-
 def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     """Simple positional form. Examples:
 
@@ -405,7 +385,6 @@ _HANDLERS = {
     "apply-pending": _handle_apply_pending,
     "discard-pending": _handle_discard_pending,
     "stage-suggestions": _handle_stage_suggestions,
-    "run-research": _handle_run_research,
     "research": _handle_research,
     "corroborate-claims": _handle_corroborate_claims,
     "render": _handle_render,

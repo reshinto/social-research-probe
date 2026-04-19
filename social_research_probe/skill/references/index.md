@@ -14,7 +14,7 @@ Invoke from Claude Code:
 | purposes | show-purposes, update-purposes | [purposes.md](purposes.md) |
 | pending suggestions | show-pending, apply-pending, discard-pending | [pending.md](pending.md) |
 | generating suggestions | suggest-topics, suggest-purposes | [suggest.md](suggest.md) |
-| running research | run-research | [run-research.md](run-research.md) |
+| running research | research | [research.md](research.md) |
 | output format | sections 1–11 template | [output-format.md](output-format.md) |
 
 ## Exit Codes

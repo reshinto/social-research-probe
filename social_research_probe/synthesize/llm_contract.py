@@ -5,7 +5,7 @@ This module's job is to:
   1. Turn that packet into a prompt the LLM can respond to (build_synthesis_prompt).
   2. Parse and validate the LLM's JSON response (parse_synthesis_response).
 
-Called by: pipeline.run_research (skill mode) and commands/research.py (cli mode).
+Called by: pipeline.run_research (skill mode) and cli._handle_research (cli mode).
 """
 
 from __future__ import annotations

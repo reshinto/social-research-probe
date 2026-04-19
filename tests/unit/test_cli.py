@@ -253,8 +253,8 @@ class TestStageSuggestions:
         assert result != 0
 
 
-class TestRunResearch:
-    def test_run_research(self, monkeypatch, tmp_path):
+class TestResearchCommand:
+    def test_research(self, monkeypatch, tmp_path):
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
@@ -265,10 +265,10 @@ class TestRunResearch:
                 [
                     "--data-dir",
                     str(tmp_path),
-                    "run-research",
-                    "--platform",
+                    "research",
                     "youtube",
-                    '"AI"->latest-news',
+                    "AI",
+                    "latest-news",
                 ]
             )
             == 0

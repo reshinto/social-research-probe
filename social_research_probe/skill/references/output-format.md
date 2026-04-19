@@ -1,4 +1,4 @@
-# Output Format — run-research
+# Output Format — research
 
 Read this file before emitting any output. Follow every section exactly as written.
 Substitute `{{placeholders}}` with real values from the JSON packet.
