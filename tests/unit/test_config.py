@@ -76,9 +76,7 @@ def test_llm_settings_none_returns_empty_dict(tmp_data_dir: Path):
     assert cfg.llm_settings("none") == {}
 
 
-def test_load_active_config_uses_resolved_data_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
+def test_load_active_config_uses_resolved_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     data_dir = tmp_path / "active"
     monkeypatch.setenv("SRP_DATA_DIR", str(data_dir))
     cfg = load_active_config()
@@ -86,9 +84,7 @@ def test_load_active_config_uses_resolved_data_dir(
 
 
 def test_preferred_free_text_runner_returns_local_when_configured(tmp_data_dir: Path):
-    (tmp_data_dir / "config.toml").write_text(
-        '[llm]\nrunner = "local"\n', encoding="utf-8"
-    )
+    (tmp_data_dir / "config.toml").write_text('[llm]\nrunner = "local"\n', encoding="utf-8")
     cfg = Config.load(tmp_data_dir)
     assert cfg.preferred_free_text_runner == "local"
     assert cfg.default_structured_runner == "local"
@@ -101,9 +97,7 @@ def test_preferred_free_text_runner_returns_none_for_none_runner(tmp_data_dir: P
 
 
 def test_config_deep_merge_preserves_defaults_for_absent_keys(tmp_data_dir: Path):
-    (tmp_data_dir / "config.toml").write_text(
-        '[llm]\nrunner = "claude"\n', encoding="utf-8"
-    )
+    (tmp_data_dir / "config.toml").write_text('[llm]\nrunner = "claude"\n', encoding="utf-8")
     cfg = Config.load(tmp_data_dir)
     # Non-overridden sections still have defaults
     assert cfg.corroboration_backend == "host"

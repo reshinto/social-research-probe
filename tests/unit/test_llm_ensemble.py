@@ -217,7 +217,9 @@ def test_multi_llm_prompt_uses_local_runner(monkeypatch):
         preferred_free_text_runner = "local"
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p: calls.append(name) or "local answer")
+    monkeypatch.setattr(
+        llm_mod, "_run_provider", lambda name, p: calls.append(name) or "local answer"
+    )
 
     assert multi_llm_prompt("summarise this video") == "local answer"
     assert calls == ["local"]
