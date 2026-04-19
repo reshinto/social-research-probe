@@ -272,7 +272,9 @@ class TestInstallSkill:
     def test_install_skill(self, monkeypatch, tmp_path):
         monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
         target = tmp_path / ".claude" / "skill_out"
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
+        monkeypatch.setattr(
+            "shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True)
+        )
         monkeypatch.setattr("shutil.which", lambda x: None)
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         result = main(["install-skill", "--target", str(target)])
@@ -408,7 +410,9 @@ class TestInstallSkillWithUvOrPipx:
     def test_install_skill_with_uv(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
         target = tmp_path / ".claude" / "skill_out"
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
+        monkeypatch.setattr(
+            "shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True)
+        )
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         calls = []
         monkeypatch.setattr(
@@ -428,7 +432,9 @@ class TestInstallSkillWithUvOrPipx:
     def test_install_skill_with_pipx(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
         target = tmp_path / ".claude" / "skill_out"
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
+        monkeypatch.setattr(
+            "shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True)
+        )
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         calls = []
         monkeypatch.setattr(

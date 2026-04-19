@@ -27,14 +27,10 @@ def _write_purposes(tmp_path, purposes: dict):
     (tmp_path / "purposes.json").write_text(json.dumps(data), encoding="utf-8")
 
 
-
-
 def test_maybe_register_fake_no_env_var(monkeypatch):
     """Without env var set, _maybe_register_fake is a no-op (covers 54->exit branch)."""
     monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
     _maybe_register_fake()  # should not raise or import anything
-
-
 
 
 def test_enrich_query_adds_method_words():
@@ -72,8 +68,6 @@ def test_zscore_two_values():
     result = _zscore([1.0, 3.0])
     assert len(result) == 2
     assert abs(result[0] + result[1]) < 1e-9  # opposite signs, sum to ~0
-
-
 
 
 def test_score_item_returns_score_and_dict():
@@ -115,8 +109,6 @@ def test_score_item_returns_score_and_dict():
     assert 0.0 <= score <= 1.0
     assert "title" in d
     assert "scores" in d
-
-
 
 
 def test_run_research_returns_packet(monkeypatch, tmp_path):

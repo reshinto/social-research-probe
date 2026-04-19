@@ -300,7 +300,11 @@ def test_exa_search_network_error_raises_adapter_error(monkeypatch):
     from social_research_probe.errors import AdapterError
 
     monkeypatch.setenv("SRP_EXA_API_KEY", "k")
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
+    )
     with pytest.raises(AdapterError, match="exa search failed"):
         ExaBackend()._search("test")
 
@@ -313,7 +317,11 @@ def test_brave_search_network_error_raises_adapter_error(monkeypatch):
     from social_research_probe.errors import AdapterError
 
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
+    )
     with pytest.raises(AdapterError, match="brave search failed"):
         BraveBackend()._search("test")
 
@@ -326,6 +334,10 @@ def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
     from social_research_probe.errors import AdapterError
 
     monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
+    )
     with pytest.raises(AdapterError, match="tavily search failed"):
         TavilyBackend()._search("test")
