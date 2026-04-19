@@ -94,6 +94,12 @@ class TestNoCommand:
     def test_no_command_returns_2(self):
         assert main([]) == 2
 
+    def test_version_flag_exits_0(self, capsys):
+        assert main(["--version"]) == 0
+        out = capsys.readouterr().out
+        assert "srp" in out
+        assert "social_research_probe" in out
+
 
 class TestShowTopics:
     def test_show_topics_text(self, monkeypatch, tmp_path, capsys):
@@ -837,9 +843,8 @@ class TestRequiredSynthesis:
             "opportunity_analysis",
         }
 
-    def test_raises_synthesis_error_on_runner_exception(self, monkeypatch):
+    def test_returns_none_when_all_runners_fail(self, monkeypatch):
         from social_research_probe.cli import _run_required_synthesis
-        from social_research_probe.errors import SynthesisError
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -849,12 +854,10 @@ class TestRequiredSynthesis:
             "social_research_probe.cli.get_runner",
             lambda name: (_ for _ in ()).throw(RuntimeError("no cli")),
         )
-        with pytest.raises(SynthesisError, match="failed to generate sections 10-11"):
-            _run_required_synthesis(_VALID_PACKET)
+        assert _run_required_synthesis(_VALID_PACKET) is None
 
-    def test_raises_synthesis_error_when_runner_is_unavailable(self, monkeypatch):
+    def test_returns_none_when_all_runners_unavailable(self, monkeypatch):
         from social_research_probe.cli import _run_required_synthesis
-        from social_research_probe.errors import SynthesisError
 
         class _Cfg:
             default_structured_runner = "gemini"
@@ -865,8 +868,7 @@ class TestRequiredSynthesis:
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
-        with pytest.raises(SynthesisError, match="unavailable"):
-            _run_required_synthesis(_VALID_PACKET)
+        assert _run_required_synthesis(_VALID_PACKET) is None
 
     def test_falls_back_when_preferred_structured_runner_fails(self, monkeypatch):
         from social_research_probe.cli import _run_required_synthesis

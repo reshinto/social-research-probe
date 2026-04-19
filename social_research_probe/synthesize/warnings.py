@@ -28,12 +28,14 @@ def detect(
     top5: list[ScoredItem],
     now: datetime | None = None,
     corroboration_ran: bool = False,
+    corroboration_skip_reason: str | None = None,
 ) -> list[str]:
     """Return a list of warning strings about quality concerns.
 
     Includes a corroboration reminder only when the pipeline skipped the
     corroboration stage, so users do not mistake the heuristic trust score for
-    a verified source check.
+    a verified source check. Pass ``corroboration_skip_reason`` to make the
+    HTML report self-explanatory (e.g. "backend disabled in config").
     """
     reference_now = now or datetime.now(UTC)
     notes: list[str] = []
@@ -42,7 +44,8 @@ def detect(
     _check_top5_quality(top5, notes)
     _check_freshness(signals, reference_now, notes)
     if not corroboration_ran:
-        notes.append("source corroboration was not run; trust scores are heuristic only")
+        suffix = f" ({corroboration_skip_reason})" if corroboration_skip_reason else ""
+        notes.append(f"source corroboration was not run{suffix}; trust scores are heuristic only")
     return notes
 
 

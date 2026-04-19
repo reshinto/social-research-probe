@@ -73,17 +73,15 @@ def _items_links(items: list[ScoredItem]) -> str:
         url = _esc(it.get("url", "#"))
         channel = _esc(it.get("channel", ""))
         takeaway = _esc(it.get("one_line_takeaway", ""))
-        # Transcript collapsible if present
-        extra = ""
         transcript = it.get("transcript", "")
-        if not transcript:
-            print(f"[srp] warning: item {i} missing transcript")
-
-        extra = (
-            "<details><summary>Transcript</summary>"
-            f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript) > 3000 else ''}</pre>"
-            "</details>"
-        )
+        if transcript:
+            extra = (
+                "<details><summary>Transcript</summary>"
+                f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript) > 3000 else ''}</pre>"
+                "</details>"
+            )
+        else:
+            extra = ""
         lis.append(
             f"<li><strong>[{i}]</strong> "
             f'<a href="{url}" rel="noopener noreferrer">{channel}</a>'
@@ -222,7 +220,7 @@ def section_9_warnings(packet: ResearchPacket) -> str:
 def section_10_synthesis(text: str | None) -> str:
     """Section 10: Compiled synthesis (LLM-generated or placeholder)."""
     if not text:
-        return "<p><em>(LLM synthesis not stored in this packet)</em></p>"
+        return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
 
     return md_to_html(text)
@@ -231,7 +229,7 @@ def section_10_synthesis(text: str | None) -> str:
 def section_11_opportunity(text: str | None) -> str:
     """Section 11: Opportunity analysis (LLM-generated or placeholder)."""
     if not text:
-        return "<p><em>(LLM synthesis not stored in this packet)</em></p>"
+        return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
 
     return md_to_html(text)

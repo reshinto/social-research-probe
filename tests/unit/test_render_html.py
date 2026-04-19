@@ -272,7 +272,7 @@ class TestSectionBuilders:
 
     def test_section_10_none(self):
         html = section_10_synthesis(None)
-        assert "LLM synthesis not stored" in html
+        assert "LLM synthesis unavailable" in html
 
     def test_section_11_with_text(self):
         html = section_11_opportunity("Opportunity: **grow fast**.")
@@ -280,7 +280,7 @@ class TestSectionBuilders:
 
     def test_section_11_none(self):
         html = section_11_opportunity(None)
-        assert "LLM synthesis not stored" in html
+        assert "LLM synthesis unavailable" in html
 
     def test_bulletise_with_parts(self):
         html = _bulletise("part one; part two")
@@ -391,7 +391,7 @@ class TestRenderHtml:
 
     def test_placeholder_when_no_synthesis(self):
         html = render_html(_PACKET)
-        assert "LLM synthesis not stored" in html
+        assert "LLM synthesis unavailable" in html
 
     def test_chart_embedded_when_png_exists(self, tmp_path):
         png = tmp_path / "overall_score_bar.png"

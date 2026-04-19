@@ -970,7 +970,7 @@ def test_render_full_without_synthesis():
     pkt = build_packet(**_make_packet())
     out = render_full(pkt)
     assert "## 10." in out
-    assert "LLM synthesis not stored" in out
+    assert "LLM synthesis unavailable" in out
     assert "## 11." in out
 
 
@@ -981,7 +981,7 @@ def test_render_full_with_synthesis():
     out = render_full(pkt)
     assert "My synthesis." in out
     assert "My opp." in out
-    assert "LLM synthesis not stored" not in out
+    assert "LLM synthesis unavailable" not in out
 
 
 def test_render_sections_1_9_low_confidence_flag():

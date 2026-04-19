@@ -181,7 +181,7 @@ def test_research_packet_and_html_end_to_end(tmp_path: Path) -> None:
 
     assert _SYNTHESIS_10 in html
     assert _SYNTHESIS_11 in html
-    assert "LLM synthesis not stored" not in html
+    assert "LLM synthesis unavailable" not in html
     assert "source corroboration was not run; trust scores are heuristic only" not in html
     assert _SUMMARY_PHRASE in html
     assert "<th>Model</th>" in html

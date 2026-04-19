@@ -14,7 +14,7 @@ from social_research_probe.commands import suggestions as suggestions_cmd
 from social_research_probe.commands import topics as topics_cmd
 from social_research_probe.commands.parse import _parse_quoted_list, _take_quoted
 from social_research_probe.config import load_active_config, resolve_data_dir
-from social_research_probe.errors import SrpError, SynthesisError, ValidationError
+from social_research_probe.errors import SrpError, ValidationError
 from social_research_probe.llm.host import emit_packet
 from social_research_probe.llm.registry import get_runner
 from social_research_probe.types import RunnerName
@@ -150,6 +150,11 @@ def _global_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--data-dir", default=None)
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Print version and resolved package path, then exit.",
+    )
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
     _add_topics_subparsers(sub)
     _add_purposes_subparsers(sub)
@@ -307,6 +312,7 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
     from social_research_probe.render.html import write_html_report
+    from social_research_probe.utils.progress import log
 
     platform, topic, purposes = _parse_simple_research_args(args.args)
     config_extras = {
@@ -315,6 +321,15 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     }
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     no_html = getattr(args, "no_html", False)
+
+    cfg = load_active_config()
+    preferred = cfg.default_structured_runner
+    if preferred == "none":
+        log("[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'.")
+    else:
+        runner = get_runner(preferred)
+        if not runner.health_check():
+            log(f"[srp] synthesis: runner '{preferred}' binary not found on PATH — sections 10-11 will be skipped. Install the CLI or pick a different runner.")
 
     def _write_and_attach_html_path(pkt: dict) -> str:
         report_path = write_html_report(pkt, data_dir)
@@ -336,8 +351,7 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     """Call structured LLM runners to produce sections 10-11 when enabled.
 
     Returns a dict with 'compiled_synthesis' and 'opportunity_analysis', or
-    None when the runner is disabled. Raises SynthesisError when synthesis is
-    required but all runner attempts fail.
+    None when the runner is disabled or all runner attempts fail.
     """
     from social_research_probe.synthesize.llm_contract import (
         SYNTHESIS_JSON_SCHEMA,
@@ -349,33 +363,33 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     cfg = load_active_config()
     preferred = cfg.default_structured_runner
     if preferred == "none":
+        log("[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'.")
         return None
 
     prompt = build_synthesis_prompt(packet)
     failures: list[str] = []
-    for runner_name in _structured_runner_order(preferred):
-        log(f"[srp] LLM ({runner_name}): generating compiled synthesis and opportunity analysis")
+    runners = _structured_runner_order(preferred)
+    for i, runner_name in enumerate(runners, start=1):
+        log(f"[srp] synthesis: attempting runner {i}/{len(runners)} ({runner_name})")
         try:
             runner = get_runner(runner_name)
             if not runner.health_check():
-                log(f"[srp] LLM ({runner_name}): unavailable")
+                log(f"[srp] synthesis: runner={runner_name} outcome=unavailable (binary not on PATH)")
                 failures.append(f"{runner_name}: unavailable")
                 continue
             raw = runner.run(prompt, schema=SYNTHESIS_JSON_SCHEMA)
-            log(
-                f"[srp] LLM ({runner_name}): synthesis generation successful, raw: {raw}, prompt: {prompt}"
-            )
-            return parse_synthesis_response(raw)
+            result = parse_synthesis_response(raw)
+            log(f"[srp] synthesis: runner={runner_name} outcome=success")
+            return result
         except ValidationError as exc:
-            log(f"[srp] LLM ({runner_name}): invalid response: {exc}")
+            log(f"[srp] synthesis: runner={runner_name} outcome=invalid_response err={exc}")
             failures.append(f"{runner_name}: invalid response ({exc})")
         except Exception as exc:
-            log(f"[srp] LLM ({runner_name}): failed: {exc}")
+            log(f"[srp] synthesis: runner={runner_name} outcome=error err={exc}")
             failures.append(f"{runner_name}: {exc}")
-            continue
     detail = "; ".join(failures) if failures else "no runners were attempted"
-    log(f"[srp] synthesis failed: {detail}")
-    raise SynthesisError(f"failed to generate sections 10-11: {detail}")
+    log(f"[srp] synthesis: all runners failed — sections 10-11 will be omitted. failures=[{detail}]")
+    return None
 
 
 def _attach_synthesis(packet: dict) -> None:
@@ -522,8 +536,13 @@ def _dispatch(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     """Parse argv and dispatch to the matching subcommand."""
+    import social_research_probe as _srp_pkg
+
     parser = _global_parser()
     args = parser.parse_args(argv)
+    if getattr(args, "version", False):
+        print(f"srp 0.1.0  ({_srp_pkg.__file__})")
+        return 0
     if args.command is None:
         parser.print_help(sys.stderr)
         return 2

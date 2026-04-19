@@ -533,8 +533,8 @@ def _available_backends(data_dir: Path) -> list[str]:
     from social_research_probe.errors import ValidationError
 
     configured = Config.load(data_dir).corroboration_backend
-    log(f"[srp] corroboration: configured backend is {configured}")
     if configured == "none":
+        log("[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend host'.")
         return []
     candidates = ("exa", "brave", "tavily") if configured == "host" else (configured,)
 
@@ -545,6 +545,13 @@ def _available_backends(data_dir: Path) -> list[str]:
                 available.append(name)
         except ValidationError:
             pass
+
+    if not available:
+        checked = ", ".join(candidates)
+        log(
+            f"[srp] corroboration: backend '{configured}' configured but no provider usable"
+            f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
+        )
     return available
 
 
@@ -680,11 +687,20 @@ def run_research(
         svs = _build_svs(top5, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         chart_captions = _render_charts(all_scored, data_dir)
+        cfg_corr = Config.load(data_dir).corroboration_backend
+        skip_reason: str | None = None
+        if not backends:
+            skip_reason = (
+                "disabled in config"
+                if cfg_corr == "none"
+                else "no API credentials usable — run 'srp config check-secrets'"
+            )
         warnings = detect_warnings(
             items,
             signals,
             top5,
             corroboration_ran=bool(backends and top5),
+            corroboration_skip_reason=skip_reason,
         )
         packets.append(
             build_packet(
