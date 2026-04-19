@@ -13,7 +13,12 @@ from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.ensemble import multi_llm_prompt
 from social_research_probe.llm.host import emit_packet
-from social_research_probe.platforms.base import FetchLimits, RawItem, SignalSet, TrustHints
+from social_research_probe.platforms.base import (
+    FetchLimits,
+    RawItem,
+    SignalSet,
+    TrustHints,
+)
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import merge_purposes
@@ -37,7 +42,10 @@ from social_research_probe.stats import (
     pca,
     polynomial_regression,
 )
-from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
+from social_research_probe.stats.selector import (
+    select_and_run,
+    select_and_run_correlation,
+)
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.explain import explain as explain_stat
@@ -143,7 +151,8 @@ def _score_item(
         corroboration_score=0.3,
     )
     age_days = max(
-        1.0, (datetime.now(UTC) - signal.upload_date).days if signal.upload_date else 30.0
+        1.0,
+        (datetime.now(UTC) - signal.upload_date).days if signal.upload_date else 30.0,
     )
     trend = trend_score(
         z_view_velocity=z_view_velocity,
@@ -164,7 +173,12 @@ def _score_item(
         "channel": item.author_name,
         "url": item.url,
         "source_class": src.value,
-        "scores": {"trust": trust, "trend": trend, "opportunity": opportunity, "overall": overall},
+        "scores": {
+            "trust": trust,
+            "trend": trend,
+            "opportunity": opportunity,
+            "overall": overall,
+        },
         "features": {
             "view_velocity": signal.view_velocity or 0.0,
             "engagement_ratio": signal.engagement_ratio or 0.0,
@@ -499,6 +513,108 @@ def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
+def _available_backends(data_dir: Path) -> list[str]:
+    """Return corroboration backend names whose API keys are present and healthy.
+
+    Tries exa, brave, and tavily in order. llm_cli is excluded from auto-runs
+    because it has no marginal cost signal — it just reruns the LLM the
+    pipeline already called.
+    """
+    from social_research_probe.corroboration.registry import get_backend
+    from social_research_probe.errors import ValidationError
+
+    available: list[str] = []
+    for name in ("exa", "brave", "tavily"):
+        try:
+            if get_backend(name).health_check():
+                available.append(name)
+        except ValidationError:
+            pass
+    return available
+
+
+async def _corroborate_one(
+    item: ScoredItem,
+    backends: list[str],
+    sem: asyncio.Semaphore,
+) -> dict:
+    """Corroborate a single item using its title as the claim text.
+
+    Runs inside an asyncio event loop created per worker thread so nested
+    ``asyncio.run`` calls in ``corroborate_claim`` work safely.
+    """
+    from social_research_probe.corroboration.host import corroborate_claim
+    from social_research_probe.validation.claims import Claim
+
+    claim = Claim(
+        text=item.get("title", ""),
+        source_text=item.get("one_line_takeaway") or item.get("title", ""),
+        index=0,
+    )
+    async with sem:
+        return await asyncio.to_thread(corroborate_claim, claim, backends)
+
+
+def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]:
+    """Corroborate all top-5 items concurrently, one claim per item.
+
+    Uses the video title as the claim text — short, factual, and searchable.
+    The AI-generated one_line_takeaway is passed as source context. Caps
+    concurrent API calls to 3 to respect search-backend rate limits.
+    """
+    log(f"[srp] corroboration: checking {len(top5)} items via {', '.join(backends)}")
+
+    async def _gather() -> list[dict]:
+        sem = asyncio.Semaphore(3)
+        results = await asyncio.gather(
+            *[_corroborate_one(item, backends, sem) for item in top5],
+            return_exceptions=True,
+        )
+        return [r if isinstance(r, dict) else {} for r in results]
+
+    return run_coro(_gather())
+
+
+def _build_svs(
+    top5: list[ScoredItem],
+    corroboration_results: list[dict],
+    backends: list[str],
+) -> SourceValidationSummary:
+    """Build SourceValidationSummary from corroboration results (or defaults).
+
+    Verdict mapping:
+    - supported  → validated
+    - inconclusive / refuted → partially (has a signal, outcome uncertain)
+    - no results (empty dict or no backends ran) → unverified
+    """
+    if corroboration_results and backends:
+        validated = sum(
+            1 for r in corroboration_results if r.get("aggregate_verdict") == "supported"
+        )
+        partially = sum(
+            1
+            for r in corroboration_results
+            if r.get("aggregate_verdict") in ("inconclusive", "refuted")
+        )
+        unverified = len(top5) - validated - partially
+        notes = f"auto-corroborated via {', '.join(backends)}"
+    else:
+        validated = 0
+        partially = 0
+        unverified = len(top5)
+        notes = "corroboration not run; use 'srp corroborate-claims' for validation"
+    return {
+        "validated": validated,
+        "partially": partially,
+        "unverified": max(0, unverified),
+        "low_trust": sum(1 for d in top5 if d["scores"]["trust"] < 0.4),
+        "primary": sum(1 for d in top5 if d["source_class"] == "primary"),
+        "secondary": sum(1 for d in top5 if d["source_class"] == "secondary"),
+        "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
+        "notes": notes,
+    }
+
+
 def run_research(
     cmd: ParsedRunResearch,
     data_dir: Path,
@@ -545,16 +661,9 @@ def run_research(
         top5 = all_scored[:5]
         if platform_config.get("fetch_transcripts", True) and cmd.platform == "youtube":
             _enrich_top5_with_transcripts(top5)
-        svs: SourceValidationSummary = {
-            "validated": 0,
-            "partially": 0,
-            "unverified": len(top5),
-            "low_trust": sum(1 for d in top5 if d["scores"]["trust"] < 0.4),
-            "primary": sum(1 for d in top5 if d["source_class"] == "primary"),
-            "secondary": sum(1 for d in top5 if d["source_class"] == "secondary"),
-            "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
-            "notes": "corroboration not run; use 'srp corroborate-claims' for validation",
-        }
+        backends = _available_backends(data_dir)
+        corroboration_results = _corroborate_top5(top5, backends) if backends else []
+        svs = _build_svs(top5, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         chart_captions = _render_charts(all_scored, data_dir)
         warnings = detect_warnings(items, signals, top5)

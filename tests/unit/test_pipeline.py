@@ -9,8 +9,11 @@ import pytest
 
 from social_research_probe.commands.parse import parse
 from social_research_probe.pipeline import (
+    _available_backends,
     _build_stats_summary,
+    _build_svs,
     _channel_credibility,
+    _corroborate_top5,
     _enrich_query,
     _maybe_register_fake,
     _render_charts,
@@ -466,3 +469,155 @@ def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_pat
     cmd = parse('run-research platform:youtube "AI"->latest-news')
     run_research(cmd, tmp_path, mode="cli", adapter_config={"fetch_transcripts": False})
     assert called == []
+
+
+# ---------------------------------------------------------------------------
+# _available_backends
+# ---------------------------------------------------------------------------
+
+
+def test_available_backends_returns_healthy_ones(monkeypatch, tmp_path):
+    """Backend names whose health_check() returns True are included."""
+    import social_research_probe.corroboration.registry as reg
+
+    class _HealthyBackend:
+        def health_check(self) -> bool:
+            return True
+
+    class _SickBackend:
+        def health_check(self) -> bool:
+            return False
+
+    def fake_get(name: str):
+        return _HealthyBackend() if name == "exa" else _SickBackend()
+
+    monkeypatch.setattr(reg, "get_backend", fake_get)
+    result = _available_backends(tmp_path)
+    assert result == ["exa"]
+
+
+def test_available_backends_returns_empty_when_all_unhealthy(monkeypatch, tmp_path):
+    """Returns an empty list when no backends pass health_check()."""
+    import social_research_probe.corroboration.registry as reg
+
+    class _SickBackend:
+        def health_check(self) -> bool:
+            return False
+
+    monkeypatch.setattr(reg, "get_backend", lambda _name: _SickBackend())
+    assert _available_backends(tmp_path) == []
+
+
+def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
+    """ValidationError from get_backend is silently skipped."""
+    import social_research_probe.corroboration.registry as reg
+    from social_research_probe.errors import ValidationError
+
+    monkeypatch.setattr(
+        reg, "get_backend", lambda _name: (_ for _ in ()).throw(ValidationError("bad"))
+    )
+    assert _available_backends(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# _corroborate_top5
+# ---------------------------------------------------------------------------
+
+
+def test_corroborate_top5_calls_corroborate_claim_for_each_item(monkeypatch, tmp_path):
+    """Each top-5 item produces one corroborate_claim call."""
+    calls: list[str] = []
+
+    def fake_corroborate(claim, backends):
+        calls.append(claim.text)
+        return {
+            "claim_text": claim.text,
+            "results": [],
+            "aggregate_verdict": "supported",
+            "aggregate_confidence": 0.8,
+        }
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline._corroborate_one.__globals__"
+        if False
+        else "social_research_probe.corroboration.host.corroborate_claim",
+        fake_corroborate,
+    )
+    items = [
+        {"title": f"Title {i}", "one_line_takeaway": "summary", "url": f"https://x/{i}"}
+        for i in range(3)
+    ]
+    results = _corroborate_top5(items, ["exa"])
+    assert len(results) == 3
+    assert all(r.get("aggregate_verdict") == "supported" for r in results)
+
+
+def test_corroborate_top5_tolerates_backend_failure(monkeypatch, tmp_path):
+    """A backend exception for one item returns an empty dict for that item."""
+
+    def fake_corroborate(claim, backends):
+        if "bad" in claim.text:
+            raise RuntimeError("network error")
+        return {"aggregate_verdict": "supported", "aggregate_confidence": 0.9, "results": []}
+
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.host.corroborate_claim",
+        fake_corroborate,
+    )
+    items = [
+        {"title": "Good title", "one_line_takeaway": "ok", "url": "https://x/1"},
+        {"title": "bad title", "one_line_takeaway": "fail", "url": "https://x/2"},
+    ]
+    results = _corroborate_top5(items, ["exa"])
+    assert len(results) == 2
+    # The good item has a verdict; the bad item got an empty fallback dict
+    assert results[0].get("aggregate_verdict") == "supported"
+    assert results[1] == {}
+
+
+# ---------------------------------------------------------------------------
+# _build_svs
+# ---------------------------------------------------------------------------
+
+
+def _make_item(source_class: str = "secondary", trust: float = 0.7) -> dict:
+    return {
+        "source_class": source_class,
+        "scores": {"trust": trust},
+    }
+
+
+def test_build_svs_with_corroboration_counts_verdicts():
+    items = [_make_item(), _make_item(), _make_item()]
+    corr = [
+        {"aggregate_verdict": "supported", "aggregate_confidence": 0.8, "results": [{}]},
+        {"aggregate_verdict": "inconclusive", "aggregate_confidence": 0.5, "results": [{}]},
+        {"aggregate_verdict": "refuted", "aggregate_confidence": 0.3, "results": [{}]},
+    ]
+    svs = _build_svs(items, corr, ["exa"])
+    assert svs["validated"] == 1
+    assert svs["partially"] == 2
+    assert svs["unverified"] == 0
+    assert "auto-corroborated" in svs["notes"]
+    assert "exa" in svs["notes"]
+
+
+def test_build_svs_without_corroboration_uses_defaults():
+    items = [_make_item(), _make_item()]
+    svs = _build_svs(items, [], [])
+    assert svs["validated"] == 0
+    assert svs["unverified"] == 2
+    assert "corroboration not run" in svs["notes"]
+
+
+def test_build_svs_counts_source_classes_and_low_trust():
+    items = [
+        _make_item("primary", 0.7),
+        _make_item("secondary", 0.3),
+        _make_item("commentary", 0.8),
+    ]
+    svs = _build_svs(items, [], [])
+    assert svs["primary"] == 1
+    assert svs["secondary"] == 1
+    assert svs["commentary"] == 1
+    assert svs["low_trust"] == 1  # only the 0.3 trust item
