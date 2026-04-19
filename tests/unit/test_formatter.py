@@ -74,7 +74,8 @@ def _make_packet(**overrides):
 def test_build_packet_shape():
     pkt = build_packet(**_make_packet())
     assert pkt["topic"] == "ai agents"
-    assert pkt["response_schema"]["compiled_synthesis"].startswith("string")
+    assert "compiled_synthesis" not in pkt
+    assert "opportunity_analysis" not in pkt
 
 
 def test_render_sections_contains_headings():
@@ -969,16 +970,18 @@ def test_render_full_without_synthesis():
     pkt = build_packet(**_make_packet())
     out = render_full(pkt)
     assert "## 10." in out
-    assert "LLM synthesis not run" in out
+    assert "LLM synthesis not stored" in out
     assert "## 11." in out
 
 
 def test_render_full_with_synthesis():
     pkt = build_packet(**_make_packet())
-    out = render_full(pkt, compiled_synthesis="My synthesis.", opportunity_analysis="My opp.")
+    pkt["compiled_synthesis"] = "My synthesis."
+    pkt["opportunity_analysis"] = "My opp."
+    out = render_full(pkt)
     assert "My synthesis." in out
     assert "My opp." in out
-    assert "LLM synthesis not run" not in out
+    assert "LLM synthesis not stored" not in out
 
 
 def test_render_sections_1_9_low_confidence_flag():

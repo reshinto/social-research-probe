@@ -1,9 +1,9 @@
 import json
+import os
 import subprocess
 import sys
 import textwrap
-
-import pytest
+from pathlib import Path
 
 from social_research_probe.llm.host import emit_packet
 
@@ -16,17 +16,17 @@ def test_emit_packet_writes_json_and_exits_zero(tmp_path):
         emit_packet({"topic":"ai"}, kind="synthesis")
     """)
     )
-    p = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    repo_root = Path(__file__).resolve().parents[2]
+    env = {**os.environ, "PYTHONPATH": str(repo_root)}
+    p = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, env=env)
     assert p.returncode == 0
     out = json.loads(p.stdout)
-    assert out == {"skill_mode": True, "kind": "synthesis", "packet": {"topic": "ai"}}
+    assert out == {"kind": "synthesis", "packet": {"topic": "ai"}}
 
 
 def test_emit_packet_in_process(monkeypatch, capsys):
-    """Cover emit_packet lines directly by catching SystemExit."""
-    with pytest.raises(SystemExit) as exc:
-        emit_packet({"topic": "ai"}, kind="synthesis")
-    assert exc.value.code == 0
+    """emit_packet writes the unified envelope to stdout without exiting."""
+    emit_packet({"topic": "ai"}, kind="synthesis")
     captured = capsys.readouterr()
     out = json.loads(captured.out)
-    assert out == {"skill_mode": True, "kind": "synthesis", "packet": {"topic": "ai"}}
+    assert out == {"kind": "synthesis", "packet": {"topic": "ai"}}

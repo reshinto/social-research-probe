@@ -12,6 +12,10 @@ import html
 import re
 from pathlib import Path
 
+from social_research_probe.synthesize.formatter import (
+    _contextual_explanation,
+    _infer_model,
+)
 from social_research_probe.types import ResearchPacket, ScoredItem
 
 
@@ -72,12 +76,14 @@ def _items_links(items: list[ScoredItem]) -> str:
         # Transcript collapsible if present
         extra = ""
         transcript = it.get("transcript", "")
-        if transcript:
-            extra = (
-                "<details><summary>Transcript</summary>"
-                f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript) > 3000 else ''}</pre>"
-                "</details>"
-            )
+        if not transcript:
+            print(f"[srp] warning: item {i} missing transcript")
+
+        extra = (
+            "<details><summary>Transcript</summary>"
+            f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript) > 3000 else ''}</pre>"
+            "</details>"
+        )
         lis.append(
             f"<li><strong>[{i}]</strong> "
             f'<a href="{url}" rel="noopener noreferrer">{channel}</a>'
@@ -122,14 +128,26 @@ def section_7_statistics(packet: ResearchPacket) -> str:
 
 
 def _highlights_table(highlights: list[str]) -> str:
-    """Render statistics highlights as a two-column HTML table."""
-    rows = ["<tr><th>Metric</th><th>Finding</th></tr>"]
+    """Render statistics highlights as a four-column HTML table."""
+    rows = ["<tr><th>Model</th><th>Metric</th><th>Finding</th><th>What it means</th></tr>"]
+    prev_model = None
     for h in highlights:
         if " — " in h:
             metric, finding = h.split(" — ", 1)
         else:
             metric, finding = h, ""
-        rows.append(f"<tr><td>{_esc(metric)}</td><td>{_esc(finding)}</td></tr>")
+        model = _infer_model(metric)
+        explanation = _contextual_explanation(metric, finding)
+        model_cell = model if model != prev_model else ""
+        prev_model = model
+        rows.append(
+            "<tr>"
+            f"<td>{_esc(model_cell)}</td>"
+            f"<td>{_esc(metric)}</td>"
+            f"<td>{_esc(finding)}</td>"
+            f"<td>{_esc(explanation)}</td>"
+            "</tr>"
+        )
     return f'<div class="table-wrap"><table>{"".join(rows)}</table></div>'
 
 
@@ -204,7 +222,7 @@ def section_9_warnings(packet: ResearchPacket) -> str:
 def section_10_synthesis(text: str | None) -> str:
     """Section 10: Compiled synthesis (LLM-generated or placeholder)."""
     if not text:
-        return "<p><em>(LLM synthesis not run — runner disabled or unavailable)</em></p>"
+        return "<p><em>(LLM synthesis not stored in this packet)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
 
     return md_to_html(text)
@@ -213,7 +231,7 @@ def section_10_synthesis(text: str | None) -> str:
 def section_11_opportunity(text: str | None) -> str:
     """Section 11: Opportunity analysis (LLM-generated or placeholder)."""
     if not text:
-        return "<p><em>(LLM synthesis not run — runner disabled or unavailable)</em></p>"
+        return "<p><em>(LLM synthesis not stored in this packet)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
 
     return md_to_html(text)

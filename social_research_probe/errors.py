@@ -19,5 +19,9 @@ class AdapterError(SrpError):
     exit_code = 4
 
 
+class SynthesisError(SrpError):
+    exit_code = 4
+
+
 class MigrationError(SrpError):
     exit_code = 5

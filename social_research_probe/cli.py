@@ -14,8 +14,10 @@ from social_research_probe.commands import suggestions as suggestions_cmd
 from social_research_probe.commands import topics as topics_cmd
 from social_research_probe.commands.parse import _parse_quoted_list, _take_quoted
 from social_research_probe.config import load_active_config, resolve_data_dir
-from social_research_probe.errors import SrpError, ValidationError
+from social_research_probe.errors import SrpError, SynthesisError, ValidationError
+from social_research_probe.llm.host import emit_packet
 from social_research_probe.llm.registry import get_runner
+from social_research_probe.types import RunnerName
 
 
 def _add_topics_subparsers(sub: argparse._SubParsersAction) -> None:
@@ -74,9 +76,10 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
         help="Simple form: research [platform] TOPIC PURPOSES (purposes comma-separated)",
     )
     rs.add_argument("args", nargs="+", help="[PLATFORM] TOPIC PURPOSE[,PURPOSE...]")
-    rs.add_argument("--mode", choices=["skill", "cli"], default="cli")
     rs.add_argument(
-        "--no-shorts", action="store_true", help="Exclude YouTube Shorts (<90s) from results"
+        "--no-shorts",
+        action="store_true",
+        help="Exclude YouTube Shorts (<90s) from results",
     )
     rs.add_argument(
         "--no-transcripts",
@@ -145,7 +148,6 @@ def _global_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="srp", description="Evidence-first social-media research."
     )
-    parser.add_argument("--mode", choices=["skill", "cli"], default="cli")
     parser.add_argument("--data-dir", default=None)
     parser.add_argument("--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
@@ -302,12 +304,9 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     srp research youtube ai latest-news
     srp research youtube ai latest-news,trends  # multiple purposes
     """
-    import sys
-
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
     from social_research_probe.render.html import write_html_report
-    from social_research_probe.synthesize.formatter import render_full
 
     platform, topic, purposes = _parse_simple_research_args(args.args)
     config_extras = {
@@ -317,44 +316,29 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     no_html = getattr(args, "no_html", False)
 
-    def _write_and_attach_html_path(pkt: dict, synthesis: dict | None) -> str:
-        report_path = write_html_report(pkt, synthesis, data_dir)
+    def _write_and_attach_html_path(pkt: dict) -> str:
+        report_path = write_html_report(pkt, data_dir)
         report_uri = report_path.resolve().as_uri()
         pkt["html_report_path"] = report_uri
         return report_uri
 
-    # In skill mode the pipeline calls emit_packet (sys.exit), so HTML must be
-    # written before that via the pre_emit_hook callback.
-    def _skill_pre_emit_hook(pkt: dict) -> None:
-        if no_html:
-            return
-        synthesis = _run_cli_synthesis(pkt)
-        _write_and_attach_html_path(pkt, synthesis)
-
-    hook = _skill_pre_emit_hook if args.mode == "skill" else None
-    packet = run_research(
-        parse(raw), data_dir, args.mode, adapter_config=config_extras, pre_emit_hook=hook
-    )
-
-    if args.mode == "cli":
-        synthesis = _run_cli_synthesis(packet)
-        compiled = synthesis["compiled_synthesis"] if synthesis else None
-        opportunity = synthesis["opportunity_analysis"] if synthesis else None
-        if not no_html:
-            report_uri = _write_and_attach_html_path(packet, synthesis)
-            sys.stdout.write(f"Open your report: {report_uri}\n")
-        else:
-            sys.stdout.write(render_full(packet, compiled, opportunity))
+    packet = run_research(parse(raw), data_dir, adapter_config=config_extras)
+    _attach_synthesis(packet)
+    if not no_html:
+        if "multi" in packet:
+            raise ValidationError("HTML rendering is only available for single-topic research")
+        _write_and_attach_html_path(packet)
+    emit_packet(packet, kind="synthesis")
     return 0
 
 
-def _run_cli_synthesis(packet: dict) -> dict | None:
-    """Call the configured structured LLM runner to produce sections 10-11.
+def _run_required_synthesis(packet: dict) -> dict | None:
+    """Call structured LLM runners to produce sections 10-11 when enabled.
 
     Returns a dict with 'compiled_synthesis' and 'opportunity_analysis', or
-    None when the runner is disabled or the call fails.
+    None when the runner is disabled. Raises SynthesisError when synthesis is
+    required but all runner attempts fail.
     """
-    from social_research_probe.errors import ValidationError
     from social_research_probe.synthesize.llm_contract import (
         SYNTHESIS_JSON_SCHEMA,
         build_synthesis_prompt,
@@ -363,20 +347,58 @@ def _run_cli_synthesis(packet: dict) -> dict | None:
     from social_research_probe.utils.progress import log
 
     cfg = load_active_config()
-    runner_name = cfg.default_structured_runner
-    if runner_name == "none":
+    preferred = cfg.default_structured_runner
+    if preferred == "none":
         return None
 
-    log(f"[srp] LLM ({runner_name}): generating compiled synthesis and opportunity analysis")
-    try:
-        runner = get_runner(runner_name)
-        if not runner.health_check():
-            return None
-        prompt = build_synthesis_prompt(packet)
-        raw = runner.run(prompt, schema=SYNTHESIS_JSON_SCHEMA)
-        return parse_synthesis_response(raw)
-    except (ValidationError, Exception):
-        return None
+    prompt = build_synthesis_prompt(packet)
+    failures: list[str] = []
+    for runner_name in _structured_runner_order(preferred):
+        log(f"[srp] LLM ({runner_name}): generating compiled synthesis and opportunity analysis")
+        try:
+            runner = get_runner(runner_name)
+            if not runner.health_check():
+                log(f"[srp] LLM ({runner_name}): unavailable")
+                failures.append(f"{runner_name}: unavailable")
+                continue
+            raw = runner.run(prompt, schema=SYNTHESIS_JSON_SCHEMA)
+            log(
+                f"[srp] LLM ({runner_name}): synthesis generation successful, raw: {raw}, prompt: {prompt}"
+            )
+            return parse_synthesis_response(raw)
+        except ValidationError as exc:
+            log(f"[srp] LLM ({runner_name}): invalid response: {exc}")
+            failures.append(f"{runner_name}: invalid response ({exc})")
+        except Exception as exc:
+            log(f"[srp] LLM ({runner_name}): failed: {exc}")
+            failures.append(f"{runner_name}: {exc}")
+            continue
+    detail = "; ".join(failures) if failures else "no runners were attempted"
+    log(f"[srp] synthesis failed: {detail}")
+    raise SynthesisError(f"failed to generate sections 10-11: {detail}")
+
+
+def _attach_synthesis(packet: dict) -> None:
+    """Attach synthesized sections 10-11 to a research packet when available."""
+    children = packet.get("multi")
+    if isinstance(children, list):
+        for child in children:
+            synthesis = _run_required_synthesis(child)
+            if synthesis is not None:
+                child.update(synthesis)
+        return
+
+    synthesis = _run_required_synthesis(packet)
+    if synthesis is not None:
+        packet.update(synthesis)
+
+
+def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
+    """Return preferred structured runner first, then the remaining fallbacks."""
+    candidates: list[RunnerName] = ["claude", "gemini", "codex", "local"]
+    if preferred == "none":
+        return []
+    return [preferred, *[name for name in candidates if name != preferred]]
 
 
 def _parse_simple_research_args(positional: list[str]) -> tuple[str, str, list[str]]:

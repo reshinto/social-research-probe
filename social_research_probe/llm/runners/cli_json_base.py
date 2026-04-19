@@ -26,6 +26,7 @@ class JsonCliRunner(LLMRunner):
     name: ClassVar[str]
     binary_name: ClassVar[str]
     base_argv: ClassVar[tuple[str, ...]]
+    schema_flag: ClassVar[str | None] = "--schema"
 
     def _binary(self) -> str:
         """Return the configured binary for this runner, falling back to the default."""
@@ -42,9 +43,17 @@ class JsonCliRunner(LLMRunner):
     def _build_argv(self, schema: JSONObject | None) -> list[str]:
         """Build the argv list for the configured CLI invocation."""
         argv = [self._binary(), *self.base_argv, *self._extra_flags()]
-        if schema:
-            argv += ["--schema", json.dumps(schema)]
+        if schema and self.schema_flag:
+            argv += [self.schema_flag, json.dumps(schema)]
         return argv
+
+    def _prompt_args(self, prompt: str) -> list[str]:
+        """Return argv fragments that carry the prompt for this CLI."""
+        return []
+
+    def _stdin_input(self, prompt: str) -> str | None:
+        """Return stdin payload for this CLI."""
+        return prompt
 
     def _parse_response(self, stdout: str) -> dict:
         """Parse the JSON stdout emitted by the CLI."""
@@ -59,5 +68,9 @@ class JsonCliRunner(LLMRunner):
 
         log(f"[srp] LLM ({self.name}): running structured JSON task")
         timeout = load_active_config().llm_timeout_seconds
-        result = sp_run(self._build_argv(schema), input=prompt, timeout=timeout)
+        result = sp_run(
+            [*self._build_argv(schema), *self._prompt_args(prompt)],
+            input=self._stdin_input(prompt),
+            timeout=timeout,
+        )
         return self._parse_response(result.stdout)

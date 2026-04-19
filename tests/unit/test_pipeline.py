@@ -129,13 +129,13 @@ def test_run_research_returns_packet(monkeypatch, tmp_path):
     )
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    packet = run_research(cmd, tmp_path, mode="cli")
+    packet = run_research(cmd, tmp_path)
     assert "topic" in packet
     assert "items_top5" in packet
     assert isinstance(packet["items_top5"], list)
 
 
-def test_run_research_skill_mode_calls_emit_packet(monkeypatch, tmp_path):
+def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -146,45 +146,12 @@ def test_run_research_skill_mode_calls_emit_packet(monkeypatch, tmp_path):
             }
         },
     )
-    calls = []
-
-    def fake_emit(packet, kind):
-        calls.append((packet, kind))
-        raise SystemExit(0)
-
-    monkeypatch.setattr("social_research_probe.pipeline.emit_packet", fake_emit)
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    with pytest.raises(SystemExit):
-        run_research(cmd, tmp_path, mode="skill")
-    assert len(calls) == 1
-
-
-def test_run_research_skill_mode_calls_pre_emit_hook(monkeypatch, tmp_path):
-    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(
-        tmp_path,
-        {
-            "latest-news": {
-                "method": "Track latest channels for breaking news",
-                "evidence_priorities": [],
-            }
-        },
-    )
-    hook_calls = []
-
-    def fake_hook(pkt):
-        hook_calls.append(pkt)
-
-    def fake_emit(packet, kind):
-        raise SystemExit(0)
-
-    monkeypatch.setattr("social_research_probe.pipeline.emit_packet", fake_emit)
-    raw = 'run-research platform:youtube "AI"->latest-news'
-    cmd = parse(raw)
-    with pytest.raises(SystemExit):
-        run_research(cmd, tmp_path, mode="skill", pre_emit_hook=fake_hook)
-    assert len(hook_calls) == 1
+    packet = run_research(cmd, tmp_path)
+    assert packet["topic"] == "AI"
+    assert "compiled_synthesis" not in packet
+    assert "opportunity_analysis" not in packet
 
 
 def test_run_research_multi_topic(monkeypatch, tmp_path):
@@ -200,7 +167,7 @@ def test_run_research_multi_topic(monkeypatch, tmp_path):
     )
     raw = 'run-research platform:youtube "AI"->latest-news;"blockchain"->latest-news'
     cmd = parse(raw)
-    result = run_research(cmd, tmp_path, mode="cli")
+    result = run_research(cmd, tmp_path)
     assert "multi" in result
 
 
@@ -221,7 +188,7 @@ def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:youtube "AI"->nonexistent_purpose'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        run_research(cmd, tmp_path, mode="cli")
+        run_research(cmd, tmp_path)
 
 
 def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
@@ -240,7 +207,7 @@ def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:nonexistent "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        run_research(cmd, tmp_path, mode="cli")
+        run_research(cmd, tmp_path)
 
 
 def _fake_top5(n: int) -> list[dict]:
@@ -352,7 +319,7 @@ def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError, match="health check"):
-        run_research(cmd, tmp_path, mode="cli")
+        run_research(cmd, tmp_path)
 
 
 def test_build_stats_summary_single_item_runs_only_descriptive():
@@ -390,7 +357,7 @@ class TestEnrichTop5WithTranscripts:
         assert len(items[0]["transcript"]) <= 6000
         assert items[0]["one_line_takeaway"] == "Multi-LLM generated summary."
 
-    def test_falls_back_to_description_when_llm_unavailable(self, monkeypatch):
+    def test_falls_back_to_transcript_excerpt_when_llm_unavailable(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
@@ -406,7 +373,7 @@ class TestEnrichTop5WithTranscripts:
         ]
         _enrich_top5_with_transcripts(items)
         assert "transcript" in items[0]
-        assert items[0]["one_line_takeaway"] == "keep me"
+        assert items[0]["one_line_takeaway"] == "some transcript content"
 
     def test_no_transcript_key_when_fetch_returns_none(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
@@ -494,7 +461,7 @@ def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_pat
         lambda items: called.append(items),
     )
     cmd = parse('run-research platform:youtube "AI"->latest-news')
-    run_research(cmd, tmp_path, mode="cli", adapter_config={"fetch_transcripts": False})
+    run_research(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
     assert called == []
 
 

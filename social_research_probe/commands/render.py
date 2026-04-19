@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import sys
 
+from social_research_probe.packet import unwrap_packet
 from social_research_probe.stats.selector import select_and_run
 from social_research_probe.viz.selector import select_and_render
 
@@ -42,9 +43,12 @@ def run(packet_path: str, output_dir: str | None = None) -> int:
 
     try:
         with open(packet_path) as f:
-            packet = json.load(f)
+            payload = json.load(f)
     except (json.JSONDecodeError, OSError) as exc:
         raise ValidationError(f"cannot read packet file: {exc}") from exc
+    packet = unwrap_packet(payload)
+    if not isinstance(packet, dict):
+        raise ValidationError("packet file must contain a JSON object")
 
     items = packet.get("items_top5", [])
     # Extract the "overall" composite score from each item's scores dict.

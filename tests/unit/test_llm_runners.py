@@ -85,21 +85,19 @@ def test_claude_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base claude invocation only."""
     runner = ClaudeRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["claude", "--output-format", "json"]
-    # --schema flag must not appear when no schema is supplied.
-    assert "--schema" not in argv
+    assert argv == ["claude", "--print", "--output-format", "json"]
+    assert "--json-schema" not in argv
 
 
 def test_claude_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
+    """_build_argv with a schema appends Claude's JSON-schema flag."""
     import json
 
     runner = ClaudeRunner()
     schema = {"type": "object", "properties": {"result": {"type": "string"}}}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    # The value immediately after --schema must be the JSON encoding of the schema.
-    idx = argv.index("--schema")
+    assert "--json-schema" in argv
+    idx = argv.index("--json-schema")
     assert json.loads(argv[idx + 1]) == schema
 
 
@@ -144,20 +142,17 @@ def test_gemini_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base gemini invocation only."""
     runner = GeminiRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["gemini", "--format", "json"]
+    assert argv == ["gemini", "--output-format", "json"]
     assert "--schema" not in argv
 
 
 def test_gemini_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
-    import json
-
+    """Gemini ignores schema at argv-build time because it lacks inline schema support."""
     runner = GeminiRunner()
     schema = {"type": "object"}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    idx = argv.index("--schema")
-    assert json.loads(argv[idx + 1]) == schema
+    assert argv == ["gemini", "--output-format", "json"]
+    assert "--schema" not in argv
 
 
 def test_gemini_parse_response_valid_json() -> None:
@@ -201,20 +196,17 @@ def test_codex_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base codex invocation only."""
     runner = CodexRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["codex", "--json"]
+    assert argv == ["codex", "exec"]
     assert "--schema" not in argv
 
 
 def test_codex_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
-    import json
-
+    """Codex handles schema via temp files during run(), not inline argv."""
     runner = CodexRunner()
     schema = {"type": "object"}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    idx = argv.index("--schema")
-    assert json.loads(argv[idx + 1]) == schema
+    assert argv == ["codex", "exec"]
+    assert "--schema" not in argv
 
 
 def test_codex_parse_response_valid_json() -> None:

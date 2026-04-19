@@ -14,4 +14,13 @@ class GeminiRunner(JsonCliRunner):
 
     name: ClassVar[str] = "gemini"
     binary_name: ClassVar[str] = "gemini"
-    base_argv: ClassVar[tuple[str, ...]] = ("--format", "json")
+    base_argv: ClassVar[tuple[str, ...]] = ("--output-format", "json")
+    schema_flag: ClassVar[str | None] = None
+
+    def _prompt_args(self, prompt: str) -> list[str]:
+        """Gemini uses --prompt for non-interactive execution."""
+        return ["--prompt", prompt]
+
+    def _stdin_input(self, prompt: str) -> str | None:
+        """Gemini prompt mode should not also receive stdin input."""
+        return None

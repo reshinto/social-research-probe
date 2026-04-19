@@ -68,7 +68,6 @@ _PACKET = {
     },
     "chart_captions": [],
     "warnings": [],
-    "response_schema": {"compiled_synthesis": "string", "opportunity_analysis": "string"},
 }
 
 
@@ -210,6 +209,21 @@ class TestSectionBuilders:
         html = section_7_statistics(_PACKET)
         assert "Mean score" in html
 
+    def test_section_7_includes_model_and_interpretation_columns(self):
+        pkt = {
+            **_PACKET,
+            "stats_summary": {
+                "models_run": ["descriptive"],
+                "highlights": ["Mean overall score: 0.70 — competitive baseline"],
+                "low_confidence": False,
+            },
+        }
+        html = section_7_statistics(pkt)
+        assert "Model" in html
+        assert "What it means" in html
+        assert "descriptive" in html
+        assert "Moderate baseline (0.70)" in html
+
     def test_section_7_no_highlights(self):
         pkt = {**_PACKET, "stats_summary": {"highlights": [], "low_confidence": False}}
         html = section_7_statistics(pkt)
@@ -221,10 +235,11 @@ class TestSectionBuilders:
         assert "Low confidence" in html
 
     def test_highlights_table_with_separator(self):
-        html = _highlights_table(["Mean score — 0.7"])
+        html = _highlights_table(["Mean overall score: 0.70 — competitive baseline"])
         assert "<table>" in html
-        assert "Mean score" in html
-        assert "0.7" in html
+        assert "descriptive" in html
+        assert "Mean overall score: 0.70" in html
+        assert "Moderate baseline (0.70)" in html
 
     def test_highlights_table_without_separator(self):
         html = _highlights_table(["No separator line"])
@@ -257,7 +272,7 @@ class TestSectionBuilders:
 
     def test_section_10_none(self):
         html = section_10_synthesis(None)
-        assert "LLM synthesis not run" in html
+        assert "LLM synthesis not stored" in html
 
     def test_section_11_with_text(self):
         html = section_11_opportunity("Opportunity: **grow fast**.")
@@ -265,7 +280,7 @@ class TestSectionBuilders:
 
     def test_section_11_none(self):
         html = section_11_opportunity(None)
-        assert "LLM synthesis not run" in html
+        assert "LLM synthesis not stored" in html
 
     def test_bulletise_with_parts(self):
         html = _bulletise("part one; part two")
@@ -367,16 +382,16 @@ class TestRenderHtml:
         assert "speechSynthesis" in html
 
     def test_synthesis_10_rendered(self):
-        html = render_html(_PACKET, synthesis_10="My synthesis text.")
+        html = render_html({**_PACKET, "compiled_synthesis": "My synthesis text."})
         assert "My synthesis text." in html
 
     def test_synthesis_11_rendered(self):
-        html = render_html(_PACKET, synthesis_11="My opportunity text.")
+        html = render_html({**_PACKET, "opportunity_analysis": "My opportunity text."})
         assert "My opportunity text." in html
 
     def test_placeholder_when_no_synthesis(self):
         html = render_html(_PACKET)
-        assert "LLM synthesis not run" in html
+        assert "LLM synthesis not stored" in html
 
     def test_chart_embedded_when_png_exists(self, tmp_path):
         png = tmp_path / "overall_score_bar.png"
@@ -399,28 +414,34 @@ class TestRenderHtml:
 
 class TestWriteHtmlReport:
     def test_creates_report_file(self, tmp_path):
-        out = write_html_report(_PACKET, None, tmp_path)
+        out = write_html_report(_PACKET, tmp_path)
         assert out.exists()
         assert out.suffix == ".html"
         assert "reports" in str(out)
 
     def test_report_filename_contains_topic_slug(self, tmp_path):
-        out = write_html_report(_PACKET, None, tmp_path)
+        out = write_html_report(_PACKET, tmp_path)
         assert "ai-agents" in out.name or "ai" in out.name
 
     def test_report_filename_contains_platform(self, tmp_path):
-        out = write_html_report(_PACKET, None, tmp_path)
+        out = write_html_report(_PACKET, tmp_path)
         assert "youtube" in out.name
 
     def test_synthesis_included_when_provided(self, tmp_path):
-        synthesis = {"compiled_synthesis": "synth10 text", "opportunity_analysis": "synth11 text"}
-        out = write_html_report(_PACKET, synthesis, tmp_path)
+        out = write_html_report(
+            {
+                **_PACKET,
+                "compiled_synthesis": "synth10 text",
+                "opportunity_analysis": "synth11 text",
+            },
+            tmp_path,
+        )
         content = out.read_text(encoding="utf-8")
         assert "synth10 text" in content
         assert "synth11 text" in content
 
     def test_prints_path_to_stderr(self, tmp_path, capsys):
-        write_html_report(_PACKET, None, tmp_path)
+        write_html_report(_PACKET, tmp_path)
         err = capsys.readouterr().err
         assert "HTML report" in err
         assert "file://" in err
@@ -428,7 +449,7 @@ class TestWriteHtmlReport:
     def test_creates_reports_dir(self, tmp_path):
         reports_dir = tmp_path / "reports"
         assert not reports_dir.exists()
-        write_html_report(_PACKET, None, tmp_path)
+        write_html_report(_PACKET, tmp_path)
         assert reports_dir.is_dir()
 
 
@@ -590,25 +611,30 @@ class TestTtpHttpAdapter:
 class TestResearchHtmlInCli:
     """Integration tests for HTML output wired into the research CLI path."""
 
-    _PACKET_WITH_RS: ClassVar[dict] = {
+    _PACKET_WITH_SYNTHESIS: ClassVar[dict] = {
         **_PACKET,
-        "response_schema": {"compiled_synthesis": "s", "opportunity_analysis": "s"},
+        "compiled_synthesis": "synth10 text",
+        "opportunity_analysis": "synth11 text",
     }
 
     def _patch_pipeline(self, monkeypatch):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: self._PACKET_WITH_RS,
+            lambda cmd, d, adapter_config=None: self._PACKET_WITH_SYNTHESIS,
         )
-        monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
-    def test_html_file_written_in_cli_mode(self, monkeypatch, tmp_path):
+    def test_html_file_written_in_research_command(self, monkeypatch, tmp_path, capsys):
         from social_research_probe.cli import main
 
         self._patch_pipeline(monkeypatch)
         assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "synthesis"
+        assert payload["packet"]["compiled_synthesis"] == "synth10 text"
+        assert payload["packet"]["html_report_path"].startswith("file://")
 
     def test_no_html_flag_suppresses_file(self, monkeypatch, tmp_path):
         from social_research_probe.cli import main
@@ -620,65 +646,50 @@ class TestResearchHtmlInCli:
         reports_dir = tmp_path / "reports"
         assert not reports_dir.exists() or not list(reports_dir.glob("*.html"))
 
-    def test_pre_emit_hook_passed_in_skill_mode(self, monkeypatch, tmp_path):
-        from social_research_probe.cli import main
+    def test_report_command_accepts_envelope_packet(self, tmp_path):
+        from social_research_probe.commands.report import run
 
-        received_hook = []
-
-        def fake_run(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
-            received_hook.append(pre_emit_hook)
-            return self._PACKET_WITH_RS
-
-        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run)
-        main(["--data-dir", str(tmp_path), "research", "--mode", "skill", "ai", "latest-news"])
-        assert len(received_hook) == 1
-        assert received_hook[0] is not None  # hook was passed
-
-    def test_pre_emit_hook_writes_html_when_called(self, monkeypatch, tmp_path):
-        from social_research_probe.cli import main
-
-        received_hook = []
-
-        def fake_run(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
-            received_hook.append(pre_emit_hook)
-            return self._PACKET_WITH_RS
-
-        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run)
-        monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
-        main(["--data-dir", str(tmp_path), "research", "--mode", "skill", "ai", "latest-news"])
-        hook = received_hook[0]
-        assert hook is not None
-        hook(self._PACKET_WITH_RS)
-        reports = list((tmp_path / "reports").glob("*.html"))
-        assert len(reports) == 1
-        assert self._PACKET_WITH_RS["html_report_path"].startswith("file://")
-
-    def test_pre_emit_hook_skips_html_when_no_html(self, monkeypatch, tmp_path):
-        from social_research_probe.cli import main
-
-        received_hook = []
-
-        def fake_run(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
-            received_hook.append(pre_emit_hook)
-            return self._PACKET_WITH_RS
-
-        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run)
-        main(
-            [
-                "--data-dir",
-                str(tmp_path),
-                "research",
-                "--mode",
-                "skill",
-                "ai",
-                "latest-news",
-                "--no-html",
-            ]
+        pkt_path = tmp_path / "packet.json"
+        pkt_path.write_text(
+            json.dumps({"kind": "synthesis", "packet": self._PACKET_WITH_SYNTHESIS}),
+            encoding="utf-8",
         )
-        hook = received_hook[0]
-        assert hook is not None
-        monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
-        hook(self._PACKET_WITH_RS)
-        assert not (tmp_path / "reports").exists() or not list(
-            (tmp_path / "reports").glob("*.html")
+        out_path = tmp_path / "out.html"
+        assert run(str(pkt_path), None, None, str(out_path)) == 0
+        assert "synth10 text" in out_path.read_text(encoding="utf-8")
+
+    def test_render_command_accepts_envelope_packet(self, monkeypatch, tmp_path):
+        from social_research_probe.commands import render as render_cmd
+
+        pkt_path = tmp_path / "packet.json"
+        pkt_path.write_text(
+            json.dumps({"kind": "synthesis", "packet": self._PACKET_WITH_SYNTHESIS}),
+            encoding="utf-8",
         )
+
+        monkeypatch.setattr(render_cmd, "select_and_run", lambda data, label: [])
+        monkeypatch.setattr(
+            render_cmd,
+            "select_and_render",
+            lambda data, label, output_dir: type(
+                "_Chart",
+                (),
+                {"path": "/tmp/chart.png", "caption": "cap"},
+            )(),
+        )
+
+        assert render_cmd.run(str(pkt_path)) == 0
+
+    def test_synthesis_error_returns_nonzero(self, monkeypatch, tmp_path):
+        from social_research_probe.cli import main
+        from social_research_probe.errors import SynthesisError
+
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, adapter_config=None: _PACKET,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.cli._attach_synthesis",
+            lambda pkt: (_ for _ in ()).throw(SynthesisError("boom")),
+        )
+        assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 4

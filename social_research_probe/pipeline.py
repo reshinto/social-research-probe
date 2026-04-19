@@ -4,16 +4,13 @@ import asyncio
 import math
 import os
 import statistics
-from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
 
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.ensemble import multi_llm_prompt
-from social_research_probe.llm.host import emit_packet
 from social_research_probe.platforms.base import (
     FetchLimits,
     RawItem,
@@ -71,8 +68,6 @@ from social_research_probe.viz import regression_scatter as regression_scatter_v
 from social_research_probe.viz import residuals as residuals_viz
 from social_research_probe.viz import scatter as scatter_viz
 from social_research_probe.viz import table as table_viz
-
-Mode = Literal["skill", "cli"]
 
 _SRC_NUM = {"primary": 1.0, "secondary": 0.7, "commentary": 0.4, "unknown": 0.3}
 
@@ -204,6 +199,17 @@ def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
     )
 
 
+def _fallback_transcript_summary(transcript: str, word_limit: int = 220) -> str:
+    """Return a readable transcript-derived fallback when the LLM summary fails."""
+    words = transcript.split()
+    if not words:
+        return transcript
+    excerpt = " ".join(words[:word_limit]).strip()
+    if len(words) > word_limit:
+        excerpt += " ..."
+    return excerpt
+
+
 async def _enrich_one(
     item: ScoredItem,
     fetch_transcript,
@@ -244,6 +250,8 @@ async def _enrich_one(
     )
     if summary:
         item["one_line_takeaway"] = summary
+    else:
+        item["one_line_takeaway"] = _fallback_transcript_summary(cleaned)
 
 
 def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
@@ -525,6 +533,7 @@ def _available_backends(data_dir: Path) -> list[str]:
     from social_research_probe.errors import ValidationError
 
     configured = Config.load(data_dir).corroboration_backend
+    log(f"[srp] corroboration: configured backend is {configured}")
     if configured == "none":
         return []
     candidates = ("exa", "brave", "tavily") if configured == "host" else (configured,)
@@ -624,9 +633,7 @@ def _build_svs(
 def run_research(
     cmd: ParsedRunResearch,
     data_dir: Path,
-    mode: Mode,
     adapter_config: AdapterConfig | None = None,
-    pre_emit_hook: Callable[[dict], None] | None = None,
 ) -> ResearchPacket | MultiResearchPacket:
     _maybe_register_fake()
     os.environ["SRP_DATA_DIR"] = str(data_dir)
@@ -694,13 +701,5 @@ def run_research(
             )
         )
 
-    combined = (
-        packets[0]
-        if len(packets) == 1
-        else {"multi": packets, "response_schema": packets[0]["response_schema"]}
-    )
-    if mode == "skill":
-        if pre_emit_hook is not None:
-            pre_emit_hook(combined)
-        emit_packet(combined, kind="synthesis")  # exits 0
+    combined = packets[0] if len(packets) == 1 else {"multi": packets}
     return combined

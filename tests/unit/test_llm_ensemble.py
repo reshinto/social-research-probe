@@ -211,6 +211,32 @@ def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
     assert calls == [("gemini", "summarise this video")]
 
 
+def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch):
+    from social_research_probe.llm import ensemble as llm_mod
+
+    calls = []
+
+    class _FakeConfig:
+        llm_runner = "gemini"
+        preferred_free_text_runner = "gemini"
+
+    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+        calls.append((name, prompt))
+        if name == "gemini":
+            return None
+        if "synthesize" in prompt.lower() or "synthesise" in prompt.lower():
+            return "synthesized fallback"
+        return "fallback answer"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+
+    assert multi_llm_prompt("summarise this video") == "synthesized fallback"
+    assert calls[0] == ("gemini", "summarise this video")
+    assert ("claude", "summarise this video") in calls
+    assert ("codex", "summarise this video") in calls
+
+
 def test_multi_llm_prompt_uses_local_runner(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 

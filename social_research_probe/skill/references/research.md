@@ -1,10 +1,10 @@
 1. `srp config check-secrets --needed-for research --platform youtube --output json`
    If `missing` is non-empty: tell user to run `srp config set-secret <name>` in a terminal (hidden prompt — never ask them to paste keys into chat). Stop until confirmed.
-2. Run the research in skill mode to get the JSON packet:
-   - `srp research --mode skill <topic> <purpose>` — platform defaults to `youtube`
-   - `srp research --mode skill <platform> <topic> <purpose1>,<purpose2>` — multiple purposes (comma-separated)
+2. Run the research to get the JSON packet:
+   - `srp research <topic> <purpose>` — platform defaults to `youtube`
+   - `srp research <platform> <topic> <purpose1>,<purpose2>` — multiple purposes (comma-separated)
    - Add `--no-shorts` to exclude YouTube Shorts (<90s). Shorts are included by default.
-   - Note: users invoke this skill as `/srp research <topic> <purpose>` — never ask them to specify `--mode`.
+   - Note: users invoke this skill as `/srp research <topic> <purpose>`.
 3. **HTML report is written automatically.** The CLI prints the report path to stderr as `[srp] HTML report: file:///...`. Surface that path to the user immediately:
    - Tell the user: `Open your report: file:///~/.social-research-probe/reports/<filename>.html`
    - The HTML is self-contained and opens in any browser. It includes all 11 sections, embedded charts, and a built-in text-to-speech player.

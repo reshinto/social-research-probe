@@ -28,6 +28,8 @@ def fetch_transcript(url: str) -> str | None:
     ``SRP_YTDLP_BROWSER`` env var (e.g. ``safari``, ``chrome``).
     Defaults to no cookies to avoid macOS sandbox permission errors.
     """
+    if fake := _fake_test_transcript(url):
+        return fake
     try:
         import yt_dlp
     except ImportError:
@@ -64,6 +66,16 @@ def _yt_dlp_opts() -> dict:
     if browser and browser.lower() != "none":
         opts["cookiesfrombrowser"] = (browser,)
     return opts
+
+
+def _fake_test_transcript(url: str) -> str | None:
+    """Return a deterministic transcript for subprocess integration tests."""
+    if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") != "1":
+        return None
+    if "watch?v=fake" not in url:
+        return None
+    tokens = " ".join(f"transcript-token-{i}" for i in range(1, 260))
+    return f"Deterministic transcript for integration testing. {tokens}"
 
 
 def get_transcript(video_id: str) -> str | None:

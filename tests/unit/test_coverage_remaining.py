@@ -7,6 +7,7 @@ import subprocess
 import pytest
 
 from social_research_probe.cli import main
+from social_research_probe.errors import SynthesisError
 from social_research_probe.llm.ensemble import _run_provider
 from social_research_probe.pipeline import _fetch_best_transcript
 from social_research_probe.synthesize.formatter import (
@@ -40,26 +41,34 @@ _VALID_PACKET = {
 }
 
 
-def test_research_skill_mode_skips_render_full(monkeypatch, tmp_path):
+def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys):
     calls = []
 
-    def fake_run_research(cmd, data_dir, mode, adapter_config=None, pre_emit_hook=None):
-        calls.append((cmd, data_dir, mode, adapter_config))
+    def fake_run_research(cmd, data_dir, adapter_config=None):
+        calls.append((cmd, data_dir, adapter_config))
         return _VALID_PACKET
 
-    def fail_render_full(*args, **kwargs):
-        raise AssertionError("render_full should not be called in skill mode")
-
     monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run_research)
-    monkeypatch.setattr("social_research_probe.synthesize.formatter.render_full", fail_render_full)
+    monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
-    assert (
-        main(["--data-dir", str(tmp_path), "research", "--mode", "skill", "ai", "latest-news"]) == 0
-    )
+    assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
     assert calls
-    _cmd, _data_dir, mode, adapter_config = calls[0]
-    assert mode == "skill"
+    _cmd, _data_dir, adapter_config = calls[0]
     assert adapter_config == {"include_shorts": True, "fetch_transcripts": True}
+    out = capsys.readouterr().out
+    assert '"kind": "synthesis"' in out
+
+
+def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.run_research",
+        lambda cmd, data_dir, adapter_config=None: _VALID_PACKET,
+    )
+    monkeypatch.setattr(
+        "social_research_probe.cli._attach_synthesis",
+        lambda pkt: (_ for _ in ()).throw(SynthesisError("boom")),
+    )
+    assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 4
 
 
 @pytest.mark.parametrize(

@@ -87,15 +87,21 @@ def _run_provider(name: str, prompt: str, task: str = "generating response") -> 
         return None
 
 
-def _collect_responses(prompt: str, task: str = "generating response") -> dict[str, str]:
+def _collect_responses(
+    prompt: str,
+    task: str = "generating response",
+    providers: tuple[FreeTextRunnerName, ...] = _PROVIDERS,
+) -> dict[str, str]:
     """Fan out the prompt to all providers in parallel.
 
     Returns a dict mapping provider name to response text for every provider
     that succeeded. Missing or failed providers are absent from the dict.
     """
     responses: dict[str, str] = {}
-    with ThreadPoolExecutor(max_workers=len(_PROVIDERS)) as pool:
-        futures = {pool.submit(_run_provider, name, prompt, task): name for name in _PROVIDERS}
+    if not providers:
+        return responses
+    with ThreadPoolExecutor(max_workers=len(providers)) as pool:
+        futures = {pool.submit(_run_provider, name, prompt, task): name for name in providers}
         for future in as_completed(futures):
             name = futures[future]
             response = future.result()
@@ -152,6 +158,13 @@ def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | No
         return None
     preferred = cfg.preferred_free_text_runner
     if preferred is not None:
-        return _run_provider(preferred, prompt, task)
+        preferred_result = _run_provider(preferred, prompt, task)
+        if preferred_result:
+            return preferred_result
+        providers = (
+            _PROVIDERS if preferred == "local" else tuple(p for p in _PROVIDERS if p != preferred)
+        )
+        responses = _collect_responses(prompt, task, providers=providers)
+        return _synthesize(responses, prompt)
     responses = _collect_responses(prompt, task)
     return _synthesize(responses, prompt)

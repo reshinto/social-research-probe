@@ -10,7 +10,7 @@ reviewable shapes.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, NotRequired, TypeAlias, TypedDict
+from typing import Literal, TypeAlias, TypedDict
 
 JSONScalar: TypeAlias = None | bool | int | float | str
 JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
@@ -97,7 +97,7 @@ class PurposeEntry(TypedDict):
 
     method: str
     evidence_priorities: list[str]
-    scoring_overrides: NotRequired[dict[str, float]]
+    scoring_overrides: dict[str, float]
 
 
 class TopicsState(TypedDict):
@@ -213,13 +213,6 @@ class StatsSummary(TypedDict):
     low_confidence: bool
 
 
-class ResponseSchema(TypedDict):
-    """Skill-mode schema for the LLM-authored sections."""
-
-    compiled_synthesis: str
-    opportunity_analysis: str
-
-
 class ResearchPacket(TypedDict, total=False):
     """Canonical single-topic research packet emitted by the pipeline."""
 
@@ -233,7 +226,8 @@ class ResearchPacket(TypedDict, total=False):
     stats_summary: StatsSummary
     chart_captions: list[str]
     warnings: list[str]
-    response_schema: ResponseSchema
+    compiled_synthesis: str
+    opportunity_analysis: str
     html_report_path: str
 
 
@@ -241,7 +235,6 @@ class MultiResearchPacket(TypedDict, total=False):
     """Packet wrapper used when one request produces multiple topic packets."""
 
     multi: list[ResearchPacket]
-    response_schema: ResponseSchema
     html_report_path: str
 
 
