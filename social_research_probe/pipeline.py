@@ -24,9 +24,10 @@ from social_research_probe.synthesize.explain import explain as explain_stat
 from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.synthesize.warnings import detect as detect_warnings
 from social_research_probe.validation.source import classify as classify_source
+from social_research_probe.viz import bar as bar_viz
+from social_research_probe.viz import line as line_viz
 from social_research_probe.viz import scatter as scatter_viz
 from social_research_probe.viz import table as table_viz
-from social_research_probe.viz.selector import select_and_render
 
 Mode = Literal["skill", "cli"]
 
@@ -198,13 +199,11 @@ def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
 
 
 def _render_bar(overall: list[float], charts_dir) -> str:
-    chart = select_and_render(overall, label="overall_score", output_dir=str(charts_dir))
+    chart = bar_viz.render(overall, label="overall_score", output_dir=str(charts_dir))
     return chart.caption
 
 
 def _render_line(overall: list[float], charts_dir) -> str:
-    from social_research_probe.viz import line as line_viz
-
     chart = line_viz.render(overall, label="overall_score_by_rank", output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
