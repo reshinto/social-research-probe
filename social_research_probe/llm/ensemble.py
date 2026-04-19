@@ -36,6 +36,7 @@ def _run_provider(name: str, prompt: str) -> str | None:
     Silently catches all exceptions so a missing or rate-limited CLI never
     crashes the caller — it simply contributes nothing to the ensemble.
     """
+    print(f"[srp] activating LLM: {name}")
     try:
         if name == "claude":
             # stdin=DEVNULL prevents the 3-second stdin wait Claude emits otherwise.
