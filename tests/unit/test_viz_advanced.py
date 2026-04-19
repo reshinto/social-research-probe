@@ -6,6 +6,7 @@ import os
 import sys
 import types
 import unittest.mock as mock
+from pathlib import Path
 
 from social_research_probe.viz import heatmap as heatmap_mod
 from social_research_probe.viz import histogram as histogram_mod
@@ -24,6 +25,20 @@ def _install_fake_matplotlib(monkeypatch):
     monkeypatch.setitem(sys.modules, "matplotlib", fake_mpl)
     monkeypatch.setitem(sys.modules, "matplotlib.pyplot", fake_plt)
     return fake_plt
+
+
+def _install_placeholder_writer(monkeypatch):
+    calls = []
+
+    def fake_write_placeholder_png(path: str) -> None:
+        calls.append(path)
+        Path(path).write_bytes(b"png")
+
+    monkeypatch.setattr(
+        "social_research_probe.viz._png_writer.write_placeholder_png",
+        fake_write_placeholder_png,
+    )
+    return calls
 
 
 class TestRegressionScatter:
@@ -53,6 +68,19 @@ class TestRegressionScatter:
         result = regression_mod.render([1.0], [2.0], label="x", output_dir=str(tmp_path))
         assert "R²=0.000" in result.caption
 
+    def test_render_falls_back_to_placeholder_on_matplotlib_error(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            regression_mod,
+            "_render_with_matplotlib",
+            lambda *args: (_ for _ in ()).throw(RuntimeError),
+        )
+        calls = _install_placeholder_writer(monkeypatch)
+
+        result = regression_mod.render([1.0, 2.0], [2.0, 4.0], label="x", output_dir=str(tmp_path))
+
+        assert calls == [result.path]
+        assert os.path.isfile(result.path)
+
     def test_fit_line_zero_variance(self):
         slope, intercept, r2 = regression_mod._fit_line([1.0, 1.0, 1.0], [1.0, 2.0, 3.0])
         assert slope == 0.0
@@ -78,6 +106,19 @@ class TestHistogram:
         histogram_mod._render_with_matplotlib([0.1, 0.2, 0.3], str(tmp_path / "h.png"), "x", 5)
         fake_plt.savefig.assert_called_once()
 
+    def test_render_falls_back_to_placeholder_on_matplotlib_error(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            histogram_mod,
+            "_render_with_matplotlib",
+            lambda *args: (_ for _ in ()).throw(RuntimeError),
+        )
+        calls = _install_placeholder_writer(monkeypatch)
+
+        result = histogram_mod.render([0.1, 0.2, 0.3], label="x", output_dir=str(tmp_path))
+
+        assert calls == [result.path]
+        assert os.path.isfile(result.path)
+
 
 class TestHeatmap:
     def test_render_creates_png(self, tmp_path):
@@ -101,6 +142,20 @@ class TestHeatmap:
             ["x", "y"], [[1.0, 0.5], [0.5, 1.0]], str(tmp_path / "hm.png"), "lab"
         )
         fake_plt.savefig.assert_called_once()
+
+    def test_render_falls_back_to_placeholder_on_matplotlib_error(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            heatmap_mod,
+            "_render_with_matplotlib",
+            lambda *args: (_ for _ in ()).throw(RuntimeError),
+        )
+        calls = _install_placeholder_writer(monkeypatch)
+
+        features = {"a": [1.0, 2.0, 3.0], "b": [2.0, 4.0, 6.0]}
+        result = heatmap_mod.render(features, output_dir=str(tmp_path))
+
+        assert calls == [result.path]
+        assert os.path.isfile(result.path)
 
     def test_pearson_zero_variance(self):
         assert heatmap_mod._pearson([1.0, 1.0, 1.0], [2.0, 3.0, 4.0]) == 0.0
@@ -126,6 +181,19 @@ class TestResiduals:
         fake_plt = _install_fake_matplotlib(monkeypatch)
         residuals_mod._render_with_matplotlib([0.1, 0.2], [0.0, 0.05], str(tmp_path / "r.png"), "x")
         fake_plt.savefig.assert_called_once()
+
+    def test_render_falls_back_to_placeholder_on_matplotlib_error(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            residuals_mod,
+            "_render_with_matplotlib",
+            lambda *args: (_ for _ in ()).throw(RuntimeError),
+        )
+        calls = _install_placeholder_writer(monkeypatch)
+
+        result = residuals_mod.render([1.0, 2.0], [1.1, 2.1], label="r", output_dir=str(tmp_path))
+
+        assert calls == [result.path]
+        assert os.path.isfile(result.path)
 
     def test_fit_zero_variance_returns_zero_slope(self):
         fitted, residuals = residuals_mod._fit_and_residuals([1.0, 1.0, 1.0], [1.0, 2.0, 3.0])

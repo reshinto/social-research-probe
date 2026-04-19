@@ -6,6 +6,7 @@ and that captions carry the expected content. Matplotlib uses the Agg backend
 """
 
 import os
+from pathlib import Path
 
 from social_research_probe.viz.bar import render as bar_render
 from social_research_probe.viz.line import render as line_render
@@ -135,3 +136,77 @@ def test_table_render_with_matplotlib_empty_rows(monkeypatch, tmp_path):
     path = str(tmp_path / "out_empty.png")
     table_mod._render_with_matplotlib([], path, "empty")
     fake_plt.savefig.assert_called_once_with(path, bbox_inches="tight")
+
+
+def _install_placeholder_writer(monkeypatch):
+    calls = []
+
+    def fake_write_placeholder_png(path: str) -> None:
+        calls.append(path)
+        Path(path).write_bytes(b"png")
+
+    monkeypatch.setattr(
+        "social_research_probe.viz._png_writer.write_placeholder_png",
+        fake_write_placeholder_png,
+    )
+    return calls
+
+
+def test_line_render_falls_back_to_placeholder_on_matplotlib_error(monkeypatch, tmp_path):
+    from social_research_probe.viz import line as line_mod
+
+    monkeypatch.setattr(
+        line_mod, "_render_with_matplotlib", lambda *args: (_ for _ in ()).throw(RuntimeError)
+    )
+    calls = _install_placeholder_writer(monkeypatch)
+
+    result = line_mod.render([1.0, 2.0], label="views", output_dir=str(tmp_path))
+
+    assert calls == [result.path]
+    assert os.path.isfile(result.path)
+
+
+def test_bar_render_falls_back_to_placeholder_on_matplotlib_error(monkeypatch, tmp_path):
+    from social_research_probe.viz import bar as bar_mod
+
+    monkeypatch.setattr(
+        bar_mod, "_render_with_matplotlib", lambda *args: (_ for _ in ()).throw(RuntimeError)
+    )
+    calls = _install_placeholder_writer(monkeypatch)
+
+    result = bar_mod.render([1.0, 2.0], label="views", output_dir=str(tmp_path))
+
+    assert calls == [result.path]
+    assert os.path.isfile(result.path)
+
+
+def test_scatter_render_falls_back_to_placeholder_on_matplotlib_error(monkeypatch, tmp_path):
+    from social_research_probe.viz import scatter as scatter_mod
+
+    monkeypatch.setattr(
+        scatter_mod,
+        "_render_with_matplotlib",
+        lambda *args: (_ for _ in ()).throw(RuntimeError),
+    )
+    calls = _install_placeholder_writer(monkeypatch)
+
+    result = scatter_mod.render([1.0, 2.0], [3.0, 4.0], label="views", output_dir=str(tmp_path))
+
+    assert calls == [result.path]
+    assert os.path.isfile(result.path)
+
+
+def test_table_render_falls_back_to_placeholder_on_matplotlib_error(monkeypatch, tmp_path):
+    from social_research_probe.viz import table as table_mod
+
+    monkeypatch.setattr(
+        table_mod,
+        "_render_with_matplotlib",
+        lambda *args: (_ for _ in ()).throw(RuntimeError),
+    )
+    calls = _install_placeholder_writer(monkeypatch)
+
+    result = table_mod.render([{"name": "Alice"}], label="scores", output_dir=str(tmp_path))
+
+    assert calls == [result.path]
+    assert os.path.isfile(result.path)
