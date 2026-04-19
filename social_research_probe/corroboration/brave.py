@@ -75,6 +75,7 @@ class BraveBackend(CorroborationBackend):
             AdapterError: on network failures or missing API key.
         """
         import json
+        import urllib.error
         import urllib.parse
         import urllib.request
 
@@ -88,9 +89,11 @@ class BraveBackend(CorroborationBackend):
             },
             method="GET",
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-        # Brave response structure: {"web": {"results": [{"url": ...}, ...]}}
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.URLError as exc:
+            raise AdapterError(f"brave search failed: {exc}") from exc
         return data.get("web", {}).get("results", [])
 
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:

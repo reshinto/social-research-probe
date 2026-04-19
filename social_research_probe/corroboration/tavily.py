@@ -76,6 +76,7 @@ class TavilyBackend(CorroborationBackend):
             AdapterError: on network failures or missing API key.
         """
         import json
+        import urllib.error
         import urllib.request
 
         payload = json.dumps({"query": query, "max_results": 5}).encode()
@@ -88,9 +89,11 @@ class TavilyBackend(CorroborationBackend):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-        # Tavily response structure: {"results": [{"url": ...}, ...]}
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.URLError as exc:
+            raise AdapterError(f"tavily search failed: {exc}") from exc
         return data.get("results", [])
 
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:

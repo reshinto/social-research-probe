@@ -9,7 +9,7 @@ from typing import Literal
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.host import emit_packet
-from social_research_probe.platforms.base import FetchLimits
+from social_research_probe.platforms.base import FetchLimits, RawItem, SignalSet, TrustHints
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import merge_purposes
@@ -84,37 +84,45 @@ def _maybe_register_fake() -> None:
         importlib.import_module("tests.fixtures.fake_youtube")
 
 
-def _score_item(it, sig, h, z_vel: float, z_eng: float):
-    src = classify_source(it, h)
+def _score_item(
+    item: RawItem,
+    signal: SignalSet,
+    hints: TrustHints,
+    z_view_velocity: float,
+    z_engagement: float,
+) -> tuple[float, dict]:
+    src = classify_source(item, hints)
     trust = trust_score(
         source_class=_SRC_NUM[src.value],
-        channel_credibility=_channel_credibility(h.subscriber_count),
-        citation_traceability=min(1.0, len(h.citation_markers) / 3),
+        channel_credibility=_channel_credibility(hints.subscriber_count),
+        citation_traceability=min(1.0, len(hints.citation_markers) / 3),
         ai_slop_penalty=0.0,
         corroboration_score=0.3,
     )
-    age_days = max(1.0, (datetime.now(UTC) - sig.upload_date).days if sig.upload_date else 30.0)
+    age_days = max(
+        1.0, (datetime.now(UTC) - signal.upload_date).days if signal.upload_date else 30.0
+    )
     trend = trend_score(
-        z_view_velocity=z_vel,
-        z_engagement_ratio=z_eng,
-        z_cross_channel_repetition=sig.cross_channel_repetition or 0.0,
+        z_view_velocity=z_view_velocity,
+        z_engagement_ratio=z_engagement,
+        z_cross_channel_repetition=signal.cross_channel_repetition or 0.0,
         age_days=age_days,
     )
-    engagement = sig.engagement_ratio or 0.0
-    opp = opportunity_score(
-        market_gap=max(0.0, 1.0 - (sig.cross_channel_repetition or 0.0)),
+    engagement = signal.engagement_ratio or 0.0
+    opportunity = opportunity_score(
+        market_gap=max(0.0, 1.0 - (signal.cross_channel_repetition or 0.0)),
         monetization_proxy=min(1.0, engagement * 20),
         feasibility=0.5,
         novelty=max(0.0, 1.0 - age_days / 180.0),
     )
-    ov = overall_score(trust=trust, trend=trend, opportunity=opp)
-    return ov, {
-        "title": it.title,
-        "channel": it.author_name,
-        "url": it.url,
+    overall = overall_score(trust=trust, trend=trend, opportunity=opportunity)
+    return overall, {
+        "title": item.title,
+        "channel": item.author_name,
+        "url": item.url,
         "source_class": src.value,
-        "scores": {"trust": trust, "trend": trend, "opportunity": opp, "overall": ov},
-        "one_line_takeaway": (it.text_excerpt or it.title)[:140],
+        "scores": {"trust": trust, "trend": trend, "opportunity": opportunity, "overall": overall},
+        "one_line_takeaway": (item.text_excerpt or item.title)[:140],
     }
 
 
@@ -138,8 +146,10 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
         z_vels = _zscore([s.view_velocity or 0.0 for s in signals])
         z_engs = _zscore([s.engagement_ratio or 0.0 for s in signals])
         scored = [
-            _score_item(it, s, h, zv, ze)
-            for it, s, h, zv, ze in zip(items, signals, hints, z_vels, z_engs, strict=True)
+            _score_item(item, signal, hint, z_vel, z_eng)
+            for item, signal, hint, z_vel, z_eng in zip(
+                items, signals, hints, z_vels, z_engs, strict=True
+            )
         ]
         scored.sort(key=lambda x: x[0], reverse=True)
         top5 = [d for _, d in scored[:5]]

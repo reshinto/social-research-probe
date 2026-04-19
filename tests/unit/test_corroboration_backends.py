@@ -290,3 +290,42 @@ def test_tavily_corroborate_end_to_end(monkeypatch):
     result = TavilyBackend().corroborate(_FakeClaim("some claim"))
     assert result.verdict == "supported"
     assert "https://tavily.com" in result.sources
+
+
+def test_exa_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps urllib.error.URLError in AdapterError."""
+    import urllib.error
+    import urllib.request
+
+    from social_research_probe.errors import AdapterError
+
+    monkeypatch.setenv("SRP_EXA_API_KEY", "k")
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    with pytest.raises(AdapterError, match="exa search failed"):
+        ExaBackend()._search("test")
+
+
+def test_brave_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps urllib.error.URLError in AdapterError."""
+    import urllib.error
+    import urllib.request
+
+    from social_research_probe.errors import AdapterError
+
+    monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    with pytest.raises(AdapterError, match="brave search failed"):
+        BraveBackend()._search("test")
+
+
+def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps urllib.error.URLError in AdapterError."""
+    import urllib.error
+    import urllib.request
+
+    from social_research_probe.errors import AdapterError
+
+    monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")))
+    with pytest.raises(AdapterError, match="tavily search failed"):
+        TavilyBackend()._search("test")

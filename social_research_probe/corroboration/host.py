@@ -41,25 +41,20 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
     if not results:
         return ("inconclusive", 0.0)
 
-    # Count votes for each verdict label.
     counts: Counter[str] = Counter(r.verdict for r in results)
     top_verdicts = counts.most_common()
 
-    # Detect a tie: if the top two counts are equal, fall back to inconclusive.
     if len(top_verdicts) >= 2 and top_verdicts[0][1] == top_verdicts[1][1]:
         winner = "inconclusive"
     else:
         winner = top_verdicts[0][0]
 
-    # Weighted-average confidence: each result's confidence weights itself.
     total_weight = sum(r.confidence for r in results)
-    if total_weight == 0.0:
-        # All backends returned 0 confidence — fall back to plain average.
-        avg_confidence = sum(r.confidence for r in results) / len(results)
-    else:
-        avg_confidence = sum(r.confidence * r.confidence for r in results) / total_weight
-
-    # Clamp to [0.0, 1.0] to guard against floating-point drift.
+    avg_confidence = (
+        sum(r.confidence * r.confidence for r in results) / total_weight
+        if total_weight > 0.0
+        else 0.0
+    )
     avg_confidence = max(0.0, min(1.0, avg_confidence))
 
     return (winner, avg_confidence)
@@ -101,7 +96,6 @@ def corroborate_claim(claim, backend_names: list[str]) -> dict:
             result = backend.corroborate(claim)
             collected.append(result)
         except AdapterError as exc:
-            # Log the failure and continue with remaining backends.
             print(f"[corroboration] backend {backend_name!r} failed: {exc}", file=sys.stderr)
 
     verdict, confidence = aggregate_verdict(collected)

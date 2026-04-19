@@ -43,10 +43,6 @@ class Claim:
     index: int
 
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-
-
 def _split_sentences(text: str) -> list[str]:
     """Split text into sentences on sentence-ending punctuation.
 
@@ -115,10 +111,6 @@ def _is_candidate(sentence: str) -> bool:
     if len(words) < 5:
         return False
     return _has_number(sentence) or _has_proper_noun(sentence)
-
-
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 
 
 def extract_claims(text: str, source_text: str | None = None) -> list[Claim]:

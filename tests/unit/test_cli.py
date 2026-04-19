@@ -260,14 +260,20 @@ class TestRunResearch:
         assert calls
 
 
+class TestInstallSkillTargetValidation:
+    def test_install_skill_target_outside_home_raises(self, monkeypatch, tmp_path):
+        """install-skill rejects --target paths outside ~/.claude/."""
+        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
+        result = main(["install-skill", "--target", "/tmp/dangerous"])
+        assert result != 0
+
+
 class TestInstallSkill:
     def test_install_skill(self, monkeypatch, tmp_path):
-        target = tmp_path / "skill_out"
-        # Monkeypatch shutil.copytree so we don't actually copy
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(exist_ok=True))
-        # Monkeypatch shutil.which so uv/pipx aren't found
+        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
+        target = tmp_path / ".claude" / "skill_out"
+        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
         monkeypatch.setattr("shutil.which", lambda x: None)
-        # Monkeypatch shutil.rmtree to avoid error if target doesn't exist
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
@@ -400,8 +406,9 @@ class TestSrpErrorHandling:
 
 class TestInstallSkillWithUvOrPipx:
     def test_install_skill_with_uv(self, monkeypatch, tmp_path, capsys):
-        target = tmp_path / "skill_out"
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(exist_ok=True))
+        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
+        target = tmp_path / ".claude" / "skill_out"
+        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         calls = []
         monkeypatch.setattr(
@@ -419,8 +426,9 @@ class TestInstallSkillWithUvOrPipx:
         assert "uv" in out
 
     def test_install_skill_with_pipx(self, monkeypatch, tmp_path, capsys):
-        target = tmp_path / "skill_out"
-        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(exist_ok=True))
+        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
+        target = tmp_path / ".claude" / "skill_out"
+        monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(parents=True, exist_ok=True))
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
         calls = []
         monkeypatch.setattr(
@@ -441,8 +449,9 @@ class TestInstallSkillWithUvOrPipx:
 class TestInstallSkillDestExists:
     def test_install_skill_dest_exists_calls_rmtree(self, monkeypatch, tmp_path, capsys):
         """Line 257: shutil.rmtree called when dest already exists."""
-        target = tmp_path / "skill_out"
-        target.mkdir()  # make it exist so dest.exists() is True
+        monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
+        target = tmp_path / ".claude" / "skill_out"
+        target.mkdir(parents=True)  # make it exist so dest.exists() is True
         rmtree_calls = []
         monkeypatch.setattr("shutil.rmtree", lambda d: rmtree_calls.append(d))
         monkeypatch.setattr("shutil.copytree", lambda s, d: None)

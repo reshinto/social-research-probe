@@ -76,6 +76,7 @@ class ExaBackend(CorroborationBackend):
             AdapterError: on network failures or non-200 responses.
         """
         import json
+        import urllib.error
         import urllib.request
 
         payload = json.dumps({"query": query, "numResults": 5}).encode()
@@ -88,8 +89,11 @@ class ExaBackend(CorroborationBackend):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())["results"]
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read())["results"]
+        except (urllib.error.URLError, KeyError) as exc:
+            raise AdapterError(f"exa search failed: {exc}") from exc
 
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:
         """Convert Exa API result items into a CorroborationResult.

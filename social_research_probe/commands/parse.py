@@ -12,9 +12,6 @@ class ParseError(SrpError):
     exit_code = 2
 
 
-# --- AST ---------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class ParsedUpdateTopics:
     op: Literal["add", "remove", "rename"]
@@ -90,9 +87,6 @@ Parsed = (
 )
 
 
-# --- Lexer helpers -----------------------------------------------------------
-
-
 def _take_quoted(src: str, pos: int) -> tuple[str, int]:
     if pos >= len(src) or src[pos] != '"':
         raise ParseError(f"expected '\"' at position {pos}")
@@ -103,7 +97,6 @@ def _take_quoted(src: str, pos: int) -> tuple[str, int]:
 
 
 def _parse_quoted_list(src: str) -> list[str]:
-    # Parse "a"|"b"|"c"
     values: list[str] = []
     pos = 0
     while pos < len(src):
@@ -123,9 +116,6 @@ def _parse_id_selector(src: str) -> Literal["all"] | list[int]:
         return [int(x.strip()) for x in src.split(",") if x.strip()]
     except ValueError as exc:
         raise ParseError(f"invalid id selector: {src!r}") from exc
-
-
-# --- Command dispatch --------------------------------------------------------
 
 
 def parse(text: str) -> Parsed:

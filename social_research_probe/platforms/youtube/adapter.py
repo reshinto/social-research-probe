@@ -82,7 +82,7 @@ class YouTubeAdapter(PlatformAdapter):
                 published_at = datetime.fromisoformat(
                     published_raw.replace("Z", "+00:00")
                 ).astimezone(UTC)
-            except Exception:
+            except ValueError:
                 published_at = datetime.now(UTC)
             thumb = (sn.get("thumbnails") or {}).get("default", {}).get("url")
             items.append(
