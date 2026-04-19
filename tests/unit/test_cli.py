@@ -629,6 +629,18 @@ class TestPromptForSecrets:
         self._run(tmp_path, ["", "  ", "", ""], monkeypatch)
         assert write_calls == []
 
+    def test_key_without_url_skips_register_line(self, tmp_path, monkeypatch):
+        import social_research_probe.commands.install_skill as mod
+
+        monkeypatch.setattr(mod, "_KEY_PROMPTS", [("test_key", "Test key", "")])
+        monkeypatch.setattr("social_research_probe.commands.config.read_secret", lambda d, n: None)
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret", lambda d, n, v: None
+        )
+        from social_research_probe.commands.install_skill import _prompt_for_secrets
+
+        _prompt_for_secrets(tmp_path, _input=lambda p="": "")
+
     def test_provided_values_are_written(self, tmp_path, monkeypatch):
         """Non-blank answers must be persisted via write_secret."""
         written = {}

@@ -18,22 +18,50 @@ from social_research_probe.errors import ValidationError
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
 _BUNDLED_CONFIG = Path(__file__).parent.parent / "config.toml.example"
 
-# Ordered list of (secret_name, human_readable_description) pairs shown
-# during the interactive setup prompt.
-_KEY_PROMPTS: list[tuple[str, str]] = [
-    ("youtube_api_key", "YouTube Data API v3 key (required for YouTube search)"),
-    ("brave_api_key", "Brave Search API key (corroboration — paid)"),
-    ("exa_api_key", "Exa search API key (corroboration — free tier available)"),
-    ("tavily_api_key", "Tavily search API key (corroboration — free tier available)"),
+# (secret_name, description, signup_url) — url shown so user can register before entering key.
+_KEY_PROMPTS: list[tuple[str, str, str]] = [
+    (
+        "youtube_api_key",
+        "YouTube Data API v3 key (required for YouTube search)",
+        "https://console.cloud.google.com/apis/library/youtube.googleapis.com",
+    ),
+    (
+        "brave_api_key",
+        "Brave Search API key (corroboration — paid, no free tier)",
+        "https://brave.com/search/api/",
+    ),
+    (
+        "exa_api_key",
+        "Exa search API key (corroboration — free tier available)",
+        "https://dashboard.exa.ai/",
+    ),
+    (
+        "tavily_api_key",
+        "Tavily search API key (corroboration — free tier: 1000 credits/month)",
+        "https://app.tavily.com/",
+    ),
 ]
 
 
-_RUNNER_CHOICES: list[tuple[str, str]] = [
-    ("claude", "Claude CLI (claude) — requires Anthropic account"),
-    ("gemini", "Gemini CLI (gemini) — requires Google account"),
-    ("codex", "Codex CLI (codex) — requires OpenAI account"),
-    ("local", "Local model via SRP_LOCAL_LLM_BIN env var"),
-    ("none", "No LLM — skip all AI features"),
+# (runner_name, description, signup_url) — url shown so user can sign up before choosing.
+_RUNNER_CHOICES: list[tuple[str, str, str]] = [
+    (
+        "claude",
+        "Claude CLI (claude) — requires Anthropic account",
+        "https://claude.ai/download",
+    ),
+    (
+        "gemini",
+        "Gemini CLI (gemini) — requires Google account",
+        "https://github.com/google-gemini/gemini-cli",
+    ),
+    (
+        "codex",
+        "Codex CLI (codex) — requires OpenAI account",
+        "https://github.com/openai/codex",
+    ),
+    ("local", "Local model via SRP_LOCAL_LLM_BIN env var", ""),
+    ("none", "No LLM — skip all AI features", ""),
 ]
 
 
@@ -109,8 +137,10 @@ def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
     from social_research_probe.commands.config import write_config_value
 
     print("\nDefault LLM runner — choose which AI backend srp should use:")
-    for i, (name, description) in enumerate(_RUNNER_CHOICES, start=1):
+    for i, (name, description, url) in enumerate(_RUNNER_CHOICES, start=1):
         print(f"  {i}. {name:8}  {description}")
+        if url:
+            print(f"           Register: {url}")
     try:
         raw = str(_input("  Enter number (or press Enter to skip): ")).strip()
     except (EOFError, KeyboardInterrupt):
@@ -125,7 +155,7 @@ def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
     except ValueError:
         print(f"  invalid choice '{raw}' — skipping runner configuration")
         return
-    chosen, _ = _RUNNER_CHOICES[index]
+    chosen, _, _url = _RUNNER_CHOICES[index]
     write_config_value(data_dir, "llm.runner", chosen)
     print(f"  runner set to '{chosen}'.")
 
@@ -144,9 +174,11 @@ def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:
     from social_research_probe.commands.config import mask_secret, read_secret, write_secret
 
     print("\nAPI key setup — press Enter to skip any key:")
-    for name, description in _KEY_PROMPTS:
+    for name, description, url in _KEY_PROMPTS:
         existing = read_secret(data_dir, name)
         suffix = f"  [current: {mask_secret(existing)}]" if existing else ""
+        if url:
+            print(f"  Register: {url}")
         try:
             value = str(_input(f"  {description}{suffix}:\n  > ")).strip()
         except (EOFError, KeyboardInterrupt):
