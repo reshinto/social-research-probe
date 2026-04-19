@@ -220,7 +220,7 @@ class ResponseSchema(TypedDict):
     opportunity_analysis: str
 
 
-class ResearchPacket(TypedDict):
+class ResearchPacket(TypedDict, total=False):
     """Canonical single-topic research packet emitted by the pipeline."""
 
     topic: str
@@ -234,13 +234,15 @@ class ResearchPacket(TypedDict):
     chart_captions: list[str]
     warnings: list[str]
     response_schema: ResponseSchema
+    html_report_path: str
 
 
-class MultiResearchPacket(TypedDict):
+class MultiResearchPacket(TypedDict, total=False):
     """Packet wrapper used when one request produces multiple topic packets."""
 
     multi: list[ResearchPacket]
     response_schema: ResponseSchema
+    html_report_path: str
 
 
 PacketPayload: TypeAlias = ResearchPacket | MultiResearchPacket

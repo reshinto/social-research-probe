@@ -6,14 +6,15 @@ find pages that match the claim text.
 Why: Brave Search returns traditional web index results (not AI-generated),
 giving a complementary signal to semantic-search backends like Exa.
 
-Who calls it: corroboration/host.py via the registry. Requires the environment
-variable SRP_BRAVE_API_KEY to be set.
+Who calls it: corroboration/host.py via the registry. Credentials may come from
+SRP_BRAVE_API_KEY or the active ``secrets.toml``.
 """
 
 from __future__ import annotations
 
 from typing import ClassVar
 
+from social_research_probe.corroboration._secret_utils import read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
@@ -36,30 +37,27 @@ class BraveBackend(CorroborationBackend):
     name: ClassVar[str] = "brave"
 
     def health_check(self) -> bool:
-        """Return True if SRP_BRAVE_API_KEY env var is set.
+        """Return True if a Brave API key is available.
 
         Returns:
             True when the key is present and non-empty; False otherwise.
         """
-        import os
-
-        return bool(os.environ.get("SRP_BRAVE_API_KEY"))
+        return bool(read_runtime_secret("brave_api_key"))
 
     def _api_key(self) -> str:
-        """Retrieve the Brave API key from the environment.
+        """Retrieve the Brave API key from runtime secret sources.
 
         Returns:
-            The SRP_BRAVE_API_KEY value as a string.
+            The Brave API key as a string.
 
         Raises:
-            AdapterError: if SRP_BRAVE_API_KEY is not set, with a clear message
-                so the operator knows exactly which variable to configure.
+            AdapterError: if no Brave API key is configured.
         """
-        import os
-
-        key = os.environ.get("SRP_BRAVE_API_KEY")
+        key = read_runtime_secret("brave_api_key")
         if not key:
-            raise AdapterError("SRP_BRAVE_API_KEY not set")
+            raise AdapterError(
+                "brave_api_key missing — run `srp config set-secret brave_api_key` in a terminal"
+            )
         return key
 
     def _search(self, query: str) -> list[dict]:

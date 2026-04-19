@@ -317,13 +317,19 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     no_html = getattr(args, "no_html", False)
 
+    def _write_and_attach_html_path(pkt: dict, synthesis: dict | None) -> str:
+        report_path = write_html_report(pkt, synthesis, data_dir)
+        report_uri = report_path.resolve().as_uri()
+        pkt["html_report_path"] = report_uri
+        return report_uri
+
     # In skill mode the pipeline calls emit_packet (sys.exit), so HTML must be
     # written before that via the pre_emit_hook callback.
     def _skill_pre_emit_hook(pkt: dict) -> None:
         if no_html:
             return
         synthesis = _run_cli_synthesis(pkt)
-        write_html_report(pkt, synthesis, data_dir)
+        _write_and_attach_html_path(pkt, synthesis)
 
     hook = _skill_pre_emit_hook if args.mode == "skill" else None
     packet = run_research(
@@ -335,8 +341,10 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         compiled = synthesis["compiled_synthesis"] if synthesis else None
         opportunity = synthesis["opportunity_analysis"] if synthesis else None
         if not no_html:
-            write_html_report(packet, synthesis, data_dir)
-        sys.stdout.write(render_full(packet, compiled, opportunity))
+            report_uri = _write_and_attach_html_path(packet, synthesis)
+            sys.stdout.write(f"Open your report: {report_uri}\n")
+        else:
+            sys.stdout.write(render_full(packet, compiled, opportunity))
     return 0
 
 
@@ -348,6 +356,7 @@ def _run_cli_synthesis(packet: dict) -> dict | None:
     """
     from social_research_probe.errors import ValidationError
     from social_research_probe.synthesize.llm_contract import (
+        SYNTHESIS_JSON_SCHEMA,
         build_synthesis_prompt,
         parse_synthesis_response,
     )
@@ -361,10 +370,10 @@ def _run_cli_synthesis(packet: dict) -> dict | None:
     log(f"[srp] LLM ({runner_name}): generating compiled synthesis and opportunity analysis")
     try:
         runner = get_runner(runner_name)
+        if not runner.health_check():
+            return None
         prompt = build_synthesis_prompt(packet)
-        from social_research_probe.synthesize.formatter import RESPONSE_SCHEMA
-
-        raw = runner.run(prompt, schema=RESPONSE_SCHEMA)
+        raw = runner.run(prompt, schema=SYNTHESIS_JSON_SCHEMA)
         return parse_synthesis_response(raw)
     except (ValidationError, Exception):
         return None

@@ -48,3 +48,4 @@ def test_run_research_skill_mode_emits_packet(tmp_path):
     assert pkt["platform"] == "youtube"
     assert pkt["purpose_set"] == ["trends"]
     assert "response_schema" in pkt
+    assert pkt["html_report_path"].startswith("file://")

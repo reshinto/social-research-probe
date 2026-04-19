@@ -5,7 +5,7 @@ Markdown sections 1-11. Also builds the packet dict passed to skill mode.
 
 Sections 1-9 are derived deterministically from packet data.
 Sections 10-11 (Compiled Synthesis, Opportunity Analysis) are filled by the
-calling LLM in skill mode; in CLI mode a placeholder is shown instead.
+caller when synthesis text is available; otherwise a placeholder is shown.
 """
 
 from __future__ import annotations
@@ -592,12 +592,12 @@ def render_full(
     """Render all 11 sections as Markdown.
 
     Sections 1-9 are derived from the packet. Sections 10-11 use the
-    provided synthesis strings; if omitted they indicate that LLM synthesis
-    was not run (e.g. plain CLI mode without a configured runner).
+    provided synthesis strings; if omitted they indicate that the configured
+    synthesis runner was disabled or unavailable.
     """
     body = render_sections_1_9(packet)
-    s10 = compiled_synthesis or "_(LLM synthesis not run — use skill mode for AI analysis)_"
-    s11 = opportunity_analysis or "_(LLM synthesis not run — use skill mode for AI analysis)_"
+    s10 = compiled_synthesis or "_(LLM synthesis not run — runner disabled or unavailable)_"
+    s11 = opportunity_analysis or "_(LLM synthesis not run — runner disabled or unavailable)_"
     body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
     body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
     return body

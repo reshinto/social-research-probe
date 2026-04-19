@@ -5,23 +5,40 @@ This module's job is to:
   1. Turn that packet into a prompt the LLM can respond to (build_synthesis_prompt).
   2. Parse and validate the LLM's JSON response (parse_synthesis_response).
 
-Called by: pipeline.run_research (skill mode) and cli._handle_research (cli mode).
+Called by: CLI and report-generation paths that request structured synthesis.
 """
 
 from __future__ import annotations
 
 import json
+from typing import Final
 
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.prompts import SYNTHESIS_PROMPT
-from social_research_probe.synthesize.formatter import RESPONSE_SCHEMA
+
+SYNTHESIS_JSON_SCHEMA: Final[dict] = {
+    "type": "object",
+    "properties": {
+        "compiled_synthesis": {
+            "type": "string",
+            "description": "Concise synthesis of the evidence, at most 150 words.",
+        },
+        "opportunity_analysis": {
+            "type": "string",
+            "description": "Concise opportunity analysis, at most 150 words.",
+        },
+    },
+    "required": ["compiled_synthesis", "opportunity_analysis"],
+    "additionalProperties": False,
+}
 
 
 def build_synthesis_prompt(packet: dict) -> str:
     """Build the LLM prompt for synthesising an evidence packet.
 
     Formats SYNTHESIS_PROMPT with topic, platform, a JSON summary of the
-    top-5 items as evidence, and the expected response schema.
+    top-5 items as evidence, and the structured JSON schema expected back from
+    the runner.
 
     Args:
         packet: A dict produced by synthesize.formatter.build_packet.
@@ -37,7 +54,7 @@ def build_synthesis_prompt(packet: dict) -> str:
     # them as structured evidence rather than a raw Python repr.
     evidence = json.dumps(packet.get("items_top5", []), indent=2)
     # The schema is compact JSON so it fits neatly on one prompt line.
-    schema = json.dumps(RESPONSE_SCHEMA)
+    schema = json.dumps(SYNTHESIS_JSON_SCHEMA)
     return SYNTHESIS_PROMPT.format(
         topic=packet.get("topic", ""),
         platform=packet.get("platform", ""),

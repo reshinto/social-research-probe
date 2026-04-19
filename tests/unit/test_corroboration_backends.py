@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from social_research_probe.commands.config import write_secret
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.brave import BraveBackend
 from social_research_probe.corroboration.exa import ExaBackend
@@ -37,16 +38,18 @@ def test_exa_health_check_true_when_key_set(monkeypatch):
     assert ExaBackend().health_check() is True
 
 
-def test_exa_health_check_false_when_key_missing(monkeypatch):
+def test_exa_health_check_false_when_key_missing(monkeypatch, tmp_path):
     """ExaBackend.health_check() returns False when SRP_EXA_API_KEY is absent."""
     monkeypatch.delenv("SRP_EXA_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     assert ExaBackend().health_check() is False
 
 
-def test_exa_api_key_raises_when_missing(monkeypatch):
-    """ExaBackend._api_key() raises AdapterError when SRP_EXA_API_KEY is not set."""
+def test_exa_api_key_raises_when_missing(monkeypatch, tmp_path):
+    """ExaBackend._api_key() raises AdapterError when no key source is configured."""
     monkeypatch.delenv("SRP_EXA_API_KEY", raising=False)
-    with pytest.raises(AdapterError, match="SRP_EXA_API_KEY"):
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    with pytest.raises(AdapterError, match="exa_api_key"):
         ExaBackend()._api_key()
 
 
@@ -85,16 +88,18 @@ def test_brave_health_check_true_when_key_set(monkeypatch):
     assert BraveBackend().health_check() is True
 
 
-def test_brave_health_check_false_when_key_missing(monkeypatch):
+def test_brave_health_check_false_when_key_missing(monkeypatch, tmp_path):
     """BraveBackend.health_check() returns False when SRP_BRAVE_API_KEY is absent."""
     monkeypatch.delenv("SRP_BRAVE_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     assert BraveBackend().health_check() is False
 
 
-def test_brave_api_key_raises_when_missing(monkeypatch):
-    """BraveBackend._api_key() raises AdapterError when SRP_BRAVE_API_KEY is not set."""
+def test_brave_api_key_raises_when_missing(monkeypatch, tmp_path):
+    """BraveBackend._api_key() raises AdapterError when no key source is configured."""
     monkeypatch.delenv("SRP_BRAVE_API_KEY", raising=False)
-    with pytest.raises(AdapterError, match="SRP_BRAVE_API_KEY"):
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    with pytest.raises(AdapterError, match="brave_api_key"):
         BraveBackend()._api_key()
 
 
@@ -131,17 +136,40 @@ def test_tavily_health_check_true_when_key_set(monkeypatch):
     assert TavilyBackend().health_check() is True
 
 
-def test_tavily_health_check_false_when_key_missing(monkeypatch):
+def test_tavily_health_check_false_when_key_missing(monkeypatch, tmp_path):
     """TavilyBackend.health_check() returns False when SRP_TAVILY_API_KEY is absent."""
     monkeypatch.delenv("SRP_TAVILY_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     assert TavilyBackend().health_check() is False
 
 
-def test_tavily_api_key_raises_when_missing(monkeypatch):
-    """TavilyBackend._api_key() raises AdapterError when SRP_TAVILY_API_KEY is not set."""
+def test_tavily_api_key_raises_when_missing(monkeypatch, tmp_path):
+    """TavilyBackend._api_key() raises AdapterError when no key source is configured."""
     monkeypatch.delenv("SRP_TAVILY_API_KEY", raising=False)
-    with pytest.raises(AdapterError, match="SRP_TAVILY_API_KEY"):
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    with pytest.raises(AdapterError, match="tavily_api_key"):
         TavilyBackend()._api_key()
+
+
+def test_exa_health_check_reads_key_from_active_data_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("SRP_EXA_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    write_secret(tmp_path, "exa_api_key", "from-file")
+    assert ExaBackend().health_check() is True
+
+
+def test_brave_api_key_reads_from_active_data_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("SRP_BRAVE_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    write_secret(tmp_path, "brave_api_key", "from-file")
+    assert BraveBackend()._api_key() == "from-file"
+
+
+def test_tavily_api_key_reads_from_active_data_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("SRP_TAVILY_API_KEY", raising=False)
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    write_secret(tmp_path, "tavily_api_key", "from-file")
+    assert TavilyBackend()._api_key() == "from-file"
 
 
 def test_tavily_build_result_with_results():

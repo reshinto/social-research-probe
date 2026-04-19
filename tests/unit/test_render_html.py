@@ -651,6 +651,7 @@ class TestResearchHtmlInCli:
         hook(self._PACKET_WITH_RS)
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
+        assert self._PACKET_WITH_RS["html_report_path"].startswith("file://")
 
     def test_pre_emit_hook_skips_html_when_no_html(self, monkeypatch, tmp_path):
         from social_research_probe.cli import main

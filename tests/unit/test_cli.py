@@ -811,14 +811,25 @@ class TestRunCliSynthesis:
         class _Cfg:
             default_structured_runner = "claude"
 
+        captured = {}
+
         class _Runner:
+            def health_check(self) -> bool:
+                return True
+
             def run(self, prompt, *, schema=None):
+                captured["schema"] = schema
                 return {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
         result = _run_cli_synthesis(_VALID_PACKET)
         assert result == {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+        assert captured["schema"]["type"] == "object"
+        assert set(captured["schema"]["required"]) == {
+            "compiled_synthesis",
+            "opportunity_analysis",
+        }
 
     def test_returns_none_on_runner_exception(self, monkeypatch):
         from social_research_probe.cli import _run_cli_synthesis
@@ -833,7 +844,21 @@ class TestRunCliSynthesis:
         )
         assert _run_cli_synthesis(_VALID_PACKET) is None
 
-    def test_synthesis_fields_passed_to_render_full(self, monkeypatch, tmp_path, capsys):
+    def test_returns_none_when_runner_is_unavailable(self, monkeypatch):
+        from social_research_probe.cli import _run_cli_synthesis
+
+        class _Cfg:
+            default_structured_runner = "gemini"
+
+        class _Runner:
+            def health_check(self) -> bool:
+                return False
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
+        assert _run_cli_synthesis(_VALID_PACKET) is None
+
+    def test_default_cli_output_surfaces_html_report_uri(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
             lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
@@ -844,10 +869,36 @@ class TestRunCliSynthesis:
         )
         main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
         out = capsys.readouterr().out
+        assert "Open your report:" in out
+        assert "file://" in out
+
+    def test_synthesis_fields_passed_to_render_full_when_no_html(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.cli._run_cli_synthesis",
+            lambda pkt: {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"},
+        )
+        main(
+            [
+                "--data-dir",
+                str(tmp_path),
+                "research",
+                "youtube",
+                "AI",
+                "latest-news",
+                "--no-html",
+            ]
+        )
+        out = capsys.readouterr().out
         assert "synth10" in out
         assert "synth11" in out
 
-    def test_render_full_called_with_none_when_synthesis_returns_none(
+    def test_render_full_called_with_none_when_synthesis_returns_none_and_no_html(
         self, monkeypatch, tmp_path, capsys
     ):
         monkeypatch.setattr(
@@ -855,6 +906,16 @@ class TestRunCliSynthesis:
             lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
         )
         monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
-        main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
+        main(
+            [
+                "--data-dir",
+                str(tmp_path),
+                "research",
+                "youtube",
+                "AI",
+                "latest-news",
+                "--no-html",
+            ]
+        )
         out = capsys.readouterr().out
         assert "LLM synthesis not run" in out

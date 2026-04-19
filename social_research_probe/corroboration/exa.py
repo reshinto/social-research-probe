@@ -7,14 +7,15 @@ Why: Exa specialises in finding semantically similar content, making it effectiv
 at locating whether a claim appears in credible published sources — stronger
 evidence than LLM reasoning alone.
 
-Who calls it: corroboration/host.py via the registry. Requires the environment
-variable SRP_EXA_API_KEY to be set.
+Who calls it: corroboration/host.py via the registry. Credentials may come from
+SRP_EXA_API_KEY or the active ``secrets.toml``.
 """
 
 from __future__ import annotations
 
 from typing import ClassVar
 
+from social_research_probe.corroboration._secret_utils import read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
@@ -37,30 +38,27 @@ class ExaBackend(CorroborationBackend):
     name: ClassVar[str] = "exa"
 
     def health_check(self) -> bool:
-        """Return True if SRP_EXA_API_KEY env var is set.
+        """Return True if an Exa API key is available.
 
         Returns:
             True when the key is present and non-empty; False otherwise.
         """
-        import os
-
-        return bool(os.environ.get("SRP_EXA_API_KEY"))
+        return bool(read_runtime_secret("exa_api_key"))
 
     def _api_key(self) -> str:
-        """Retrieve the Exa API key from the environment.
+        """Retrieve the Exa API key from runtime secret sources.
 
         Returns:
-            The SRP_EXA_API_KEY value as a string.
+            The Exa API key as a string.
 
         Raises:
-            AdapterError: if SRP_EXA_API_KEY is not set, with a clear message
-                so the operator knows exactly which variable to configure.
+            AdapterError: if no Exa API key is configured.
         """
-        import os
-
-        key = os.environ.get("SRP_EXA_API_KEY")
+        key = read_runtime_secret("exa_api_key")
         if not key:
-            raise AdapterError("SRP_EXA_API_KEY not set")
+            raise AdapterError(
+                "exa_api_key missing — run `srp config set-secret exa_api_key` in a terminal"
+            )
         return key
 
     def _search(self, query: str) -> list[dict]:

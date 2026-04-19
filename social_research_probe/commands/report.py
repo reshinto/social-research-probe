@@ -64,7 +64,7 @@ def run(
         dest = Path(out_path)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(html_content, encoding="utf-8")
-        print(f"[srp] HTML report written: file://{dest.resolve()}", file=sys.stderr)
+        print(f"[srp] HTML report written: {dest.resolve().as_uri()}", file=sys.stderr)
     else:
         sys.stdout.write(html_content)
     return 0

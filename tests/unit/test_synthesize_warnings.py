@@ -97,3 +97,12 @@ def test_clean_run_only_emits_corroboration_note():
     top5 = [_scored("secondary", overall=0.7) for _ in range(5)]
     notes = detect(items, signals, top5, now=now)
     assert notes == ["source corroboration was not run; trust scores are heuristic only"]
+
+
+def test_corroboration_warning_omitted_when_corroboration_ran():
+    now = datetime(2026, 4, 19, tzinfo=UTC)
+    items = [_item(f"ch{i}") for i in range(5)]
+    signals = [_signal(now - timedelta(days=1))]
+    top5 = [_scored("secondary", overall=0.7) for _ in range(5)]
+    notes = detect(items, signals, top5, now=now, corroboration_ran=True)
+    assert "source corroboration was not run; trust scores are heuristic only" not in notes

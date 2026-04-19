@@ -58,5 +58,6 @@ class JsonCliRunner(LLMRunner):
         from social_research_probe.utils.subprocess_runner import run as sp_run
 
         log(f"[srp] LLM ({self.name}): running structured JSON task")
-        result = sp_run(self._build_argv(schema), input=prompt)
+        timeout = load_active_config().llm_timeout_seconds
+        result = sp_run(self._build_argv(schema), input=prompt, timeout=timeout)
         return self._parse_response(result.stdout)

@@ -546,6 +546,32 @@ def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
     assert _available_backends(tmp_path) == []
 
 
+def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path):
+    """A specific configured backend bypasses host auto-discovery."""
+    import social_research_probe.corroboration.registry as reg
+
+    class _Cfg:
+        corroboration_backend = "llm_cli"
+
+    class _Backend:
+        def health_check(self) -> bool:
+            return True
+
+    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
+    assert _available_backends(tmp_path) == ["llm_cli"]
+
+
+def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, tmp_path):
+    """backend=none disables corroboration even if backends would be healthy."""
+
+    class _Cfg:
+        corroboration_backend = "none"
+
+    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    assert _available_backends(tmp_path) == []
+
+
 # ---------------------------------------------------------------------------
 # _corroborate_top5
 # ---------------------------------------------------------------------------

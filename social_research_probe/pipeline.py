@@ -515,17 +515,22 @@ def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
 
 
 def _available_backends(data_dir: Path) -> list[str]:
-    """Return corroboration backend names whose API keys are present and healthy.
+    """Return corroboration backends allowed by config and available at runtime.
 
-    Tries exa, brave, and tavily in order. llm_cli is excluded from auto-runs
-    because it has no marginal cost signal — it just reruns the LLM the
-    pipeline already called.
+    ``backend = host`` auto-discovers the web-search backends whose credentials
+    are configured. ``backend = llm_cli`` or a specific search backend uses only
+    that backend. ``backend = none`` disables corroboration entirely.
     """
     from social_research_probe.corroboration.registry import get_backend
     from social_research_probe.errors import ValidationError
 
+    configured = Config.load(data_dir).corroboration_backend
+    if configured == "none":
+        return []
+    candidates = ("exa", "brave", "tavily") if configured == "host" else (configured,)
+
     available: list[str] = []
-    for name in ("exa", "brave", "tavily"):
+    for name in candidates:
         try:
             if get_backend(name).health_check():
                 available.append(name)
@@ -668,7 +673,12 @@ def run_research(
         svs = _build_svs(top5, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         chart_captions = _render_charts(all_scored, data_dir)
-        warnings = detect_warnings(items, signals, top5)
+        warnings = detect_warnings(
+            items,
+            signals,
+            top5,
+            corroboration_ran=bool(backends and top5),
+        )
         packets.append(
             build_packet(
                 topic=topic,

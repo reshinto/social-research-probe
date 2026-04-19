@@ -47,6 +47,8 @@ def _isolate_runner_config(monkeypatch: pytest.MonkeyPatch):
     import social_research_probe.llm.runners.cli_json_base as base_mod
 
     class _FakeConfig:
+        llm_timeout_seconds = 30
+
         def llm_settings(self, name: str) -> dict[str, object]:
             return {}
 
@@ -347,6 +349,30 @@ def test_gemini_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     runner = GeminiRunner()
     assert runner.run("hello") == {"ok": 2}
+
+
+def test_gemini_run_uses_configured_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Structured runners use llm.timeout_seconds from config."""
+    import social_research_probe.llm.runners.cli_json_base as base_mod
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    class _Cfg:
+        llm_timeout_seconds = 77
+
+        def llm_settings(self, name: str) -> dict[str, object]:
+            return {}
+
+    captured = {}
+
+    def fake_run(argv, input=None, timeout=30):
+        captured["timeout"] = timeout
+        return _make_completed('{"ok": 2}')
+
+    monkeypatch.setattr(base_mod, "load_active_config", lambda: _Cfg())
+    monkeypatch.setattr(sp_mod, "run", fake_run)
+    runner = GeminiRunner()
+    assert runner.run("hello") == {"ok": 2}
+    assert captured["timeout"] == 77
 
 
 def test_codex_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:

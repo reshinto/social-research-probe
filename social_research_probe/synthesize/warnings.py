@@ -27,11 +27,13 @@ def detect(
     signals: list[SignalSet],
     top5: list[ScoredItem],
     now: datetime | None = None,
+    corroboration_ran: bool = False,
 ) -> list[str]:
     """Return a list of warning strings about quality concerns.
 
-    Always includes a corroboration reminder so users do not mistake the
-    heuristic trust score for a verified source check.
+    Includes a corroboration reminder only when the pipeline skipped the
+    corroboration stage, so users do not mistake the heuristic trust score for
+    a verified source check.
     """
     reference_now = now or datetime.now(UTC)
     notes: list[str] = []
@@ -39,7 +41,8 @@ def detect(
     _check_channel_diversity(items, notes)
     _check_top5_quality(top5, notes)
     _check_freshness(signals, reference_now, notes)
-    notes.append("source corroboration was not run; trust scores are heuristic only")
+    if not corroboration_ran:
+        notes.append("source corroboration was not run; trust scores are heuristic only")
     return notes
 
 

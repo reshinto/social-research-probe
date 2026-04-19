@@ -116,7 +116,7 @@ def write_html_report(
         charts_dir=data_dir / "charts",
     )
     out_path.write_text(html_content, encoding="utf-8")
-    print(f"[srp] HTML report: file://{out_path}", file=sys.stderr)
+    print(f"[srp] HTML report: {out_path.resolve().as_uri()}", file=sys.stderr)
     return out_path
 
 

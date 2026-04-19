@@ -7,14 +7,15 @@ and returns clean, structured results.
 Why: Provides a third search signal alongside Exa and Brave, increasing the
 robustness of majority-vote aggregation by diversifying the search indices used.
 
-Who calls it: corroboration/host.py via the registry. Requires the environment
-variable SRP_TAVILY_API_KEY to be set.
+Who calls it: corroboration/host.py via the registry. Credentials may come from
+SRP_TAVILY_API_KEY or the active ``secrets.toml``.
 """
 
 from __future__ import annotations
 
 from typing import ClassVar
 
+from social_research_probe.corroboration._secret_utils import read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
@@ -37,30 +38,27 @@ class TavilyBackend(CorroborationBackend):
     name: ClassVar[str] = "tavily"
 
     def health_check(self) -> bool:
-        """Return True if SRP_TAVILY_API_KEY env var is set.
+        """Return True if a Tavily API key is available.
 
         Returns:
             True when the key is present and non-empty; False otherwise.
         """
-        import os
-
-        return bool(os.environ.get("SRP_TAVILY_API_KEY"))
+        return bool(read_runtime_secret("tavily_api_key"))
 
     def _api_key(self) -> str:
-        """Retrieve the Tavily API key from the environment.
+        """Retrieve the Tavily API key from runtime secret sources.
 
         Returns:
-            The SRP_TAVILY_API_KEY value as a string.
+            The Tavily API key as a string.
 
         Raises:
-            AdapterError: if SRP_TAVILY_API_KEY is not set, with a clear message
-                so the operator knows exactly which variable to configure.
+            AdapterError: if no Tavily API key is configured.
         """
-        import os
-
-        key = os.environ.get("SRP_TAVILY_API_KEY")
+        key = read_runtime_secret("tavily_api_key")
         if not key:
-            raise AdapterError("SRP_TAVILY_API_KEY not set")
+            raise AdapterError(
+                "tavily_api_key missing — run `srp config set-secret tavily_api_key` in a terminal"
+            )
         return key
 
     def _search(self, query: str) -> list[dict]:
