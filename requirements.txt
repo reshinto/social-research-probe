@@ -3,3 +3,4 @@ rapidfuzz>=3.0
 google-api-python-client>=2.0
 yt-dlp>=2024.0
 matplotlib>=3.8
+openai-whisper>=20231117

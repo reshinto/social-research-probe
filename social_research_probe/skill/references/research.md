@@ -6,7 +6,7 @@
    - Add `--no-shorts` to exclude YouTube Shorts (<90s). Shorts are included by default.
    - Note: users invoke this skill as `/srp research <topic> <purpose>` — never ask them to specify `--mode`.
 3. The JSON packet contains all data. Emit sections 1–11 as follows:
-   - **Sections 1–9:** Identical to `srp research --mode cli` output. Render exactly as the CLI would.
+   - **Sections 1–9:** Identical to `srp research --mode cli` output. Render exactly as the CLI would, with one exception: **Section 3 — Top Items links & takeaways** — for each item, if `packet.items_top5[i].transcript` is present, read it and write a 1–2 sentence summary of what the video is actually about (topic, key argument, who it is for). Do not quote the transcript verbatim. If no transcript is available, fall back to `one_line_takeaway`.
    - **Section 10 — Compiled Synthesis:** Use the template below.
    - **Section 11 — Opportunity Analysis:** Use the template below.
 4. Open every chart PNG before emitting output. Extract PNG paths from `packet.chart_captions` (each caption contains a `_(see PNG: …)_` marker for scatter/table charts; bar/line PNGs live alongside under `~/.social-research-probe/charts/`). **Bar charts have no `_(see PNG: …)_` marker** — always explicitly include `~/.social-research-probe/charts/overall_score_bar.png`. On macOS run `open <path1> <path2> …`.

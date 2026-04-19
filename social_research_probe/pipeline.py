@@ -8,6 +8,7 @@ from typing import Literal
 
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.errors import ValidationError
+from social_research_probe.llm.ensemble import multi_llm_prompt
 from social_research_probe.llm.host import emit_packet
 from social_research_probe.platforms.base import FetchLimits, RawItem, SignalSet, TrustHints
 from social_research_probe.platforms.registry import get_adapter
@@ -161,24 +162,71 @@ def _score_item(
     }
 
 
-def _enrich_top5_with_transcripts(top5: list[dict]) -> None:
-    """Replace each top-5 item's takeaway with the first 200 chars of its transcript.
+def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
+    """Build the prompt sent to the LLM ensemble for a 200-word video summary."""
+    return (
+        "Write a detailed summary of this YouTube video (minimum 200 words). Cover:\n"
+        "- The main topic and what the video is about\n"
+        "- The key arguments, findings, demonstrations, or announcements\n"
+        "- Who the target audience is and what they should take away\n"
+        "- Any specific claims, tools, people, companies, or data points mentioned\n\n"
+        "Be specific and factual. Do not start with 'This video' or 'In this video'.\n\n"
+        f"Title: {title}\nChannel: {channel}\n\n"
+        f"Transcript:\n{transcript}"
+    )
 
-    Falls back silently to the existing description-based takeaway when the
-    transcript cannot be fetched (yt-dlp missing, no English track, network
-    error). Modifies the dicts in place.
+
+def _enrich_top5_with_transcripts(top5: list[dict]) -> None:
+    """Fetch transcripts for top-5 items and generate 200-word AI summaries.
+
+    Transcript sources tried in order:
+    1. YouTube captions via yt-dlp (``fetch_transcript``).
+    2. Whisper transcription of the downloaded audio (``fetch_transcript_whisper``).
+
+    The full transcript (up to 6000 chars) is stored as item["transcript"].
+    A 200-word+ summary from the multi-LLM ensemble is stored as
+    item["one_line_takeaway"]. Falls back silently when no transcript or LLM
+    response is available. Modifies the dicts in place.
     """
     from social_research_probe.platforms.youtube.extract import fetch_transcript
+    from social_research_probe.platforms.youtube.whisper_transcript import (
+        fetch_transcript_whisper,
+    )
 
     for item in top5:
-        try:
-            text = fetch_transcript(item["url"])
-        except Exception:
-            text = None
-        if text:
-            cleaned = " ".join(text.split())[:200]
-            if cleaned:
-                item["one_line_takeaway"] = cleaned
+        text = _fetch_best_transcript(item["url"], fetch_transcript, fetch_transcript_whisper)
+        if not text:
+            continue
+        cleaned = " ".join(text.split())[:6000]
+        if not cleaned:
+            continue
+        item["transcript"] = cleaned
+        prompt = _build_summary_prompt(
+            title=item.get("title", ""),
+            channel=item.get("channel", ""),
+            transcript=cleaned,
+        )
+        summary = multi_llm_prompt(prompt)
+        if summary:
+            item["one_line_takeaway"] = summary
+
+
+def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:
+    """Try primary transcript fetch; fall back to whisper if it returns nothing.
+
+    Both callables accept a URL and return ``str | None``.
+    All exceptions are swallowed so failures never crash the pipeline.
+    """
+    try:
+        text = primary_fn(url)
+    except Exception:
+        text = None
+    if text and text.strip():
+        return text
+    try:
+        return fallback_fn(url)
+    except Exception:
+        return None
 
 
 def _build_stats_summary(scored_items: list[dict]) -> dict:

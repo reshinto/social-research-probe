@@ -343,27 +343,53 @@ def test_stats_models_for_zero_returns_empty():
 
 
 class TestEnrichTop5WithTranscripts:
-    def test_replaces_takeaway_when_transcript_available(self, monkeypatch):
+    def test_stores_transcript_and_summary_when_available(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
-            lambda url: "first  line\nsecond  line " * 30,
+            lambda url: "first  line\nsecond  line " * 200,
         )
-        items = [{"url": "https://x/1", "one_line_takeaway": "old"}]
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.multi_llm_prompt",
+            lambda prompt: "Multi-LLM generated summary.",
+        )
+        items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "desc"}]
         _enrich_top5_with_transcripts(items)
-        assert items[0]["one_line_takeaway"] != "old"
-        assert len(items[0]["one_line_takeaway"]) <= 200
+        assert "transcript" in items[0]
+        assert len(items[0]["transcript"]) <= 6000
+        assert items[0]["one_line_takeaway"] == "Multi-LLM generated summary."
 
-    def test_keeps_existing_takeaway_when_fetch_returns_none(self, monkeypatch):
+    def test_falls_back_to_description_when_llm_unavailable(self, monkeypatch):
+        from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.extract.fetch_transcript",
+            lambda url: "some transcript content",
+        )
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.multi_llm_prompt",
+            lambda prompt: None,
+        )
+        items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "keep me"}]
+        _enrich_top5_with_transcripts(items)
+        assert "transcript" in items[0]
+        assert items[0]["one_line_takeaway"] == "keep me"
+
+    def test_no_transcript_key_when_fetch_returns_none(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
             lambda url: None,
         )
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.whisper_transcript.fetch_transcript_whisper",
+            lambda url: None,
+        )
         items = [{"url": "https://x/1", "one_line_takeaway": "keep me"}]
         _enrich_top5_with_transcripts(items)
+        assert "transcript" not in items[0]
         assert items[0]["one_line_takeaway"] == "keep me"
 
     def test_silently_recovers_from_extractor_exception(self, monkeypatch):
@@ -373,11 +399,37 @@ class TestEnrichTop5WithTranscripts:
             raise RuntimeError("network gone")
 
         monkeypatch.setattr(
-            "social_research_probe.platforms.youtube.extract.fetch_transcript", boom
+            "social_research_probe.platforms.youtube.extract.fetch_transcript",
+            boom,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.whisper_transcript.fetch_transcript_whisper",
+            lambda url: None,
         )
         items = [{"url": "https://x/1", "one_line_takeaway": "still here"}]
         _enrich_top5_with_transcripts(items)
+        assert "transcript" not in items[0]
         assert items[0]["one_line_takeaway"] == "still here"
+
+    def test_uses_whisper_when_caption_fetch_returns_none(self, monkeypatch):
+        from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.extract.fetch_transcript",
+            lambda url: None,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.whisper_transcript.fetch_transcript_whisper",
+            lambda url: "Whisper-produced transcript text.",
+        )
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.multi_llm_prompt",
+            lambda prompt: "Summary from whisper transcript.",
+        )
+        items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "orig"}]
+        _enrich_top5_with_transcripts(items)
+        assert items[0]["transcript"] == "Whisper-produced transcript text."
+        assert items[0]["one_line_takeaway"] == "Summary from whisper transcript."
 
 
 def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
@@ -387,8 +439,13 @@ def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
         "social_research_probe.platforms.youtube.extract.fetch_transcript",
         lambda url: "   \n   ",
     )
+    monkeypatch.setattr(
+        "social_research_probe.platforms.youtube.whisper_transcript.fetch_transcript_whisper",
+        lambda url: None,
+    )
     items = [{"url": "https://x", "one_line_takeaway": "orig"}]
     _enrich_top5_with_transcripts(items)
+    assert "transcript" not in items[0]
     assert items[0]["one_line_takeaway"] == "orig"
 
 

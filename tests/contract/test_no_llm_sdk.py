@@ -47,4 +47,7 @@ def test_no_llm_sdk_in_source():
 def test_forbidden_packages_not_in_pyproject():
     pyproject = (SRC_ROOT.parents[1] / "pyproject.toml").read_text()
     for pkg in FORBIDDEN_TOP_LEVEL | {"google-generativeai", "google-genai"}:
-        assert pkg not in pyproject.lower(), f"{pkg} must not appear in pyproject.toml"
+        # Use a negative lookahead so "openai-whisper" (local transcription lib,
+        # not the OpenAI API SDK) does not trigger the openai prohibition.
+        pattern = re.compile(re.escape(pkg) + r"(?!-)", re.IGNORECASE)
+        assert not pattern.search(pyproject), f"{pkg} must not appear in pyproject.toml"
