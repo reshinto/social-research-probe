@@ -371,7 +371,9 @@ class TestEnrichTop5WithTranscripts:
             "social_research_probe.pipeline.multi_llm_prompt",
             lambda prompt: None,
         )
-        items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "keep me"}]
+        items = [
+            {"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "keep me"}
+        ]
         _enrich_top5_with_transcripts(items)
         assert "transcript" in items[0]
         assert items[0]["one_line_takeaway"] == "keep me"

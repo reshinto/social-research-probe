@@ -87,9 +87,7 @@ def _collect_responses(prompt: str) -> dict[str, str]:
 
 def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> str:
     """Construct a meta-prompt instructing the synthesizer to merge all responses."""
-    blocks = "\n\n".join(
-        f"[Response {i + 1}]\n{text}" for i, text in enumerate(responses.values())
-    )
+    blocks = "\n\n".join(f"[Response {i + 1}]\n{text}" for i, text in enumerate(responses.values()))
     return (
         "You received these responses from multiple AI assistants answering the same request. "
         "Synthesize them into one comprehensive, well-organized answer that captures the best "

@@ -88,7 +88,9 @@ def test_synthesize_returns_directly_for_single_response():
 def test_synthesize_calls_provider_for_multi_response(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt: "synthesized" if name == "claude" else None)
+    monkeypatch.setattr(
+        llm_mod, "_run_provider", lambda name, prompt: "synthesized" if name == "claude" else None
+    )
     result = _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
     assert result == "synthesized"
 

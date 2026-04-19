@@ -7,6 +7,7 @@ Sections 1-9 are derived deterministically from packet data.
 Sections 10-11 (Compiled Synthesis, Opportunity Analysis) are filled by the
 calling LLM in skill mode; in CLI mode a placeholder is shown instead.
 """
+
 from __future__ import annotations
 
 import re
@@ -317,10 +318,18 @@ def _explain_bootstrap(metric: str, finding: str) -> str:
     """Bootstrap resampling — validates that score estimates are stable, not a sampling fluke."""
     if metric.startswith("Bootstrap CI lower"):
         v = _val(metric)
-        return f"Even in the worst-case simulation, the true average is at least {v:.3f} — the floor is confirmed and reliable." if v is not None else ""
+        return (
+            f"Even in the worst-case simulation, the true average is at least {v:.3f} — the floor is confirmed and reliable."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Bootstrap CI upper"):
         v = _val(metric)
-        return f"Best realistic estimate tops out at {v:.3f} — this is the upside ceiling for what this space can deliver on average." if v is not None else ""
+        return (
+            f"Best realistic estimate tops out at {v:.3f} — this is the upside ceiling for what this space can deliver on average."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Bootstrap mean"):
         m2 = re.search(r"\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]", metric + " " + finding)
         v = _val(metric)
@@ -337,15 +346,31 @@ def _explain_multi_regression(metric: str) -> str:
     if metric.startswith("Intercept for overall"):
         return "Formula offset — use alongside the coefficients below to understand exactly how the overall score is calculated."
     if metric.startswith("Coefficient for trust"):
-        return f"Trust is weighted at {v:.0%} of overall score — the largest single lever. Improving source credibility has the biggest measurable impact on ranking." if v is not None else ""
+        return (
+            f"Trust is weighted at {v:.0%} of overall score — the largest single lever. Improving source credibility has the biggest measurable impact on ranking."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Coefficient for trend"):
-        return f"Trend is weighted at {v:.0%} of overall score — second largest lever. Riding a current trend is worth about two-thirds as much as improving trust." if v is not None else ""
+        return (
+            f"Trend is weighted at {v:.0%} of overall score — second largest lever. Riding a current trend is worth about two-thirds as much as improving trust."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Coefficient for opportunity"):
-        return f"Opportunity is weighted at {v:.0%} of overall score — smallest lever, but still meaningful. Targeting a niche angle adds value at the margin." if v is not None else ""
+        return (
+            f"Opportunity is weighted at {v:.0%} of overall score — smallest lever, but still meaningful. Targeting a niche angle adds value at the margin."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Multi-regression R²") or metric.startswith("Adjusted R²"):
         if v and v >= 0.999:
             return "Perfect fit — the overall score is a deterministic formula of trust, trend, and opportunity. No hidden factors are at play."
-        return f"Formula explains {v:.0%} of variance — nearly complete; a small residual remains outside the model." if v else ""
+        return (
+            f"Formula explains {v:.0%} of variance — nearly complete; a small residual remains outside the model."
+            if v
+            else ""
+        )
     return ""
 
 
@@ -385,7 +410,11 @@ def _explain_kaplan_meier(metric: str, finding: str) -> str:
             return "More than half of popular videos are still accumulating views at the end of the observation window — this topic has durable long-term value; publishing here is not a one-week bet."
         m2 = re.search(r":\s*(-?\d+\.?\d*)\s*days", metric)
         v = float(m2.group(1)) if m2 else None
-        return f"Half of popular videos lose momentum after {v:.0f} days — plan follow-up content before then to sustain reach." if v else ""
+        return (
+            f"Half of popular videos lose momentum after {v:.0f} days — plan follow-up content before then to sustain reach."
+            if v
+            else ""
+        )
     if metric.startswith("Kaplan-Meier S(t=30d)"):
         v = _val(metric)
         if v is None:
@@ -402,9 +431,17 @@ def _explain_naive_bayes(metric: str) -> str:
     """Naive Bayes — shows the base rate for top-5 success and whether the signals are predictive."""
     v = _val(metric)
     if metric.startswith("Naive Bayes prior P(is_top_5=0)"):
-        return f"Base odds of NOT making the top 5 are {v:.0%} — the top tier is selective; average content will not break through without deliberate differentiation." if v is not None else ""
+        return (
+            f"Base odds of NOT making the top 5 are {v:.0%} — the top tier is selective; average content will not break through without deliberate differentiation."
+            if v is not None
+            else ""
+        )
     if metric.startswith("Naive Bayes prior P(is_top_5=1)"):
-        return f"1 in {round(1 / v)} videos makes the top 5 by default — achievable but requires deliberate effort on trust, trend, and opportunity." if v else ""
+        return (
+            f"1 in {round(1 / v)} videos makes the top 5 by default — achievable but requires deliberate effort on trust, trend, and opportunity."
+            if v
+            else ""
+        )
     if metric.startswith("Naive Bayes training accuracy"):
         if v is None:
             return ""
@@ -446,7 +483,9 @@ def _explain_bayesian(metric: str, finding: str) -> str:
             return f"Residual variance {v:.4f} — essentially zero unexplained variation; trust, trend, and opportunity together fully account for the score differences."
         return f"Residual variance {v:.4f} — small but non-zero; most scoring is explained, but a minor component remains outside the model."
     # Coefficients share the same pattern: extract value and CrI
-    coef_match = re.search(r":\s*(-?\d+\.\d+).*\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]", metric + " " + finding)
+    coef_match = re.search(
+        r":\s*(-?\d+\.\d+).*\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]", metric + " " + finding
+    )
     if not coef_match:
         return ""
     v, lo, hi = float(coef_match.group(1)), float(coef_match.group(2)), float(coef_match.group(3))
@@ -512,7 +551,9 @@ def _highlights_table(highlights: list[str]) -> str:
     """
     if not highlights:
         return "_(no highlights)_"
-    header = "| Model | Metric | Finding | What it means |\n|-------|--------|---------|---------------|"
+    header = (
+        "| Model | Metric | Finding | What it means |\n|-------|--------|---------|---------------|"
+    )
     rows = []
     prev_model = None
     for h in highlights:

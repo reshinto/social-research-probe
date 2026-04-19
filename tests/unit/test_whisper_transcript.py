@@ -78,6 +78,7 @@ def test_returns_transcript_text_on_success(monkeypatch, tmp_path):
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
                 import os
+
                 tmpdir = os.path.dirname(output_template)
                 open(os.path.join(tmpdir, "audio.mp3"), "w").close()
         return _OkResult()
@@ -109,6 +110,7 @@ def test_returns_none_when_whisper_returns_empty_text(monkeypatch):
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
                 import os
+
                 tmpdir = os.path.dirname(output_template)
                 open(os.path.join(tmpdir, "audio.mp3"), "w").close()
         return _OkResult()

@@ -213,8 +213,6 @@ def test_fetch_transcript_succeeds_without_cookies_by_default(monkeypatch):
     assert attempts == [None]
 
 
-
-
 def test_fetch_transcript_retries_without_cookies_when_browser_set_and_fails(monkeypatch):
     """When SRP_YTDLP_BROWSER is set and cookie attempt fails, fallback (no cookies) succeeds."""
     import sys
@@ -246,6 +244,7 @@ def test_fetch_transcript_retries_without_cookies_when_browser_set_and_fails(mon
     monkeypatch.setitem(sys.modules, "yt_dlp", fake)
     assert ext.fetch_transcript("https://x") == "plain text"
     assert attempts == [("safari",), None]
+
 
 def test_yt_dlp_opts_disables_cookies_when_env_set_to_none(monkeypatch):
     from social_research_probe.platforms.youtube.extract import _yt_dlp_opts
