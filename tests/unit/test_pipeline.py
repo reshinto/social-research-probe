@@ -226,6 +226,12 @@ def _fake_top5(n: int) -> list[dict]:
                 "opportunity": 0.6 + i * 0.05,
                 "overall": 0.5 + i * 0.04,
             },
+            "features": {
+                "view_velocity": 100.0 + i * 10,
+                "engagement_ratio": 0.02 + i * 0.005,
+                "age_days": 1.0 + i,
+                "subscriber_count": 1000.0 + i * 500,
+            },
             "one_line_takeaway": "...",
         }
         for i in range(n)
@@ -266,15 +272,17 @@ def test_render_charts_empty_returns_empty(tmp_path):
     assert _render_charts([], tmp_path) == []
 
 
-def test_render_charts_writes_five_captions(tmp_path):
+def test_render_charts_writes_full_chart_suite(tmp_path):
     captions = _render_charts(_fake_top5(3), tmp_path)
-    assert len(captions) == 5
+    assert len(captions) == 10
     assert (tmp_path / "charts").is_dir()
     joined = "\n".join(captions)
     assert "Bar chart" in joined
     assert "Line chart" in joined
-    assert "trust_vs_opportunity" in joined
-    assert "trust_vs_trend" in joined
+    assert "Histogram" in joined
+    assert "Regression" in joined
+    assert "Correlation heatmap" in joined
+    assert "Residuals" in joined
     assert "Table" in joined or "table" in joined
 
 
@@ -314,7 +322,7 @@ def test_build_stats_summary_single_item_runs_only_descriptive():
 
 def test_render_charts_single_item_still_renders(tmp_path):
     captions = _render_charts(_fake_top5(1), tmp_path)
-    assert len(captions) == 5
+    assert len(captions) == 10
 
 
 def test_stats_models_for_zero_returns_empty():

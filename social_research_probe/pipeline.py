@@ -17,6 +17,7 @@ from social_research_probe.scoring.combine import overall_score
 from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import trend_score
 from social_research_probe.scoring.trust import trust_score
+from social_research_probe.stats import multi_regression
 from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
@@ -25,7 +26,11 @@ from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.synthesize.warnings import detect as detect_warnings
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
+from social_research_probe.viz import heatmap as heatmap_viz
+from social_research_probe.viz import histogram as histogram_viz
 from social_research_probe.viz import line as line_viz
+from social_research_probe.viz import regression_scatter as regression_scatter_viz
+from social_research_probe.viz import residuals as residuals_viz
 from social_research_probe.viz import scatter as scatter_viz
 from social_research_probe.viz import table as table_viz
 
@@ -131,6 +136,12 @@ def _score_item(
         "url": item.url,
         "source_class": src.value,
         "scores": {"trust": trust, "trend": trend, "opportunity": opportunity, "overall": overall},
+        "features": {
+            "view_velocity": signal.view_velocity or 0.0,
+            "engagement_ratio": signal.engagement_ratio or 0.0,
+            "age_days": age_days,
+            "subscriber_count": float(hints.subscriber_count or 0),
+        },
         "one_line_takeaway": (item.text_excerpt or item.title)[:140],
     }
 
@@ -151,9 +162,20 @@ def _build_stats_summary(scored_items: list[dict]) -> dict:
     results += select_and_run_correlation(
         trust, opportunity, label_a="trust", label_b="opportunity"
     )
+    results += multi_regression.run(
+        overall,
+        {
+            "trust": trust,
+            "trend": [d["scores"]["trend"] for d in scored_items],
+            "opportunity": opportunity,
+        },
+        label="overall",
+    )
     models_run = _stats_models_for(len(overall))
     if len(overall) >= 2:
         models_run.append("correlation")
+    if len(overall) >= 5:
+        models_run.append("multi_regression")
     return {
         "models_run": models_run,
         "highlights": [explain_stat(r) for r in results],
@@ -173,12 +195,13 @@ def _stats_models_for(n: int) -> list[str]:
 
 
 def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
-    """Render every applicable chart type using the full scored dataset.
+    """Render the full advanced-stats chart suite from the scored dataset.
 
-    Stats and scatter plots benefit from larger n (statistical significance
-    only kicks in around n>=8 for moderate correlations), so all fetched
-    items feed bar/line/scatter. The table chart is capped at top-10 for
-    visual readability.
+    Produces: bar, line (rank decay), regression-scatter with fitted line
+    (trust vs opp and trust vs trend), plain scatters for backward compat,
+    histogram of overall scores, correlation heatmap of all numeric
+    features, residuals plot for the rank regression, plus a formatted
+    top-10 table.
     """
     if not scored_items:
         return []
@@ -188,12 +211,18 @@ def _render_charts(scored_items: list[dict], data_dir) -> list[str]:
     trust = [d["scores"]["trust"] for d in scored_items]
     trend = [d["scores"]["trend"] for d in scored_items]
     opportunity = [d["scores"]["opportunity"] for d in scored_items]
+    ranks = [float(i) for i in range(len(overall))]
 
     captions: list[str] = []
     captions.append(_render_bar(overall, charts_dir))
     captions.append(_render_line(overall, charts_dir))
+    captions.append(_render_histogram(overall, charts_dir))
+    captions.append(_render_regression(trust, opportunity, "trust_vs_opportunity", charts_dir))
+    captions.append(_render_regression(trust, trend, "trust_vs_trend", charts_dir))
     captions.append(_render_scatter(trust, opportunity, "trust_vs_opportunity", charts_dir))
     captions.append(_render_scatter(trust, trend, "trust_vs_trend", charts_dir))
+    captions.append(_render_heatmap(scored_items, charts_dir))
+    captions.append(_render_residuals(ranks, overall, "overall_by_rank", charts_dir))
     captions.append(_render_table(scored_items[:10], charts_dir))
     return captions
 
@@ -211,6 +240,35 @@ def _render_line(overall: list[float], charts_dir) -> str:
 def _render_scatter(x: list[float], y: list[float], label: str, charts_dir) -> str:
     chart = scatter_viz.render(x, y, label=label, output_dir=str(charts_dir))
     return f"Scatter: {label.replace('_', ' ')} ({len(x)} items)\n_(see PNG: {chart.path})_"
+
+
+def _render_histogram(values: list[float], charts_dir) -> str:
+    chart = histogram_viz.render(values, label="overall_score", output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
+
+
+def _render_regression(x: list[float], y: list[float], label: str, charts_dir) -> str:
+    chart = regression_scatter_viz.render(x, y, label=label, output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
+
+
+def _render_heatmap(scored_items: list[dict], charts_dir) -> str:
+    features = {
+        "trust": [d["scores"]["trust"] for d in scored_items],
+        "trend": [d["scores"]["trend"] for d in scored_items],
+        "opportunity": [d["scores"]["opportunity"] for d in scored_items],
+        "overall": [d["scores"]["overall"] for d in scored_items],
+        "velocity": [d["features"]["view_velocity"] for d in scored_items],
+        "engagement": [d["features"]["engagement_ratio"] for d in scored_items],
+        "age_days": [d["features"]["age_days"] for d in scored_items],
+    }
+    chart = heatmap_viz.render(features, label="feature_correlations", output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
+
+
+def _render_residuals(x: list[float], y: list[float], label: str, charts_dir) -> str:
+    chart = residuals_viz.render(x, y, label=label, output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
 def _render_table(top5: list[dict], charts_dir) -> str:
