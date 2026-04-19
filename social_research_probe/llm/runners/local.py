@@ -115,5 +115,6 @@ class LocalRunner(LLMRunner):
         from social_research_probe.utils.subprocess_runner import run as sp_run
 
         argv = self._build_argv(schema)
+        print(f"[srp] LLM (local): running structured JSON task via {argv[0]!r}")
         result = sp_run(argv, input=prompt)
         return self._parse_response(result.stdout)

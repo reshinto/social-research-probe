@@ -787,7 +787,5 @@ class TestPromptForRunner:
             "social_research_probe.commands.config.write_config_value",
             lambda d, k, v: calls.append(v),
         )
-        _prompt_for_runner(
-            tmp_path, _input=lambda p="": (_ for _ in ()).throw(KeyboardInterrupt())
-        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": (_ for _ in ()).throw(KeyboardInterrupt()))
         assert calls == []

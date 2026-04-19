@@ -132,7 +132,9 @@ class LLMCliBackend(CorroborationBackend):
         """
         from social_research_probe.llm.registry import get_runner
 
-        runner = get_runner(self._resolve_runner_name())
+        runner_name = self._resolve_runner_name()
+        print(f"[srp] llm ({runner_name}): corroborating claim via LLM: {claim.text[:80]!r}")
+        runner = get_runner(runner_name)
         prompt = self._build_prompt(claim)
         raw = runner.run(
             prompt,

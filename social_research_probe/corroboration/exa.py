@@ -136,5 +136,6 @@ class ExaBackend(CorroborationBackend):
         Raises:
             AdapterError: if the API key is missing or the HTTP call fails.
         """
+        print(f"[srp] exa: searching for claim: {claim.text[:80]!r}")
         raw = self._search(claim.text)
         return self._build_result(claim, raw)
