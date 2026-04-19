@@ -17,8 +17,12 @@ from social_research_probe.scoring.combine import overall_score
 from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import trend_score
 from social_research_probe.scoring.trust import trust_score
+from social_research_probe.stats.selector import select_and_run
+from social_research_probe.synthesize.evidence import summarize as summarize_evidence
+from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.validation.source import classify as classify_source
+from social_research_probe.viz.selector import select_and_render
 
 Mode = Literal["skill", "cli"]
 
@@ -126,6 +130,29 @@ def _score_item(
     }
 
 
+def _build_stats_summary(scores: list[float]) -> dict:
+    """Run the stats selector on overall scores and shape it for the packet."""
+    results = select_and_run(scores, label="overall_score")
+    models_run = ["descriptive"] if scores else []
+    if len(scores) >= 3:
+        models_run.append("growth")
+    return {
+        "models_run": models_run,
+        "highlights": [r.caption for r in results],
+        "low_confidence": len(scores) < 3,
+    }
+
+
+def _render_charts(scores: list[float], data_dir) -> list[str]:
+    """Render an overall-score chart into ``<data_dir>/charts/`` if data exists."""
+    if not scores:
+        return []
+    charts_dir = data_dir / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    chart = select_and_render(scores, label="overall_score", output_dir=str(charts_dir))
+    return [chart.caption]
+
+
 def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
     _maybe_register_fake()
     purposes = purpose_registry.load(data_dir)["purposes"]
@@ -161,8 +188,11 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
             "primary": sum(1 for d in top5 if d["source_class"] == "primary"),
             "secondary": sum(1 for d in top5 if d["source_class"] == "secondary"),
             "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
-            "notes": "",
+            "notes": "corroboration not run; use 'srp corroborate-claims' for validation",
         }
+        overall_scores = [d["scores"]["overall"] for d in top5]
+        stats_summary = _build_stats_summary(overall_scores)
+        chart_captions = _render_charts(overall_scores, data_dir)
         packets.append(
             build_packet(
                 topic=topic,
@@ -170,14 +200,10 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
                 purpose_set=list(merged.names),
                 items_top5=top5,
                 source_validation_summary=svs,
-                platform_signals_summary=f"{len(items)} items fetched",
-                evidence_summary=(
-                    "deterministic fixture"
-                    if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE")
-                    else "live fetch"
-                ),
-                stats_summary={"models_run": [], "highlights": [], "low_confidence": True},
-                chart_captions=[],
+                platform_signals_summary=summarize_signals(signals),
+                evidence_summary=summarize_evidence(items, signals, top5),
+                stats_summary=stats_summary,
+                chart_captions=chart_captions,
                 warnings=[],
             )
         )

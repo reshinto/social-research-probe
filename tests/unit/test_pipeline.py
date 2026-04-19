@@ -9,9 +9,11 @@ import pytest
 
 from social_research_probe.commands.parse import parse
 from social_research_probe.pipeline import (
+    _build_stats_summary,
     _channel_credibility,
     _enrich_query,
     _maybe_register_fake,
+    _render_charts,
     _score_item,
     _zscore,
     run_research,
@@ -209,6 +211,34 @@ def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     cmd = parse(raw)
     with pytest.raises(ValidationError):
         run_research(cmd, tmp_path, mode="cli")
+
+
+def test_build_stats_summary_empty_scores():
+    summary = _build_stats_summary([])
+    assert summary == {"models_run": [], "highlights": [], "low_confidence": True}
+
+
+def test_build_stats_summary_two_scores_skips_growth():
+    summary = _build_stats_summary([0.5, 0.7])
+    assert summary["models_run"] == ["descriptive"]
+    assert summary["low_confidence"] is True
+
+
+def test_build_stats_summary_three_scores_includes_growth():
+    summary = _build_stats_summary([0.5, 0.7, 0.9])
+    assert summary["models_run"] == ["descriptive", "growth"]
+    assert summary["low_confidence"] is False
+    assert summary["highlights"]
+
+
+def test_render_charts_empty_scores_returns_empty(tmp_path):
+    assert _render_charts([], tmp_path) == []
+
+
+def test_render_charts_writes_caption(tmp_path):
+    captions = _render_charts([0.5, 0.6, 0.7], tmp_path)
+    assert len(captions) == 1
+    assert (tmp_path / "charts").is_dir()
 
 
 def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
