@@ -65,6 +65,23 @@ def _items_links_and_takeaways(items: list[dict]) -> str:
     return "\n".join(bullets)
 
 
+def _highlights_table(highlights: list[str]) -> str:
+    """Render stat highlights as a two-column markdown table: Metric | Finding."""
+    if not highlights:
+        return "_(no highlights)_"
+    header = "| Metric | Finding |\n|--------|---------|"
+    rows = []
+    for h in highlights:
+        if " — " in h:
+            metric, finding = h.split(" — ", 1)
+        else:
+            metric, finding = h, ""
+        metric = metric.replace("|", r"\|")
+        finding = finding.replace("|", r"\|")
+        rows.append(f"| {metric} | {finding} |")
+    return "\n".join([header, *rows])
+
+
 def _bulletise(text: str) -> str:
     """Split a semicolon-separated summary into a bullet list."""
     return "\n".join(f"- {part.strip()}" for part in text.split(";") if part.strip())
@@ -121,8 +138,8 @@ def render_sections_1_9(packet: dict[str, Any]) -> str:
     parts.append("## 6. Evidence\n\n" + _bulletise(packet["evidence_summary"]))
     models = ", ".join(stats.get("models_run", [])) or "none"
     lc = " (low confidence)" if stats.get("low_confidence") else ""
-    highlights = "\n".join(f"- {h}" for h in stats.get("highlights", [])) or "_(no highlights)_"
-    parts.append(f"## 7. Statistics\n\n**Models:** {models}{lc}\n\n{highlights}")
+    highlights = stats.get("highlights", [])
+    parts.append(f"## 7. Statistics\n\n**Models:** {models}{lc}\n\n{_highlights_table(highlights)}")
     caps = packet.get("chart_captions", [])
     parts.append("## 8. Charts\n\n" + ("\n\n".join(caps) if caps else "_(no charts rendered)_"))
     parts.append(
