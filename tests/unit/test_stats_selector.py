@@ -27,3 +27,19 @@ def test_selector_empty_data_returns_empty():
     """Empty input should produce an empty result list."""
     results = select_and_run([], label="test")
     assert results == []
+
+
+def test_select_and_run_correlation_runs_when_both_have_two_or_more():
+    from social_research_probe.stats.selector import select_and_run_correlation
+
+    results = select_and_run_correlation([1.0, 2.0, 3.0], [2.0, 4.0, 6.0])
+    assert results
+    assert any(
+        "correlation" in r.name.lower() or "correlation" in r.caption.lower() for r in results
+    )
+
+
+def test_select_and_run_correlation_skips_when_too_few_points():
+    from social_research_probe.stats.selector import select_and_run_correlation
+
+    assert select_and_run_correlation([1.0], [2.0]) == []

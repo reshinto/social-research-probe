@@ -213,32 +213,62 @@ def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
         run_research(cmd, tmp_path, mode="cli")
 
 
-def test_build_stats_summary_empty_scores():
+def _fake_top5(n: int) -> list[dict]:
+    return [
+        {
+            "title": f"t{i}",
+            "channel": f"ch{i}",
+            "url": f"https://x/{i}",
+            "source_class": "secondary",
+            "scores": {
+                "trust": 0.5 + i * 0.05,
+                "trend": 0.4 + i * 0.05,
+                "opportunity": 0.6 + i * 0.05,
+                "overall": 0.5 + i * 0.04,
+            },
+            "one_line_takeaway": "...",
+        }
+        for i in range(n)
+    ]
+
+
+def test_build_stats_summary_empty_top5():
     summary = _build_stats_summary([])
     assert summary == {"models_run": [], "highlights": [], "low_confidence": True}
 
 
-def test_build_stats_summary_two_scores_skips_growth():
-    summary = _build_stats_summary([0.5, 0.7])
-    assert summary["models_run"] == ["descriptive"]
+def test_build_stats_summary_two_items_skips_growth():
+    summary = _build_stats_summary(_fake_top5(2))
+    assert summary["models_run"] == ["descriptive", "spread", "regression", "correlation"]
     assert summary["low_confidence"] is True
-
-
-def test_build_stats_summary_three_scores_includes_growth():
-    summary = _build_stats_summary([0.5, 0.7, 0.9])
-    assert summary["models_run"] == ["descriptive", "growth"]
-    assert summary["low_confidence"] is False
     assert summary["highlights"]
 
 
-def test_render_charts_empty_scores_returns_empty(tmp_path):
+def test_build_stats_summary_three_items_runs_all():
+    summary = _build_stats_summary(_fake_top5(3))
+    assert summary["models_run"] == [
+        "descriptive",
+        "spread",
+        "regression",
+        "growth",
+        "outliers",
+        "correlation",
+    ]
+    assert summary["low_confidence"] is False
+
+
+def test_render_charts_empty_returns_empty(tmp_path):
     assert _render_charts([], tmp_path) == []
 
 
-def test_render_charts_writes_caption(tmp_path):
-    captions = _render_charts([0.5, 0.6, 0.7], tmp_path)
-    assert len(captions) == 1
+def test_render_charts_writes_three_captions(tmp_path):
+    captions = _render_charts(_fake_top5(3), tmp_path)
+    assert len(captions) == 3
     assert (tmp_path / "charts").is_dir()
+    joined = "\n".join(captions)
+    assert "Bar chart" in joined
+    assert "Scatter" in joined
+    assert "Table" in joined or "table" in joined
 
 
 def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
@@ -267,3 +297,20 @@ def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     cmd = parse(raw)
     with pytest.raises(ValidationError, match="health check"):
         run_research(cmd, tmp_path, mode="cli")
+
+
+def test_build_stats_summary_single_item_runs_only_descriptive():
+    summary = _build_stats_summary(_fake_top5(1))
+    assert summary["models_run"] == ["descriptive"]
+    assert summary["low_confidence"] is True
+
+
+def test_render_charts_single_item_still_renders(tmp_path):
+    captions = _render_charts(_fake_top5(1), tmp_path)
+    assert len(captions) == 3
+
+
+def test_stats_models_for_zero_returns_empty():
+    from social_research_probe.pipeline import _stats_models_for
+
+    assert _stats_models_for(0) == []

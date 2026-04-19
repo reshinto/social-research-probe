@@ -17,11 +17,14 @@ from social_research_probe.scoring.combine import overall_score
 from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import trend_score
 from social_research_probe.scoring.trust import trust_score
-from social_research_probe.stats.selector import select_and_run
+from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.formatter import build_packet
+from social_research_probe.synthesize.warnings import detect as detect_warnings
 from social_research_probe.validation.source import classify as classify_source
+from social_research_probe.viz import scatter as scatter_viz
+from social_research_probe.viz import table as table_viz
 from social_research_probe.viz.selector import select_and_render
 
 Mode = Literal["skill", "cli"]
@@ -130,27 +133,74 @@ def _score_item(
     }
 
 
-def _build_stats_summary(scores: list[float]) -> dict:
-    """Run the stats selector on overall scores and shape it for the packet."""
-    results = select_and_run(scores, label="overall_score")
-    models_run = ["descriptive"] if scores else []
-    if len(scores) >= 3:
-        models_run.append("growth")
+def _build_stats_summary(top5: list[dict]) -> dict:
+    """Run all applicable stats analyses on each metric series in the top-5."""
+    if not top5:
+        return {"models_run": [], "highlights": [], "low_confidence": True}
+    overall = [d["scores"]["overall"] for d in top5]
+    trust = [d["scores"]["trust"] for d in top5]
+    opportunity = [d["scores"]["opportunity"] for d in top5]
+    results = select_and_run(overall, label="overall_score")
+    results += select_and_run_correlation(
+        trust, opportunity, label_a="trust", label_b="opportunity"
+    )
+    models_run = _stats_models_for(len(overall))
+    if len(overall) >= 2:
+        models_run.append("correlation")
     return {
         "models_run": models_run,
         "highlights": [r.caption for r in results],
-        "low_confidence": len(scores) < 3,
+        "low_confidence": len(overall) < 3,
     }
 
 
-def _render_charts(scores: list[float], data_dir) -> list[str]:
-    """Render an overall-score chart into ``<data_dir>/charts/`` if data exists."""
-    if not scores:
+def _stats_models_for(n: int) -> list[str]:
+    models: list[str] = []
+    if n >= 1:
+        models.append("descriptive")
+    if n >= 2:
+        models += ["spread", "regression"]
+    if n >= 3:
+        models += ["growth", "outliers"]
+    return models
+
+
+def _render_charts(top5: list[dict], data_dir) -> list[str]:
+    """Render bar (overall), scatter (trust vs opportunity), and table charts."""
+    if not top5:
         return []
     charts_dir = data_dir / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
-    chart = select_and_render(scores, label="overall_score", output_dir=str(charts_dir))
-    return [chart.caption]
+    overall = [d["scores"]["overall"] for d in top5]
+    trust = [d["scores"]["trust"] for d in top5]
+    opportunity = [d["scores"]["opportunity"] for d in top5]
+
+    captions: list[str] = []
+    bar_chart = select_and_render(overall, label="overall_score", output_dir=str(charts_dir))
+    captions.append(bar_chart.caption)
+
+    scatter_chart = scatter_viz.render(
+        trust, opportunity, label="trust_vs_opportunity", output_dir=str(charts_dir)
+    )
+    captions.append(
+        f"Scatter: trust vs opportunity ({len(trust)} items)\n_(see PNG: {scatter_chart.path})_"
+    )
+
+    table_rows = [
+        {
+            "rank": i + 1,
+            "channel": d["channel"][:25],
+            "trust": f"{d['scores']['trust']:.2f}",
+            "trend": f"{d['scores']['trend']:.2f}",
+            "opp": f"{d['scores']['opportunity']:.2f}",
+            "overall": f"{d['scores']['overall']:.2f}",
+        }
+        for i, d in enumerate(top5)
+    ]
+    table_chart = table_viz.render(table_rows, label="top5_summary", output_dir=str(charts_dir))
+    captions.append(f"{table_chart.caption}\n_(see PNG: {table_chart.path})_")
+
+    return captions
 
 
 def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
@@ -190,9 +240,9 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
             "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
             "notes": "corroboration not run; use 'srp corroborate-claims' for validation",
         }
-        overall_scores = [d["scores"]["overall"] for d in top5]
-        stats_summary = _build_stats_summary(overall_scores)
-        chart_captions = _render_charts(overall_scores, data_dir)
+        stats_summary = _build_stats_summary(top5)
+        chart_captions = _render_charts(top5, data_dir)
+        warnings = detect_warnings(items, signals, top5)
         packets.append(
             build_packet(
                 topic=topic,
@@ -204,7 +254,7 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
                 evidence_summary=summarize_evidence(items, signals, top5),
                 stats_summary=stats_summary,
                 chart_captions=chart_captions,
-                warnings=[],
+                warnings=warnings,
             )
         )
 

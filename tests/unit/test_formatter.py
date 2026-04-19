@@ -66,8 +66,12 @@ def test_render_sections_contains_headings():
 
 
 def test_render_sections_with_items():
-    """Cover _fmt_item (lines 27-28) and the non-empty items branch (line 44)."""
-    from social_research_probe.synthesize.formatter import _fmt_item, render_sections_1_9
+    """Cover the items-table branch and bullet renderer."""
+    from social_research_probe.synthesize.formatter import (
+        _bulletise,
+        _items_table,
+        render_sections_1_9,
+    )
 
     item = {
         "title": "Test Video",
@@ -77,12 +81,16 @@ def test_render_sections_with_items():
         "scores": {"trust": 0.8, "trend": 0.6, "opportunity": 0.5, "overall": 0.7},
         "one_line_takeaway": "A great takeaway.",
     }
-    # Direct call to _fmt_item
-    line = _fmt_item(1, item)
-    assert "Test Video" in line
-    assert "trust=0.80" in line
+    table = _items_table([item])
+    assert "| Channel |" in table
+    assert "0.80" in table
+    assert "Test Video" in table
+    assert _bulletise("a; b; c") == "- a\n- b\n- c"
 
-    # render_sections_1_9 with items triggers line 44
+    # Pipe in the title is escaped so it doesn't break the markdown table.
+    table_with_pipe = _items_table([{**item, "title": "Pipe | Title"}])
+    assert r"Pipe \| Title" in table_with_pipe
+
     out = render_sections_1_9(
         {
             "topic": "ai",

@@ -36,15 +36,38 @@ def build_packet(
     }
 
 
-def _fmt_item(i: int, it: dict) -> str:
-    s = it.get("scores", {})
-    return (
-        f"{i}. **{it['title']}** — {it['channel']} — {it['url']}\n"
-        f"   class={it.get('source_class', '?')} "
-        f"trust={s.get('trust', 0):.2f} trend={s.get('trend', 0):.2f} "
-        f"opportunity={s.get('opportunity', 0):.2f} overall={s.get('overall', 0):.2f}\n"
-        f"   > {it.get('one_line_takeaway', '')}"
+def _items_table(items: list[dict]) -> str:
+    """Render the top items as a markdown table for compact scanning."""
+    header = (
+        "| # | Channel | Class | Trust | Trend | Opp | Overall | Title |\n"
+        "|---|---------|-------|-------|-------|-----|---------|-------|"
     )
+    rows = []
+    for i, it in enumerate(items, start=1):
+        scores = it.get("scores", {})
+        title = it["title"].replace("|", r"\|")
+        rows.append(
+            f"| {i} | {it['channel']} | {it.get('source_class', '?')} "
+            f"| {scores.get('trust', 0):.2f} | {scores.get('trend', 0):.2f} "
+            f"| {scores.get('opportunity', 0):.2f} | {scores.get('overall', 0):.2f} "
+            f"| {title} |"
+        )
+    return "\n".join([header, *rows])
+
+
+def _items_links_and_takeaways(items: list[dict]) -> str:
+    """Render per-item URL and takeaway as a separate bullet list."""
+    bullets = []
+    for i, it in enumerate(items, start=1):
+        bullets.append(
+            f"- **[{i}]** [{it['channel']}]({it['url']}) — {it.get('one_line_takeaway', '')}"
+        )
+    return "\n".join(bullets)
+
+
+def _bulletise(text: str) -> str:
+    """Split a semicolon-separated summary into a bullet list."""
+    return "\n".join(f"- {part.strip()}" for part in text.split(";") if part.strip())
 
 
 def render_sections_1_9(packet: dict[str, Any]) -> str:
@@ -54,16 +77,21 @@ def render_sections_1_9(packet: dict[str, Any]) -> str:
     warnings = packet.get("warnings", [])
     parts: list[str] = []
     parts.append(
-        f"## 1. Topic & Purpose\n\n{packet['topic']} — purposes: {', '.join(packet['purpose_set'])}"
+        "## 1. Topic & Purpose\n\n"
+        f"- **Topic:** {packet['topic']}\n"
+        f"- **Purposes:** {', '.join(packet['purpose_set'])}"
     )
-    parts.append(f"## 2. Platform\n\n{packet['platform']}")
+    parts.append(f"## 2. Platform\n\n- **Platform:** {packet['platform']}")
     if items:
         parts.append(
-            "## 3. Top Items\n\n" + "\n\n".join(_fmt_item(i + 1, it) for i, it in enumerate(items))
+            "## 3. Top Items\n\n"
+            + _items_table(items)
+            + "\n\n**Links & takeaways:**\n\n"
+            + _items_links_and_takeaways(items)
         )
     else:
         parts.append("## 3. Top Items\n\n_(no items returned)_")
-    parts.append(f"## 4. Platform Signals\n\n{packet['platform_signals_summary']}")
+    parts.append("## 4. Platform Signals\n\n" + _bulletise(packet["platform_signals_summary"]))
     parts.append(
         "## 5. Source Validation\n\n"
         f"- validated: {svs['validated']}, partial: {svs['partially']}, "
@@ -71,16 +99,13 @@ def render_sections_1_9(packet: dict[str, Any]) -> str:
         f"- primary/secondary/commentary: {svs['primary']}/{svs['secondary']}/{svs['commentary']}"
         + (f"\n- notes: {svs['notes']}" if svs.get("notes") else "")
     )
-    parts.append(f"## 6. Evidence\n\n{packet['evidence_summary']}")
+    parts.append("## 6. Evidence\n\n" + _bulletise(packet["evidence_summary"]))
     models = ", ".join(stats.get("models_run", [])) or "none"
     lc = " (low confidence)" if stats.get("low_confidence") else ""
     highlights = "\n".join(f"- {h}" for h in stats.get("highlights", [])) or "_(no highlights)_"
-    parts.append(f"## 7. Statistics\n\nModels: {models}{lc}\n\n{highlights}")
+    parts.append(f"## 7. Statistics\n\n**Models:** {models}{lc}\n\n{highlights}")
     caps = packet.get("chart_captions", [])
-    parts.append(
-        "## 8. Charts\n\n"
-        + ("\n".join(f"- {c}" for c in caps) if caps else "_(no charts rendered)_")
-    )
+    parts.append("## 8. Charts\n\n" + ("\n\n".join(caps) if caps else "_(no charts rendered)_"))
     parts.append(
         "## 9. Warnings\n\n" + ("\n".join(f"- {w}" for w in warnings) if warnings else "_(none)_")
     )
