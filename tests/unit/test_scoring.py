@@ -21,3 +21,26 @@ def test_opportunity_bounds():
 def test_overall_weights_sum_to_one():
     s = overall_score(trust=1.0, trend=1.0, opportunity=1.0)
     assert math.isclose(s, 1.0, abs_tol=1e-9)
+
+
+# --- Additional trend.py coverage (lines 3->exit, 10-11) ---
+
+def test_clip_clamps_above_one():
+    # Force extremely high z-scores so the weighted sum exceeds 1.0; _clip must cap it.
+    s = trend_score(z_view_velocity=100.0, z_engagement_ratio=100.0,
+                    z_cross_channel_repetition=100.0, age_days=0.0)
+    assert s == 1.0
+
+
+def test_clip_clamps_below_zero():
+    # Force extremely negative z-scores and a very old age so the sum goes below 0.0.
+    s = trend_score(z_view_velocity=-100.0, z_engagement_ratio=-100.0,
+                    z_cross_channel_repetition=-100.0, age_days=99999.0)
+    assert s == 0.0
+
+
+def test_norm_z_inner_function_called():
+    # Exercises norm_z with typical z values (covers lines 10-11).
+    s = trend_score(z_view_velocity=1.0, z_engagement_ratio=0.5,
+                    z_cross_channel_repetition=0.0, age_days=7.0)
+    assert 0.0 <= s <= 1.0

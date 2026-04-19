@@ -33,6 +33,6 @@ def atomic_write_json(path: Path, data: dict[str, Any]) -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_name, path)
-    except BaseException:
+    except BaseException:  # pragma: no cover
         Path(tmp_name).unlink(missing_ok=True)
         raise

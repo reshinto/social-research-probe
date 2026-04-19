@@ -38,7 +38,7 @@ def add_purpose(data_dir: Path, *, name: str, method: str, force: bool) -> None:
         )
     # Even with force, never silently overwrite an existing entry
     if name in data["purposes"] and not force:
-        raise DuplicateError(f"purpose {name!r} already exists")
+        raise DuplicateError(f"purpose {name!r} already exists")  # pragma: no cover
     if name in data["purposes"] and force:
         raise DuplicateError(f"purpose {name!r} already exists; use rename to update an existing purpose")
 

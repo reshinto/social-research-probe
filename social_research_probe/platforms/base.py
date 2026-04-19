@@ -54,22 +54,22 @@ class PlatformAdapter(ABC):
     default_limits: ClassVar[FetchLimits]
 
     @abstractmethod
-    def health_check(self) -> bool: ...
+    def health_check(self) -> bool: ...  # pragma: no cover
 
     @abstractmethod
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...
+    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...  # pragma: no cover
 
     @abstractmethod
-    def enrich(self, items: list[RawItem]) -> list[RawItem]: ...
+    def enrich(self, items: list[RawItem]) -> list[RawItem]: ...  # pragma: no cover
 
     @abstractmethod
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]: ...
+    def to_signals(self, items: list[RawItem]) -> list[SignalSet]: ...  # pragma: no cover
 
     @abstractmethod
-    def trust_hints(self, item: RawItem) -> TrustHints: ...
+    def trust_hints(self, item: RawItem) -> TrustHints: ...  # pragma: no cover
 
     @abstractmethod
-    def url_normalize(self, url: str) -> str: ...
+    def url_normalize(self, url: str) -> str: ...  # pragma: no cover
 
     def fetch_text_for_claim_extraction(self, item: RawItem) -> str | None:
         return None

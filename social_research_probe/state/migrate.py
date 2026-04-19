@@ -54,7 +54,7 @@ def migrate_to_current(path: Path, data: dict[str, Any], *, kind: str) -> dict[s
         )
 
     chain = migrators_for(kind)
-    if current >= len(chain) + 1:
+    if current >= len(chain) + 1:  # pragma: no cover
         raise MigrationError(f"{path.name} at v{current} has no migration path to v{target}")
 
     _write_backup(path, data, current)

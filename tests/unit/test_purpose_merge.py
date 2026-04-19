@@ -62,3 +62,30 @@ def test_merged_is_frozen_dataclass():
     import pytest
     with pytest.raises(Exception):  # frozen
         merged.method = "changed"  # type: ignore[misc]
+
+
+def test_merge_purpose_missing_method_raises():
+    """Line 34: purpose entry without 'method' key raises ValidationError."""
+    import pytest
+    from social_research_probe.errors import ValidationError
+
+    purposes = {
+        "broken": {
+            "evidence_priorities": [],
+            "scoring_overrides": {},
+            # missing 'method'
+        }
+    }
+    with pytest.raises(ValidationError, match="missing required key 'method'"):
+        merge_purposes(purposes, ["broken"])
+
+
+def test_scoring_overrides_lower_val_not_updated():
+    """Line 43->42: a lower scoring_override value must NOT replace a higher one."""
+    purposes = {
+        "strict": {"method": "x", "evidence_priorities": [], "scoring_overrides": {"trust": 0.9}},
+        "lax": {"method": "y", "evidence_priorities": [], "scoring_overrides": {"trust": 0.1}},
+    }
+    merged = merge_purposes(purposes, ["strict", "lax"])
+    # The max (0.9) must win over the lower value (0.1)
+    assert merged.scoring_overrides["trust"] == 0.9

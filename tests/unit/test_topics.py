@@ -88,3 +88,20 @@ def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
     add_topics(tmp_data_dir, ["ai agents"], force=False)
     with pytest.raises(SrpError):
         rename_topic(tmp_data_dir, "nonexistent", "something new")
+
+
+def test_save_with_duplicates_raises(tmp_data_dir: Path):
+    """Line 27: _save raises DuplicateError if topics list has internal duplicates."""
+    from social_research_probe.commands.topics import _save
+    data = {"schema_version": 1, "topics": ["ai", "ai"]}  # duplicate
+    with pytest.raises(DuplicateError, match="internal error"):
+        _save(tmp_data_dir, data)
+
+
+def test_add_topics_dedupes_within_values(tmp_data_dir: Path):
+    """Branch 60->59: _save deduplication loop skips already-seen values (v IS in seen)."""
+    # With force=True, duplicate values within the input list are allowed in to_add
+    # The dedup loop at line 59-62 filters them out
+    add_topics(tmp_data_dir, ["ai agents", "ai agents"], force=True)
+    state = _read(tmp_data_dir)
+    assert state["topics"].count("ai agents") == 1

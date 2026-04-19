@@ -28,3 +28,11 @@ def test_secondary_default():
                        subscriber_count=20_000, upload_cadence_days=7.0,
                        citation_markers=["https://example.com/post"])
     assert classify(_item(), hints) is SourceClass.SECONDARY
+
+
+def test_unknown_when_old_no_markers_low_subs():
+    # No markers, subs < 1000, age >= 180 → UNKNOWN (covers line 29 of source.py)
+    hints = TrustHints(account_age_days=365, verified=False,
+                       subscriber_count=100, upload_cadence_days=30.0,
+                       citation_markers=[])
+    assert classify(_item(), hints) is SourceClass.UNKNOWN

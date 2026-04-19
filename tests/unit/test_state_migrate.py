@@ -46,3 +46,9 @@ def test_migrators_for_known_kinds():
     assert migrators_for("topics") is not None
     assert migrators_for("purposes") is not None
     assert migrators_for("pending_suggestions") is not None
+
+
+def test_migrators_for_unknown_kind_raises():
+    """Line 32: migrators_for with an unknown kind raises MigrationError."""
+    with pytest.raises(MigrationError, match="no migrators registered"):
+        migrators_for("nonexistent_kind")

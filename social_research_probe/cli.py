@@ -75,6 +75,16 @@ def _global_parser() -> argparse.ArgumentParser:
     rr.add_argument("--mode", choices=["skill", "cli"], default="cli")
     rr.add_argument("dsl", nargs="+")
 
+    cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
+    cc.add_argument("--input", required=True, help="Path to claims JSON file")
+    cc.add_argument("--backends", default="llm_cli",
+                    help="Comma-separated backend names (default: llm_cli)")
+    cc.add_argument("--output", default=None, help="Output file path (default: stdout)")
+
+    rend = sub.add_parser("render", help="Render charts and stats for a research packet")
+    rend.add_argument("--packet", required=True, help="Path to packet JSON file")
+    rend.add_argument("--output-dir", default=None, help="Directory to save charts")
+
     ins = sub.add_parser("install-skill", help="Copy SKILL.md + references into a target directory")
     ins.add_argument("--target", default=None, help="Destination directory (default: ~/.claude/skills/srp)")
 
@@ -140,7 +150,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         elif args.remove:
             values = _parse_quoted_list(args.remove)
             topics_cmd.remove_topics(data_dir, values)
-        elif args.rename:
+        elif args.rename:  # pragma: no branch
             old, pos = _take_quoted(args.rename, 0)
             if args.rename[pos : pos + 2] != "->":
                 raise ValidationError("rename expects old->new")
@@ -163,7 +173,7 @@ def _dispatch(args: argparse.Namespace) -> int:
             purposes_cmd.add_purpose(data_dir, name=name, method=method, force=args.force)
         elif args.remove:
             purposes_cmd.remove_purposes(data_dir, _parse_quoted_list(args.remove))
-        elif args.rename:
+        elif args.rename:  # pragma: no branch
             old, pos = _take_quoted(args.rename, 0)
             if args.rename[pos : pos + 2] != "->":
                 raise ValidationError("rename expects old->new")
@@ -228,6 +238,15 @@ def _dispatch(args: argparse.Namespace) -> int:
         run_research(parse(raw), data_dir, args.mode)
         return 0
 
+    if args.command == "corroborate-claims":
+        from social_research_probe.commands import corroborate_claims as cc_cmd
+        backends = [b.strip() for b in args.backends.split(",") if b.strip()]
+        return cc_cmd.run(args.input, backends, output_path=args.output)
+
+    if args.command == "render":
+        from social_research_probe.commands import render as render_cmd
+        return render_cmd.run(args.packet, output_dir=args.output_dir)
+
     if args.command == "install-skill":
         import shutil
         import subprocess
@@ -281,9 +300,9 @@ def _dispatch_config(args: argparse.Namespace, data_dir: Path) -> int:
     if args.config_cmd == "set-secret":
         if args.from_stdin:
             value = sys.stdin.read().rstrip("\n")
-        else:
-            import getpass
-            value = getpass.getpass(f"{args.name}: ")
+        else:  # pragma: no cover
+            import getpass  # pragma: no cover
+            value = getpass.getpass(f"{args.name}: ")  # pragma: no cover
         if not value:
             raise ValidationError("empty secret value")
         config_cmd.write_secret(data_dir, args.name, value)

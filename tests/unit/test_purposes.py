@@ -69,3 +69,26 @@ def test_rename_onto_existing_raises(tmp_data_dir: Path):
 def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
     with pytest.raises(Exception):
         rename_purpose(tmp_data_dir, "nonexistent", "something")
+
+
+def test_add_near_duplicate_raises(tmp_data_dir: Path):
+    """Line 36: NEAR_DUPLICATE without force raises DuplicateError."""
+    add_purpose(tmp_data_dir, name="track latest news channel", method="Track news", force=False)
+    # "track latest news channels" scores ~98 with rapidfuzz token_set_ratio → near-duplicate
+    with pytest.raises(DuplicateError):
+        add_purpose(tmp_data_dir, name="track latest news channels", method="Track news too", force=False)
+
+
+def test_add_existing_with_force_raises(tmp_data_dir: Path):
+    """Line 43: existing name with force=True raises DuplicateError (can't overwrite, use rename)."""
+    add_purpose(tmp_data_dir, name="trends", method="original", force=False)
+    with pytest.raises(DuplicateError, match="use rename"):
+        add_purpose(tmp_data_dir, name="trends", method="updated", force=True)
+
+
+def test_add_near_duplicate_without_force_raises_on_near_dup(tmp_data_dir: Path):
+    """Line 36: NEAR_DUPLICATE branch raises when not forced (using known near-dup pair)."""
+    add_purpose(tmp_data_dir, name="audience-fit", method="Audience fit analysis", force=False)
+    # "audience fit" vs "audience-fit" → NEAR_DUPLICATE (not DUPLICATE) in dedupe
+    with pytest.raises(DuplicateError):
+        add_purpose(tmp_data_dir, name="audience fit", method="Audience fit", force=False)
