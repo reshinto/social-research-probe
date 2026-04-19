@@ -11,36 +11,55 @@ returns ``None`` so callers can fall back gracefully.
 
 from __future__ import annotations
 
+import os
 import re
 import urllib.error
 import urllib.request
 
 
 def fetch_transcript(url: str) -> str | None:
-    """Return the cleaned English transcript text for *url*, or None on failure."""
+    """Return the cleaned English transcript text for *url*, or None on failure.
+
+    YouTube increasingly bot-blocks unauthenticated requests with
+    "Sign in to confirm you're not a bot". We work around this by telling
+    yt-dlp to read cookies from the user's default browser (Safari on
+    macOS, or whatever ``SRP_YTDLP_BROWSER`` env var points at).
+    """
     try:
         import yt_dlp
     except ImportError:
         return None
 
-    opts = {
+    opts = _yt_dlp_opts()
+    for attempt_opts in [opts, {**opts, "cookiesfrombrowser": None}]:
+        try:
+            with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+        except Exception:
+            continue
+        subs = info.get("subtitles") or {}
+        auto = info.get("automatic_captions") or {}
+        en_tracks = subs.get("en") or auto.get("en") or []
+        if en_tracks:
+            text = _extract_text(en_tracks)
+            if text:
+                return text
+    return None
+
+
+def _yt_dlp_opts() -> dict:
+    """Build yt-dlp options. Includes browser-cookie auth when available."""
+    opts: dict = {
         "quiet": True,
         "skip_download": True,
         "writesubtitles": True,
         "subtitleslangs": ["en"],
+        "no_warnings": True,
     }
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-    except Exception:
-        return None
-
-    subs = info.get("subtitles") or {}
-    auto = info.get("automatic_captions") or {}
-    en_tracks = subs.get("en") or auto.get("en") or []
-    if not en_tracks:
-        return None
-    return _extract_text(en_tracks)
+    browser = os.environ.get("SRP_YTDLP_BROWSER", "safari")
+    if browser and browser.lower() != "none":
+        opts["cookiesfrombrowser"] = (browser,)
+    return opts
 
 
 def get_transcript(video_id: str) -> str | None:

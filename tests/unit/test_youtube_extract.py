@@ -179,3 +179,95 @@ def test_strip_vtt_collapses_duplicate_lines():
 
     vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n\n00:00:02.000 --> 00:00:03.000\nHello\n"
     assert _strip_vtt(vtt) == "Hello"
+
+
+def test_fetch_transcript_retries_without_cookies_when_first_attempt_fails(monkeypatch):
+    """First attempt (with cookies) raises; fallback attempt (no cookies) succeeds."""
+    import sys
+    import types
+
+    import social_research_probe.platforms.youtube.extract as ext
+
+    attempts = []
+
+    class _YDL:
+        def __init__(self, opts):
+            self._opts = opts
+            attempts.append(opts.get("cookiesfrombrowser"))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=False):
+            if self._opts.get("cookiesfrombrowser") is not None:
+                raise RuntimeError("cookie db locked")
+            return {"subtitles": {"en": [{"data": "plain text"}]}}
+
+    fake = types.ModuleType("yt_dlp")
+    fake.YoutubeDL = _YDL
+    monkeypatch.setitem(sys.modules, "yt_dlp", fake)
+    assert ext.fetch_transcript("https://x") == "plain text"
+    assert attempts == [("safari",), None]
+
+
+def test_yt_dlp_opts_disables_cookies_when_env_set_to_none(monkeypatch):
+    from social_research_probe.platforms.youtube.extract import _yt_dlp_opts
+
+    monkeypatch.setenv("SRP_YTDLP_BROWSER", "none")
+    opts = _yt_dlp_opts()
+    assert "cookiesfrombrowser" not in opts
+
+
+def test_fetch_transcript_falls_through_when_both_attempts_yield_no_tracks(monkeypatch):
+    """Both attempts return info without English tracks → None."""
+    import sys
+    import types
+
+    import social_research_probe.platforms.youtube.extract as ext
+
+    class _YDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=False):
+            return {"subtitles": {"fr": []}, "automatic_captions": {}}
+
+    fake = types.ModuleType("yt_dlp")
+    fake.YoutubeDL = _YDL
+    monkeypatch.setitem(sys.modules, "yt_dlp", fake)
+    assert ext.fetch_transcript("https://x") is None
+
+
+def test_fetch_transcript_retries_when_tracks_yield_empty_text(monkeypatch):
+    """en_tracks present but _extract_text returns None → loop continues."""
+    import sys
+    import types
+
+    import social_research_probe.platforms.youtube.extract as ext
+
+    class _YDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=False):
+            return {"subtitles": {"en": ["bad-shape"]}}  # not a dict → _extract_text returns None
+
+    fake = types.ModuleType("yt_dlp")
+    fake.YoutubeDL = _YDL
+    monkeypatch.setitem(sys.modules, "yt_dlp", fake)
+    assert ext.fetch_transcript("https://x") is None
