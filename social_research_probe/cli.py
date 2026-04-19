@@ -325,11 +325,15 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     cfg = load_active_config()
     preferred = cfg.default_structured_runner
     if preferred == "none":
-        log("[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'.")
+        log(
+            "[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'."
+        )
     else:
         runner = get_runner(preferred)
         if not runner.health_check():
-            log(f"[srp] synthesis: runner '{preferred}' binary not found on PATH — sections 10-11 will be skipped. Install the CLI or pick a different runner.")
+            log(
+                f"[srp] synthesis: runner '{preferred}' binary not found on PATH — sections 10-11 will be skipped. Install the CLI or pick a different runner."
+            )
 
     def _write_and_attach_html_path(pkt: dict) -> str:
         report_path = write_html_report(pkt, data_dir)
@@ -363,7 +367,9 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     cfg = load_active_config()
     preferred = cfg.default_structured_runner
     if preferred == "none":
-        log("[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'.")
+        log(
+            "[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'."
+        )
         return None
 
     prompt = build_synthesis_prompt(packet)
@@ -374,7 +380,9 @@ def _run_required_synthesis(packet: dict) -> dict | None:
         try:
             runner = get_runner(runner_name)
             if not runner.health_check():
-                log(f"[srp] synthesis: runner={runner_name} outcome=unavailable (binary not on PATH)")
+                log(
+                    f"[srp] synthesis: runner={runner_name} outcome=unavailable (binary not on PATH)"
+                )
                 failures.append(f"{runner_name}: unavailable")
                 continue
             raw = runner.run(prompt, schema=SYNTHESIS_JSON_SCHEMA)
@@ -388,7 +396,9 @@ def _run_required_synthesis(packet: dict) -> dict | None:
             log(f"[srp] synthesis: runner={runner_name} outcome=error err={exc}")
             failures.append(f"{runner_name}: {exc}")
     detail = "; ".join(failures) if failures else "no runners were attempted"
-    log(f"[srp] synthesis: all runners failed — sections 10-11 will be omitted. failures=[{detail}]")
+    log(
+        f"[srp] synthesis: all runners failed — sections 10-11 will be omitted. failures=[{detail}]"
+    )
     return None
 
 

@@ -586,8 +586,14 @@ def render_full(
     the packet itself; if omitted they indicate that synthesis was not stored.
     """
     body = render_sections_1_9(packet)
-    s10 = packet.get("compiled_synthesis") or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
-    s11 = packet.get("opportunity_analysis") or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
+    s10 = (
+        packet.get("compiled_synthesis")
+        or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
+    )
+    s11 = (
+        packet.get("opportunity_analysis")
+        or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
+    )
     body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
     body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
     return body

@@ -82,10 +82,16 @@ def _items_links(items: list[ScoredItem]) -> str:
             )
         else:
             extra = ""
+        description_notice = (
+            '<p class="summary-notice"><em>Summary generated from the video\'s'
+            " description — transcript unavailable.</em></p>"
+            if it.get("summary_source") == "description"
+            else ""
+        )
         lis.append(
             f"<li><strong>[{i}]</strong> "
             f'<a href="{url}" rel="noopener noreferrer">{channel}</a>'
-            f" — {takeaway}{extra}</li>"
+            f" — {takeaway}{description_notice}{extra}</li>"
         )
     return f"<ul>{''.join(lis)}</ul>"
 

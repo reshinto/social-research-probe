@@ -186,9 +186,9 @@ def _score_item(
 
 
 def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
-    """Build the prompt sent to the LLM ensemble for a 200-word video summary."""
+    """Build the prompt sent to the LLM ensemble for a 100-word video summary."""
     return (
-        "Write a detailed summary of this YouTube video (minimum 200 words). Cover:\n"
+        "Write a detailed summary of this YouTube video (minimum 100 words). Cover:\n"
         "- The main topic and what the video is about\n"
         "- The key arguments, findings, demonstrations, or announcements\n"
         "- Who the target audience is and what they should take away\n"
@@ -210,6 +210,24 @@ def _fallback_transcript_summary(transcript: str, word_limit: int = 220) -> str:
     return excerpt
 
 
+def _build_description_summary_prompt(item: ScoredItem) -> str:
+    """Build the prompt for a 100-word summary based on video description only."""
+    title = item.get("title", "")
+    channel = item.get("channel", "")
+    published = item.get("published_at", "")
+    description = item.get("text_excerpt", "")
+    return (
+        "Write a summary of this YouTube video (minimum 100 words) using only the"
+        " information provided below — no transcript is available.\n"
+        "Cover: the main topic, likely key arguments or demonstrations, who the target"
+        " audience is, and any specific people, tools, or events referenced.\n"
+        "Do not invent content not present below."
+        " Do not start with 'This video' or 'In this video'.\n\n"
+        f"Title: {title}\nChannel: {channel}\nPublished: {published}\n\n"
+        f"Description:\n{description}"
+    )
+
+
 async def _enrich_one(
     item: ScoredItem,
     fetch_transcript,
@@ -221,6 +239,9 @@ async def _enrich_one(
     Runs transcript fetch and LLM summary concurrently across items via
     asyncio.gather. Whisper fallback acquires ``whisper_sem`` to cap
     concurrent audio-download + ML-transcription jobs. Modifies item in place.
+
+    When no transcript is available, falls back to an LLM summary built
+    from the video title and description, marked as description-based.
     """
     title = item.get("title", "untitled")[:80]
     log(f"[srp] transcript: fetching for {title!r}")
@@ -232,25 +253,28 @@ async def _enrich_one(
         async with whisper_sem:
             text = await asyncio.to_thread(fetch_transcript_whisper, item["url"])
 
-    if not text:
-        return
-    cleaned = " ".join(text.split())[:6000]
-    if not cleaned:
-        return
-    item["transcript"] = cleaned
-    prompt = _build_summary_prompt(
-        title=item.get("title", ""),
-        channel=item.get("channel", ""),
-        transcript=cleaned,
-    )
-    summary = await asyncio.to_thread(
-        multi_llm_prompt,
-        prompt,
-        task=f"summarising transcript for {title[:60]!r}",
-    )
+    cleaned = " ".join(text.split())[:6000] if text else ""
+
+    if cleaned:
+        item["transcript"] = cleaned
+        item["summary_source"] = "transcript"
+        log(f"[srp] summary: transcript-based for {title[:60]!r}")
+        prompt = _build_summary_prompt(
+            title=item.get("title", ""),
+            channel=item.get("channel", ""),
+            transcript=cleaned,
+        )
+        task_label = f"summarising transcript for {title[:60]!r}"
+    else:
+        item["summary_source"] = "description"
+        log(f"[srp] summary: description-based for {title[:60]!r} (transcript unavailable)")
+        prompt = _build_description_summary_prompt(item)
+        task_label = f"summarising description for {title[:60]!r}"
+
+    summary = await asyncio.to_thread(multi_llm_prompt, prompt, task=task_label)
     if summary:
         item["one_line_takeaway"] = summary
-    else:
+    elif cleaned:
         item["one_line_takeaway"] = _fallback_transcript_summary(cleaned)
 
 
@@ -266,7 +290,7 @@ def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
     to prevent memory exhaustion. Item failures do not abort the batch.
 
     The full transcript (up to 6000 chars) is stored as item["transcript"].
-    A 200-word+ summary from the multi-LLM ensemble is stored as
+    A 100-word+ summary from the multi-LLM ensemble is stored as
     item["one_line_takeaway"]. Falls back silently on any error.
     Modifies the dicts in place.
     """
@@ -534,7 +558,9 @@ def _available_backends(data_dir: Path) -> list[str]:
 
     configured = Config.load(data_dir).corroboration_backend
     if configured == "none":
-        log("[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend host'.")
+        log(
+            "[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend host'."
+        )
         return []
     candidates = ("exa", "brave", "tavily") if configured == "host" else (configured,)
 
@@ -584,7 +610,7 @@ def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]
     The AI-generated one_line_takeaway is passed as source context. Caps
     concurrent API calls to 3 to respect search-backend rate limits.
     """
-    log(f"[srp] corroboration: checking {len(top5)} items via {', '.join(backends)}")
+    log(f"[srp] corroboration: starting — {len(top5)} items to check via {', '.join(backends)}")
 
     async def _gather() -> list[dict]:
         sem = asyncio.Semaphore(3)
@@ -594,7 +620,15 @@ def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]
         )
         return [r if isinstance(r, dict) else {} for r in results]
 
-    return run_coro(_gather())
+    results = run_coro(_gather())
+    verdicts = [r.get("aggregate_verdict", "no_result") for r in results]
+    summary = ", ".join(
+        f"{v}={verdicts.count(v)}"
+        for v in ("supported", "inconclusive", "refuted", "no_result")
+        if verdicts.count(v)
+    )
+    log(f"[srp] corroboration: done — {summary}")
+    return results
 
 
 def _build_svs(

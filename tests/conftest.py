@@ -45,7 +45,7 @@ if "rpds" not in sys.modules:
                 set.discard(r, v)
                 return r
 
-            def discard(self, v):  # type: ignore[override]
+            def discard(self, v):
                 r = _HTS(self)
                 set.discard(r, v)
                 return r
@@ -60,7 +60,7 @@ if "rpds" not in sys.modules:
             HashTrieSet = _HTS
             List = _L
 
-        sys.modules["rpds"] = _FakeRpds()  # type: ignore[assignment]
+        sys.modules["rpds"] = _FakeRpds()
 
 
 @pytest.fixture

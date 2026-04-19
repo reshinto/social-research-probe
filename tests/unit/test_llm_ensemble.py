@@ -58,6 +58,11 @@ def test_run_provider_unknown_name_returns_none():
     assert _run_provider("unknown_llm", "hello") is None
 
 
+def test_collect_responses_empty_providers_returns_empty_dict():
+    """_collect_responses returns {} immediately when providers tuple is empty."""
+    assert _collect_responses("prompt", providers=()) == {}
+
+
 def test_collect_responses_returns_only_successes(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 

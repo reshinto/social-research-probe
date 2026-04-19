@@ -166,7 +166,7 @@ def test_gemini_parse_response_valid_json() -> None:
 def test_gemini_parse_response_markdown_fenced_json() -> None:
     """_parse_response strips markdown fences before parsing the inner JSON."""
     runner = GeminiRunner()
-    inner = "```json\n{\"key\": \"value\"}\n```"
+    inner = '```json\n{"key": "value"}\n```'
     import json as _json
 
     envelope = _json.dumps({"response": inner})
@@ -407,3 +407,94 @@ def test_local_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SRP_LOCAL_LLM_BIN", "/fake/llm")
     runner = LocalRunner()
     assert runner.run("hello") == {"ok": 4}
+
+
+# ---------------------------------------------------------------------------
+# Base class _prompt_args and _stdin_input default implementations
+# ---------------------------------------------------------------------------
+
+
+class _MinimalRunner(
+    __import__(
+        "social_research_probe.llm.runners.cli_json_base", fromlist=["JsonCliRunner"]
+    ).JsonCliRunner
+):
+    """Minimal concrete subclass that uses the base-class prompt/stdin defaults."""
+
+    name = "minimal"
+    binary_name = "minimal"
+    base_argv = ()
+    schema_flag = None
+
+
+def test_base_prompt_args_returns_empty_list() -> None:
+    """The default _prompt_args implementation returns [] (prompt goes via stdin)."""
+    runner = _MinimalRunner()
+    assert runner._prompt_args("hello") == []
+
+
+def test_base_stdin_input_returns_prompt() -> None:
+    """The default _stdin_input implementation returns the prompt string unchanged."""
+    runner = _MinimalRunner()
+    assert runner._stdin_input("hello") == "hello"
+
+
+# ---------------------------------------------------------------------------
+# CodexRunner — schema file path and AdapterError re-raise
+# ---------------------------------------------------------------------------
+
+
+def test_codex_run_with_schema_writes_schema_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CodexRunner.run() with a schema writes it to a temp file and adds --output-schema."""
+
+    captured_argv: list[str] = []
+
+    class _FakeResult:
+        returncode = 0
+        stdout = '{"ok": 1}'
+        stderr = ""
+
+    def fake_run(argv, input=None, timeout=30):
+        captured_argv.extend(argv)
+        return _FakeResult()
+
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(sp_mod, "run", fake_run)
+    runner = CodexRunner()
+    schema = {"type": "object", "properties": {"x": {"type": "string"}}}
+    result = runner.run("hello", schema=schema)
+    assert result == {"ok": 1}
+    assert "--output-schema" in captured_argv
+
+
+def test_codex_run_raises_adapter_error_when_output_json_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodexRunner.run() re-raises AdapterError when the output file contains invalid JSON."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    class _FakeResult:
+        returncode = 0
+        stdout = "not json"
+        stderr = ""
+
+    monkeypatch.setattr(sp_mod, "run", lambda argv, input=None, timeout=30: _FakeResult())
+    runner = CodexRunner()
+    with pytest.raises(AdapterError, match="codex returned non-JSON final message"):
+        runner.run("hello")
+
+
+# ---------------------------------------------------------------------------
+# GeminiRunner — invalid inner JSON in response field
+# ---------------------------------------------------------------------------
+
+
+def test_gemini_parse_response_invalid_inner_json_raises_adapter_error() -> None:
+    """_parse_response raises AdapterError when the 'response' field is not valid JSON."""
+    import json as _json
+
+    runner = GeminiRunner()
+    envelope = _json.dumps({"response": "this is not json", "stats": {}})
+    with pytest.raises(AdapterError, match="gemini response field is not valid JSON"):
+        runner._parse_response(envelope)

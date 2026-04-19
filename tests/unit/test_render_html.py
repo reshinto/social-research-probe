@@ -505,6 +505,15 @@ class TestCommandsReport:
         with pytest.raises(ValidationError, match="cannot read packet file"):
             run(str(tmp_path / "nonexistent.json"), None, None, None)
 
+    def test_run_non_dict_packet_raises_validation_error(self, tmp_path):
+        from social_research_probe.commands.report import run
+        from social_research_probe.errors import ValidationError
+
+        bad = tmp_path / "list.json"
+        bad.write_text("[1, 2, 3]", encoding="utf-8")
+        with pytest.raises(ValidationError, match="packet file must contain a JSON object"):
+            run(str(bad), None, None, None)
+
     def test_read_text_file_none_returns_none(self):
         from social_research_probe.commands.report import _read_text_file
 
