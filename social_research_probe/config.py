@@ -114,13 +114,13 @@ class Config:
 
     @property
     def preferred_free_text_runner(self) -> FreeTextRunnerName | None:
-        """Return the configured free-text runner when the choice is supported.
+        """Return the configured free-text runner, or None when LLM is disabled.
 
-        The free-text summarisation path currently supports the external Claude,
-        Gemini, and Codex CLIs. ``local`` remains reserved for structured JSON
-        calls through the runner registry.
+        Returns the runner name for any concrete provider (claude, gemini, codex,
+        local). Returns None only when runner is ``none``, so callers can treat
+        None as "disabled" rather than "fall back to ensemble".
         """
-        if self.llm_runner in {"claude", "gemini", "codex"}:
+        if self.llm_runner in {"claude", "gemini", "codex", "local"}:
             return self.llm_runner
         return None
 
@@ -128,10 +128,11 @@ class Config:
     def default_structured_runner(self) -> RunnerName:
         """Return the configured runner for structured JSON tasks.
 
-        When config explicitly disables the runner with ``none``, we fall back
-        to Claude so the llm_cli backend retains a usable default.
+        Returns the raw configured value including ``none``. Callers must gate
+        on health_check() before invoking, so ``none`` propagates correctly as
+        "disabled" instead of silently falling back to another provider.
         """
-        return "claude" if self.llm_runner == "none" else self.llm_runner
+        return self.llm_runner
 
     def platform_defaults(self, name: str) -> AdapterConfig:
         """Return a copy of the per-platform defaults used to build adapter config."""

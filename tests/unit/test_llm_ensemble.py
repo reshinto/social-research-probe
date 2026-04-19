@@ -5,7 +5,6 @@ from __future__ import annotations
 from social_research_probe.llm.ensemble import (
     _build_synthesis_prompt,
     _collect_responses,
-    _preferred_provider,
     _run_provider,
     _synthesize,
     multi_llm_prompt,
@@ -124,34 +123,66 @@ def test_build_synthesis_prompt_contains_original_and_responses():
     assert "r2" in prompt
 
 
-def test_preferred_provider_uses_loaded_config(monkeypatch):
+def test_run_provider_local_returns_none_when_bin_not_set(monkeypatch):
+    """Local runner returns None when SRP_LOCAL_LLM_BIN is unset."""
+    monkeypatch.delenv("SRP_LOCAL_LLM_BIN", raising=False)
+    assert _run_provider("local", "hello") is None
+
+
+def test_run_provider_local_calls_binary(monkeypatch):
+    import subprocess
+
+    monkeypatch.setenv("SRP_LOCAL_LLM_BIN", "/usr/bin/mymodel")
+
+    class _Result:
+        stdout = "local answer"
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _Result())
+    assert _run_provider("local", "hello") == "local answer"
+
+
+def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
+    """runner = none must return None without calling any LLM."""
     from social_research_probe.llm import ensemble as llm_mod
 
+    calls = []
+
     class _FakeConfig:
-        preferred_free_text_runner = "codex"
+        llm_runner = "none"
+        preferred_free_text_runner = None
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    assert _preferred_provider() == "codex"
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p: calls.append(name) or "x")
+    assert multi_llm_prompt("anything") is None
+    assert calls == []
 
 
 def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
+    class _FakeConfig:
+        llm_runner = "claude"
+        preferred_free_text_runner = "claude"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt: None)
-    monkeypatch.setattr(llm_mod, "_preferred_provider", lambda: None)
     assert multi_llm_prompt("anything") is None
 
 
 def test_multi_llm_prompt_end_to_end(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
+    class _FakeConfig:
+        llm_runner = "claude"
+        preferred_free_text_runner = None  # simulate unknown runner → triggers ensemble
+
     def fake_run(name: str, prompt: str) -> str | None:
         if "synthesize" in prompt.lower() or "synthesise" in prompt.lower():
             return "final synthesis" if name == "claude" else None
         return f"{name} answer"
 
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
-    monkeypatch.setattr(llm_mod, "_preferred_provider", lambda: None)
     result = multi_llm_prompt("summarise this video")
     assert result == "final synthesis"
 
@@ -161,12 +192,32 @@ def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
 
     calls = []
 
+    class _FakeConfig:
+        llm_runner = "gemini"
+        preferred_free_text_runner = "gemini"
+
     def fake_run(name: str, prompt: str) -> str | None:
         calls.append((name, prompt))
         return "configured answer"
 
-    monkeypatch.setattr(llm_mod, "_preferred_provider", lambda: "gemini")
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
 
     assert multi_llm_prompt("summarise this video") == "configured answer"
     assert calls == [("gemini", "summarise this video")]
+
+
+def test_multi_llm_prompt_uses_local_runner(monkeypatch):
+    from social_research_probe.llm import ensemble as llm_mod
+
+    calls = []
+
+    class _FakeConfig:
+        llm_runner = "local"
+        preferred_free_text_runner = "local"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p: calls.append(name) or "local answer")
+
+    assert multi_llm_prompt("summarise this video") == "local answer"
+    assert calls == ["local"]

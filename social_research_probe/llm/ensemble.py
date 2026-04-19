@@ -64,17 +64,25 @@ def _run_provider(name: str, prompt: str) -> str | None:
                 text=True,
                 timeout=_TIMEOUT,
             )
+        elif name == "local":
+            import os
+
+            bin_path = os.environ.get("SRP_LOCAL_LLM_BIN", "")
+            if not bin_path:
+                return None
+            result = subprocess.run(
+                [bin_path],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=_TIMEOUT,
+            )
         else:
             return None
         output = result.stdout.strip()
         return output if output else None
     except Exception:
         return None
-
-
-def _preferred_provider() -> FreeTextRunnerName | None:
-    """Return the configured free-text runner when config names one explicitly."""
-    return load_active_config().preferred_free_text_runner
 
 
 def _collect_responses(prompt: str) -> dict[str, str]:
@@ -132,12 +140,15 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
 def multi_llm_prompt(prompt: str) -> str | None:
     """Run a free-text prompt through the configured default runner or ensemble.
 
-    When config chooses Claude, Gemini, or Codex, that provider is used
-    directly. Otherwise the legacy ensemble path fans out to all providers and
-    synthesizes the results. Returns None only when every eligible provider
-    fails.
+    When runner is ``none``, returns None immediately without calling any LLM.
+    When a specific provider is configured, that provider is used directly.
+    Falls back to the ensemble fan-out only if preferred_free_text_runner
+    returns None for an unrecognised runner value.
     """
-    preferred = _preferred_provider()
+    cfg = load_active_config()
+    if cfg.llm_runner == "none":
+        return None
+    preferred = cfg.preferred_free_text_runner
     if preferred is not None:
         return _run_provider(preferred, prompt)
     responses = _collect_responses(prompt)

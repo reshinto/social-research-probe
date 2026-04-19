@@ -20,7 +20,7 @@ MetricValue: TypeAlias = None | bool | int | float | str
 MetricMap: TypeAlias = dict[str, MetricValue]
 
 RunnerName = Literal["none", "claude", "gemini", "codex", "local"]
-FreeTextRunnerName = Literal["claude", "gemini", "codex"]
+FreeTextRunnerName = Literal["claude", "gemini", "codex", "local"]
 
 
 class RunnerSettings(TypedDict, total=False):
