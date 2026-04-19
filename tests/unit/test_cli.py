@@ -13,6 +13,22 @@ import pytest
 
 from social_research_probe.cli import _emit, _id_selector, main
 
+_VALID_PACKET = {
+    "topic": "ai",
+    "platform": "youtube",
+    "purpose_set": ["latest-news"],
+    "items_top5": [],
+    "source_validation_summary": {
+        "validated": 0, "partially": 0, "unverified": 0, "low_trust": 0,
+        "primary": 0, "secondary": 0, "commentary": 0, "notes": "",
+    },
+    "platform_signals_summary": "0 items",
+    "evidence_summary": "0 items",
+    "stats_summary": {"models_run": [], "highlights": [], "low_confidence": False},
+    "chart_captions": [],
+    "warnings": [],
+}
+
 
 class TestEmitHelpers:
     def test_emit_json(self, capsys):
@@ -242,7 +258,7 @@ class TestRunResearch:
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None: calls.append(mode) or {},
+            lambda cmd, d, mode, adapter_config=None: calls.append(mode) or _VALID_PACKET,
         )
         assert (
             main(
@@ -483,7 +499,7 @@ class TestSimpleResearch:
     def _patch_pipeline(self, monkeypatch, captured):
         def fake(cmd, d, mode, adapter_config=None):
             captured.append((cmd, mode, adapter_config))
-            return {}
+            return _VALID_PACKET
 
         monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
 
@@ -538,7 +554,7 @@ class TestSimpleResearchTranscripts:
     def _patch_pipeline(self, monkeypatch, captured):
         def fake(cmd, d, mode, adapter_config=None):
             captured.append((cmd, mode, adapter_config))
-            return {}
+            return _VALID_PACKET
 
         monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
 

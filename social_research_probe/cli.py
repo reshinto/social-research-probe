@@ -280,11 +280,16 @@ def _handle_stage_suggestions(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _handle_run_research(args: argparse.Namespace, data_dir: Path) -> int:
+    import sys
+
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
+    from social_research_probe.synthesize.formatter import render_full
 
     raw = f"run-research platform:{args.platform} " + " ".join(args.dsl)
-    run_research(parse(raw), data_dir, args.mode)
+    packet = run_research(parse(raw), data_dir, args.mode)
+    if args.mode == "cli":
+        sys.stdout.write(render_full(packet))
     return 0
 
 
@@ -295,8 +300,11 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     srp research youtube ai latest-news
     srp research youtube ai latest-news,trends  # multiple purposes
     """
+    import sys
+
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
+    from social_research_probe.synthesize.formatter import render_full
 
     platform, topic, purposes = _parse_simple_research_args(args.args)
     config_extras = {
@@ -304,7 +312,9 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         "fetch_transcripts": not args.no_transcripts,
     }
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
-    run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
+    packet = run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
+    if args.mode == "cli":
+        sys.stdout.write(render_full(packet))
     return 0
 
 
