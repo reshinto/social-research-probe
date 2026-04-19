@@ -18,11 +18,19 @@ from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import trend_score
 from social_research_probe.scoring.trust import trust_score
 from social_research_probe.stats import (
+    bayesian_linear,
     bootstrap,
+    derived_targets,
+    huber_regression,
     hypothesis_tests,
+    kaplan_meier,
+    kmeans,
+    logistic_regression,
     multi_regression,
+    naive_bayes,
     nonparametric,
     normality,
+    pca,
     polynomial_regression,
 )
 from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
@@ -213,18 +221,74 @@ def _build_stats_summary(scored_items: list[dict]) -> dict:
         "bottom_half",
     )
     results += bootstrap.run(overall, label="overall_score")
+    results += _run_advanced_models(scored_items)
     models_run = _stats_models_for(len(overall))
     if len(overall) >= 2:
         models_run += ["correlation", "spearman", "mann_whitney", "welch_t"]
     if len(overall) >= 4:
         models_run += ["normality", "polynomial_deg2", "polynomial_deg3", "bootstrap"]
     if len(overall) >= 5:
-        models_run.append("multi_regression")
+        models_run += [
+            "multi_regression",
+            "logistic_regression",
+            "kmeans",
+            "pca",
+            "kaplan_meier",
+            "naive_bayes",
+            "huber_regression",
+            "bayesian_linear",
+        ]
     return {
         "models_run": models_run,
         "highlights": [explain_stat(r) for r in results],
         "low_confidence": len(overall) < 8,
     }
+
+
+def _run_advanced_models(scored_items: list[dict]) -> list:
+    """Run batch-2 advanced models (logistic, k-means, PCA, survival, NB, Huber, Bayes).
+
+    Each model short-circuits to an empty list when the dataset is too
+    small for identifiability; the pipeline keeps running even when
+    individual models decline to fit.
+    """
+    if len(scored_items) < 5:
+        return []
+    targets = derived_targets.build_targets(scored_items)
+    feature_names = [
+        "trust",
+        "trend",
+        "opportunity",
+        "view_velocity",
+        "engagement_ratio",
+        "age_days",
+        "subscribers",
+    ]
+    feature_cols = {name: targets[name] for name in feature_names}
+    feature_matrix = [
+        [targets[name][i] for name in feature_names] for i in range(len(scored_items))
+    ]
+    results: list = []
+    results += logistic_regression.run(targets["is_top_5"], feature_cols, label="is_top_5")
+    results += kmeans.run(feature_matrix, k=3, label="items")
+    results += pca.run(feature_matrix, feature_names, n_components=2, label="features")
+    results += kaplan_meier.run(
+        targets["time_to_event_days"],
+        targets["event_crossed_100k"],
+        label="views>=100k",
+    )
+    results += naive_bayes.run(targets["is_top_5"], feature_cols, label="is_top_5")
+    results += huber_regression.run(targets["rank"], targets["overall"], label="overall")
+    results += bayesian_linear.run(
+        targets["overall"],
+        {
+            "trust": targets["trust"],
+            "trend": targets["trend"],
+            "opportunity": targets["opportunity"],
+        },
+        label="overall",
+    )
+    return results
 
 
 def _stats_models_for(n: int) -> list[str]:
