@@ -73,14 +73,17 @@ def _format_results(
         )
     ]
     for name, coeff in zip(names, beta[1:], strict=True):
+        if coeff > 500:
+            or_str = "odds ratio > 1e217"
+        elif coeff < -500:
+            or_str = "odds ratio < 1e-217"
+        else:
+            or_str = f"odds ratio {math.exp(coeff):.3f}"
         results.append(
             StatResult(
                 name=f"logistic_coef_{name}",
                 value=coeff,
-                caption=(
-                    f"Logistic coefficient for {name}: {coeff:.4f} "
-                    f"(odds ratio {math.exp(coeff):.3f})"
-                ),
+                caption=f"Logistic coefficient for {name}: {coeff:.4f} ({or_str})",
             )
         )
     results.append(

@@ -439,7 +439,7 @@ def test_kmeans_fit_early_convergence_break():
 
     # Very well-separated data so assignments stabilise after 1 reassignment
     data = [[0.0], [0.1], [0.2], [100.0], [100.1], [100.2]]
-    centroids, labels = fit(data, k=2, seed=0, max_iter=10)
+    _centroids, labels = fit(data, k=2, seed=0, max_iter=10)
     # Same cluster -> labels should split cleanly
     assert len(set(labels[:3])) == 1
     assert len(set(labels[3:])) == 1
@@ -470,7 +470,7 @@ def test_kmeans_fit_loop_breaks_on_stable_assignments():
 
     # Use seeded identical data so initial random pick + reassignment converge instantly
     data = [[5.0], [5.0]]
-    centroids, labels = fit(data, k=2, seed=0, max_iter=50)
+    centroids, _labels = fit(data, k=2, seed=0, max_iter=50)
     # They should stabilise immediately and return 2 centroids
     assert len(centroids) == 2
 
@@ -488,7 +488,7 @@ def test_kmeans_direct_loop_break_via_mocked_closest(monkeypatch):
 
     monkeypatch.setattr(km, "_closest", lambda p, c: 0)
     data = [[1.0], [2.0], [3.0]]
-    centroids, labels = km.fit(data, k=2, seed=0, max_iter=10)
+    _centroids, labels = km.fit(data, k=2, seed=0, max_iter=10)
     assert labels == [0, 0, 0]
 
 
@@ -527,3 +527,25 @@ def test_logistic_max_iter_exhausted():
     y = [0, 0, 1, 0, 1, 1]
     out = run(y, {"x": x}, max_iter=1)
     assert any(r.name == "logistic_accuracy" for r in out)
+
+
+def test_logistic_overflow_guard_on_huge_coefficient():
+    """Huge coefficient from large features triggers the odds-ratio overflow guard."""
+    from social_research_probe.stats.logistic_regression import _format_results
+
+    # beta[1] > 500 triggers the "odds ratio > 1e217" branch
+    y = [0, 1, 0, 1]
+    x = [[1.0, 0.0], [1.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
+    out = _format_results(y, x, [0.0, 600.0], ["huge"], "label")
+    huge = next(r.caption for r in out if "huge" in r.name)
+    assert "> 1e217" in huge
+
+
+def test_logistic_overflow_guard_on_huge_negative_coefficient():
+    from social_research_probe.stats.logistic_regression import _format_results
+
+    y = [0, 1]
+    x = [[1.0, 0.0], [1.0, 1.0]]
+    out = _format_results(y, x, [0.0, -600.0], ["tiny"], "label")
+    tiny = next(r.caption for r in out if "tiny" in r.name)
+    assert "< 1e-217" in tiny
