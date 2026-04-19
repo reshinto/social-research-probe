@@ -156,9 +156,21 @@ def test_gemini_build_argv_with_schema() -> None:
 
 
 def test_gemini_parse_response_valid_json() -> None:
-    """_parse_response returns a dict when stdout is valid JSON."""
+    """_parse_response unwraps the gemini CLI envelope and parses the inner JSON."""
     runner = GeminiRunner()
-    result = runner._parse_response('{"key": "value"}')
+    envelope = '{"session_id": "x", "response": "{\\"key\\": \\"value\\"}", "stats": {}}'
+    result = runner._parse_response(envelope)
+    assert result == {"key": "value"}
+
+
+def test_gemini_parse_response_markdown_fenced_json() -> None:
+    """_parse_response strips markdown fences before parsing the inner JSON."""
+    runner = GeminiRunner()
+    inner = "```json\n{\"key\": \"value\"}\n```"
+    import json as _json
+
+    envelope = _json.dumps({"response": inner})
+    result = runner._parse_response(envelope)
     assert result == {"key": "value"}
 
 
@@ -333,11 +345,14 @@ def test_claude_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_gemini_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
-    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    """run() calls subprocess_runner.run, unwraps the gemini envelope, and parses inner JSON."""
+    import json as _json
+
     import social_research_probe.utils.subprocess_runner as sp_mod
 
+    envelope = _json.dumps({"session_id": "s", "response": '{"ok": 2}', "stats": {}})
     monkeypatch.setattr(
-        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 2}')
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed(envelope)
     )
     runner = GeminiRunner()
     assert runner.run("hello") == {"ok": 2}
@@ -356,9 +371,13 @@ def test_gemini_run_uses_configured_timeout(monkeypatch: pytest.MonkeyPatch) -> 
 
     captured = {}
 
+    import json as _json
+
+    envelope = _json.dumps({"session_id": "s", "response": '{"ok": 2}', "stats": {}})
+
     def fake_run(argv, input=None, timeout=30):
         captured["timeout"] = timeout
-        return _make_completed('{"ok": 2}')
+        return _make_completed(envelope)
 
     monkeypatch.setattr(base_mod, "load_active_config", lambda: _Cfg())
     monkeypatch.setattr(sp_mod, "run", fake_run)
