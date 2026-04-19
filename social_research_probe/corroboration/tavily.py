@@ -13,6 +13,8 @@ variable SRP_TAVILY_API_KEY to be set.
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 from typing import ClassVar
 
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
@@ -133,6 +135,6 @@ class TavilyBackend(CorroborationBackend):
         Raises:
             AdapterError: if the API key is missing or the HTTP call fails.
         """
-        print(f"[srp] tavily: searching for claim: {claim.text[:80]!r}")
+        log(f"[srp] tavily: searching for claim: {claim.text[:80]!r}")
         raw = self._search(claim.text)
         return self._build_result(claim, raw)

@@ -11,6 +11,8 @@ returns ``None`` so callers can fall back gracefully.
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 import os
 import re
 import urllib.error
@@ -31,6 +33,7 @@ def fetch_transcript(url: str) -> str | None:
     except ImportError:
         return None
 
+    log(f"[srp] yt-dlp: fetching captions for {url}")
     opts = _yt_dlp_opts()
     for attempt_opts in [opts, {**opts, "cookiesfrombrowser": None}]:
         try:

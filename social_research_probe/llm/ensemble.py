@@ -17,6 +17,8 @@ Supported CLIs (must be installed and authenticated separately):
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -36,7 +38,7 @@ def _run_provider(name: str, prompt: str, task: str = "generating response") -> 
     Silently catches all exceptions so a missing or rate-limited CLI never
     crashes the caller — it simply contributes nothing to the ensemble.
     """
-    print(f"[srp] LLM ({name}): {task}")
+    log(f"[srp] LLM ({name}): {task}")
     try:
         if name == "claude":
             # stdin=DEVNULL prevents the 3-second stdin wait Claude emits otherwise.

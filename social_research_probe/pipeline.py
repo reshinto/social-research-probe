@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 import math
 import os
 import statistics
@@ -204,6 +206,8 @@ def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
     )
 
     for item in top5:
+        title = item.get("title", "untitled")[:80]
+        log(f"[srp] transcript: fetching for {title!r}")
         text = _fetch_best_transcript(item["url"], fetch_transcript, fetch_transcript_whisper)
         if not text:
             continue
@@ -216,8 +220,7 @@ def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
             channel=item.get("channel", ""),
             transcript=cleaned,
         )
-        title = item.get("title", "untitled")[:60]
-        summary = multi_llm_prompt(prompt, task=f"summarising transcript for {title!r}")
+        summary = multi_llm_prompt(prompt, task=f"summarising transcript for {title[:60]!r}")
         if summary:
             item["one_line_takeaway"] = summary
 

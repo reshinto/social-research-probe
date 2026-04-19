@@ -9,6 +9,8 @@ base argv.
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 import json
 import shutil
 from typing import ClassVar
@@ -56,6 +58,6 @@ class JsonCliRunner(LLMRunner):
         """Send prompt to the CLI and return its parsed JSON response."""
         from social_research_probe.utils.subprocess_runner import run as sp_run
 
-        print(f"[srp] LLM ({self.name}): running structured JSON task")
+        log(f"[srp] LLM ({self.name}): running structured JSON task")
         result = sp_run(self._build_argv(schema), input=prompt)
         return self._parse_response(result.stdout)

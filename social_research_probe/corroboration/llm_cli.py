@@ -12,6 +12,8 @@ at import time when the corroboration package is loaded.
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
@@ -133,7 +135,7 @@ class LLMCliBackend(CorroborationBackend):
         from social_research_probe.llm.registry import get_runner
 
         runner_name = self._resolve_runner_name()
-        print(f"[srp] llm ({runner_name}): corroborating claim via LLM: {claim.text[:80]!r}")
+        log(f"[srp] llm ({runner_name}): corroborating claim via LLM: {claim.text[:80]!r}")
         runner = get_runner(runner_name)
         prompt = self._build_prompt(claim)
         raw = runner.run(

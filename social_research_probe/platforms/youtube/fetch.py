@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 from collections.abc import Mapping
 from typing import Protocol
 
@@ -58,6 +60,7 @@ def search_videos(
     published_after: str | None,
 ) -> list[JSONObject]:
     """Run the YouTube search.list call and return the raw item objects."""
+    log(f"[srp] youtube: searching for {topic!r} (up to {max_items} results)")
     try:
         resp = (
             client.search()
@@ -78,6 +81,7 @@ def search_videos(
 
 def hydrate_videos(client: YouTubeClient, *, video_ids: list[str]) -> list[JSONObject]:
     """Hydrate video ids through videos.list and return the raw item objects."""
+    log(f"[srp] youtube: fetching details for {len(video_ids)} video(s)")
     try:
         resp = (
             client.videos()
@@ -94,6 +98,7 @@ def hydrate_videos(client: YouTubeClient, *, video_ids: list[str]) -> list[JSONO
 
 def hydrate_channels(client: YouTubeClient, *, channel_ids: list[str]) -> list[JSONObject]:
     """Hydrate channel ids through channels.list and return the raw item objects."""
+    log(f"[srp] youtube: fetching details for {len(channel_ids)} channel(s)")
     try:
         resp = (
             client.channels()

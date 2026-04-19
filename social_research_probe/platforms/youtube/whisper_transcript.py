@@ -9,6 +9,8 @@ All failures return ``None`` so callers can degrade gracefully.
 
 from __future__ import annotations
 
+from social_research_probe.utils.progress import log
+
 import os
 import subprocess
 import tempfile
@@ -32,6 +34,7 @@ def fetch_transcript_whisper(url: str) -> str | None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         audio_path = os.path.join(tmpdir, "audio.%(ext)s")
+        log(f"[srp] yt-dlp: downloading audio for whisper transcription: {url}")
         dl = subprocess.run(
             [
                 "yt-dlp",
@@ -58,6 +61,7 @@ def fetch_transcript_whisper(url: str) -> str | None:
             return None
 
         audio_file = os.path.join(tmpdir, mp3_files[0])
+        log("[srp] whisper: loading model and transcribing audio (this may take a minute)")
         model = whisper.load_model("base")
         result = model.transcribe(audio_file, language="en", fp16=False)
         text = (result.get("text") or "").strip()
