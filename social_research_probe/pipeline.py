@@ -17,7 +17,14 @@ from social_research_probe.scoring.combine import overall_score
 from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import trend_score
 from social_research_probe.scoring.trust import trust_score
-from social_research_probe.stats import multi_regression
+from social_research_probe.stats import (
+    bootstrap,
+    hypothesis_tests,
+    multi_regression,
+    nonparametric,
+    normality,
+    polynomial_regression,
+)
 from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
@@ -178,22 +185,39 @@ def _build_stats_summary(scored_items: list[dict]) -> dict:
     overall = [d["scores"]["overall"] for d in scored_items]
     trust = [d["scores"]["trust"] for d in scored_items]
     opportunity = [d["scores"]["opportunity"] for d in scored_items]
+    trend = [d["scores"]["trend"] for d in scored_items]
+    ranks = [float(i) for i in range(len(overall))]
     results = select_and_run(overall, label="overall_score")
     results += select_and_run_correlation(
         trust, opportunity, label_a="trust", label_b="opportunity"
     )
     results += multi_regression.run(
         overall,
-        {
-            "trust": trust,
-            "trend": [d["scores"]["trend"] for d in scored_items],
-            "opportunity": opportunity,
-        },
+        {"trust": trust, "trend": trend, "opportunity": opportunity},
         label="overall",
     )
+    results += normality.run(overall, label="overall_score")
+    results += polynomial_regression.run(ranks, overall, label="overall", degree=2)
+    results += polynomial_regression.run(ranks, overall, label="overall", degree=3)
+    results += nonparametric.run_spearman(trust, opportunity, "trust", "opportunity")
+    results += nonparametric.run_mann_whitney(
+        overall[: len(overall) // 2],
+        overall[len(overall) // 2 :],
+        "top_half",
+        "bottom_half",
+    )
+    results += hypothesis_tests.run_welch_t(
+        overall[: len(overall) // 2],
+        overall[len(overall) // 2 :],
+        "top_half",
+        "bottom_half",
+    )
+    results += bootstrap.run(overall, label="overall_score")
     models_run = _stats_models_for(len(overall))
     if len(overall) >= 2:
-        models_run.append("correlation")
+        models_run += ["correlation", "spearman", "mann_whitney", "welch_t"]
+    if len(overall) >= 4:
+        models_run += ["normality", "polynomial_deg2", "polynomial_deg3", "bootstrap"]
     if len(overall) >= 5:
         models_run.append("multi_regression")
     return {

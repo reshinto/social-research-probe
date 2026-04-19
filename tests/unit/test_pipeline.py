@@ -245,7 +245,15 @@ def test_build_stats_summary_empty_top5():
 
 def test_build_stats_summary_two_items_skips_growth():
     summary = _build_stats_summary(_fake_top5(2))
-    assert summary["models_run"] == ["descriptive", "spread", "regression", "correlation"]
+    assert summary["models_run"] == [
+        "descriptive",
+        "spread",
+        "regression",
+        "correlation",
+        "spearman",
+        "mann_whitney",
+        "welch_t",
+    ]
     assert summary["low_confidence"] is True
     assert summary["highlights"]
 
@@ -259,6 +267,9 @@ def test_build_stats_summary_three_items_runs_all_models_but_low_confidence():
         "growth",
         "outliers",
         "correlation",
+        "spearman",
+        "mann_whitney",
+        "welch_t",
     ]
     assert summary["low_confidence"] is True
 

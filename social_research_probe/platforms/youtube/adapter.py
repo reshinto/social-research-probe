@@ -23,7 +23,7 @@ from social_research_probe.platforms.registry import register
 @register
 class YouTubeAdapter(PlatformAdapter):
     name: ClassVar[str] = "youtube"
-    default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=20, recency_days=90)
+    default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=50, recency_days=90)
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
