@@ -12,14 +12,13 @@ Who calls it:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 
 from social_research_probe.commands import render as render_cmd
 from social_research_probe.errors import ValidationError
-
 
 # ---------------------------------------------------------------------------
 # Stub return types

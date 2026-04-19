@@ -1,5 +1,6 @@
 import math
 
+
 def _clip(x: float) -> float: return max(0.0, min(1.0, x))
 
 def recency_decay(age_days: float) -> float:

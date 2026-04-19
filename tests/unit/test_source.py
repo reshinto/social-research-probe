@@ -1,12 +1,14 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from social_research_probe.platforms.base import RawItem, TrustHints
 from social_research_probe.validation.source import SourceClass, classify
+
 
 def _item(url="https://youtube.com/watch?v=x", extras=None):
     return RawItem(
         id="x", url=url, title="t",
         author_id="c1", author_name="c1",
-        published_at=datetime(2026, 4, 1, tzinfo=timezone.utc),
+        published_at=datetime(2026, 4, 1, tzinfo=UTC),
         metrics={}, text_excerpt=None, thumbnail=None,
         extras=extras or {},
     )

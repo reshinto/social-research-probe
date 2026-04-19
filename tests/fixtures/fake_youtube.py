@@ -1,7 +1,7 @@
 """Deterministic YouTube-shaped adapter for tests. Registered on import."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
 from social_research_probe.platforms.base import (
@@ -15,7 +15,7 @@ from social_research_probe.platforms.registry import register
 
 
 def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     items = []
     for i in range(n):
         items.append(
@@ -53,7 +53,7 @@ class FakeYouTubeAdapter(PlatformAdapter):
         return items
 
     def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         signals = []
         for item in items:
             age_days = max(1, (now - item.published_at).days)

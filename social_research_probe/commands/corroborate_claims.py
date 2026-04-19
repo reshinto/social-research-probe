@@ -20,8 +20,8 @@ import json
 import sys
 from pathlib import Path
 
-from social_research_probe.validation.claims import Claim, extract_claims
 from social_research_probe.corroboration.host import corroborate_claim
+from social_research_probe.validation.claims import Claim
 
 
 def run(

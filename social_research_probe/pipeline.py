@@ -1,23 +1,24 @@
 from __future__ import annotations
+
 import math
 import os
 import statistics
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from social_research_probe.commands.parse import ParsedRunResearch
-from social_research_probe.platforms.registry import get_adapter
+from social_research_probe.errors import ValidationError
+from social_research_probe.llm.host import emit_packet
 from social_research_probe.platforms.base import FetchLimits
+from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import merge_purposes
-from social_research_probe.validation.source import classify as classify_source
-from social_research_probe.scoring.trust import trust_score
-from social_research_probe.scoring.trend import trend_score
-from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.combine import overall_score
+from social_research_probe.scoring.opportunity import opportunity_score
+from social_research_probe.scoring.trend import trend_score
+from social_research_probe.scoring.trust import trust_score
 from social_research_probe.synthesize.formatter import build_packet
-from social_research_probe.llm.host import emit_packet
-from social_research_probe.errors import ValidationError
+from social_research_probe.validation.source import classify as classify_source
 
 Mode = Literal["skill", "cli"]
 
@@ -64,7 +65,7 @@ def _score_item(it, sig, h, z_vel: float, z_eng: float):
         ai_slop_penalty=0.0,
         corroboration_score=0.3,
     )
-    age_days = max(1.0, (datetime.now(timezone.utc) - sig.upload_date).days if sig.upload_date else 30.0)
+    age_days = max(1.0, (datetime.now(UTC) - sig.upload_date).days if sig.upload_date else 30.0)
     trend = trend_score(
         z_view_velocity=z_vel,
         z_engagement_ratio=z_eng,

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import jsonschema
 from jsonschema import Draft202012Validator
 
 from social_research_probe.errors import ValidationError

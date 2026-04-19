@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration import registry as reg_module
+from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.errors import ValidationError
 
 
@@ -40,9 +40,9 @@ def _make_backend(name_val: str) -> type[CorroborationBackend]:
 
 def test_register_and_get_backend():
     """@register adds the backend to the registry and get_backend returns an instance."""
-    StubBackend = reg_module.register(_make_backend("test_backend_a"))
+    stub_cls = reg_module.register(_make_backend("test_backend_a"))
     backend = reg_module.get_backend("test_backend_a")
-    assert isinstance(backend, StubBackend)
+    assert isinstance(backend, stub_cls)
 
 
 def test_get_unknown_raises_validation_error():

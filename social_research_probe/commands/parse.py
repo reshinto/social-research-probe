@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Union
+from typing import Literal
 
 from social_research_probe.errors import SrpError
 
@@ -58,14 +58,14 @@ class ParsedShowPending:
 
 @dataclass(frozen=True)
 class ParsedApplyPending:
-    topic_ids: Union[Literal["all"], list[int]]
-    purpose_ids: Union[Literal["all"], list[int]]
+    topic_ids: Literal["all"] | list[int]
+    purpose_ids: Literal["all"] | list[int]
 
 
 @dataclass(frozen=True)
 class ParsedDiscardPending:
-    topic_ids: Union[Literal["all"], list[int]]
-    purpose_ids: Union[Literal["all"], list[int]]
+    topic_ids: Literal["all"] | list[int]
+    purpose_ids: Literal["all"] | list[int]
 
 
 @dataclass(frozen=True)
@@ -74,18 +74,18 @@ class ParsedRunResearch:
     topics: list[tuple[str, list[str]]]  # [(topic, [purpose, ...]), ...]
 
 
-Parsed = Union[
-    ParsedUpdateTopics,
-    ParsedShowTopics,
-    ParsedUpdatePurposes,
-    ParsedShowPurposes,
-    ParsedSuggestTopics,
-    ParsedSuggestPurposes,
-    ParsedShowPending,
-    ParsedApplyPending,
-    ParsedDiscardPending,
-    ParsedRunResearch,
-]
+Parsed = (
+    ParsedUpdateTopics
+    | ParsedShowTopics
+    | ParsedUpdatePurposes
+    | ParsedShowPurposes
+    | ParsedSuggestTopics
+    | ParsedSuggestPurposes
+    | ParsedShowPending
+    | ParsedApplyPending
+    | ParsedDiscardPending
+    | ParsedRunResearch
+)
 
 
 # --- Lexer helpers -----------------------------------------------------------
@@ -113,7 +113,7 @@ def _parse_quoted_list(src: str) -> list[str]:
     return values
 
 
-def _parse_id_selector(src: str) -> Union[Literal["all"], list[int]]:
+def _parse_id_selector(src: str) -> Literal["all"] | list[int]:
     if src == "all":
         return "all"
     try:
@@ -200,7 +200,7 @@ def _parse_discard_pending(tail: str) -> ParsedDiscardPending:
     return ParsedDiscardPending(topic_ids=topic_ids, purpose_ids=purpose_ids)
 
 
-def _parse_pending_selectors(tail: str) -> tuple[Union[Literal["all"], list[int]], Union[Literal["all"], list[int]]]:
+def _parse_pending_selectors(tail: str) -> tuple[Literal["all"] | list[int], Literal["all"] | list[int]]:
     # Rebuild tokens: a token without ':' is a continuation of the previous value
     tokens = tail.split()
     merged: list[str] = []

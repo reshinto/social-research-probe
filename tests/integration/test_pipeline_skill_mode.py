@@ -1,4 +1,8 @@
-import json, os, subprocess, sys
+import json
+import os
+import subprocess
+import sys
+
 
 def test_run_research_skill_mode_emits_packet(tmp_path):
     env = {**os.environ, "SRP_DATA_DIR": str(tmp_path),

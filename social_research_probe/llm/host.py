@@ -1,5 +1,7 @@
 from __future__ import annotations
-import json, sys
+
+import json
+import sys
 from typing import Literal, NoReturn
 
 PacketKind = Literal["synthesis", "suggestions", "corroboration"]

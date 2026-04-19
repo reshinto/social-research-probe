@@ -144,8 +144,6 @@ class FilesystemCache:
             even within the TTL window.
         """
         path = self._path_for(key)
-        try:
+        import contextlib
+        with contextlib.suppress(FileNotFoundError):
             path.unlink()
-        except FileNotFoundError:
-            # Idempotent: invalidating a key that is not cached is a no-op.
-            pass

@@ -64,10 +64,10 @@ def run(
             timeout=timeout,
             input=input,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         raise AdapterError(
             f"command {argv[0]!r} timed out after {timeout}s"
-        )
+        ) from exc
 
     if result.returncode != 0:
         raise AdapterError(

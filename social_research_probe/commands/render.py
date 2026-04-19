@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 from social_research_probe.stats.selector import select_and_run
 from social_research_probe.viz.selector import select_and_render

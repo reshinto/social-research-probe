@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _URL_RE = re.compile(r"https?://\S+")
 
@@ -11,7 +11,7 @@ def account_age_days(created_iso: str | None) -> int | None:
     if not created_iso:
         return None
     created = datetime.fromisoformat(created_iso.replace("Z", "+00:00"))
-    return (datetime.now(timezone.utc) - created).days
+    return (datetime.now(UTC) - created).days
 
 
 def citation_markers(description: str | None) -> list[str]:

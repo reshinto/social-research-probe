@@ -44,7 +44,7 @@ def render(
     y: list[float],
     label: str = "scatter",
     output_dir: str | None = None,
-) -> "ChartResult":  # noqa: F821 — type resolved at runtime
+) -> ChartResult:  # noqa: F821 — type resolved at runtime
     """Render a scatter plot of two numeric series and save it as a PNG.
 
     Args:

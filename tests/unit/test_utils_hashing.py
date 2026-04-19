@@ -8,8 +8,6 @@ and that the output format is correct (64-character lowercase hex string).
 
 from __future__ import annotations
 
-import pytest
-
 from social_research_probe.utils.hashing import stable_hash
 
 

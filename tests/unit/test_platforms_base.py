@@ -1,7 +1,7 @@
 """Platform adapter dataclasses + ABC contract."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -22,7 +22,7 @@ def test_fetch_limits_defaults():
 
 def test_fetch_limits_is_frozen():
     limits = FetchLimits()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         limits.max_items = 5  # type: ignore[misc]
 
 
@@ -33,7 +33,7 @@ def test_raw_item_required_fields():
         title="T",
         author_id="c1",
         author_name="Channel",
-        published_at=datetime.now(timezone.utc),
+        published_at=datetime.now(UTC),
         metrics={"views": 100},
         text_excerpt=None,
         thumbnail=None,
@@ -71,12 +71,12 @@ def test_adapter_is_abstract():
 
 def test_fetch_text_for_claim_extraction_returns_none():
     """Line 75: default fetch_text_for_claim_extraction returns None."""
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from social_research_probe.platforms.base import (
         FetchLimits,
         PlatformAdapter,
         RawItem,
-        SignalSet,
         TrustHints,
     )
 
@@ -109,7 +109,7 @@ def test_fetch_text_for_claim_extraction_returns_none():
         title="T",
         author_id="a",
         author_name="Author",
-        published_at=datetime.now(timezone.utc),
+        published_at=datetime.now(UTC),
         metrics={},
         text_excerpt=None,
         thumbnail=None,

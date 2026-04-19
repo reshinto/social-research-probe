@@ -1,4 +1,6 @@
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
+
 from social_research_probe.scoring.combine import overall_score
 
 unit = st.floats(min_value=0.0, max_value=1.0, allow_nan=False)

@@ -1,8 +1,10 @@
 import math
-from social_research_probe.scoring.trust import trust_score
-from social_research_probe.scoring.trend import trend_score, recency_decay
-from social_research_probe.scoring.opportunity import opportunity_score
+
 from social_research_probe.scoring.combine import overall_score
+from social_research_probe.scoring.opportunity import opportunity_score
+from social_research_probe.scoring.trend import recency_decay, trend_score
+from social_research_probe.scoring.trust import trust_score
+
 
 def test_trust_bounds_and_formula():
     s = trust_score(source_class=1.0, channel_credibility=1.0,

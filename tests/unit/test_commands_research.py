@@ -10,14 +10,9 @@ Who calls it:
 """
 from __future__ import annotations
 
-import io
 import json
-from pathlib import Path
-
-import pytest
 
 from social_research_probe.commands import research as research_cmd
-
 
 # ---------------------------------------------------------------------------
 # Helpers

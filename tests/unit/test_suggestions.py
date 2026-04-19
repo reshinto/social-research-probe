@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
-from pathlib import Path
 
 from social_research_probe.commands.purposes import add_purpose
 from social_research_probe.commands.suggestions import (
@@ -118,7 +118,6 @@ def test_discard_pending_removes_without_applying(tmp_data_dir: Path):
 
 
 
-import pytest
 
 
 def test_suggest_topics_breaks_at_count(tmp_data_dir):
@@ -136,7 +135,7 @@ def test_suggest_purposes_breaks_at_count(tmp_data_dir):
 def test_stage_suggestions_missing_value_raises(tmp_data_dir):
     """Line 99: topic candidate without value raises ValidationError."""
     from social_research_probe.errors import ValidationError
-    with pytest.raises(ValidationError, match="missing .value."):
+    with pytest.raises(ValidationError, match=r"missing .value."):
         stage_suggestions(
             tmp_data_dir,
             topic_candidates=[{"reason": "gap"}],

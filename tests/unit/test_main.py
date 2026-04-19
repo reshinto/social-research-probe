@@ -1,5 +1,6 @@
 """Tests that __main__.py is executable as a module."""
 import runpy
+
 import pytest
 
 

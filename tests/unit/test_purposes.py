@@ -12,7 +12,7 @@ from social_research_probe.commands.purposes import (
     rename_purpose,
     show_purposes,
 )
-from social_research_probe.errors import DuplicateError, ValidationError
+from social_research_probe.errors import DuplicateError, SrpError, ValidationError
 
 
 def _read(data_dir: Path) -> dict:
@@ -67,7 +67,7 @@ def test_rename_onto_existing_raises(tmp_data_dir: Path):
 
 
 def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
-    with pytest.raises(Exception):
+    with pytest.raises(SrpError):
         rename_purpose(tmp_data_dir, "nonexistent", "something")
 
 

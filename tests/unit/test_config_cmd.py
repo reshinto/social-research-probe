@@ -1,7 +1,6 @@
 """srp config subcommand: set/get/check for non-secret and secret values."""
 from __future__ import annotations
 
-import json
 import os
 import stat
 from pathlib import Path
@@ -92,8 +91,6 @@ def test_write_config_value(tmp_data_dir: Path):
 
 def test_check_perms_warns_on_bad_perms(tmp_data_dir: Path, capsys):
     """Lines 46-47: _check_perms prints warning when permissions are too open."""
-    import os
-    import stat as stat_mod
     from social_research_probe.commands.config import _check_perms
 
     path = tmp_data_dir / "secrets.toml"
@@ -117,8 +114,9 @@ def test_show_config_env_var_shown(tmp_data_dir: Path, monkeypatch: pytest.Monke
 def test_write_config_value_bad_key_raises():
     """Line 119: write_config_value raises when key is not section.key format."""
     from pathlib import Path
+
     from social_research_probe.errors import ValidationError
-    with pytest.raises(ValidationError, match="section.key"):
+    with pytest.raises(ValidationError, match=r"section\.key"):
         write_config_value(Path("/tmp"), "badkey", "value")
 
 

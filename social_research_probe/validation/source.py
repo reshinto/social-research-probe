@@ -1,11 +1,13 @@
 from __future__ import annotations
-from enum import Enum
+
+from enum import StrEnum
+
 from social_research_probe.platforms.base import RawItem, TrustHints
 
 _PRIMARY_DOMAINS = ("arxiv.org", "nature.com", "ieee.org", "acm.org",
                     ".gov", ".edu", "who.int", "nih.gov")
 
-class SourceClass(str, Enum):
+class SourceClass(StrEnum):
     PRIMARY = "primary"
     SECONDARY = "secondary"
     COMMENTARY = "commentary"

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from rapidfuzz import fuzz, process
 
@@ -11,7 +11,7 @@ DUPLICATE_THRESHOLD = 95
 NEAR_DUPLICATE_THRESHOLD = 80
 
 
-class DuplicateStatus(str, Enum):
+class DuplicateStatus(StrEnum):
     NEW = "new"
     NEAR_DUPLICATE = "near-duplicate"
     DUPLICATE = "duplicate"

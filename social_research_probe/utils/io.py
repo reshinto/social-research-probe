@@ -46,7 +46,7 @@ def read_json(path: Path, default: dict | None = None) -> dict:
         the same dict object.
     """
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             return json.load(fh)
     except FileNotFoundError:
         # Return a fresh copy so callers cannot mutate the default sentinel.
@@ -93,8 +93,7 @@ def write_json(path: Path, data: dict) -> None:
         os.replace(tmp_path, path)
     except Exception:
         # Best-effort cleanup of the temp file so we do not litter .tmp files.
-        try:
+        import contextlib
+        with contextlib.suppress(OSError):  # pragma: no cover
             os.unlink(tmp_path)
-        except OSError:  # pragma: no cover
-            pass
         raise

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-import os
+from datetime import UTC
 
 import pytest
 
@@ -15,7 +15,6 @@ from social_research_probe.pipeline import (
     _zscore,
     run_research,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -86,7 +85,7 @@ def test_zscore_two_values():
 # ---------------------------------------------------------------------------
 
 def test_score_item_returns_score_and_dict():
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from social_research_probe.platforms.base import RawItem, SignalSet, TrustHints
 
@@ -96,7 +95,7 @@ def test_score_item_returns_score_and_dict():
         title="Test",
         author_id="ch1",
         author_name="Channel",
-        published_at=datetime.now(timezone.utc),
+        published_at=datetime.now(UTC),
         metrics={"views": 1000, "likes": 50, "comments": 10},
         text_excerpt="Some text here.",
         thumbnail=None,
@@ -106,7 +105,7 @@ def test_score_item_returns_score_and_dict():
         views=1000,
         likes=50,
         comments=10,
-        upload_date=datetime.now(timezone.utc),
+        upload_date=datetime.now(UTC),
         view_velocity=100.0,
         engagement_ratio=0.06,
         comment_velocity=1.0,
@@ -225,10 +224,9 @@ def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
         }
     })
     # Patch get_adapter to return an adapter whose health_check returns False
-    from social_research_probe.errors import ValidationError
     import social_research_probe.pipeline as pipeline_mod
+    from social_research_probe.errors import ValidationError
 
-    original_get_adapter = pipeline_mod.get_adapter
 
     class FailingAdapter:
         def health_check(self):

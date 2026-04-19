@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from social_research_probe.cli import main, _emit, _to_text, _to_markdown, _id_selector
+from social_research_probe.cli import _emit, _id_selector, main
 
 
 class TestEmitHelpers:
@@ -215,7 +215,6 @@ class TestRunResearch:
 
 class TestInstallSkill:
     def test_install_skill(self, monkeypatch, tmp_path):
-        import shutil
         target = tmp_path / "skill_out"
         # Monkeypatch shutil.copytree so we don't actually copy
         monkeypatch.setattr("shutil.copytree", lambda s, d: target.mkdir(exist_ok=True))
@@ -381,6 +380,7 @@ class TestDispatchFallthrough:
     def test_dispatch_returns_2_for_unknown_command(self, monkeypatch, tmp_path):
         """Line 275: _dispatch returns 2 when command not matched."""
         import argparse
+
         from social_research_probe.cli import _dispatch
         args = argparse.Namespace(command="nonexistent-command", data_dir=str(tmp_path))
         result = _dispatch(args)

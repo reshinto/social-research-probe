@@ -45,7 +45,7 @@ def render(
     data: list[float],
     label: str = "values",
     output_dir: str | None = None,
-) -> "ChartResult":  # noqa: F821 — type resolved at runtime
+) -> ChartResult:  # noqa: F821 — type resolved at runtime
     """Render a line chart of the data series and save it as a PNG.
 
     Args:

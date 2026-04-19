@@ -18,7 +18,7 @@ import zlib
 
 
 def write_placeholder_png(path: str) -> None:
-    """Write a 1×1 white pixel PNG file to *path*.
+    """Write a 1x1 white pixel PNG file to *path*.
 
     Produces the smallest valid PNG recognised by all image viewers,
     suitable as a placeholder when a real chart renderer is unavailable.
@@ -26,7 +26,7 @@ def write_placeholder_png(path: str) -> None:
     Args:
         path: Absolute file path where the PNG will be written.
 
-    Why 1×1: the purpose is only to produce a file with the .png extension
+    Why 1x1: the purpose is only to produce a file with the .png extension
     that exists on disk; actual visual content is irrelevant for unit tests.
     """
     def _chunk(tag: bytes, data: bytes) -> bytes:

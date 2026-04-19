@@ -49,6 +49,7 @@ def test_scoring_overrides_element_wise_max():
 
 def test_unknown_purpose_raises():
     import pytest
+
     from social_research_probe.errors import ValidationError
 
     with pytest.raises(ValidationError):
@@ -60,13 +61,14 @@ def test_merged_is_frozen_dataclass():
     merged = merge_purposes(purposes, ["p"])
     assert isinstance(merged, MergedPurpose)
     import pytest
-    with pytest.raises(Exception):  # frozen
+    with pytest.raises(Exception):  # noqa: B017
         merged.method = "changed"  # type: ignore[misc]
 
 
 def test_merge_purpose_missing_method_raises():
     """Line 34: purpose entry without 'method' key raises ValidationError."""
     import pytest
+
     from social_research_probe.errors import ValidationError
 
     purposes = {

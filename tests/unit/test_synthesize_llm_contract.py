@@ -10,16 +10,13 @@ Who calls it:
 """
 from __future__ import annotations
 
-import json
-
 import pytest
 
+from social_research_probe.errors import ValidationError
 from social_research_probe.synthesize.llm_contract import (
     build_synthesis_prompt,
     parse_synthesis_response,
 )
-from social_research_probe.errors import ValidationError
-
 
 # ---------------------------------------------------------------------------
 # Helpers

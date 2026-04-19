@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import UTC
 from typing import Any, ClassVar
 
 from social_research_probe.errors import AdapterError
@@ -53,27 +54,28 @@ class YouTubeAdapter(PlatformAdapter):
         return h * 3600 + mn * 60 + s
 
     def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:  # pragma: no cover — live
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
+
         from social_research_probe.platforms.youtube import fetch
         client = fetch.build_client(self._api_key())
         published_after = None
         if limits.recency_days:
-            dt = datetime.now(timezone.utc) - timedelta(days=limits.recency_days)
+            dt = datetime.now(UTC) - timedelta(days=limits.recency_days)
             published_after = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         raw = fetch.search_videos(client, topic=topic, max_items=limits.max_items, published_after=published_after)
         return self._items_from_search(raw)
 
     def _items_from_search(self, raw: list[dict]) -> list[RawItem]:  # pragma: no cover
-        from datetime import datetime, timezone
+        from datetime import datetime
         items = []
         for r in raw:
             vid_id = r.get("id", {}).get("videoId", "")
             sn = r.get("snippet", {})
             published_raw = sn.get("publishedAt", "")
             try:
-                published_at = datetime.fromisoformat(published_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+                published_at = datetime.fromisoformat(published_raw.replace("Z", "+00:00")).astimezone(UTC)
             except Exception:
-                published_at = datetime.now(timezone.utc)
+                published_at = datetime.now(UTC)
             thumb = (sn.get("thumbnails") or {}).get("default", {}).get("url")
             items.append(RawItem(
                 id=vid_id,
@@ -130,8 +132,8 @@ class YouTubeAdapter(PlatformAdapter):
         return enriched
 
     def to_signals(self, items: list[RawItem]) -> list[SignalSet]:  # pragma: no cover
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc)
+        from datetime import datetime
+        now = datetime.now(UTC)
         signals = []
         for it in items:
             age_days = max(1, (now - it.published_at).days)

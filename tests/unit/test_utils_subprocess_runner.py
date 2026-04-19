@@ -10,7 +10,6 @@ message for failed commands.
 from __future__ import annotations
 
 import subprocess
-from unittest.mock import patch
 
 import pytest
 
@@ -35,7 +34,7 @@ def test_run_nonzero_raises_adapter_error() -> None:
 def test_run_timeout_raises_adapter_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """A TimeoutExpired from subprocess.run must be re-raised as AdapterError."""
 
-    def _fake_run(*args, **kwargs):  # noqa: ANN001, ANN202
+    def _fake_run(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd=["sleep", "99"], timeout=1)
 
     monkeypatch.setattr("social_research_probe.utils.subprocess_runner.subprocess.run", _fake_run)

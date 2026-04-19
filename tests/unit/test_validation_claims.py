@@ -10,7 +10,7 @@ What is verified here:
 """
 from __future__ import annotations
 
-from social_research_probe.validation.claims import Claim, extract_claims
+from social_research_probe.validation.claims import extract_claims
 
 
 def test_extract_claims_basic() -> None:

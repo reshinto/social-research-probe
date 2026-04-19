@@ -50,7 +50,7 @@ def render(
     rows: list[dict],
     label: str = "table",
     output_dir: str | None = None,
-) -> "ChartResult":  # noqa: F821 — type resolved at runtime
+) -> ChartResult:  # noqa: F821 — type resolved at runtime
     """Render a simple text table as a PNG using matplotlib's table widget.
 
     Args:

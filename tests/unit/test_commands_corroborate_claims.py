@@ -19,7 +19,6 @@ import pytest
 from social_research_probe.commands import corroborate_claims as cc_cmd
 from social_research_probe.errors import ValidationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

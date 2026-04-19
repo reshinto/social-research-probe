@@ -1,5 +1,6 @@
 from social_research_probe.synthesize.formatter import build_packet, render_sections_1_9
 
+
 def test_build_packet_shape():
     items = [{"title":"A","channel":"C","url":"u","source_class":"primary",
               "scores":{"trust":0.9,"trend":0.5,"opportunity":0.4,"overall":0.7},
@@ -32,7 +33,7 @@ def test_render_sections_contains_headings():
 
 def test_render_sections_with_items():
     """Cover _fmt_item (lines 27-28) and the non-empty items branch (line 44)."""
-    from social_research_probe.synthesize.formatter import render_sections_1_9, _fmt_item
+    from social_research_probe.synthesize.formatter import _fmt_item, render_sections_1_9
     item = {
         "title": "Test Video",
         "channel": "Test Channel",

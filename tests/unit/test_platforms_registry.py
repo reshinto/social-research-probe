@@ -54,9 +54,9 @@ def test_register_class_without_name_raises():
             default_limits = FetchLimits()
 
             def __init__(self, config): pass
-            def health_check(self): return True  # noqa: E704
-            def search(self, topic, limits): return []  # noqa: E704
-            def enrich(self, items): return items  # noqa: E704
-            def to_signals(self, items): return []  # noqa: E704
-            def trust_hints(self, item): return TrustHints(None, None, None, None, [])  # noqa: E704
-            def url_normalize(self, url): return url  # noqa: E704
+            def health_check(self): return True
+            def search(self, topic, limits): return []
+            def enrich(self, items): return items
+            def to_signals(self, items): return []
+            def trust_hints(self, item): return TrustHints(None, None, None, None, [])
+            def url_normalize(self, url): return url

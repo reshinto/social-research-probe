@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import json
 
+from social_research_probe.errors import ValidationError
 from social_research_probe.llm.prompts import SYNTHESIS_PROMPT
 from social_research_probe.synthesize.formatter import RESPONSE_SCHEMA
-from social_research_probe.errors import ValidationError
 
 
 def build_synthesis_prompt(packet: dict) -> str:
