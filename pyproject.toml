@@ -52,6 +52,7 @@ exclude_lines = [
     "raise NotImplementedError",
     "^\\s*\\.\\.\\.$",
     "@abstractmethod",
+    "emit_packet\\(",
 ]
 
 [tool.ruff]

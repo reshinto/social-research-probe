@@ -43,7 +43,7 @@ _VALID_PACKET = {
 def test_research_skill_mode_skips_render_full(monkeypatch, tmp_path):
     calls = []
 
-    def fake_run_research(cmd, data_dir, mode, adapter_config=None):
+    def fake_run_research(cmd, data_dir, mode, adapter_config=None, pre_emit_hook=None):
         calls.append((cmd, data_dir, mode, adapter_config))
         return _VALID_PACKET
 
@@ -95,6 +95,23 @@ def test_fetch_best_transcript_returns_none_when_fallback_raises():
         raise RuntimeError("boom")
 
     assert _fetch_best_transcript("https://example.com", lambda _url: None, fallback) is None
+
+
+def test_fetch_best_transcript_returns_primary_text_when_available():
+    assert (
+        _fetch_best_transcript("https://x", lambda _url: "hello world", lambda _url: None)
+        == "hello world"
+    )
+
+
+def test_fetch_best_transcript_swallows_primary_exception_and_tries_fallback():
+    def primary(_url: str) -> str | None:
+        raise OSError("network down")
+
+    assert (
+        _fetch_best_transcript("https://x", primary, lambda _url: "fallback text")
+        == "fallback text"
+    )
 
 
 def test_enrich_top5_skips_whitespace_only_fallback_transcript(monkeypatch):
