@@ -90,7 +90,12 @@ def _extract_text(tracks: list) -> str | None:
 
 
 def _download_subtitle(url: str | None, ext: str) -> str | None:
-    """Download the subtitle file at *url* and return cleaned plain text."""
+    """Download the subtitle file at *url* and return cleaned plain text.
+
+    YouTube serves several subtitle formats: VTT/SRT for manual captions,
+    and json3/srv3 for auto-generated ones. Parse each to plain text so
+    downstream consumers see a flat string regardless of source format.
+    """
     if not url:
         return None
     try:
@@ -100,7 +105,28 @@ def _download_subtitle(url: str | None, ext: str) -> str | None:
         return None
     if ext in {"vtt", "srt"}:
         return _strip_vtt(raw)
+    if ext in {"json3", "srv3", "srv2", "srv1"}:
+        return _parse_json3(raw)
     return raw
+
+
+def _parse_json3(raw: str) -> str | None:
+    """Parse a YouTube json3/srv3 caption file into plain text."""
+    import json
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    events = payload.get("events") or []
+    lines: list[str] = []
+    for event in events:
+        segs = event.get("segs") or []
+        text = "".join(seg.get("utf8", "") for seg in segs if isinstance(seg, dict))
+        cleaned = text.strip()
+        if cleaned and (not lines or lines[-1] != cleaned):
+            lines.append(cleaned)
+    return " ".join(lines) or None
 
 
 _TAG_RE = re.compile(r"<[^>]+>")

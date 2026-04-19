@@ -145,7 +145,7 @@ class TestDownloadSubtitle:
                 return b"raw json blob"
 
         monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: _Resp())
-        assert _download_subtitle("https://x", "json3") == "raw json blob"
+        assert _download_subtitle("https://x", "ttml") == "raw json blob"
 
 
 def test_fetch_transcript_returns_none_when_yt_dlp_raises(monkeypatch):
@@ -271,3 +271,48 @@ def test_fetch_transcript_retries_when_tracks_yield_empty_text(monkeypatch):
     fake.YoutubeDL = _YDL
     monkeypatch.setitem(sys.modules, "yt_dlp", fake)
     assert ext.fetch_transcript("https://x") is None
+
+
+class TestParseJson3:
+    def test_extracts_text_from_events(self):
+        from social_research_probe.platforms.youtube.extract import _parse_json3
+
+        raw = '{"events":[{"segs":[{"utf8":"Hello"},{"utf8":" world"}]},{"segs":[{"utf8":"Second line"}]}]}'
+        assert _parse_json3(raw) == "Hello world Second line"
+
+    def test_returns_none_on_bad_json(self):
+        from social_research_probe.platforms.youtube.extract import _parse_json3
+
+        assert _parse_json3("not json at all") is None
+
+    def test_returns_none_on_empty_events(self):
+        from social_research_probe.platforms.youtube.extract import _parse_json3
+
+        assert _parse_json3('{"events":[]}') is None
+
+    def test_skips_duplicate_adjacent_lines(self):
+        from social_research_probe.platforms.youtube.extract import _parse_json3
+
+        raw = '{"events":[{"segs":[{"utf8":"Same"}]},{"segs":[{"utf8":"Same"}]}]}'
+        assert _parse_json3(raw) == "Same"
+
+
+def test_download_subtitle_parses_json3(monkeypatch):
+    import urllib.request
+
+    from social_research_probe.platforms.youtube.extract import _download_subtitle
+
+    body = b'{"events":[{"segs":[{"utf8":"Hi there"}]}]}'
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return body
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: _Resp())
+    assert _download_subtitle("https://x", "json3") == "Hi there"
