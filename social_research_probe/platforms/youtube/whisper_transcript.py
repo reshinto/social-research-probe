@@ -35,20 +35,24 @@ def fetch_transcript_whisper(url: str) -> str | None:
     with tempfile.TemporaryDirectory() as tmpdir:
         audio_path = os.path.join(tmpdir, "audio.%(ext)s")
         log(f"[srp] yt-dlp: downloading audio for whisper transcription: {url}")
+        cmd = [
+            "yt-dlp",
+            "--extract-audio",
+            "--audio-format",
+            "mp3",
+            "--audio-quality",
+            "0",
+            "--output",
+            audio_path,
+            "--no-playlist",
+            "--quiet",
+        ]
+        browser = os.environ.get("SRP_YTDLP_BROWSER", "none")
+        if browser and browser.lower() != "none":
+            cmd += ["--cookies-from-browser", browser]
+        cmd.append(url)
         dl = subprocess.run(
-            [
-                "yt-dlp",
-                "--extract-audio",
-                "--audio-format",
-                "mp3",
-                "--audio-quality",
-                "0",
-                "--output",
-                audio_path,
-                "--no-playlist",
-                "--quiet",
-                url,
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=300,

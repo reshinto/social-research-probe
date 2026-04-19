@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 import os
 import statistics
@@ -12,7 +13,12 @@ from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.ensemble import multi_llm_prompt
 from social_research_probe.llm.host import emit_packet
-from social_research_probe.platforms.base import FetchLimits, RawItem, SignalSet, TrustHints
+from social_research_probe.platforms.base import (
+    FetchLimits,
+    RawItem,
+    SignalSet,
+    TrustHints,
+)
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import merge_purposes
@@ -36,7 +42,10 @@ from social_research_probe.stats import (
     pca,
     polynomial_regression,
 )
-from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
+from social_research_probe.stats.selector import (
+    select_and_run,
+    select_and_run_correlation,
+)
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.explain import explain as explain_stat
@@ -50,6 +59,7 @@ from social_research_probe.types import (
     SourceValidationSummary,
     StatsSummary,
 )
+from social_research_probe.utils.concurrency import run_coro
 from social_research_probe.utils.progress import log
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
@@ -141,7 +151,8 @@ def _score_item(
         corroboration_score=0.3,
     )
     age_days = max(
-        1.0, (datetime.now(UTC) - signal.upload_date).days if signal.upload_date else 30.0
+        1.0,
+        (datetime.now(UTC) - signal.upload_date).days if signal.upload_date else 30.0,
     )
     trend = trend_score(
         z_view_velocity=z_view_velocity,
@@ -162,7 +173,12 @@ def _score_item(
         "channel": item.author_name,
         "url": item.url,
         "source_class": src.value,
-        "scores": {"trust": trust, "trend": trend, "opportunity": opportunity, "overall": overall},
+        "scores": {
+            "trust": trust,
+            "trend": trend,
+            "opportunity": opportunity,
+            "overall": overall,
+        },
         "features": {
             "view_velocity": signal.view_velocity or 0.0,
             "engagement_ratio": signal.engagement_ratio or 0.0,
@@ -187,41 +203,82 @@ def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
     )
 
 
-def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
-    """Fetch transcripts for top-5 items and generate 200-word AI summaries.
+async def _enrich_one(
+    item: ScoredItem,
+    fetch_transcript,
+    fetch_transcript_whisper,
+    whisper_sem: asyncio.Semaphore,
+) -> None:
+    """Fetch transcript and LLM summary for a single video item.
 
-    Transcript sources tried in order:
+    Runs transcript fetch and LLM summary concurrently across items via
+    asyncio.gather. Whisper fallback acquires ``whisper_sem`` to cap
+    concurrent audio-download + ML-transcription jobs. Modifies item in place.
+    """
+    title = item.get("title", "untitled")[:80]
+    log(f"[srp] transcript: fetching for {title!r}")
+
+    # Caption fetch runs in a thread; whisper fallback acquires the semaphore
+    # only if the caption fetch returns nothing.
+    text = await asyncio.to_thread(fetch_transcript, item["url"])
+    if not (text and text.strip()):
+        async with whisper_sem:
+            text = await asyncio.to_thread(fetch_transcript_whisper, item["url"])
+
+    if not text:
+        return
+    cleaned = " ".join(text.split())[:6000]
+    if not cleaned:
+        return
+    item["transcript"] = cleaned
+    prompt = _build_summary_prompt(
+        title=item.get("title", ""),
+        channel=item.get("channel", ""),
+        transcript=cleaned,
+    )
+    summary = await asyncio.to_thread(
+        multi_llm_prompt,
+        prompt,
+        task=f"summarising transcript for {title[:60]!r}",
+    )
+    if summary:
+        item["one_line_takeaway"] = summary
+
+
+def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
+    """Fetch transcripts and AI summaries for top-5 items concurrently.
+
+    Transcript sources tried in order per item:
     1. YouTube captions via yt-dlp (``fetch_transcript``).
     2. Whisper transcription of the downloaded audio (``fetch_transcript_whisper``).
 
+    All 5 items are processed in parallel via asyncio.gather so transcript
+    downloads and LLM calls overlap. Whisper is capped at 2 concurrent jobs
+    to prevent memory exhaustion. Item failures do not abort the batch.
+
     The full transcript (up to 6000 chars) is stored as item["transcript"].
     A 200-word+ summary from the multi-LLM ensemble is stored as
-    item["one_line_takeaway"]. Falls back silently when no transcript or LLM
-    response is available. Modifies the dicts in place.
+    item["one_line_takeaway"]. Falls back silently on any error.
+    Modifies the dicts in place.
     """
     from social_research_probe.platforms.youtube.extract import fetch_transcript
     from social_research_probe.platforms.youtube.whisper_transcript import (
         fetch_transcript_whisper,
     )
 
-    for item in top5:
-        title = item.get("title", "untitled")[:80]
-        log(f"[srp] transcript: fetching for {title!r}")
-        text = _fetch_best_transcript(item["url"], fetch_transcript, fetch_transcript_whisper)
-        if not text:
-            continue
-        cleaned = " ".join(text.split())[:6000]
-        if not cleaned:
-            continue
-        item["transcript"] = cleaned
-        prompt = _build_summary_prompt(
-            title=item.get("title", ""),
-            channel=item.get("channel", ""),
-            transcript=cleaned,
+    async def _gather() -> None:
+        # Limit concurrent whisper jobs to 2 to avoid memory exhaustion from
+        # simultaneous audio-download + ML-transcription across all top-5 items.
+        whisper_sem = asyncio.Semaphore(2)
+        await asyncio.gather(
+            *[
+                _enrich_one(item, fetch_transcript, fetch_transcript_whisper, whisper_sem)
+                for item in top5
+            ],
+            return_exceptions=True,
         )
-        summary = multi_llm_prompt(prompt, task=f"summarising transcript for {title[:60]!r}")
-        if summary:
-            item["one_line_takeaway"] = summary
+
+    run_coro(_gather())
 
 
 def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:
@@ -456,6 +513,108 @@ def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
+def _available_backends(data_dir: Path) -> list[str]:
+    """Return corroboration backend names whose API keys are present and healthy.
+
+    Tries exa, brave, and tavily in order. llm_cli is excluded from auto-runs
+    because it has no marginal cost signal — it just reruns the LLM the
+    pipeline already called.
+    """
+    from social_research_probe.corroboration.registry import get_backend
+    from social_research_probe.errors import ValidationError
+
+    available: list[str] = []
+    for name in ("exa", "brave", "tavily"):
+        try:
+            if get_backend(name).health_check():
+                available.append(name)
+        except ValidationError:
+            pass
+    return available
+
+
+async def _corroborate_one(
+    item: ScoredItem,
+    backends: list[str],
+    sem: asyncio.Semaphore,
+) -> dict:
+    """Corroborate a single item using its title as the claim text.
+
+    Runs inside an asyncio event loop created per worker thread so nested
+    ``asyncio.run`` calls in ``corroborate_claim`` work safely.
+    """
+    from social_research_probe.corroboration.host import corroborate_claim
+    from social_research_probe.validation.claims import Claim
+
+    claim = Claim(
+        text=item.get("title", ""),
+        source_text=item.get("one_line_takeaway") or item.get("title", ""),
+        index=0,
+    )
+    async with sem:
+        return await asyncio.to_thread(corroborate_claim, claim, backends)
+
+
+def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]:
+    """Corroborate all top-5 items concurrently, one claim per item.
+
+    Uses the video title as the claim text — short, factual, and searchable.
+    The AI-generated one_line_takeaway is passed as source context. Caps
+    concurrent API calls to 3 to respect search-backend rate limits.
+    """
+    log(f"[srp] corroboration: checking {len(top5)} items via {', '.join(backends)}")
+
+    async def _gather() -> list[dict]:
+        sem = asyncio.Semaphore(3)
+        results = await asyncio.gather(
+            *[_corroborate_one(item, backends, sem) for item in top5],
+            return_exceptions=True,
+        )
+        return [r if isinstance(r, dict) else {} for r in results]
+
+    return run_coro(_gather())
+
+
+def _build_svs(
+    top5: list[ScoredItem],
+    corroboration_results: list[dict],
+    backends: list[str],
+) -> SourceValidationSummary:
+    """Build SourceValidationSummary from corroboration results (or defaults).
+
+    Verdict mapping:
+    - supported  → validated
+    - inconclusive / refuted → partially (has a signal, outcome uncertain)
+    - no results (empty dict or no backends ran) → unverified
+    """
+    if corroboration_results and backends:
+        validated = sum(
+            1 for r in corroboration_results if r.get("aggregate_verdict") == "supported"
+        )
+        partially = sum(
+            1
+            for r in corroboration_results
+            if r.get("aggregate_verdict") in ("inconclusive", "refuted")
+        )
+        unverified = len(top5) - validated - partially
+        notes = f"auto-corroborated via {', '.join(backends)}"
+    else:
+        validated = 0
+        partially = 0
+        unverified = len(top5)
+        notes = "corroboration not run; use 'srp corroborate-claims' for validation"
+    return {
+        "validated": validated,
+        "partially": partially,
+        "unverified": max(0, unverified),
+        "low_trust": sum(1 for d in top5 if d["scores"]["trust"] < 0.4),
+        "primary": sum(1 for d in top5 if d["source_class"] == "primary"),
+        "secondary": sum(1 for d in top5 if d["source_class"] == "secondary"),
+        "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
+        "notes": notes,
+    }
+
+
 def run_research(
     cmd: ParsedRunResearch,
     data_dir: Path,
@@ -502,16 +661,9 @@ def run_research(
         top5 = all_scored[:5]
         if platform_config.get("fetch_transcripts", True) and cmd.platform == "youtube":
             _enrich_top5_with_transcripts(top5)
-        svs: SourceValidationSummary = {
-            "validated": 0,
-            "partially": 0,
-            "unverified": len(top5),
-            "low_trust": sum(1 for d in top5 if d["scores"]["trust"] < 0.4),
-            "primary": sum(1 for d in top5 if d["source_class"] == "primary"),
-            "secondary": sum(1 for d in top5 if d["source_class"] == "secondary"),
-            "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
-            "notes": "corroboration not run; use 'srp corroborate-claims' for validation",
-        }
+        backends = _available_backends(data_dir)
+        corroboration_results = _corroborate_top5(top5, backends) if backends else []
+        svs = _build_svs(top5, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         chart_captions = _render_charts(all_scored, data_dir)
         warnings = detect_warnings(items, signals, top5)

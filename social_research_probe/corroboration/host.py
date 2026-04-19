@@ -12,12 +12,14 @@ one or more external sources.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.registry import get_backend
 from social_research_probe.errors import AdapterError
+from social_research_probe.utils.concurrency import run_coro
 
 
 def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
@@ -88,16 +90,22 @@ def corroborate_claim(claim, backend_names: list[str]) -> dict:
     """
     import dataclasses
 
-    collected: list[CorroborationResult] = []
-
-    for backend_name in backend_names:
+    async def _call_backend(backend_name: str) -> CorroborationResult | None:
         try:
             backend = get_backend(backend_name)
-            result = backend.corroborate(claim)
-            collected.append(result)
+            return await asyncio.to_thread(backend.corroborate, claim)
         except AdapterError as exc:
             print(f"[corroboration] backend {backend_name!r} failed: {exc}", file=sys.stderr)
+            return None
 
+    async def _gather_backends() -> list[CorroborationResult]:
+        outcomes = await asyncio.gather(
+            *[_call_backend(name) for name in backend_names],
+            return_exceptions=False,
+        )
+        return [r for r in outcomes if r is not None]
+
+    collected = run_coro(_gather_backends())
     verdict, confidence = aggregate_verdict(collected)
 
     return {

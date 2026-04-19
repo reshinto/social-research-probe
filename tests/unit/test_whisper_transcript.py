@@ -118,3 +118,31 @@ def test_returns_none_when_whisper_returns_empty_text(monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     result = fetch_transcript_whisper("https://www.youtube.com/watch?v=test")
     assert result is None
+
+
+def test_cookies_from_browser_flag_added_when_env_set(monkeypatch):
+    """When SRP_YTDLP_BROWSER is set, --cookies-from-browser is passed to yt-dlp."""
+    import subprocess
+    import types
+
+    fake_whisper = types.ModuleType("whisper")
+    monkeypatch.setitem(sys.modules, "whisper", fake_whisper)
+    monkeypatch.setenv("SRP_YTDLP_BROWSER", "safari")
+
+    captured: list[list[str]] = []
+
+    class _FailResult:
+        returncode = 1
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, **_kw):
+        captured.append(cmd)
+        return _FailResult()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    fetch_transcript_whisper("https://www.youtube.com/watch?v=test")
+
+    assert captured, "subprocess.run was never called"
+    assert "--cookies-from-browser" in captured[0]
+    assert "safari" in captured[0]
