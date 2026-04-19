@@ -329,3 +329,70 @@ def test_stats_models_for_zero_returns_empty():
     from social_research_probe.pipeline import _stats_models_for
 
     assert _stats_models_for(0) == []
+
+
+class TestEnrichTop5WithTranscripts:
+    def test_replaces_takeaway_when_transcript_available(self, monkeypatch):
+        from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.extract.fetch_transcript",
+            lambda url: "first  line\nsecond  line " * 30,
+        )
+        items = [{"url": "https://x/1", "one_line_takeaway": "old"}]
+        _enrich_top5_with_transcripts(items)
+        assert items[0]["one_line_takeaway"] != "old"
+        assert len(items[0]["one_line_takeaway"]) <= 200
+
+    def test_keeps_existing_takeaway_when_fetch_returns_none(self, monkeypatch):
+        from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.extract.fetch_transcript",
+            lambda url: None,
+        )
+        items = [{"url": "https://x/1", "one_line_takeaway": "keep me"}]
+        _enrich_top5_with_transcripts(items)
+        assert items[0]["one_line_takeaway"] == "keep me"
+
+    def test_silently_recovers_from_extractor_exception(self, monkeypatch):
+        from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+        def boom(url):
+            raise RuntimeError("network gone")
+
+        monkeypatch.setattr(
+            "social_research_probe.platforms.youtube.extract.fetch_transcript", boom
+        )
+        items = [{"url": "https://x/1", "one_line_takeaway": "still here"}]
+        _enrich_top5_with_transcripts(items)
+        assert items[0]["one_line_takeaway"] == "still here"
+
+
+def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
+    from social_research_probe.pipeline import _enrich_top5_with_transcripts
+
+    monkeypatch.setattr(
+        "social_research_probe.platforms.youtube.extract.fetch_transcript",
+        lambda url: "   \n   ",
+    )
+    items = [{"url": "https://x", "one_line_takeaway": "orig"}]
+    _enrich_top5_with_transcripts(items)
+    assert items[0]["one_line_takeaway"] == "orig"
+
+
+def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
+    """adapter_config.fetch_transcripts=False skips the _enrich_top5 call."""
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
+    )
+    called = []
+    monkeypatch.setattr(
+        "social_research_probe.pipeline._enrich_top5_with_transcripts",
+        lambda items: called.append(items),
+    )
+    cmd = parse('run-research platform:youtube "AI"->latest-news')
+    run_research(cmd, tmp_path, mode="cli", adapter_config={"fetch_transcripts": False})
+    assert called == []

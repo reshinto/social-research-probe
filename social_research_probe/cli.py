@@ -82,6 +82,11 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     rs.add_argument(
         "--no-shorts", action="store_true", help="Exclude YouTube Shorts (<90s) from results"
     )
+    rs.add_argument(
+        "--no-transcripts",
+        action="store_true",
+        help="Skip transcript fetching for top-5 items (faster, less context)",
+    )
     cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
     cc.add_argument("--backends", default="llm_cli", help="Comma-separated backend names")
@@ -294,7 +299,10 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.pipeline import run_research
 
     platform, topic, purposes = _parse_simple_research_args(args.args)
-    config_extras = {"include_shorts": not args.no_shorts}
+    config_extras = {
+        "include_shorts": not args.no_shorts,
+        "fetch_transcripts": not args.no_transcripts,
+    }
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
     return 0

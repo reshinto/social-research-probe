@@ -146,6 +146,26 @@ def _score_item(
     }
 
 
+def _enrich_top5_with_transcripts(top5: list[dict]) -> None:
+    """Replace each top-5 item's takeaway with the first 200 chars of its transcript.
+
+    Falls back silently to the existing description-based takeaway when the
+    transcript cannot be fetched (yt-dlp missing, no English track, network
+    error). Modifies the dicts in place.
+    """
+    from social_research_probe.platforms.youtube.extract import fetch_transcript
+
+    for item in top5:
+        try:
+            text = fetch_transcript(item["url"])
+        except Exception:
+            text = None
+        if text:
+            cleaned = " ".join(text.split())[:200]
+            if cleaned:
+                item["one_line_takeaway"] = cleaned
+
+
 def _build_stats_summary(scored_items: list[dict]) -> dict:
     """Run all applicable stats analyses across the full scored dataset.
 
@@ -321,6 +341,8 @@ def run_research(
         scored.sort(key=lambda x: x[0], reverse=True)
         all_scored = [d for _, d in scored]
         top5 = all_scored[:5]
+        if config.get("fetch_transcripts", True) and cmd.platform == "youtube":
+            _enrich_top5_with_transcripts(top5)
         svs = {
             "validated": 0,
             "partially": 0,

@@ -494,7 +494,7 @@ class TestSimpleResearch:
         cmd, _mode, cfg = captured[0]
         assert cmd.platform == "youtube"
         assert cmd.topics == [("ai", ["latest-news"])]
-        assert cfg == {"include_shorts": True}
+        assert cfg == {"include_shorts": True, "fetch_transcripts": True}
 
     def test_explicit_platform_positional(self, monkeypatch, tmp_path):
         captured = []
@@ -515,7 +515,7 @@ class TestSimpleResearch:
         self._patch_pipeline(monkeypatch, captured)
         main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-shorts"])
         _cmd, _mode, cfg = captured[0]
-        assert cfg == {"include_shorts": False}
+        assert cfg == {"include_shorts": False, "fetch_transcripts": True}
 
     def test_too_few_args_returns_validation_exit_code(self, monkeypatch, tmp_path):
         from social_research_probe.errors import ValidationError
@@ -532,3 +532,19 @@ class TestSimpleResearch:
         assert (
             main(["--data-dir", str(tmp_path), "research", "ai", ","]) == ValidationError.exit_code
         )
+
+
+class TestSimpleResearchTranscripts:
+    def _patch_pipeline(self, monkeypatch, captured):
+        def fake(cmd, d, mode, adapter_config=None):
+            captured.append((cmd, mode, adapter_config))
+            return {}
+
+        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+
+    def test_no_transcripts_flag_disables_transcripts(self, monkeypatch, tmp_path):
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-transcripts"])
+        _cmd, _mode, cfg = captured[0]
+        assert cfg["fetch_transcripts"] is False
