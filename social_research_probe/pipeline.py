@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 import os
 import statistics
@@ -50,6 +51,7 @@ from social_research_probe.types import (
     SourceValidationSummary,
     StatsSummary,
 )
+from social_research_probe.utils.concurrency import run_coro
 from social_research_probe.utils.progress import log
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
@@ -187,41 +189,82 @@ def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
     )
 
 
-def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
-    """Fetch transcripts for top-5 items and generate 200-word AI summaries.
+async def _enrich_one(
+    item: ScoredItem,
+    fetch_transcript,
+    fetch_transcript_whisper,
+    whisper_sem: asyncio.Semaphore,
+) -> None:
+    """Fetch transcript and LLM summary for a single video item.
 
-    Transcript sources tried in order:
+    Runs transcript fetch and LLM summary concurrently across items via
+    asyncio.gather. Whisper fallback acquires ``whisper_sem`` to cap
+    concurrent audio-download + ML-transcription jobs. Modifies item in place.
+    """
+    title = item.get("title", "untitled")[:80]
+    log(f"[srp] transcript: fetching for {title!r}")
+
+    # Caption fetch runs in a thread; whisper fallback acquires the semaphore
+    # only if the caption fetch returns nothing.
+    text = await asyncio.to_thread(fetch_transcript, item["url"])
+    if not (text and text.strip()):
+        async with whisper_sem:
+            text = await asyncio.to_thread(fetch_transcript_whisper, item["url"])
+
+    if not text:
+        return
+    cleaned = " ".join(text.split())[:6000]
+    if not cleaned:
+        return
+    item["transcript"] = cleaned
+    prompt = _build_summary_prompt(
+        title=item.get("title", ""),
+        channel=item.get("channel", ""),
+        transcript=cleaned,
+    )
+    summary = await asyncio.to_thread(
+        multi_llm_prompt,
+        prompt,
+        task=f"summarising transcript for {title[:60]!r}",
+    )
+    if summary:
+        item["one_line_takeaway"] = summary
+
+
+def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
+    """Fetch transcripts and AI summaries for top-5 items concurrently.
+
+    Transcript sources tried in order per item:
     1. YouTube captions via yt-dlp (``fetch_transcript``).
     2. Whisper transcription of the downloaded audio (``fetch_transcript_whisper``).
 
+    All 5 items are processed in parallel via asyncio.gather so transcript
+    downloads and LLM calls overlap. Whisper is capped at 2 concurrent jobs
+    to prevent memory exhaustion. Item failures do not abort the batch.
+
     The full transcript (up to 6000 chars) is stored as item["transcript"].
     A 200-word+ summary from the multi-LLM ensemble is stored as
-    item["one_line_takeaway"]. Falls back silently when no transcript or LLM
-    response is available. Modifies the dicts in place.
+    item["one_line_takeaway"]. Falls back silently on any error.
+    Modifies the dicts in place.
     """
     from social_research_probe.platforms.youtube.extract import fetch_transcript
     from social_research_probe.platforms.youtube.whisper_transcript import (
         fetch_transcript_whisper,
     )
 
-    for item in top5:
-        title = item.get("title", "untitled")[:80]
-        log(f"[srp] transcript: fetching for {title!r}")
-        text = _fetch_best_transcript(item["url"], fetch_transcript, fetch_transcript_whisper)
-        if not text:
-            continue
-        cleaned = " ".join(text.split())[:6000]
-        if not cleaned:
-            continue
-        item["transcript"] = cleaned
-        prompt = _build_summary_prompt(
-            title=item.get("title", ""),
-            channel=item.get("channel", ""),
-            transcript=cleaned,
+    async def _gather() -> None:
+        # Limit concurrent whisper jobs to 2 to avoid memory exhaustion from
+        # simultaneous audio-download + ML-transcription across all top-5 items.
+        whisper_sem = asyncio.Semaphore(2)
+        await asyncio.gather(
+            *[
+                _enrich_one(item, fetch_transcript, fetch_transcript_whisper, whisper_sem)
+                for item in top5
+            ],
+            return_exceptions=True,
         )
-        summary = multi_llm_prompt(prompt, task=f"summarising transcript for {title[:60]!r}")
-        if summary:
-            item["one_line_takeaway"] = summary
+
+    run_coro(_gather())
 
 
 def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:

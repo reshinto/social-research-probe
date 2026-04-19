@@ -4,6 +4,7 @@ fixture's registration."""
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from datetime import UTC
@@ -19,6 +20,7 @@ from social_research_probe.platforms.base import (
 )
 from social_research_probe.platforms.registry import register
 from social_research_probe.types import AdapterConfig, JSONObject
+from social_research_probe.utils.concurrency import run_coro
 
 
 def _as_object(value: object) -> JSONObject:
@@ -143,18 +145,30 @@ class YouTubeAdapter(PlatformAdapter):
         return items
 
     def enrich(self, items: list[RawItem]) -> list[RawItem]:
-        """Hydrate search results with video and channel statistics."""
+        """Hydrate search results with video and channel statistics.
+
+        ``hydrate_videos`` and ``hydrate_channels`` are independent API calls
+        that share the same client but touch different YouTube endpoints. They
+        run concurrently via asyncio.gather to halve the network round-trip.
+        """
         if not items:
             return items
         from social_research_probe.platforms.youtube import fetch
 
         client = fetch.build_client(self._api_key())
         video_ids = [it.id for it in items]
-        hydrated = {str(v["id"]): v for v in fetch.hydrate_videos(client, video_ids=video_ids)}
         channel_ids = list({it.author_id for it in items if it.author_id})
-        channels = {
-            str(c["id"]): c for c in fetch.hydrate_channels(client, channel_ids=channel_ids)
-        }
+
+        async def _fetch_both() -> tuple[list, list]:
+            videos_task = asyncio.to_thread(fetch.hydrate_videos, client, video_ids=video_ids)
+            channels_task = asyncio.to_thread(
+                fetch.hydrate_channels, client, channel_ids=channel_ids
+            )
+            return await asyncio.gather(videos_task, channels_task)
+
+        raw_videos, raw_channels = run_coro(_fetch_both())
+        hydrated = {str(v["id"]): v for v in raw_videos}
+        channels = {str(c["id"]): c for c in raw_channels}
         enriched: list[RawItem] = []
         for it in items:
             vid = hydrated.get(it.id, {})

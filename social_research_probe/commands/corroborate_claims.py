@@ -17,11 +17,13 @@ Called by: cli._dispatch when args.command == 'corroborate-claims'.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
 
 from social_research_probe.corroboration.host import corroborate_claim
+from social_research_probe.utils.concurrency import run_coro
 from social_research_probe.validation.claims import Claim
 
 
@@ -59,14 +61,25 @@ def run(
         raise ValidationError(f"cannot read claims file: {exc}") from exc
 
     raw_claims = data.get("claims", [])
-    results = []
-    for i, rc in enumerate(raw_claims):
+
+    # Cap concurrent claim processing to avoid hammering external APIs.
+    sem = asyncio.Semaphore(5)
+
+    async def _corroborate_one(i: int, rc: dict) -> dict:
         text = rc.get("text", "")
         # Fall back to the claim text itself when no separate source is given,
         # so corroboration backends always have a non-empty source to check.
         source = rc.get("source_text", text)
         claim = Claim(text=text, source_text=source, index=i)
-        results.append(corroborate_claim(claim, backends))
+        async with sem:
+            return await asyncio.to_thread(corroborate_claim, claim, backends)
+
+    async def _gather_claims() -> list[dict]:
+        return await asyncio.gather(
+            *[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)],
+        )
+
+    results = run_coro(_gather_claims())
 
     out = json.dumps({"results": results}, indent=2, ensure_ascii=False)
     if output_path:
