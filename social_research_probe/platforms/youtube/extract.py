@@ -11,12 +11,12 @@ returns ``None`` so callers can fall back gracefully.
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import os
 import re
 import urllib.error
 import urllib.request
+
+from social_research_probe.utils.progress import log
 
 
 def fetch_transcript(url: str) -> str | None:

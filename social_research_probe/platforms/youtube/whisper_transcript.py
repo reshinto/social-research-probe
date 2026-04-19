@@ -9,11 +9,11 @@ All failures return ``None`` so callers can degrade gracefully.
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import os
 import subprocess
 import tempfile
+
+from social_research_probe.utils.progress import log
 
 
 def fetch_transcript_whisper(url: str) -> str | None:

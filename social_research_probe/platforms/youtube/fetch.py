@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 from collections.abc import Mapping
 from typing import Protocol
 
 from social_research_probe.errors import AdapterError
 from social_research_probe.types import JSONObject, JSONValue
+from social_research_probe.utils.progress import log
 
 
 def build_client(api_key: str):

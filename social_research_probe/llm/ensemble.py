@@ -17,13 +17,12 @@ Supported CLIs (must be installed and authenticated separately):
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from social_research_probe.config import load_active_config
 from social_research_probe.types import FreeTextRunnerName
+from social_research_probe.utils.progress import log
 
 # Seconds to wait for each provider before giving up.
 _TIMEOUT = 60

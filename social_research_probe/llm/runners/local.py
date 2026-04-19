@@ -10,8 +10,6 @@ llm.runners.
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import json
 import os
 from typing import ClassVar
@@ -19,6 +17,7 @@ from typing import ClassVar
 from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.registry import register
+from social_research_probe.utils.progress import log
 
 # Environment variable that operators set to the absolute path of the local
 # LLM binary (e.g. export SRP_LOCAL_LLM_BIN=/usr/local/bin/ollama).

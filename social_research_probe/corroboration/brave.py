@@ -12,13 +12,12 @@ variable SRP_BRAVE_API_KEY to be set.
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 from typing import ClassVar
 
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
+from social_research_probe.utils.progress import log
 
 
 @register

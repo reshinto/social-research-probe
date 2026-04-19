@@ -9,8 +9,6 @@ base argv.
 
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import json
 import shutil
 from typing import ClassVar
@@ -19,6 +17,7 @@ from social_research_probe.config import load_active_config
 from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.types import JSONObject
+from social_research_probe.utils.progress import log
 
 
 class JsonCliRunner(LLMRunner):

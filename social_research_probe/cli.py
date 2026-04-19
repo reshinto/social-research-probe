@@ -13,8 +13,9 @@ from social_research_probe.commands import purposes as purposes_cmd
 from social_research_probe.commands import suggestions as suggestions_cmd
 from social_research_probe.commands import topics as topics_cmd
 from social_research_probe.commands.parse import _parse_quoted_list, _take_quoted
-from social_research_probe.config import resolve_data_dir
+from social_research_probe.config import load_active_config, resolve_data_dir
 from social_research_probe.errors import SrpError, ValidationError
+from social_research_probe.llm.registry import get_runner
 
 
 def _add_topics_subparsers(sub: argparse._SubParsersAction) -> None:
@@ -295,8 +296,44 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     packet = run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
     if args.mode == "cli":
-        sys.stdout.write(render_full(packet))
+        compiled_synthesis = None
+        opportunity_analysis = None
+        synthesis = _run_cli_synthesis(packet)
+        if synthesis:
+            compiled_synthesis = synthesis["compiled_synthesis"]
+            opportunity_analysis = synthesis["opportunity_analysis"]
+        sys.stdout.write(render_full(packet, compiled_synthesis, opportunity_analysis))
     return 0
+
+
+def _run_cli_synthesis(packet: dict) -> dict | None:
+    """Call the configured structured LLM runner to produce sections 10-11.
+
+    Returns a dict with 'compiled_synthesis' and 'opportunity_analysis', or
+    None when the runner is disabled or the call fails.
+    """
+    from social_research_probe.errors import ValidationError
+    from social_research_probe.synthesize.llm_contract import (
+        build_synthesis_prompt,
+        parse_synthesis_response,
+    )
+    from social_research_probe.utils.progress import log
+
+    cfg = load_active_config()
+    runner_name = cfg.default_structured_runner
+    if runner_name == "none":
+        return None
+
+    log(f"[srp] LLM ({runner_name}): generating compiled synthesis and opportunity analysis")
+    try:
+        runner = get_runner(runner_name)
+        prompt = build_synthesis_prompt(packet)
+        from social_research_probe.synthesize.formatter import RESPONSE_SCHEMA
+
+        raw = runner.run(prompt, schema=RESPONSE_SCHEMA)
+        return parse_synthesis_response(raw)
+    except (ValidationError, Exception):
+        return None
 
 
 def _parse_simple_research_args(positional: list[str]) -> tuple[str, str, list[str]]:

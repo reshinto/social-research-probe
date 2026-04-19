@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from social_research_probe.utils.progress import log
-
 import math
 import os
 import statistics
@@ -52,6 +50,7 @@ from social_research_probe.types import (
     SourceValidationSummary,
     StatsSummary,
 )
+from social_research_probe.utils.progress import log
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
 from social_research_probe.viz import heatmap as heatmap_viz

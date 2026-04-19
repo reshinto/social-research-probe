@@ -89,7 +89,9 @@ def test_synthesize_calls_provider_for_multi_response(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     monkeypatch.setattr(
-        llm_mod, "_run_provider", lambda name, prompt, task="": "synthesized" if name == "claude" else None
+        llm_mod,
+        "_run_provider",
+        lambda name, prompt, task="": "synthesized" if name == "claude" else None,
     )
     result = _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
     assert result == "synthesized"
@@ -152,7 +154,9 @@ def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
         preferred_free_text_runner = None
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "x")
+    monkeypatch.setattr(
+        llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "x"
+    )
     assert multi_llm_prompt("anything") is None
     assert calls == []
 

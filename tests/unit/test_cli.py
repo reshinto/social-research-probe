@@ -789,3 +789,70 @@ class TestPromptForRunner:
         )
         _prompt_for_runner(tmp_path, _input=lambda p="": (_ for _ in ()).throw(KeyboardInterrupt()))
         assert calls == []
+
+
+class TestRunCliSynthesis:
+    """Unit tests for cli._run_cli_synthesis."""
+
+    def test_returns_none_when_runner_is_none(self, monkeypatch):
+        from social_research_probe.cli import _run_cli_synthesis
+
+        class _Cfg:
+            default_structured_runner = "none"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        assert _run_cli_synthesis({}) is None
+
+    def test_returns_synthesis_on_success(self, monkeypatch):
+        from social_research_probe.cli import _run_cli_synthesis
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+        class _Runner:
+            def run(self, prompt, *, schema=None):
+                return {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
+        result = _run_cli_synthesis(_VALID_PACKET)
+        assert result == {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+
+    def test_returns_none_on_runner_exception(self, monkeypatch):
+        from social_research_probe.cli import _run_cli_synthesis
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr(
+            "social_research_probe.cli.get_runner",
+            lambda name: (_ for _ in ()).throw(RuntimeError("no cli")),
+        )
+        assert _run_cli_synthesis(_VALID_PACKET) is None
+
+    def test_synthesis_fields_passed_to_render_full(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, mode, adapter_config=None: _VALID_PACKET,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.cli._run_cli_synthesis",
+            lambda pkt: {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"},
+        )
+        main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
+        out = capsys.readouterr().out
+        assert "synth10" in out
+        assert "synth11" in out
+
+    def test_render_full_called_with_none_when_synthesis_returns_none(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, mode, adapter_config=None: _VALID_PACKET,
+        )
+        monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
+        main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
+        out = capsys.readouterr().out
+        assert "LLM synthesis not run" in out
