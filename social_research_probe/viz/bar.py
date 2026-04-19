@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import tempfile
 
+from social_research_probe.viz.ascii import render_bars as render_ascii_bars
 from social_research_probe.viz.base import ChartResult
 
 
@@ -74,7 +75,8 @@ def render(
 
         write_placeholder_png(path)
 
+    ascii_chart = render_ascii_bars(data, label=label)
     return ChartResult(
         path=path,
-        caption=f"Bar chart: {label} ({len(data)} items)",
+        caption=f"Bar chart: {label} ({len(data)} items)\n{ascii_chart}",
     )
