@@ -264,7 +264,9 @@ class TestResearchCommand:
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: calls.append(mode) or _VALID_PACKET,
+            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: (
+                calls.append(mode) or _VALID_PACKET
+            ),
         )
         assert (
             main(

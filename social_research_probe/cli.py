@@ -99,8 +99,18 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     ins.add_argument("--target", default=None, help="Destination (default: ~/.claude/skills/srp)")
     rep = sub.add_parser("report", help="Re-render an HTML report from a saved packet file")
     rep.add_argument("--packet", required=True, help="Path to packet JSON file")
-    rep.add_argument("--synthesis-10", default=None, dest="synthesis_10", help="File with compiled synthesis text")
-    rep.add_argument("--synthesis-11", default=None, dest="synthesis_11", help="File with opportunity analysis text")
+    rep.add_argument(
+        "--synthesis-10",
+        default=None,
+        dest="synthesis_10",
+        help="File with compiled synthesis text",
+    )
+    rep.add_argument(
+        "--synthesis-11",
+        default=None,
+        dest="synthesis_11",
+        help="File with opportunity analysis text",
+    )
     rep.add_argument("--out", default=None, help="Output HTML path (default: stdout)")
 
 

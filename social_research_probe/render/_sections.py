@@ -46,16 +46,18 @@ def section_3_top_items(packet: ResearchPacket) -> str:
 
 def _items_score_table(items: list[ScoredItem]) -> str:
     """Render the score table for top items."""
-    rows = ["<tr><th>#</th><th>Channel</th><th>Class</th><th>Trust</th>"
-            "<th>Trend</th><th>Opp</th><th>Overall</th><th>Title</th></tr>"]
+    rows = [
+        "<tr><th>#</th><th>Channel</th><th>Class</th><th>Trust</th>"
+        "<th>Trend</th><th>Opp</th><th>Overall</th><th>Title</th></tr>"
+    ]
     for i, it in enumerate(items, 1):
         sc = it.get("scores", {})
         rows.append(
-            f"<tr><td>{i}</td><td>{_esc(it.get('channel',''))}</td>"
-            f"<td>{_esc(it.get('source_class','?'))}</td>"
-            f"<td>{sc.get('trust',0):.2f}</td><td>{sc.get('trend',0):.2f}</td>"
-            f"<td>{sc.get('opportunity',0):.2f}</td><td>{sc.get('overall',0):.2f}</td>"
-            f"<td>{_esc(it.get('title',''))}</td></tr>"
+            f"<tr><td>{i}</td><td>{_esc(it.get('channel', ''))}</td>"
+            f"<td>{_esc(it.get('source_class', '?'))}</td>"
+            f"<td>{sc.get('trust', 0):.2f}</td><td>{sc.get('trend', 0):.2f}</td>"
+            f"<td>{sc.get('opportunity', 0):.2f}</td><td>{sc.get('overall', 0):.2f}</td>"
+            f"<td>{_esc(it.get('title', ''))}</td></tr>"
         )
     return f'<div class="table-wrap"><table>{"".join(rows)}</table></div>'
 
@@ -73,7 +75,7 @@ def _items_links(items: list[ScoredItem]) -> str:
         if transcript:
             extra = (
                 "<details><summary>Transcript</summary>"
-                f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript)>3000 else ''}</pre>"
+                f"<pre>{_esc(transcript[:3000])}{'...' if len(transcript) > 3000 else ''}</pre>"
                 "</details>"
             )
         lis.append(
@@ -81,7 +83,7 @@ def _items_links(items: list[ScoredItem]) -> str:
             f'<a href="{url}" rel="noopener noreferrer">{channel}</a>'
             f" — {takeaway}{extra}</li>"
         )
-    return f'<ul>{"".join(lis)}</ul>'
+    return f"<ul>{''.join(lis)}</ul>"
 
 
 def section_4_platform_signals(packet: ResearchPacket) -> str:
@@ -100,7 +102,7 @@ def section_5_source_validation(packet: ResearchPacket) -> str:
     ]
     if svs.get("notes"):
         lines.append(f"<li>Notes: {_esc(svs['notes'])}</li>")
-    return f'<ul>{"".join(lines)}</ul>'
+    return f"<ul>{''.join(lines)}</ul>"
 
 
 def section_6_evidence(packet: ResearchPacket) -> str:
@@ -149,10 +151,7 @@ def _chart_block(caption: str, charts_dir: Path | None) -> str:
     if png_path:
         try:
             b64 = base64.b64encode(Path(png_path).read_bytes()).decode()
-            img_tag = (
-                f'<img src="data:image/png;base64,{b64}" '
-                'alt="" loading="lazy">'
-            )
+            img_tag = f'<img src="data:image/png;base64,{b64}" alt="" loading="lazy">'
         except OSError:
             pass
 
@@ -207,6 +206,7 @@ def section_10_synthesis(text: str | None) -> str:
     if not text:
         return "<p><em>(LLM synthesis not run — configure a runner or use skill mode)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
+
     return md_to_html(text)
 
 
@@ -215,6 +215,7 @@ def section_11_opportunity(text: str | None) -> str:
     if not text:
         return "<p><em>(LLM synthesis not run — configure a runner or use skill mode)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
+
     return md_to_html(text)
 
 

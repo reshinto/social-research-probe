@@ -32,15 +32,15 @@ from social_research_probe.render._sections import (
 from social_research_probe.types import ResearchPacket
 
 _SECTIONS = [
-    ("s1",  "1. Topic &amp; Purpose"),
-    ("s2",  "2. Platform"),
-    ("s3",  "3. Top Items"),
-    ("s4",  "4. Platform Signals"),
-    ("s5",  "5. Source Validation"),
-    ("s6",  "6. Evidence"),
-    ("s7",  "7. Statistics"),
-    ("s8",  "8. Charts"),
-    ("s9",  "9. Warnings"),
+    ("s1", "1. Topic &amp; Purpose"),
+    ("s2", "2. Platform"),
+    ("s3", "3. Top Items"),
+    ("s4", "4. Platform Signals"),
+    ("s5", "5. Source Validation"),
+    ("s6", "6. Evidence"),
+    ("s7", "7. Statistics"),
+    ("s8", "8. Charts"),
+    ("s9", "9. Warnings"),
     ("s10", "10. Compiled Synthesis"),
     ("s11", "11. Opportunity Analysis"),
 ]
@@ -122,9 +122,7 @@ def write_html_report(
 
 def _build_toc() -> str:
     """Build the sidebar table-of-contents HTML."""
-    links = "".join(
-        f'<a href="#{sid}">{label}</a>' for sid, label in _SECTIONS
-    )
+    links = "".join(f'<a href="#{sid}">{label}</a>' for sid, label in _SECTIONS)
     return f"<h2>Contents</h2>{links}"
 
 
@@ -138,12 +136,7 @@ def _build_body(packet: ResearchPacket, section_bodies: list[str]) -> str:
         f'<p class="report-meta">Platform: {platform_esc} &nbsp;·&nbsp; Generated: {timestamp}</p>',
     ]
     for (sid, label), body in zip(_SECTIONS, section_bodies, strict=True):
-        parts.append(
-            f'<section id="{sid}">'
-            f"<h2>{label}</h2>"
-            f"{body}"
-            f"</section>"
-        )
+        parts.append(f'<section id="{sid}"><h2>{label}</h2>{body}</section>')
     return "\n".join(parts)
 
 

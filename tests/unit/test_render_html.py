@@ -10,6 +10,7 @@ from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from social_research_probe.render._sections import (
     _bulletise,
     _chart_block,
@@ -60,7 +61,11 @@ _PACKET = {
     "source_validation_summary": _SVS,
     "platform_signals_summary": "high engagement; many views",
     "evidence_summary": "strong data; reliable sources",
-    "stats_summary": {"models_run": ["regression"], "highlights": ["Mean score — 0.7"], "low_confidence": False},
+    "stats_summary": {
+        "models_run": ["regression"],
+        "highlights": ["Mean score — 0.7"],
+        "low_confidence": False,
+    },
     "chart_captions": [],
     "warnings": [],
     "response_schema": {"compiled_synthesis": "string", "opportunity_analysis": "string"},
@@ -465,7 +470,6 @@ class TestCommandsReport:
 
     def test_run_invalid_json_raises_validation_error(self, tmp_path):
         from social_research_probe.commands.report import run
-
         from social_research_probe.errors import ValidationError
 
         bad = tmp_path / "bad.json"
@@ -475,7 +479,6 @@ class TestCommandsReport:
 
     def test_run_missing_packet_raises_validation_error(self, tmp_path):
         from social_research_probe.commands.report import run
-
         from social_research_probe.errors import ValidationError
 
         with pytest.raises(ValidationError, match="cannot read packet file"):
@@ -495,7 +498,6 @@ class TestCommandsReport:
 
     def test_read_text_file_missing_raises_validation_error(self, tmp_path):
         from social_research_probe.commands.report import _read_text_file
-
         from social_research_probe.errors import ValidationError
 
         with pytest.raises(ValidationError):
@@ -549,19 +551,25 @@ class TestTtpHttpAdapter:
     def test_synthesize_http_error_raises(self):
         from social_research_probe.render.tts.http import synthesize
 
-        with patch(
-            "urllib.request.urlopen",
-            side_effect=urllib.error.HTTPError("url", 500, "Server Error", {}, None),
-        ), pytest.raises(RuntimeError, match="TTS server returned 500"):
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.HTTPError("url", 500, "Server Error", {}, None),
+            ),
+            pytest.raises(RuntimeError, match="TTS server returned 500"),
+        ):
             synthesize("Hello", "http://localhost:8080/synthesize")
 
     def test_synthesize_url_error_raises(self):
         from social_research_probe.render.tts.http import synthesize
 
-        with patch(
-            "urllib.request.urlopen",
-            side_effect=urllib.error.URLError("connection refused"),
-        ), pytest.raises(RuntimeError, match="TTS server unreachable"):
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("connection refused"),
+            ),
+            pytest.raises(RuntimeError, match="TTS server unreachable"),
+        ):
             synthesize("Hello", "http://localhost:8080/synthesize")
 
     def test_write_audio_creates_file(self, tmp_path):
