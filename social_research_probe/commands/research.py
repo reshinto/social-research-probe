@@ -9,12 +9,12 @@ Called by: cli._dispatch when args.command == 'run-research' and mode == 'cli'.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
 from social_research_probe.commands.parse import parse as parse_dsl
 from social_research_probe.pipeline import run_research
+from social_research_probe.synthesize.formatter import render_full
 
 
 def run(platform: str, dsl_args: list[str], data_dir: Path, mode: str = "cli") -> int:
@@ -41,7 +41,5 @@ def run(platform: str, dsl_args: list[str], data_dir: Path, mode: str = "cli") -
     cmd = parse_dsl(raw)
     packet = run_research(cmd, data_dir, mode)
     if mode == "cli":
-        # Pretty-print so operators can pipe the output to jq or less.
-        json.dump(packet, sys.stdout, indent=2, ensure_ascii=False)
-        sys.stdout.write("\n")
+        sys.stdout.write(render_full(packet))
     return 0

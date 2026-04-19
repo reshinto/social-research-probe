@@ -70,6 +70,25 @@ def _bulletise(text: str) -> str:
     return "\n".join(f"- {part.strip()}" for part in text.split(";") if part.strip())
 
 
+def render_full(
+    packet: dict[str, Any],
+    compiled_synthesis: str | None = None,
+    opportunity_analysis: str | None = None,
+) -> str:
+    """Render all 11 sections as Markdown.
+
+    Sections 1–9 are derived from the packet. Sections 10–11 use the
+    provided synthesis strings; if omitted they indicate that LLM synthesis
+    was not run (e.g. plain CLI mode without a configured runner).
+    """
+    body = render_sections_1_9(packet)
+    s10 = compiled_synthesis or "_(LLM synthesis not run — use skill mode for AI analysis)_"
+    s11 = opportunity_analysis or "_(LLM synthesis not run — use skill mode for AI analysis)_"
+    body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
+    body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
+    return body
+
+
 def render_sections_1_9(packet: dict[str, Any]) -> str:
     svs = packet["source_validation_summary"]
     items = packet["items_top5"]

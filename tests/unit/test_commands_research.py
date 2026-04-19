@@ -2,8 +2,8 @@
 
 Why this file exists:
     Verifies that the research command correctly bridges CLI arguments to
-    pipeline.run_research, and that it prints JSON output in cli mode without
-    printing anything in skill mode (where the pipeline itself handles output).
+    pipeline.run_research, and that it prints Markdown output in cli mode
+    without printing anything in skill mode (where the pipeline handles output).
 
 Who calls it:
     pytest during CI and local test runs.
@@ -11,15 +11,33 @@ Who calls it:
 
 from __future__ import annotations
 
-import json
-
 from social_research_probe.commands import research as research_cmd
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_FAKE_PACKET = {"topic": "AI trends", "platform": "youtube", "items_top5": []}
+_FAKE_PACKET = {
+    "topic": "AI trends",
+    "platform": "youtube",
+    "purpose_set": ["latest-news"],
+    "items_top5": [],
+    "source_validation_summary": {
+        "validated": 0,
+        "partially": 0,
+        "unverified": 0,
+        "low_trust": 0,
+        "primary": 0,
+        "secondary": 0,
+        "commentary": 0,
+        "notes": "",
+    },
+    "platform_signals_summary": "0 items",
+    "evidence_summary": "0 items",
+    "stats_summary": {"models_run": [], "highlights": [], "low_confidence": False},
+    "chart_captions": [],
+    "warnings": [],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -65,8 +83,8 @@ def test_run_parses_dsl_and_calls_pipeline(monkeypatch, tmp_path):
     assert captured_call["mode"] == "cli"
 
 
-def test_run_cli_mode_prints_json(monkeypatch, tmp_path, capsys):
-    """In cli mode, run() must write the packet as indented JSON to stdout."""
+def test_run_cli_mode_prints_markdown(monkeypatch, tmp_path, capsys):
+    """In cli mode, run() must write Markdown sections 1–11 to stdout."""
     monkeypatch.setattr(research_cmd, "parse_dsl", lambda raw: object())
     monkeypatch.setattr(research_cmd, "run_research", lambda cmd, d, m: _FAKE_PACKET)
 
@@ -78,10 +96,12 @@ def test_run_cli_mode_prints_json(monkeypatch, tmp_path, capsys):
     )
 
     assert rc == 0
-    captured = capsys.readouterr()
-    parsed = json.loads(captured.out)
-    assert parsed["topic"] == "AI trends"
-    assert parsed["platform"] == "youtube"
+    out = capsys.readouterr().out
+    assert "## 1. Topic & Purpose" in out
+    assert "AI trends" in out
+    assert "youtube" in out
+    assert "## 10. Compiled Synthesis" in out
+    assert "## 11. Opportunity Analysis" in out
 
 
 def test_run_skill_mode_does_not_print(monkeypatch, tmp_path, capsys):
