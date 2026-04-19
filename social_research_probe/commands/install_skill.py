@@ -12,9 +12,19 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from social_research_probe.config import resolve_data_dir
 from social_research_probe.errors import ValidationError
 
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
+
+# Ordered list of (secret_name, human_readable_description) pairs shown
+# during the interactive setup prompt.
+_KEY_PROMPTS: list[tuple[str, str]] = [
+    ("youtube_api_key", "YouTube Data API v3 key (required for YouTube search)"),
+    ("brave_api_key", "Brave Search API key (corroboration — paid)"),
+    ("exa_api_key", "Exa search API key (corroboration — free tier available)"),
+    ("tavily_api_key", "Tavily search API key (corroboration — free tier available)"),
+]
 
 
 def run(target: str | None) -> int:
@@ -38,6 +48,7 @@ def run(target: str | None) -> int:
     shutil.copytree(src, dest)
     print(f"Skill installed to {dest}")
     _install_cli()
+    _prompt_for_secrets(resolve_data_dir(None))
     return 0
 
 
@@ -57,3 +68,30 @@ def _install_cli() -> None:
     else:
         print("warning: neither uv nor pipx found — srp CLI not permanently installed")
         print(f'  run: pipx install "{_PACKAGE_REPO}"')
+
+
+def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:
+    """Interactively prompt for API keys and save non-blank answers to secrets.toml.
+
+    Iterates over every known key, shows the description and masked current
+    value if one already exists, then reads a line from the terminal. A blank
+    or whitespace-only response skips that key without modifying anything.
+    Any non-blank value is written via write_secret so it persists across runs.
+
+    Exits the loop early on EOFError or KeyboardInterrupt so piped or
+    non-interactive installs are never blocked.
+    """
+    from social_research_probe.commands.config import mask_secret, read_secret, write_secret
+
+    print("\nAPI key setup — press Enter to skip any key:")
+    for name, description in _KEY_PROMPTS:
+        existing = read_secret(data_dir, name)
+        suffix = f"  [current: {mask_secret(existing)}]" if existing else ""
+        try:
+            value = str(_input(f"  {description}{suffix}:\n  > ")).strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if value:
+            write_secret(data_dir, name, value)
+            print("    saved.")

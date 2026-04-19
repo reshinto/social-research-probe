@@ -299,6 +299,9 @@ class TestInstallSkill:
         )
         monkeypatch.setattr("shutil.which", lambda x: None)
         monkeypatch.setattr("shutil.rmtree", lambda d: None)
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
 
@@ -445,6 +448,9 @@ class TestInstallSkillWithUvOrPipx:
             "subprocess.run",
             lambda cmd, check: calls.append(cmd),
         )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
         assert any("uv" in str(c) for c in calls)
@@ -467,6 +473,9 @@ class TestInstallSkillWithUvOrPipx:
             "subprocess.run",
             lambda cmd, check: calls.append(cmd),
         )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
         assert any("pipx" in str(c) for c in calls)
@@ -484,6 +493,9 @@ class TestInstallSkillDestExists:
         monkeypatch.setattr("shutil.rmtree", lambda d: rmtree_calls.append(d))
         monkeypatch.setattr("shutil.copytree", lambda s, d: None)
         monkeypatch.setattr("shutil.which", lambda x: None)
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
         assert len(rmtree_calls) == 1
@@ -570,3 +582,79 @@ class TestSimpleResearchTranscripts:
         main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-transcripts"])
         _cmd, _mode, cfg = captured[0]
         assert cfg["fetch_transcripts"] is False
+
+
+class TestPromptForSecrets:
+    """Unit tests for install_skill._prompt_for_secrets."""
+
+    def _run(self, tmp_path, inputs, monkeypatch):
+        """Helper: run _prompt_for_secrets with a canned sequence of inputs."""
+        from social_research_probe.commands.install_skill import _prompt_for_secrets
+
+        seq = iter(inputs)
+        _prompt_for_secrets(tmp_path, _input=lambda prompt="": next(seq))
+
+    def test_blank_inputs_skip_all_keys(self, tmp_path, monkeypatch):
+        """Every blank response must not write any secret."""
+        write_calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret",
+            lambda d, n, v: write_calls.append(n),
+        )
+        monkeypatch.setattr("social_research_probe.commands.config.read_secret", lambda d, n: None)
+        self._run(tmp_path, ["", "  ", "", ""], monkeypatch)
+        assert write_calls == []
+
+    def test_provided_values_are_written(self, tmp_path, monkeypatch):
+        """Non-blank answers must be persisted via write_secret."""
+        written = {}
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret",
+            lambda d, n, v: written.update({n: v}),
+        )
+        monkeypatch.setattr("social_research_probe.commands.config.read_secret", lambda d, n: None)
+        self._run(tmp_path, ["yt-key", "", "exa-key", ""], monkeypatch)
+        assert written == {"youtube_api_key": "yt-key", "exa_api_key": "exa-key"}
+
+    def test_existing_secret_shown_masked_in_prompt(self, tmp_path, monkeypatch):
+        """When a secret already exists, its masked value appears in the prompt text."""
+        from social_research_probe.commands.install_skill import _prompt_for_secrets
+
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.read_secret",
+            lambda d, n: "abcd1234efgh5678" if n == "youtube_api_key" else None,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret", lambda d, n, v: None
+        )
+        prompts: list[str] = []
+        _prompt_for_secrets(tmp_path, _input=lambda p="": prompts.append(p) or "")
+        assert any("abcd...5678" in p for p in prompts)
+
+    def test_eoferror_breaks_loop_gracefully(self, tmp_path, monkeypatch):
+        """EOFError on first prompt must not raise and must not write anything."""
+        write_calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret",
+            lambda d, n, v: write_calls.append(n),
+        )
+        monkeypatch.setattr("social_research_probe.commands.config.read_secret", lambda d, n: None)
+        from social_research_probe.commands.install_skill import _prompt_for_secrets
+
+        _prompt_for_secrets(tmp_path, _input=lambda prompt="": (_ for _ in ()).throw(EOFError()))
+        assert write_calls == []
+
+    def test_keyboardinterrupt_breaks_loop_gracefully(self, tmp_path, monkeypatch):
+        """KeyboardInterrupt must be caught and must not write anything."""
+        write_calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_secret",
+            lambda d, n, v: write_calls.append(n),
+        )
+        monkeypatch.setattr("social_research_probe.commands.config.read_secret", lambda d, n: None)
+        from social_research_probe.commands.install_skill import _prompt_for_secrets
+
+        _prompt_for_secrets(
+            tmp_path, _input=lambda prompt="": (_ for _ in ()).throw(KeyboardInterrupt())
+        )
+        assert write_calls == []
