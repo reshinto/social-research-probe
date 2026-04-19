@@ -793,23 +793,17 @@ def test_explain_bayesian_residual_no_value():
 
 
 def test_explain_bayesian_coef_trust():
-    r = _explain_bayesian(
-        "Bayesian coef trust: 0.40 [0.35, 0.45]", "finding [0.35, 0.45]"
-    )
+    r = _explain_bayesian("Bayesian coef trust: 0.40 [0.35, 0.45]", "finding [0.35, 0.45]")
     assert "Trust" in r and "0.40" in r
 
 
 def test_explain_bayesian_coef_trend():
-    r = _explain_bayesian(
-        "Bayesian coef trend: 0.30 [0.25, 0.35]", "finding [0.25, 0.35]"
-    )
+    r = _explain_bayesian("Bayesian coef trend: 0.30 [0.25, 0.35]", "finding [0.25, 0.35]")
     assert "Trend" in r and "0.30" in r
 
 
 def test_explain_bayesian_coef_opportunity():
-    r = _explain_bayesian(
-        "Bayesian coef opportunity: 0.20 [0.15, 0.25]", "finding [0.15, 0.25]"
-    )
+    r = _explain_bayesian("Bayesian coef opportunity: 0.20 [0.15, 0.25]", "finding [0.15, 0.25]")
     assert "Opportunity" in r and "0.20" in r
 
 

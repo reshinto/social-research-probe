@@ -54,8 +54,7 @@ def test_research_skill_mode_skips_render_full(monkeypatch, tmp_path):
     monkeypatch.setattr("social_research_probe.synthesize.formatter.render_full", fail_render_full)
 
     assert (
-        main(["--data-dir", str(tmp_path), "research", "--mode", "skill", "ai", "latest-news"])
-        == 0
+        main(["--data-dir", str(tmp_path), "research", "--mode", "skill", "ai", "latest-news"]) == 0
     )
     assert calls
     _cmd, _data_dir, mode, adapter_config = calls[0]
