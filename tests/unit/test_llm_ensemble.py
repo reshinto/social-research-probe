@@ -61,7 +61,7 @@ def test_run_provider_unknown_name_returns_none():
 def test_collect_responses_returns_only_successes(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    def fake_run(name: str, prompt: str) -> str | None:
+    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         return "answer" if name == "claude" else None
 
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
@@ -72,7 +72,7 @@ def test_collect_responses_returns_only_successes(monkeypatch):
 def test_collect_responses_all_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt: None)
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
     assert _collect_responses("test") == {}
 
 
@@ -89,7 +89,7 @@ def test_synthesize_calls_provider_for_multi_response(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     monkeypatch.setattr(
-        llm_mod, "_run_provider", lambda name, prompt: "synthesized" if name == "claude" else None
+        llm_mod, "_run_provider", lambda name, prompt, task="": "synthesized" if name == "claude" else None
     )
     result = _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
     assert result == "synthesized"
@@ -98,7 +98,7 @@ def test_synthesize_calls_provider_for_multi_response(monkeypatch):
 def test_synthesize_falls_back_when_claude_synthesis_fails(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    def fake_run(name, prompt):
+    def fake_run(name, prompt, task=""):
         if name == "gemini":
             return "gemini synthesis"
         return None
@@ -111,7 +111,7 @@ def test_synthesize_falls_back_when_claude_synthesis_fails(monkeypatch):
 def test_synthesize_returns_best_single_when_all_synthesis_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt: None)
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
     result = _synthesize({"claude": "claude_direct", "gemini": "gemini_direct"}, "prompt")
     assert result == "claude_direct"
 
@@ -152,7 +152,7 @@ def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
         preferred_free_text_runner = None
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p: calls.append(name) or "x")
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "x")
     assert multi_llm_prompt("anything") is None
     assert calls == []
 
@@ -165,7 +165,7 @@ def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
         preferred_free_text_runner = "claude"
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt: None)
+    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
     assert multi_llm_prompt("anything") is None
 
 
@@ -176,7 +176,7 @@ def test_multi_llm_prompt_end_to_end(monkeypatch):
         llm_runner = "claude"
         preferred_free_text_runner = None  # simulate unknown runner → triggers ensemble
 
-    def fake_run(name: str, prompt: str) -> str | None:
+    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         if "synthesize" in prompt.lower() or "synthesise" in prompt.lower():
             return "final synthesis" if name == "claude" else None
         return f"{name} answer"
@@ -196,7 +196,7 @@ def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
         llm_runner = "gemini"
         preferred_free_text_runner = "gemini"
 
-    def fake_run(name: str, prompt: str) -> str | None:
+    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         calls.append((name, prompt))
         return "configured answer"
 
@@ -218,7 +218,7 @@ def test_multi_llm_prompt_uses_local_runner(monkeypatch):
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(
-        llm_mod, "_run_provider", lambda name, p: calls.append(name) or "local answer"
+        llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "local answer"
     )
 
     assert multi_llm_prompt("summarise this video") == "local answer"

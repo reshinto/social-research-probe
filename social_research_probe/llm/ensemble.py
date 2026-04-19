@@ -30,13 +30,13 @@ _TIMEOUT = 60
 _PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
 
 
-def _run_provider(name: str, prompt: str) -> str | None:
+def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
     """Call one LLM CLI and return its stripped stdout, or None on any failure.
 
     Silently catches all exceptions so a missing or rate-limited CLI never
     crashes the caller — it simply contributes nothing to the ensemble.
     """
-    print(f"[srp] activating LLM: {name}")
+    print(f"[srp] LLM ({name}): {task}")
     try:
         if name == "claude":
             # stdin=DEVNULL prevents the 3-second stdin wait Claude emits otherwise.
@@ -86,7 +86,7 @@ def _run_provider(name: str, prompt: str) -> str | None:
         return None
 
 
-def _collect_responses(prompt: str) -> dict[str, str]:
+def _collect_responses(prompt: str, task: str = "generating response") -> dict[str, str]:
     """Fan out the prompt to all providers in parallel.
 
     Returns a dict mapping provider name to response text for every provider
@@ -94,7 +94,7 @@ def _collect_responses(prompt: str) -> dict[str, str]:
     """
     responses: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=len(_PROVIDERS)) as pool:
-        futures = {pool.submit(_run_provider, name, prompt): name for name in _PROVIDERS}
+        futures = {pool.submit(_run_provider, name, prompt, task): name for name in _PROVIDERS}
         for future in as_completed(futures):
             name = futures[future]
             response = future.result()
@@ -130,7 +130,7 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
 
     synthesis_prompt = _build_synthesis_prompt(original_prompt, responses)
     for provider in _PROVIDERS:
-        result = _run_provider(provider, synthesis_prompt)
+        result = _run_provider(provider, synthesis_prompt, task="synthesising ensemble responses")
         if result:
             return result
 
@@ -138,7 +138,7 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
     return responses.get("claude") or responses.get("gemini") or responses.get("codex")
 
 
-def multi_llm_prompt(prompt: str) -> str | None:
+def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
     """Run a free-text prompt through the configured default runner or ensemble.
 
     When runner is ``none``, returns None immediately without calling any LLM.
@@ -151,6 +151,6 @@ def multi_llm_prompt(prompt: str) -> str | None:
         return None
     preferred = cfg.preferred_free_text_runner
     if preferred is not None:
-        return _run_provider(preferred, prompt)
-    responses = _collect_responses(prompt)
+        return _run_provider(preferred, prompt, task)
+    responses = _collect_responses(prompt, task)
     return _synthesize(responses, prompt)

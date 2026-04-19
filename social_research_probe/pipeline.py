@@ -216,7 +216,8 @@ def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
             channel=item.get("channel", ""),
             transcript=cleaned,
         )
-        summary = multi_llm_prompt(prompt)
+        title = item.get("title", "untitled")[:60]
+        summary = multi_llm_prompt(prompt, task=f"summarising transcript for {title!r}")
         if summary:
             item["one_line_takeaway"] = summary
 

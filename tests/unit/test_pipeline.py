@@ -352,7 +352,7 @@ class TestEnrichTop5WithTranscripts:
         )
         monkeypatch.setattr(
             "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt: "Multi-LLM generated summary.",
+            lambda prompt, task="": "Multi-LLM generated summary.",
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "desc"}]
         _enrich_top5_with_transcripts(items)
@@ -369,7 +369,7 @@ class TestEnrichTop5WithTranscripts:
         )
         monkeypatch.setattr(
             "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt: None,
+            lambda prompt, task="": None,
         )
         items = [
             {"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "keep me"}
@@ -426,7 +426,7 @@ class TestEnrichTop5WithTranscripts:
         )
         monkeypatch.setattr(
             "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt: "Summary from whisper transcript.",
+            lambda prompt, task="": "Summary from whisper transcript.",
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "orig"}]
         _enrich_top5_with_transcripts(items)
