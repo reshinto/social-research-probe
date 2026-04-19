@@ -34,8 +34,10 @@ def _run_provider(name: str, prompt: str) -> str | None:
     """
     try:
         if name == "claude":
+            # stdin=DEVNULL prevents the 3-second stdin wait Claude emits otherwise.
             result = subprocess.run(
                 ["claude", "-p", prompt],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=_TIMEOUT,
@@ -43,13 +45,17 @@ def _run_provider(name: str, prompt: str) -> str | None:
         elif name == "gemini":
             result = subprocess.run(
                 ["gemini", "-p", prompt],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=_TIMEOUT,
             )
         elif name == "codex":
+            # "codex exec" is the non-interactive (headless) subcommand.
+            # Preamble and metadata go to stderr; stdout contains only the response.
             result = subprocess.run(
-                ["codex", prompt],
+                ["codex", "exec", prompt],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=_TIMEOUT,
