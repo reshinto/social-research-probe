@@ -17,10 +17,6 @@ from social_research_probe.pipeline import (
     run_research,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 
 def _write_purposes(tmp_path, purposes: dict):
     """Write a valid purposes.json into tmp_path."""
@@ -31,9 +27,6 @@ def _write_purposes(tmp_path, purposes: dict):
     (tmp_path / "purposes.json").write_text(json.dumps(data), encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# _maybe_register_fake
-# ---------------------------------------------------------------------------
 
 
 def test_maybe_register_fake_no_env_var(monkeypatch):
@@ -42,9 +35,6 @@ def test_maybe_register_fake_no_env_var(monkeypatch):
     _maybe_register_fake()  # should not raise or import anything
 
 
-# ---------------------------------------------------------------------------
-# Pure-function unit tests
-# ---------------------------------------------------------------------------
 
 
 def test_enrich_query_adds_method_words():
@@ -84,9 +74,6 @@ def test_zscore_two_values():
     assert abs(result[0] + result[1]) < 1e-9  # opposite signs, sum to ~0
 
 
-# ---------------------------------------------------------------------------
-# _score_item
-# ---------------------------------------------------------------------------
 
 
 def test_score_item_returns_score_and_dict():
@@ -124,15 +111,12 @@ def test_score_item_returns_score_and_dict():
         upload_cadence_days=7.0,
         citation_markers=["https://example.com"],
     )
-    score, d = _score_item(item, sig, hint, z_vel=0.5, z_eng=0.5)
+    score, d = _score_item(item, sig, hint, z_view_velocity=0.5, z_engagement=0.5)
     assert 0.0 <= score <= 1.0
     assert "title" in d
     assert "scores" in d
 
 
-# ---------------------------------------------------------------------------
-# run_research integration tests (use fake YouTube adapter)
-# ---------------------------------------------------------------------------
 
 
 def test_run_research_returns_packet(monkeypatch, tmp_path):
