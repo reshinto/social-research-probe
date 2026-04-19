@@ -221,8 +221,8 @@ def test_enrich_no_duration_string(monkeypatch):
     assert enriched[0].metrics["views"] == 300
 
 
-def test_enrich_skips_shorts(monkeypatch):
-    """enrich() drops items with duration < 90s (YouTube Shorts)."""
+def test_enrich_includes_shorts_by_default(monkeypatch):
+    """enrich() now keeps YouTube Shorts by default and tags them in extras."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod
 
     monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
@@ -237,15 +237,33 @@ def test_enrich_skips_shorts(monkeypatch):
             }
         ],
     )
+    monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
+    adapter = _make_adapter(monkeypatch)
+    enriched = adapter.enrich([_raw_item()])
+    assert len(enriched) == 1
+    assert enriched[0].extras["is_short"] is True
+
+
+def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
+    """When config has include_shorts=False, Shorts are filtered out."""
+    import social_research_probe.platforms.youtube.fetch as fetch_mod
+
+    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_channels",
-        lambda client, channel_ids: [],
+        "hydrate_videos",
+        lambda client, video_ids: [
+            {
+                "id": "abc123",
+                "statistics": {"viewCount": "500", "likeCount": "5", "commentCount": "1"},
+                "contentDetails": {"duration": "PT45S"},
+            }
+        ],
     )
+    monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
     adapter = _make_adapter(monkeypatch)
-    items = [_raw_item()]
-    enriched = adapter.enrich(items)
-    assert enriched == []
+    adapter.config["include_shorts"] = False
+    assert adapter.enrich([_raw_item()]) == []
 
 
 # ---------------------------------------------------------------------------

@@ -242,7 +242,7 @@ class TestRunResearch:
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode: calls.append(mode) or {},
+            lambda cmd, d, mode, adapter_config=None: calls.append(mode) or {},
         )
         assert (
             main(
@@ -477,3 +477,58 @@ class TestDispatchFallthrough:
         args = argparse.Namespace(command="nonexistent-command", data_dir=str(tmp_path))
         result = _dispatch(args)
         assert result == 2
+
+
+class TestSimpleResearch:
+    def _patch_pipeline(self, monkeypatch, captured):
+        def fake(cmd, d, mode, adapter_config=None):
+            captured.append((cmd, mode, adapter_config))
+            return {}
+
+        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+
+    def test_default_platform_is_youtube(self, monkeypatch, tmp_path):
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
+        cmd, _mode, cfg = captured[0]
+        assert cmd.platform == "youtube"
+        assert cmd.topics == [("ai", ["latest-news"])]
+        assert cfg == {"include_shorts": True}
+
+    def test_explicit_platform_positional(self, monkeypatch, tmp_path):
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        main(["--data-dir", str(tmp_path), "research", "youtube", "ai", "latest-news"])
+        cmd, _mode, _cfg = captured[0]
+        assert cmd.platform == "youtube"
+
+    def test_multiple_purposes_comma_separated(self, monkeypatch, tmp_path):
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news,trends"])
+        cmd, _mode, _cfg = captured[0]
+        assert cmd.topics == [("ai", ["latest-news", "trends"])]
+
+    def test_no_shorts_flag_disables_shorts(self, monkeypatch, tmp_path):
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-shorts"])
+        _cmd, _mode, cfg = captured[0]
+        assert cfg == {"include_shorts": False}
+
+    def test_too_few_args_returns_validation_exit_code(self, monkeypatch, tmp_path):
+        from social_research_probe.errors import ValidationError
+
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        assert main(["--data-dir", str(tmp_path), "research", "ai"]) == ValidationError.exit_code
+
+    def test_empty_purpose_arg_returns_validation_exit_code(self, monkeypatch, tmp_path):
+        from social_research_probe.errors import ValidationError
+
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        assert (
+            main(["--data-dir", str(tmp_path), "research", "ai", ","]) == ValidationError.exit_code
+        )

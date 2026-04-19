@@ -67,10 +67,21 @@ def _add_suggestions_subparsers(sub: argparse._SubParsersAction) -> None:
 
 def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     """Register research, corroboration, render, and install-skill subcommands."""
-    rr = sub.add_parser("run-research")
+    rr = sub.add_parser(
+        "run-research", help="Advanced DSL form: --platform NAME 'topic->p1+p2;...'"
+    )
     rr.add_argument("--platform", required=True)
     rr.add_argument("--mode", choices=["skill", "cli"], default="cli")
     rr.add_argument("dsl", nargs="+")
+    rs = sub.add_parser(
+        "research",
+        help="Simple form: research [platform] TOPIC PURPOSES (purposes comma-separated)",
+    )
+    rs.add_argument("args", nargs="+", help="[PLATFORM] TOPIC PURPOSE[,PURPOSE...]")
+    rs.add_argument("--mode", choices=["skill", "cli"], default="cli")
+    rs.add_argument(
+        "--no-shorts", action="store_true", help="Exclude YouTube Shorts (<90s) from results"
+    )
     cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
     cc.add_argument("--backends", default="llm_cli", help="Comma-separated backend names")
@@ -272,6 +283,38 @@ def _handle_run_research(args: argparse.Namespace, data_dir: Path) -> int:
     return 0
 
 
+def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
+    """Simple positional form. Examples:
+
+    srp research ai latest-news                 # platform defaults to youtube
+    srp research youtube ai latest-news
+    srp research youtube ai latest-news,trends  # multiple purposes
+    """
+    from social_research_probe.commands.parse import parse
+    from social_research_probe.pipeline import run_research
+
+    platform, topic, purposes = _parse_simple_research_args(args.args)
+    config_extras = {"include_shorts": not args.no_shorts}
+    raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
+    run_research(parse(raw), data_dir, args.mode, adapter_config=config_extras)
+    return 0
+
+
+def _parse_simple_research_args(positional: list[str]) -> tuple[str, str, list[str]]:
+    """Parse [platform] topic purposes into (platform, topic, purposes)."""
+    known_platforms = {"youtube"}
+    if len(positional) < 2:
+        raise ValidationError("research needs at least TOPIC and PURPOSES")
+    if positional[0] in known_platforms and len(positional) >= 3:
+        platform, topic, purpose_arg = positional[0], positional[1], positional[2]
+    else:
+        platform, topic, purpose_arg = "youtube", positional[0], positional[1]
+    purposes = [p.strip() for p in purpose_arg.split(",") if p.strip()]
+    if not purposes:
+        raise ValidationError("research needs at least one purpose")
+    return platform, topic, purposes
+
+
 def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.commands import corroborate_claims as cc_cmd
 
@@ -345,6 +388,7 @@ _HANDLERS = {
     "discard-pending": _handle_discard_pending,
     "stage-suggestions": _handle_stage_suggestions,
     "run-research": _handle_run_research,
+    "research": _handle_research,
     "corroborate-claims": _handle_corroborate_claims,
     "render": _handle_render,
     "install-skill": _handle_install_skill,

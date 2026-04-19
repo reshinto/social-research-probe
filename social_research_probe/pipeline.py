@@ -20,6 +20,7 @@ from social_research_probe.scoring.trust import trust_score
 from social_research_probe.stats.selector import select_and_run, select_and_run_correlation
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
+from social_research_probe.synthesize.explain import explain as explain_stat
 from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.synthesize.warnings import detect as detect_warnings
 from social_research_probe.validation.source import classify as classify_source
@@ -149,7 +150,7 @@ def _build_stats_summary(top5: list[dict]) -> dict:
         models_run.append("correlation")
     return {
         "models_run": models_run,
-        "highlights": [r.caption for r in results],
+        "highlights": [explain_stat(r) for r in results],
         "low_confidence": len(overall) < 3,
     }
 
@@ -203,10 +204,16 @@ def _render_charts(top5: list[dict], data_dir) -> list[str]:
     return captions
 
 
-def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
+def run_research(
+    cmd: ParsedRunResearch,
+    data_dir,
+    mode: Mode,
+    adapter_config: dict | None = None,
+) -> dict:
     _maybe_register_fake()
     purposes = purpose_registry.load(data_dir)["purposes"]
-    adapter = get_adapter(cmd.platform, {"data_dir": data_dir})
+    config = {"data_dir": data_dir, **(adapter_config or {})}
+    adapter = get_adapter(cmd.platform, config)
     if not adapter.health_check():
         raise ValidationError(f"adapter {cmd.platform} failed health check")
 

@@ -127,10 +127,10 @@ class YouTubeAdapter(PlatformAdapter):
                 "channel_video_count": int(ch_stats.get("videoCount", 0) or 0),
             }
             duration_str = vid.get("contentDetails", {}).get("duration", "")
-            if duration_str:
-                secs = self._parse_duration_seconds(duration_str)
-                if 0 < secs < 90:
-                    continue  # skip Shorts
+            secs = self._parse_duration_seconds(duration_str) if duration_str else 0
+            is_short = 0 < secs < 90
+            if is_short and not self.config.get("include_shorts", True):
+                continue
             enriched.append(
                 RawItem(
                     id=it.id,
@@ -144,7 +144,8 @@ class YouTubeAdapter(PlatformAdapter):
                     thumbnail=it.thumbnail,
                     extras={
                         **extras,
-                        "duration_seconds": self._parse_duration_seconds(duration_str),
+                        "duration_seconds": secs,
+                        "is_short": is_short,
                     },
                 )
             )
