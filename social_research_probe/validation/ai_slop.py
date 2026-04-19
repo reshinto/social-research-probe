@@ -21,12 +21,6 @@ from __future__ import annotations
 
 import re
 
-# ---------------------------------------------------------------------------
-# Boilerplate phrase list
-# ---------------------------------------------------------------------------
-
-# Phrases commonly overused by large language models. Presence of multiple
-# phrases in a short passage is a reliable slop indicator.
 _BOILERPLATE_PHRASES: list[str] = [
     "in conclusion",
     "it is important to note",
@@ -39,11 +33,6 @@ _BOILERPLATE_PHRASES: list[str] = [
     "of course",
     "great question",
 ]
-
-
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
 
 
 def _boilerplate_signal(text: str) -> float:
@@ -136,11 +125,6 @@ def _short_sentence_signal(text: str) -> float:
 
     short_count = sum(1 for s in sentences if len(s.split()) < 6)
     return short_count / len(sentences)
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 
 def score(text: str) -> float:

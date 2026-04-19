@@ -47,7 +47,7 @@ def add_topics(data_dir: Path, values: list[str], *, force: bool) -> None:
             to_add.append(value)
         elif result.status is DuplicateStatus.DUPLICATE:
             conflicts.append((value, result.matches))
-        else:  # near-duplicate
+        else:
             conflicts.append((value, result.matches))
 
     if conflicts and not force:
@@ -56,7 +56,6 @@ def add_topics(data_dir: Path, values: list[str], *, force: bool) -> None:
             f"duplicate/near-duplicate topics: {descriptions} (use --force to override)"
         )
 
-    # Deduplicate to_add against existing and within itself before saving
     seen = set(existing)
     deduped_to_add = []
     for v in to_add:

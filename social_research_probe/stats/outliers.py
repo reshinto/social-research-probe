@@ -41,7 +41,6 @@ def run(
     std_val = statistics.stdev(data)
 
     if std_val == 0:
-        # No spread — no outliers by definition.
         outlier_count = 0
     else:
         outlier_count = sum(1 for v in data if abs((v - mean_val) / std_val) > threshold)

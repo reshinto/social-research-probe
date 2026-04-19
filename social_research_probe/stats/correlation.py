@@ -44,16 +44,13 @@ def run(
     mean_a = statistics.mean(series_a)
     mean_b = statistics.mean(series_b)
 
-    # Numerator: sum of products of deviations from their respective means.
     cov = sum((series_a[i] - mean_a) * (series_b[i] - mean_b) for i in range(n))
 
-    # Denominator: product of the two standard deviations (population form).
     var_a = sum((v - mean_a) ** 2 for v in series_a)
     var_b = sum((v - mean_b) ** 2 for v in series_b)
     denom = (var_a * var_b) ** 0.5
 
     if denom == 0:
-        # One or both series have zero variance; correlation is undefined.
         return []
 
     pearson_r = cov / denom

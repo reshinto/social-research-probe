@@ -21,7 +21,7 @@ def test_current_version_is_noop(tmp_path: Path):
 
 def test_missing_schema_version_treated_as_zero(tmp_path: Path):
     path = tmp_path / "topics.json"
-    data = {"topics": ["a"]}  # no schema_version
+    data = {"topics": ["a"]}
     result = migrate_to_current(path, data, kind="topics")
     assert result["schema_version"] == SCHEMA_VERSION
 
