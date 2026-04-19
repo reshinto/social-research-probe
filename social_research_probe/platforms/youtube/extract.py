@@ -22,8 +22,9 @@ def fetch_transcript(url: str) -> str | None:
 
     YouTube increasingly bot-blocks unauthenticated requests with
     "Sign in to confirm you're not a bot". We work around this by telling
-    yt-dlp to read cookies from the user's default browser (Safari on
-    macOS, or whatever ``SRP_YTDLP_BROWSER`` env var points at).
+    yt-dlp to read cookies from a browser configured via the
+    ``SRP_YTDLP_BROWSER`` env var (e.g. ``safari``, ``chrome``).
+    Defaults to no cookies to avoid macOS sandbox permission errors.
     """
     try:
         import yt_dlp
@@ -56,7 +57,7 @@ def _yt_dlp_opts() -> dict:
         "subtitleslangs": ["en"],
         "no_warnings": True,
     }
-    browser = os.environ.get("SRP_YTDLP_BROWSER", "safari")
+    browser = os.environ.get("SRP_YTDLP_BROWSER", "none")
     if browser and browser.lower() != "none":
         opts["cookiesfrombrowser"] = (browser,)
     return opts
