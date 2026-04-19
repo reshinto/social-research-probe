@@ -8,6 +8,7 @@ Why this file exists:
 Who calls it:
     pytest during CI and local test runs.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ _FAKE_PACKET = {"topic": "AI trends", "platform": "youtube", "items_top5": []}
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_run_parses_dsl_and_calls_pipeline(monkeypatch, tmp_path):
     """run() must call parse_dsl then run_research with the reconstructed DSL.

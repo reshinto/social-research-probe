@@ -1,8 +1,11 @@
 """Atomic writes, default seeding, POSIX os.replace semantics."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
+
+import pytest
 
 from social_research_probe.state.store import atomic_write_json, read_json
 
@@ -49,3 +52,22 @@ def test_atomic_write_formatting(tmp_path: Path):
     content = path.read_text()
     assert content.endswith("\n")
     assert "  " in content  # indent=2
+
+
+def test_atomic_write_cleans_up_tmp_on_base_exception(tmp_path: Path, monkeypatch) -> None:
+    """The except BaseException branch must delete the tmp file and re-raise."""
+    import os as _os
+
+    path = tmp_path / "f.json"
+
+    def raise_keyboard_interrupt(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(_os, "replace", raise_keyboard_interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        atomic_write_json(path, {"v": 1})
+
+    # No tmp files should remain after the cleanup.
+    tmp_files = list(tmp_path.glob(".f.json.*.tmp"))
+    assert not tmp_files, f"tmp files leaked: {tmp_files}"

@@ -1,4 +1,5 @@
 """Tests for pipeline.py — requires SRP_TEST_USE_FAKE_YOUTUBE=1."""
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from social_research_probe.pipeline import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _write_purposes(tmp_path, purposes: dict):
     """Write a valid purposes.json into tmp_path."""
     data = {
@@ -33,6 +35,7 @@ def _write_purposes(tmp_path, purposes: dict):
 # _maybe_register_fake
 # ---------------------------------------------------------------------------
 
+
 def test_maybe_register_fake_no_env_var(monkeypatch):
     """Without env var set, _maybe_register_fake is a no-op (covers 54->exit branch)."""
     monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
@@ -42,6 +45,7 @@ def test_maybe_register_fake_no_env_var(monkeypatch):
 # ---------------------------------------------------------------------------
 # Pure-function unit tests
 # ---------------------------------------------------------------------------
+
 
 def test_enrich_query_adds_method_words():
     # "breaking" and "trending" are not stopwords so they get appended
@@ -83,6 +87,7 @@ def test_zscore_two_values():
 # ---------------------------------------------------------------------------
 # _score_item
 # ---------------------------------------------------------------------------
+
 
 def test_score_item_returns_score_and_dict():
     from datetime import datetime
@@ -129,14 +134,18 @@ def test_score_item_returns_score_and_dict():
 # run_research integration tests (use fake YouTube adapter)
 # ---------------------------------------------------------------------------
 
+
 def test_run_research_returns_packet(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels for breaking news",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels for breaking news",
+                "evidence_priorities": [],
+            }
+        },
+    )
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     packet = run_research(cmd, tmp_path, mode="cli")
@@ -147,12 +156,15 @@ def test_run_research_returns_packet(monkeypatch, tmp_path):
 
 def test_run_research_skill_mode_calls_emit_packet(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels for breaking news",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels for breaking news",
+                "evidence_priorities": [],
+            }
+        },
+    )
     calls = []
 
     def fake_emit(packet, kind):
@@ -169,12 +181,15 @@ def test_run_research_skill_mode_calls_emit_packet(monkeypatch, tmp_path):
 
 def test_run_research_multi_topic(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels for breaking news",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels for breaking news",
+                "evidence_priorities": [],
+            }
+        },
+    )
     raw = 'run-research platform:youtube "AI"->latest-news;"blockchain"->latest-news'
     cmd = parse(raw)
     result = run_research(cmd, tmp_path, mode="cli")
@@ -184,12 +199,15 @@ def test_run_research_multi_topic(monkeypatch, tmp_path):
 def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     # Write purposes.json but without "nonexistent_purpose"
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels",
+                "evidence_priorities": [],
+            }
+        },
+    )
     from social_research_probe.errors import ValidationError
 
     raw = 'run-research platform:youtube "AI"->nonexistent_purpose'
@@ -200,12 +218,15 @@ def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
 
 def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels",
+                "evidence_priorities": [],
+            }
+        },
+    )
     from social_research_probe.errors import ValidationError
 
     raw = 'run-research platform:nonexistent "AI"->latest-news'
@@ -217,16 +238,18 @@ def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
 def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     """Line 97: adapter.health_check() == False raises ValidationError."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
-    _write_purposes(tmp_path, {
-        "latest-news": {
-            "method": "Track latest channels",
-            "evidence_priorities": [],
-        }
-    })
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels",
+                "evidence_priorities": [],
+            }
+        },
+    )
     # Patch get_adapter to return an adapter whose health_check returns False
     import social_research_probe.pipeline as pipeline_mod
     from social_research_probe.errors import ValidationError
-
 
     class FailingAdapter:
         def health_check(self):

@@ -1,4 +1,5 @@
 """CLI entry point. All P1 subcommands wired up."""
+
 from __future__ import annotations
 
 import argparse
@@ -16,7 +17,9 @@ from social_research_probe.errors import SrpError, ValidationError
 
 
 def _global_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="srp", description="Evidence-first social-media research.")
+    parser = argparse.ArgumentParser(
+        prog="srp", description="Evidence-first social-media research."
+    )
     parser.add_argument("--mode", choices=["skill", "cli"], default="cli")
     parser.add_argument("--data-dir", default=None)
     parser.add_argument("--verbose", action="store_true")
@@ -77,8 +80,9 @@ def _global_parser() -> argparse.ArgumentParser:
 
     cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
-    cc.add_argument("--backends", default="llm_cli",
-                    help="Comma-separated backend names (default: llm_cli)")
+    cc.add_argument(
+        "--backends", default="llm_cli", help="Comma-separated backend names (default: llm_cli)"
+    )
     cc.add_argument("--output", default=None, help="Output file path (default: stdout)")
 
     rend = sub.add_parser("render", help="Render charts and stats for a research packet")
@@ -86,7 +90,9 @@ def _global_parser() -> argparse.ArgumentParser:
     rend.add_argument("--output-dir", default=None, help="Directory to save charts")
 
     ins = sub.add_parser("install-skill", help="Copy SKILL.md + references into a target directory")
-    ins.add_argument("--target", default=None, help="Destination directory (default: ~/.claude/skills/srp)")
+    ins.add_argument(
+        "--target", default=None, help="Destination directory (default: ~/.claude/skills/srp)"
+    )
 
     cfg = sub.add_parser("config")
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
@@ -150,7 +156,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         elif args.remove:
             values = _parse_quoted_list(args.remove)
             topics_cmd.remove_topics(data_dir, values)
-        elif args.rename:  # pragma: no branch
+        else:
             old, pos = _take_quoted(args.rename, 0)
             if args.rename[pos : pos + 2] != "->":
                 raise ValidationError("rename expects old->new")
@@ -173,7 +179,7 @@ def _dispatch(args: argparse.Namespace) -> int:
             purposes_cmd.add_purpose(data_dir, name=name, method=method, force=args.force)
         elif args.remove:
             purposes_cmd.remove_purposes(data_dir, _parse_quoted_list(args.remove))
-        elif args.rename:  # pragma: no branch
+        else:
             old, pos = _take_quoted(args.rename, 0)
             if args.rename[pos : pos + 2] != "->":
                 raise ValidationError("rename expects old->new")
@@ -234,23 +240,27 @@ def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "run-research":
         from social_research_probe.commands.parse import parse
         from social_research_probe.pipeline import run_research
+
         raw = f"run-research platform:{args.platform} " + " ".join(args.dsl)
         run_research(parse(raw), data_dir, args.mode)
         return 0
 
     if args.command == "corroborate-claims":
         from social_research_probe.commands import corroborate_claims as cc_cmd
+
         backends = [b.strip() for b in args.backends.split(",") if b.strip()]
         return cc_cmd.run(args.input, backends, output_path=args.output)
 
     if args.command == "render":
         from social_research_probe.commands import render as render_cmd
+
         return render_cmd.run(args.packet, output_dir=args.output_dir)
 
     if args.command == "install-skill":
         import shutil
         import subprocess
         from pathlib import Path
+
         src = Path(__file__).parent / "skill"
         dest = Path(args.target) if args.target else Path.home() / ".claude" / "skills" / "srp"
         if dest.exists():
@@ -266,7 +276,7 @@ def _dispatch(args: argparse.Namespace) -> int:
             print("srp CLI installed via pipx")
         else:
             print("warning: neither uv nor pipx found — srp CLI not permanently installed")
-            print(f"  run: pipx install \"{pkg}\"")
+            print(f'  run: pipx install "{pkg}"')
         return 0
 
     if args.command == "config":
@@ -300,9 +310,10 @@ def _dispatch_config(args: argparse.Namespace, data_dir: Path) -> int:
     if args.config_cmd == "set-secret":
         if args.from_stdin:
             value = sys.stdin.read().rstrip("\n")
-        else:  # pragma: no cover
-            import getpass  # pragma: no cover
-            value = getpass.getpass(f"{args.name}: ")  # pragma: no cover
+        else:
+            import getpass
+
+            value = getpass.getpass(f"{args.name}: ")
         if not value:
             raise ValidationError("empty secret value")
         config_cmd.write_secret(data_dir, args.name, value)
@@ -335,5 +346,5 @@ def main(argv: list[str] | None = None) -> int:
         return exc.exit_code
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     sys.exit(main())

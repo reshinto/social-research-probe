@@ -1,4 +1,5 @@
 """Atomic JSON reader/writer. POSIX-atomic replace; fsync before rename."""
+
 from __future__ import annotations
 
 import json
@@ -33,6 +34,6 @@ def atomic_write_json(path: Path, data: dict[str, Any]) -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_name, path)
-    except BaseException:  # pragma: no cover
+    except BaseException:
         Path(tmp_name).unlink(missing_ok=True)
         raise

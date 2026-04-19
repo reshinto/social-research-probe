@@ -1,4 +1,5 @@
 """rapidfuzz-backed dedupe: exact -> duplicate, near -> near-duplicate, else -> new."""
+
 from __future__ import annotations
 
 from social_research_probe.dedupe import DuplicateStatus, classify
@@ -34,6 +35,7 @@ def test_empty_existing_is_new():
 
 def test_threshold_is_documented():
     from social_research_probe.dedupe import DUPLICATE_THRESHOLD, NEAR_DUPLICATE_THRESHOLD
+
     assert DUPLICATE_THRESHOLD == 95
     assert NEAR_DUPLICATE_THRESHOLD == 80
     assert NEAR_DUPLICATE_THRESHOLD < DUPLICATE_THRESHOLD

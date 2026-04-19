@@ -1,4 +1,5 @@
 """Data-dir resolution + config.toml loading. Does NOT read secrets — see secrets.py."""
+
 from __future__ import annotations
 
 import copy

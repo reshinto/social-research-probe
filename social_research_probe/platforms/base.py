@@ -1,4 +1,5 @@
 """Platform adapter contract. All per-platform logic lives in subpackages."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -54,22 +55,22 @@ class PlatformAdapter(ABC):
     default_limits: ClassVar[FetchLimits]
 
     @abstractmethod
-    def health_check(self) -> bool: ...  # pragma: no cover
+    def health_check(self) -> bool: ...
 
     @abstractmethod
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...  # pragma: no cover
+    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...
 
     @abstractmethod
-    def enrich(self, items: list[RawItem]) -> list[RawItem]: ...  # pragma: no cover
+    def enrich(self, items: list[RawItem]) -> list[RawItem]: ...
 
     @abstractmethod
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]: ...  # pragma: no cover
+    def to_signals(self, items: list[RawItem]) -> list[SignalSet]: ...
 
     @abstractmethod
-    def trust_hints(self, item: RawItem) -> TrustHints: ...  # pragma: no cover
+    def trust_hints(self, item: RawItem) -> TrustHints: ...
 
     @abstractmethod
-    def url_normalize(self, url: str) -> str: ...  # pragma: no cover
+    def url_normalize(self, url: str) -> str: ...
 
     def fetch_text_for_claim_extraction(self, item: RawItem) -> str | None:
         return None

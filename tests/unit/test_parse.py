@@ -1,4 +1,5 @@
 """Deterministic DSL parser. Grammar locked in by tests."""
+
 from __future__ import annotations
 
 import pytest
@@ -114,6 +115,7 @@ def test_add_purpose_trailing_garbage_raises():
 
 # --- Additional parse coverage ---
 
+
 def test_unterminated_quoted_string_raises():
     # _take_quoted: missing closing quote (line 98)
     with pytest.raises(ParseError, match="unterminated"):
@@ -129,12 +131,14 @@ def test_quoted_list_unexpected_separator_raises():
 def test_id_selector_all():
     # _parse_id_selector returns "all" (line 117-118)
     from social_research_probe.commands.parse import _parse_id_selector
+
     assert _parse_id_selector("all") == "all"
 
 
 def test_id_selector_invalid_raises():
     # _parse_id_selector with non-integer raises ParseError (lines 121-122)
     from social_research_probe.commands.parse import _parse_id_selector
+
     with pytest.raises(ParseError):
         _parse_id_selector("abc")
 
@@ -149,6 +153,7 @@ def test_update_purposes_remove():
     # _parse_update_purposes remove branch (lines 179-180)
     result = parse('update-purposes remove:"old-purpose"')
     from social_research_probe.commands.parse import ParsedUpdatePurposes
+
     assert isinstance(result, ParsedUpdatePurposes)
     assert result.op == "remove"
     assert result.values == ["old-purpose"]
@@ -158,6 +163,7 @@ def test_update_purposes_rename():
     # _parse_update_purposes rename branch (lines 181-189)
     result = parse('update-purposes rename:"old"->"new"')
     from social_research_probe.commands.parse import ParsedUpdatePurposes
+
     assert isinstance(result, ParsedUpdatePurposes)
     assert result.op == "rename"
     assert result.rename_from == "old"
@@ -203,6 +209,7 @@ def test_pending_selectors_missing_both_raises():
 def test_kv_pair_no_value_raises():
     # _kv_pair: chunk like "key:" with empty value (line 223)
     from social_research_probe.commands.parse import _kv_pair
+
     with pytest.raises(ParseError):
         _kv_pair("key:")
 

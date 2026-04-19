@@ -29,6 +29,7 @@ def write_placeholder_png(path: str) -> None:
     Why 1x1: the purpose is only to produce a file with the .png extension
     that exists on disk; actual visual content is irrelevant for unit tests.
     """
+
     def _chunk(tag: bytes, data: bytes) -> bytes:
         """Wrap data in a PNG chunk (length + tag + data + CRC)."""
         length = struct.pack(">I", len(data))

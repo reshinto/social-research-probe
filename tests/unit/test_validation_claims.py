@@ -8,6 +8,7 @@ What is verified here:
     - An explicit source_text override is stored on every returned Claim.
     - An empty input string returns an empty list.
 """
+
 from __future__ import annotations
 
 from social_research_probe.validation.claims import extract_claims
@@ -40,9 +41,7 @@ def test_extract_claims_index_increments() -> None:
     claims = extract_claims(text)
     assert len(claims) >= 2
     for expected_idx, claim in enumerate(claims):
-        assert claim.index == expected_idx, (
-            f"Expected index {expected_idx}, got {claim.index}"
-        )
+        assert claim.index == expected_idx, f"Expected index {expected_idx}, got {claim.index}"
 
 
 def test_extract_claims_source_text_default() -> None:

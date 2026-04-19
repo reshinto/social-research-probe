@@ -8,6 +8,7 @@ code changes needed.
 Who calls it: llm.registry (for type constraints), the pipeline, and the
 corroboration host.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -40,7 +41,7 @@ class LLMRunner(ABC):
             True if the runner's CLI binary (or env var) is present and usable,
             False otherwise. Never raises — failures surface as False.
         """
-        ...  # pragma: no cover
+        ...
 
     @abstractmethod
     def run(self, prompt: str, *, schema: dict | None = None) -> dict:
@@ -58,4 +59,4 @@ class LLMRunner(ABC):
             AdapterError: If the LLM call fails (non-zero exit, timeout) or the
                 response body is not valid JSON.
         """
-        ...  # pragma: no cover
+        ...

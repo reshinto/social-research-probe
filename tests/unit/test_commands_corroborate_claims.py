@@ -9,6 +9,7 @@ Why this file exists:
 Who calls it:
     pytest during CI and local test runs.
 """
+
 from __future__ import annotations
 
 import json
@@ -43,6 +44,7 @@ def _write_claims(tmp_path: Path, data: dict) -> Path:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_run_success_stdout(monkeypatch, tmp_path, capsys):
     """run() writes a JSON object with 'results' list to stdout.

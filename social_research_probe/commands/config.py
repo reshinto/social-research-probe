@@ -1,4 +1,5 @@
 """srp config subcommand: non-secret config + secrets file management."""
+
 from __future__ import annotations
 
 import json
@@ -44,6 +45,7 @@ def _check_perms(path: Path) -> None:
     mode = stat.S_IMODE(path.stat().st_mode)
     if mode & 0o077:
         import sys
+
         print(
             f"warning: {path} has permissions {oct(mode)}; should be 0600",
             file=sys.stderr,
@@ -57,7 +59,7 @@ def _write_secrets_file(data_dir: Path, secrets: dict[str, str]) -> None:
     try:
         lines = ["[secrets]"]
         for key, val in sorted(secrets.items()):
-            escaped = val.replace('\\', '\\\\').replace('"', '\\"')
+            escaped = val.replace("\\", "\\\\").replace('"', '\\"')
             lines.append(f'{key} = "{escaped}"')
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         os.chmod(path, 0o600)

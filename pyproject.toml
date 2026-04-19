@@ -45,9 +45,11 @@ branch = true
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
-    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "^\\s*\\.\\.\\.$",
+    "@abstractmethod",
 ]
 
 [tool.ruff]
@@ -61,3 +63,6 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["N802"]
+"social_research_probe/llm/__init__.py" = ["F401"]
+"social_research_probe/llm/runners/__init__.py" = ["F401"]
+"social_research_probe/platforms/__init__.py" = ["F401"]

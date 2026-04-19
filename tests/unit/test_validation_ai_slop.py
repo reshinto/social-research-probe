@@ -7,6 +7,7 @@ What is verified here:
     - The score is always clamped to the unit interval [0, 1].
     - An empty string returns exactly 0.0.
 """
+
 from __future__ import annotations
 
 from social_research_probe.validation.ai_slop import score

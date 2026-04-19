@@ -9,6 +9,7 @@ only needs to call @register to become discoverable.
 Who calls it: backend modules (use @register decorator at class definition time),
 host.py (calls get_backend()), and CLI commands that want to list available backends.
 """
+
 from __future__ import annotations
 
 from social_research_probe.corroboration.base import CorroborationBackend

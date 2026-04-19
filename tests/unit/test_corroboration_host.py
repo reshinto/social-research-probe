@@ -4,6 +4,7 @@ What: Verifies majority-vote logic, tie-breaking, weighted-average confidence,
 and that AdapterError from a backend does not abort the whole run.
 Who calls it: pytest, as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -96,9 +97,7 @@ def test_corroborate_claim_skips_failed_backend(capsys):
             return True
 
         def corroborate(self, claim) -> CorroborationResult:
-            return CorroborationResult(
-                verdict="supported", confidence=0.7, reasoning="ok"
-            )
+            return CorroborationResult(verdict="supported", confidence=0.7, reasoning="ok")
 
     reg_module.register(_OkBackend)
 

@@ -1,5 +1,6 @@
 """Purpose merge: union evidence_priorities (preserve order), concat methods,
 element-wise-max scoring_overrides (strictest trust wins)."""
+
 from __future__ import annotations
 
 from social_research_probe.purposes.merge import MergedPurpose, merge_purposes
@@ -40,7 +41,11 @@ def test_method_concat_dedup():
 
 def test_scoring_overrides_element_wise_max():
     purposes = {
-        "lax": {"method": "x", "evidence_priorities": [], "scoring_overrides": {"trust": 0.3, "trend": 0.2}},
+        "lax": {
+            "method": "x",
+            "evidence_priorities": [],
+            "scoring_overrides": {"trust": 0.3, "trend": 0.2},
+        },
         "strict": {"method": "y", "evidence_priorities": [], "scoring_overrides": {"trust": 0.7}},
     }
     merged = merge_purposes(purposes, ["lax", "strict"])
@@ -61,8 +66,9 @@ def test_merged_is_frozen_dataclass():
     merged = merge_purposes(purposes, ["p"])
     assert isinstance(merged, MergedPurpose)
     import pytest
-    with pytest.raises(Exception):  # noqa: B017
-        merged.method = "changed"  # type: ignore[misc]
+
+    with pytest.raises(AttributeError):
+        merged.method = "changed"
 
 
 def test_merge_purpose_missing_method_raises():

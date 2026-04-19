@@ -4,8 +4,17 @@ from enum import StrEnum
 
 from social_research_probe.platforms.base import RawItem, TrustHints
 
-_PRIMARY_DOMAINS = ("arxiv.org", "nature.com", "ieee.org", "acm.org",
-                    ".gov", ".edu", "who.int", "nih.gov")
+_PRIMARY_DOMAINS = (
+    "arxiv.org",
+    "nature.com",
+    "ieee.org",
+    "acm.org",
+    ".gov",
+    ".edu",
+    "who.int",
+    "nih.gov",
+)
+
 
 class SourceClass(StrEnum):
     PRIMARY = "primary"
@@ -13,8 +22,10 @@ class SourceClass(StrEnum):
     COMMENTARY = "commentary"
     UNKNOWN = "unknown"
 
+
 def _has_primary_citation(markers: list[str]) -> bool:
     return any(any(d in m.lower() for d in _PRIMARY_DOMAINS) for m in markers)
+
 
 def classify(item: RawItem, hints: TrustHints) -> SourceClass:
     markers = hints.citation_markers or []

@@ -1,4 +1,5 @@
 """Rule-based suggestions + staging. Host-LLM enhancement lands in P4."""
+
 from __future__ import annotations
 
 from pathlib import Path

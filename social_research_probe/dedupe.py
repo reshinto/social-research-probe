@@ -1,4 +1,5 @@
 """Duplicate detection using rapidfuzz token_set_ratio."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -44,13 +45,21 @@ def classify(candidate: str, existing: list[str]) -> DedupeResult:
         limit=None,
     )
 
-    dup = [orig for name, score, _ in scored if score >= DUPLICATE_THRESHOLD
-           for orig in norm_to_originals[name]]
+    dup = [
+        orig
+        for name, score, _ in scored
+        if score >= DUPLICATE_THRESHOLD
+        for orig in norm_to_originals[name]
+    ]
     if dup:
         return DedupeResult(DuplicateStatus.DUPLICATE, tuple(dup))
 
-    near = [orig for name, score, _ in scored if score >= NEAR_DUPLICATE_THRESHOLD
-            for orig in norm_to_originals[name]]
+    near = [
+        orig
+        for name, score, _ in scored
+        if score >= NEAR_DUPLICATE_THRESHOLD
+        for orig in norm_to_originals[name]
+    ]
     if near:
         return DedupeResult(DuplicateStatus.NEAR_DUPLICATE, tuple(near))
 

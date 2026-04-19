@@ -1,4 +1,5 @@
 """Rule-based topic/purpose suggestions + pending staging."""
+
 from __future__ import annotations
 
 import json
@@ -115,11 +116,6 @@ def test_discard_pending_removes_without_applying(tmp_data_dir: Path):
     assert _pending(tmp_data_dir)["pending_topic_suggestions"] == []
 
 
-
-
-
-
-
 def test_suggest_topics_breaks_at_count(tmp_data_dir):
     """Lines 62->67, 65->62: suggest_topics stops early when count is reached."""
     drafts = suggest_topics(tmp_data_dir, count=1)
@@ -135,6 +131,7 @@ def test_suggest_purposes_breaks_at_count(tmp_data_dir):
 def test_stage_suggestions_missing_value_raises(tmp_data_dir):
     """Line 99: topic candidate without value raises ValidationError."""
     from social_research_probe.errors import ValidationError
+
     with pytest.raises(ValidationError, match=r"missing .value."):
         stage_suggestions(
             tmp_data_dir,
@@ -146,6 +143,7 @@ def test_stage_suggestions_missing_value_raises(tmp_data_dir):
 def test_stage_suggestions_missing_name_or_method_raises(tmp_data_dir):
     """Line 114: purpose candidate without name/method raises ValidationError."""
     from social_research_probe.errors import ValidationError
+
     with pytest.raises(ValidationError, match="missing name/method"):
         stage_suggestions(
             tmp_data_dir,
@@ -173,7 +171,9 @@ def test_apply_pending_duplicate_purpose_stays_pending(tmp_data_dir):
     stage_suggestions(
         tmp_data_dir,
         topic_candidates=[],
-        purpose_candidates=[{"name": "trends", "method": "Track trends", "evidence_priorities": []}],
+        purpose_candidates=[
+            {"name": "trends", "method": "Track trends", "evidence_priorities": []}
+        ],
     )
     apply_pending(tmp_data_dir, topic_ids="all", purpose_ids="all")
     remaining = _pending(tmp_data_dir)["pending_purpose_suggestions"]
@@ -192,6 +192,7 @@ def test_suggest_topics_skips_non_new(tmp_data_dir):
     """Branch 65->62: suggest_topics skips candidates that are duplicates."""
     # Add all seed pool topics to existing so classify returns non-NEW for all
     from social_research_probe.commands.suggestions import _TOPIC_SEED_POOL
+
     add_topics(tmp_data_dir, list(_TOPIC_SEED_POOL), force=True)
     drafts = suggest_topics(tmp_data_dir, count=5)
     assert drafts == []
@@ -201,6 +202,7 @@ def test_suggest_purposes_exhausts_pool(tmp_data_dir):
     """Branch 75->80: suggest_purposes loop exhausts all pool candidates."""
     drafts = suggest_purposes(tmp_data_dir, count=999)
     from social_research_probe.commands.suggestions import _PURPOSE_SEED_POOL
+
     assert len(drafts) <= len(_PURPOSE_SEED_POOL)
     assert len(drafts) > 0
 
@@ -208,6 +210,7 @@ def test_suggest_purposes_exhausts_pool(tmp_data_dir):
 def test_suggest_purposes_skips_non_new(tmp_data_dir):
     """Branch 78->75: suggest_purposes skips candidates that are duplicates."""
     from social_research_probe.commands.suggestions import _PURPOSE_SEED_POOL
+
     for name, method in _PURPOSE_SEED_POOL:
         add_purpose(tmp_data_dir, name=name, method=method, force=False)
     drafts = suggest_purposes(tmp_data_dir, count=5)

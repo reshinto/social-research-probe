@@ -1,4 +1,5 @@
 """jsonschema validation for topics.json, purposes.json, pending_suggestions.json."""
+
 from __future__ import annotations
 
 import pytest
@@ -46,6 +47,10 @@ def test_purposes_rejects_missing_method():
 def test_pending_rejects_duplicate_ids():
     # Schema allows dups; uniqueness is enforced at write-time in commands (Task 14).
     # This test locks in the schema shape: each entry must have id+value fields.
-    bad = {"schema_version": 1, "pending_topic_suggestions": [{"id": 1}], "pending_purpose_suggestions": []}
+    bad = {
+        "schema_version": 1,
+        "pending_topic_suggestions": [{"id": 1}],
+        "pending_purpose_suggestions": [],
+    }
     with pytest.raises(ValidationError):
         validate(bad, PENDING_SUGGESTIONS_SCHEMA)

@@ -8,10 +8,10 @@ What is verified here:
     - A transcript string returned by ``fetch_transcript`` is surfaced
       unchanged by ``get_transcript``.
 
-The live network call in ``fetch_transcript`` is intentionally excluded from
-these tests (it carries ``# pragma: no cover — network``). All tests use
-monkeypatching so no network access is required.
+The live network call in ``fetch_transcript`` is covered by monkeypatching
+yt_dlp.YoutubeDL so no network access is required.
 """
+
 from __future__ import annotations
 
 import social_research_probe.platforms.youtube.extract as yt_extract

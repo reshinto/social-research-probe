@@ -94,6 +94,7 @@ def write_json(path: Path, data: dict) -> None:
     except Exception:
         # Best-effort cleanup of the temp file so we do not litter .tmp files.
         import contextlib
-        with contextlib.suppress(OSError):  # pragma: no cover
+
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
         raise

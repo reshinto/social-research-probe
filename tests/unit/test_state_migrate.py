@@ -1,4 +1,5 @@
 """Version-chain migrators. Idempotent. Backup before overwrite."""
+
 from __future__ import annotations
 
 import json

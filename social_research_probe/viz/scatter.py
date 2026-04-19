@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import tempfile
 
+from social_research_probe.viz.base import ChartResult
 
-def _render_with_matplotlib(x: list[float], y: list[float], path: str, label: str) -> None:  # pragma: no cover — optional matplotlib
+
+def _render_with_matplotlib(x: list[float], y: list[float], path: str, label: str) -> None:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -44,7 +47,7 @@ def render(
     y: list[float],
     label: str = "scatter",
     output_dir: str | None = None,
-) -> ChartResult:  # noqa: F821 — type resolved at runtime
+) -> ChartResult:
     """Render a scatter plot of two numeric series and save it as a PNG.
 
     Args:
@@ -60,17 +63,16 @@ def render(
     memory between calls; closing explicitly prevents memory leaks in
     long-running pipeline runs.
     """
-    from social_research_probe.viz.base import ChartResult
-
     save_dir = output_dir if output_dir is not None else tempfile.gettempdir()
     filename = f"{_sanitise(label)}_scatter.png"
     path = f"{save_dir}/{filename}"
 
     try:
         _render_with_matplotlib(x, y, path, label)
-    except (ImportError, Exception):
+    except Exception:
         # Pure-Python fallback: write a minimal valid PNG placeholder.
         from social_research_probe.viz._png_writer import write_placeholder_png
+
         write_placeholder_png(path)
 
     return ChartResult(

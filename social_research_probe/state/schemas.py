@@ -1,4 +1,5 @@
 """jsonschema definitions + default factories for every state file."""
+
 from __future__ import annotations
 
 from typing import Any

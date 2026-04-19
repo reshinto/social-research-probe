@@ -9,6 +9,7 @@ This lets users inspect research results offline, outside of the AI skill flow.
 
 Called by: cli._dispatch when args.command == 'render'.
 """
+
 from __future__ import annotations
 
 import json
@@ -54,10 +55,7 @@ def run(packet_path: str, output_dir: str | None = None) -> int:
     chart = select_and_render(overall_scores, label="overall_score", output_dir=output_dir)
 
     report = {
-        "stats": [
-            {"name": r.name, "value": r.value, "caption": r.caption}
-            for r in stat_results
-        ],
+        "stats": [{"name": r.name, "value": r.value, "caption": r.caption} for r in stat_results],
         "chart": {"path": chart.path, "caption": chart.caption},
     }
     sys.stdout.write(json.dumps(report, indent=2) + "\n")

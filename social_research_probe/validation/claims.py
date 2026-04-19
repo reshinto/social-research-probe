@@ -15,6 +15,7 @@ Design notes:
     the side of recall (keeping borderline sentences) so that the downstream
     corroboration step has enough material to work with.
 """
+
 from __future__ import annotations
 
 import re

@@ -9,6 +9,7 @@ Why this file exists:
 Who calls it:
     pytest during CI and local test runs.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,9 +25,11 @@ from social_research_probe.errors import ValidationError
 # Stub return types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _FakeStatResult:
     """Minimal stand-in for stats.base.StatResult used in monkeypatching."""
+
     name: str
     value: float
     caption: str
@@ -35,6 +38,7 @@ class _FakeStatResult:
 @dataclass
 class _FakeChartResult:
     """Minimal stand-in for viz.base.ChartResult used in monkeypatching."""
+
     path: str
     caption: str
 
@@ -69,6 +73,7 @@ def _write_packet(tmp_path: Path, data: dict) -> Path:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 def test_run_success_prints_stats_and_chart(monkeypatch, tmp_path, capsys):
     """run() prints a JSON report containing 'stats' and 'chart' keys.
 
@@ -76,8 +81,9 @@ def test_run_success_prints_stats_and_chart(monkeypatch, tmp_path, capsys):
     file I/O or statistical computation.
     """
     monkeypatch.setattr(render_cmd, "select_and_run", lambda data, label: _FAKE_STATS)
-    monkeypatch.setattr(render_cmd, "select_and_render",
-                        lambda data, label, output_dir: _FAKE_CHART)
+    monkeypatch.setattr(
+        render_cmd, "select_and_render", lambda data, label, output_dir: _FAKE_CHART
+    )
 
     packet_path = _write_packet(tmp_path, _PACKET)
     rc = render_cmd.run(str(packet_path))

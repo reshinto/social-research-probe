@@ -1,4 +1,5 @@
 """srp config subcommand: set/get/check for non-secret and secret values."""
+
 from __future__ import annotations
 
 import os
@@ -116,6 +117,7 @@ def test_write_config_value_bad_key_raises():
     from pathlib import Path
 
     from social_research_probe.errors import ValidationError
+
     with pytest.raises(ValidationError, match=r"section\.key"):
         write_config_value(Path("/tmp"), "badkey", "value")
 
@@ -135,7 +137,7 @@ def test_write_config_value_bool_value(tmp_data_dir: Path):
     """Lines 136-139: write_config_value writes bool values as true/false."""
     # Manually inject a bool into the config by writing a toml that has one
     cfg_path = tmp_data_dir / "config.toml"
-    cfg_path.write_text('[llm]\nenabled = true\n')
+    cfg_path.write_text("[llm]\nenabled = true\n")
     # Now write another value — existing bool should survive round-trip
     write_config_value(tmp_data_dir, "llm.runner", "claude")
     content = cfg_path.read_text()
@@ -170,7 +172,7 @@ def test_check_secrets_no_needed_for_skips_platform(tmp_data_dir: Path):
 def test_write_config_value_numeric_value(tmp_data_dir: Path):
     """Lines 138-139: write_config_value writes non-bool non-str values as bare literals."""
     cfg_path = tmp_data_dir / "config.toml"
-    cfg_path.write_text('[limits]\nmax_items = 20\n')
+    cfg_path.write_text("[limits]\nmax_items = 20\n")
     write_config_value(tmp_data_dir, "limits.timeout", "30")
     content = cfg_path.read_text()
     assert "max_items = 20" in content

@@ -9,6 +9,7 @@ from backend HTTP/subprocess details so each piece is unit-testable in isolation
 Who calls it: pipeline steps and CLI commands that need to check a claim against
 one or more external sources.
 """
+
 from __future__ import annotations
 
 import sys

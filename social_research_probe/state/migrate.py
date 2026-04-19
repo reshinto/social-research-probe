@@ -1,4 +1,5 @@
 """Ordered version-chain migrators. Pure functions; backup before overwrite."""
+
 from __future__ import annotations
 
 import json
@@ -54,9 +55,6 @@ def migrate_to_current(path: Path, data: dict[str, Any], *, kind: str) -> dict[s
         )
 
     chain = migrators_for(kind)
-    if current >= len(chain) + 1:  # pragma: no cover
-        raise MigrationError(f"{path.name} at v{current} has no migration path to v{target}")
-
     _write_backup(path, data, current)
     out = data
     for step_idx in range(current, target):

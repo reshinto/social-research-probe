@@ -6,6 +6,7 @@ skill mode calls pipeline.run_research directly and exits via llm/host.py.
 
 Called by: cli._dispatch when args.command == 'run-research' and mode == 'cli'.
 """
+
 from __future__ import annotations
 
 import json

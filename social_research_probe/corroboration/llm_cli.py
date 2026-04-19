@@ -9,6 +9,7 @@ one backend available, even in offline or restricted environments.
 Who calls it: corroboration/host.py via the registry; registered automatically
 at import time when the corroboration package is loaded.
 """
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -107,7 +108,7 @@ class LLMCliBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:  # pragma: no cover — live LLM
+    def corroborate(self, claim) -> CorroborationResult:
         """Send the claim to the LLM runner and parse the corroboration verdict.
 
         Args:
@@ -124,12 +125,15 @@ class LLMCliBackend(CorroborationBackend):
 
         runner = get_runner(self._runner_name)
         prompt = self._build_prompt(claim)
-        raw = runner.run(prompt, schema={
-            "type": "object",
-            "properties": {
-                "verdict": {"type": "string"},
-                "confidence": {"type": "number"},
-                "reasoning": {"type": "string"},
+        raw = runner.run(
+            prompt,
+            schema={
+                "type": "object",
+                "properties": {
+                    "verdict": {"type": "string"},
+                    "confidence": {"type": "number"},
+                    "reasoning": {"type": "string"},
+                },
             },
-        })
+        )
         return self._parse_result(raw, claim)

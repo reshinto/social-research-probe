@@ -16,6 +16,7 @@ Design notes:
     is always in [0.0, 1.0]: higher means more likely AI slop / low quality.
     All computation uses the Python standard library only.
 """
+
 from __future__ import annotations
 
 import re
@@ -168,9 +169,7 @@ def score(text: str) -> float:
         return 0.0
 
     combined = (
-        _boilerplate_signal(text)
-        + _repetition_signal(text)
-        + _short_sentence_signal(text)
+        _boilerplate_signal(text) + _repetition_signal(text) + _short_sentence_signal(text)
     ) / 3
 
     # Clamp to [0.0, 1.0] as a defensive measure against floating-point drift.

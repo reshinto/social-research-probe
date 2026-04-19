@@ -7,6 +7,7 @@ This module's job is to:
 
 Called by: pipeline.run_research (skill mode) and commands/research.py (cli mode).
 """
+
 from __future__ import annotations
 
 import json
@@ -66,8 +67,6 @@ def parse_synthesis_response(raw: dict) -> dict:
     for key in ("compiled_synthesis", "opportunity_analysis"):
         val = raw.get(key)
         if not isinstance(val, str):
-            raise ValidationError(
-                f"LLM response missing or non-string key: {key!r}"
-            )
+            raise ValidationError(f"LLM response missing or non-string key: {key!r}")
         out[key] = val
     return out

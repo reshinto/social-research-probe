@@ -1,4 +1,5 @@
 """Purposes CRUD: method string required on add; dedupe on name."""
+
 from __future__ import annotations
 
 import json
@@ -56,7 +57,9 @@ def test_rename(tmp_data_dir: Path):
 
 def test_show(tmp_data_dir: Path):
     add_purpose(tmp_data_dir, name="trends", method="x", force=False)
-    assert show_purposes(tmp_data_dir) == {"trends": {"method": "x", "evidence_priorities": [], "scoring_overrides": {}}}
+    assert show_purposes(tmp_data_dir) == {
+        "trends": {"method": "x", "evidence_priorities": [], "scoring_overrides": {}}
+    }
 
 
 def test_rename_onto_existing_raises(tmp_data_dir: Path):
@@ -76,7 +79,9 @@ def test_add_near_duplicate_raises(tmp_data_dir: Path):
     add_purpose(tmp_data_dir, name="track latest news channel", method="Track news", force=False)
     # "track latest news channels" scores ~98 with rapidfuzz token_set_ratio → near-duplicate
     with pytest.raises(DuplicateError):
-        add_purpose(tmp_data_dir, name="track latest news channels", method="Track news too", force=False)
+        add_purpose(
+            tmp_data_dir, name="track latest news channels", method="Track news too", force=False
+        )
 
 
 def test_add_existing_with_force_raises(tmp_data_dir: Path):

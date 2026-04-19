@@ -1,4 +1,5 @@
 """Channel-level trust signals: age, verified, subs, citation markers."""
+
 from __future__ import annotations
 
 import re

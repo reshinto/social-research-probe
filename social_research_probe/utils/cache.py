@@ -145,5 +145,6 @@ class FilesystemCache:
         """
         path = self._path_for(key)
         import contextlib
+
         with contextlib.suppress(FileNotFoundError):
             path.unlink()

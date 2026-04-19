@@ -8,6 +8,7 @@ Why this file exists:
 Who calls it:
     pytest during CI and local test runs.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -22,6 +23,7 @@ from social_research_probe.synthesize.llm_contract import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_packet(topic="climate change", platform="youtube", items=None):
     """Return a minimal packet dict for testing build_synthesis_prompt.
 
@@ -34,8 +36,10 @@ def _make_packet(topic="climate change", platform="youtube", items=None):
         A dict mimicking the output of synthesize.formatter.build_packet.
     """
     if items is None:
-        items = [{"title": "Video A", "scores": {"overall": 0.9}},
-                 {"title": "Video B", "scores": {"overall": 0.7}}]
+        items = [
+            {"title": "Video A", "scores": {"overall": 0.9}},
+            {"title": "Video B", "scores": {"overall": 0.7}},
+        ]
     return {
         "topic": topic,
         "platform": platform,
@@ -46,6 +50,7 @@ def _make_packet(topic="climate change", platform="youtube", items=None):
 # ---------------------------------------------------------------------------
 # build_synthesis_prompt tests
 # ---------------------------------------------------------------------------
+
 
 def test_build_synthesis_prompt_contains_topic():
     """The formatted prompt must include the packet's topic string."""
@@ -84,6 +89,7 @@ def test_build_synthesis_prompt_empty_items():
 # ---------------------------------------------------------------------------
 # parse_synthesis_response tests
 # ---------------------------------------------------------------------------
+
 
 def test_parse_synthesis_response_valid():
     """Valid response dict returns both required string fields."""

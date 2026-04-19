@@ -5,6 +5,7 @@ subclass implementing both abstract methods works correctly.
 
 Who calls it: pytest, run as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -33,7 +34,7 @@ def test_llm_runner_is_abstract() -> None:
     class that has unimplemented abstract methods.
     """
     with pytest.raises(TypeError):
-        LLMRunner()  # type: ignore[abstract]
+        LLMRunner()
 
 
 def test_concrete_subclass_works() -> None:

@@ -14,6 +14,7 @@ Output JSON format::
 
 Called by: cli._dispatch when args.command == 'corroborate-claims'.
 """
+
 from __future__ import annotations
 
 import json

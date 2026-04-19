@@ -60,3 +60,78 @@ def test_bar_caption_content(tmp_path):
     assert "Bar chart" in result.caption
     assert "clicks" in result.caption
     assert str(len(data)) in result.caption
+
+
+# ---------------------------------------------------------------------------
+# _render_with_matplotlib — success path via mocked matplotlib
+# ---------------------------------------------------------------------------
+
+
+def _install_fake_matplotlib(monkeypatch):
+    """Inject a fake matplotlib and matplotlib.pyplot into sys.modules."""
+    import sys
+    import types
+    import unittest.mock as mock
+
+    fake_fig = mock.MagicMock()
+    fake_plt = mock.MagicMock()
+    fake_plt.figure.return_value = fake_fig
+    fake_plt.subplots.return_value = (fake_fig, mock.MagicMock())
+
+    fake_mpl = types.ModuleType("matplotlib")
+    fake_mpl.use = mock.MagicMock()
+    fake_mpl.pyplot = fake_plt
+
+    monkeypatch.setitem(sys.modules, "matplotlib", fake_mpl)
+    monkeypatch.setitem(sys.modules, "matplotlib.pyplot", fake_plt)
+    return fake_plt
+
+
+def test_line_render_with_matplotlib_success(monkeypatch, tmp_path):
+    """_render_with_matplotlib writes the file when matplotlib is available."""
+    from social_research_probe.viz import line as line_mod
+
+    fake_plt = _install_fake_matplotlib(monkeypatch)
+    path = str(tmp_path / "out.png")
+    line_mod._render_with_matplotlib([1.0, 2.0, 3.0], path, "test")
+    fake_plt.savefig.assert_called_once_with(path)
+
+
+def test_bar_render_with_matplotlib_success(monkeypatch, tmp_path):
+    """_render_with_matplotlib writes the file when matplotlib is available."""
+    from social_research_probe.viz import bar as bar_mod
+
+    fake_plt = _install_fake_matplotlib(monkeypatch)
+    path = str(tmp_path / "out.png")
+    bar_mod._render_with_matplotlib([1.0, 2.0], path, "test")
+    fake_plt.savefig.assert_called_once_with(path)
+
+
+def test_scatter_render_with_matplotlib_success(monkeypatch, tmp_path):
+    """_render_with_matplotlib writes the file when matplotlib is available."""
+    from social_research_probe.viz import scatter as scatter_mod
+
+    fake_plt = _install_fake_matplotlib(monkeypatch)
+    path = str(tmp_path / "out.png")
+    scatter_mod._render_with_matplotlib([1.0], [2.0], path, "test")
+    fake_plt.savefig.assert_called_once_with(path)
+
+
+def test_table_render_with_matplotlib_success(monkeypatch, tmp_path):
+    """_render_with_matplotlib writes the file when matplotlib is available."""
+    from social_research_probe.viz import table as table_mod
+
+    fake_plt = _install_fake_matplotlib(monkeypatch)
+    path = str(tmp_path / "out.png")
+    table_mod._render_with_matplotlib([{"col": "val"}], path, "test")
+    fake_plt.savefig.assert_called_once_with(path, bbox_inches="tight")
+
+
+def test_table_render_with_matplotlib_empty_rows(monkeypatch, tmp_path):
+    """_render_with_matplotlib handles empty rows (no col_labels, skips ax.table)."""
+    from social_research_probe.viz import table as table_mod
+
+    fake_plt = _install_fake_matplotlib(monkeypatch)
+    path = str(tmp_path / "out_empty.png")
+    table_mod._render_with_matplotlib([], path, "empty")
+    fake_plt.savefig.assert_called_once_with(path, bbox_inches="tight")

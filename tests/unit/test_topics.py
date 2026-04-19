@@ -1,4 +1,5 @@
 """Topics CRUD with dedupe + atomic writes."""
+
 from __future__ import annotations
 
 import json
@@ -93,6 +94,7 @@ def test_rename_nonexistent_old_raises(tmp_data_dir: Path):
 def test_save_with_duplicates_raises(tmp_data_dir: Path):
     """Line 27: _save raises DuplicateError if topics list has internal duplicates."""
     from social_research_probe.commands.topics import _save
+
     data = {"schema_version": 1, "topics": ["ai", "ai"]}  # duplicate
     with pytest.raises(DuplicateError, match="internal error"):
         _save(tmp_data_dir, data)

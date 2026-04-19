@@ -1,4 +1,5 @@
 """End-to-end CLI dispatch for state commands."""
+
 from __future__ import annotations
 
 import json
@@ -54,10 +55,14 @@ def test_config_check_secrets_json(tmp_path: Path):
     data_dir.mkdir()
     result = _run(
         data_dir,
-        "config", "check-secrets",
-        "--needed-for", "run-research",
-        "--platform", "youtube",
-        "--output", "json",
+        "config",
+        "check-secrets",
+        "--needed-for",
+        "run-research",
+        "--platform",
+        "youtube",
+        "--output",
+        "json",
     )
     assert result.returncode == 0
     payload = json.loads(result.stdout)
@@ -69,16 +74,23 @@ def test_config_set_secret_from_stdin(tmp_path: Path):
     data_dir.mkdir()
     result = _run(
         data_dir,
-        "config", "set-secret", "youtube_api_key", "--from-stdin",
+        "config",
+        "set-secret",
+        "youtube_api_key",
+        "--from-stdin",
         stdin="AIzaSECRETVALUE12345",
     )
     assert result.returncode == 0
     check = _run(
         data_dir,
-        "config", "check-secrets",
-        "--needed-for", "run-research",
-        "--platform", "youtube",
-        "--output", "json",
+        "config",
+        "check-secrets",
+        "--needed-for",
+        "run-research",
+        "--platform",
+        "youtube",
+        "--output",
+        "json",
     )
     payload = json.loads(check.stdout)
     assert "youtube_api_key" in payload["present"]

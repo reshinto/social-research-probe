@@ -1,4 +1,5 @@
 """Purpose lookup + persistence helpers (read/write purposes.json)."""
+
 from __future__ import annotations
 
 from pathlib import Path

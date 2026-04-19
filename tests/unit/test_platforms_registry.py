@@ -1,4 +1,5 @@
 """Platform registry: @register, get_adapter, unknown platform raises."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -25,13 +26,23 @@ def test_register_and_get():
         def __init__(self, config: dict[str, Any]) -> None:
             self.config = config
 
-        def health_check(self) -> bool: return True
-        def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: return []
-        def enrich(self, items: list[RawItem]) -> list[RawItem]: return items
-        def to_signals(self, items: list[RawItem]) -> list[SignalSet]: return []
+        def health_check(self) -> bool:
+            return True
+
+        def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
+            return []
+
+        def enrich(self, items: list[RawItem]) -> list[RawItem]:
+            return items
+
+        def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
+            return []
+
         def trust_hints(self, item: RawItem) -> TrustHints:
             return TrustHints(None, None, None, None, [])
-        def url_normalize(self, url: str) -> str: return url
+
+        def url_normalize(self, url: str) -> str:
+            return url
 
     adapter = get_adapter("toy-registry-test", {"k": "v"})
     assert isinstance(adapter, ToyAdapter)
@@ -48,15 +59,29 @@ def test_unknown_platform_raises():
 def test_register_class_without_name_raises():
     """Line 14: @register on a class with no 'name' raises ValueError."""
     with pytest.raises(ValueError, match="must define class var `name`"):
+
         @register
         class NoNameAdapter(PlatformAdapter):
             # deliberately no 'name' class var
             default_limits = FetchLimits()
 
-            def __init__(self, config): pass
-            def health_check(self): return True
-            def search(self, topic, limits): return []
-            def enrich(self, items): return items
-            def to_signals(self, items): return []
-            def trust_hints(self, item): return TrustHints(None, None, None, None, [])
-            def url_normalize(self, url): return url
+            def __init__(self, config):
+                pass
+
+            def health_check(self):
+                return True
+
+            def search(self, topic, limits):
+                return []
+
+            def enrich(self, items):
+                return items
+
+            def to_signals(self, items):
+                return []
+
+            def trust_hints(self, item):
+                return TrustHints(None, None, None, None, [])
+
+            def url_normalize(self, url):
+                return url

@@ -36,9 +36,7 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
         return []
 
     # Sum each step's fractional change; clamp denominator to avoid div-by-zero.
-    total_change = sum(
-        (data[i] - data[i - 1]) / max(1, abs(data[i - 1])) for i in range(1, n)
-    )
+    total_change = sum((data[i] - data[i - 1]) / max(1, abs(data[i - 1])) for i in range(1, n))
     growth_rate = total_change / (n - 1)
 
     return [

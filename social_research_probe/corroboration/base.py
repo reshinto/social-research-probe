@@ -10,6 +10,7 @@ Who calls it: corroboration/registry.py (for type-checking), corroboration/host.
 (consumes CorroborationResult), and individual backend modules (inherit from
 CorroborationBackend).
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -61,7 +62,7 @@ class CorroborationBackend(ABC):
             True when the backend has everything it needs (API key, network,
             subprocess) to accept corroborate() calls; False otherwise.
         """
-        ...  # pragma: no cover
+        ...
 
     @abstractmethod
     def corroborate(self, claim) -> CorroborationResult:
@@ -80,4 +81,4 @@ class CorroborationBackend(ABC):
             AdapterError: if the backend encounters a transient failure
                 (network error, bad API response, etc.).
         """
-        ...  # pragma: no cover
+        ...

@@ -1,6 +1,7 @@
 """Real YouTubeAdapter. In tests, `tests/fixtures/fake_youtube.py` pre-empts
 this registration. In production, this module is imported and replaces the
 fixture's registration."""
+
 from __future__ import annotations
 
 import os
@@ -34,6 +35,7 @@ class YouTubeAdapter(PlatformAdapter):
         data_dir = self.config.get("data_dir")
         if data_dir is not None:
             from social_research_probe.commands.config import read_secret
+
             val = read_secret(data_dir, "youtube_api_key")
             if val:
                 return val
@@ -53,48 +55,57 @@ class YouTubeAdapter(PlatformAdapter):
         h, mn, s = (int(v or 0) for v in m.groups())
         return h * 3600 + mn * 60 + s
 
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:  # pragma: no cover — live
+    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
         from datetime import datetime, timedelta
 
         from social_research_probe.platforms.youtube import fetch
+
         client = fetch.build_client(self._api_key())
         published_after = None
         if limits.recency_days:
             dt = datetime.now(UTC) - timedelta(days=limits.recency_days)
             published_after = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        raw = fetch.search_videos(client, topic=topic, max_items=limits.max_items, published_after=published_after)
+        raw = fetch.search_videos(
+            client, topic=topic, max_items=limits.max_items, published_after=published_after
+        )
         return self._items_from_search(raw)
 
-    def _items_from_search(self, raw: list[dict]) -> list[RawItem]:  # pragma: no cover
+    def _items_from_search(self, raw: list[dict]) -> list[RawItem]:
         from datetime import datetime
+
         items = []
         for r in raw:
             vid_id = r.get("id", {}).get("videoId", "")
             sn = r.get("snippet", {})
             published_raw = sn.get("publishedAt", "")
             try:
-                published_at = datetime.fromisoformat(published_raw.replace("Z", "+00:00")).astimezone(UTC)
+                published_at = datetime.fromisoformat(
+                    published_raw.replace("Z", "+00:00")
+                ).astimezone(UTC)
             except Exception:
                 published_at = datetime.now(UTC)
             thumb = (sn.get("thumbnails") or {}).get("default", {}).get("url")
-            items.append(RawItem(
-                id=vid_id,
-                url=f"https://www.youtube.com/watch?v={vid_id}",
-                title=sn.get("title", ""),
-                author_id=sn.get("channelId", ""),
-                author_name=sn.get("channelTitle", ""),
-                published_at=published_at,
-                metrics={},
-                text_excerpt=sn.get("description") or None,
-                thumbnail=thumb,
-                extras={},
-            ))
+            items.append(
+                RawItem(
+                    id=vid_id,
+                    url=f"https://www.youtube.com/watch?v={vid_id}",
+                    title=sn.get("title", ""),
+                    author_id=sn.get("channelId", ""),
+                    author_name=sn.get("channelTitle", ""),
+                    published_at=published_at,
+                    metrics={},
+                    text_excerpt=sn.get("description") or None,
+                    thumbnail=thumb,
+                    extras={},
+                )
+            )
         return items
 
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:  # pragma: no cover
+    def enrich(self, items: list[RawItem]) -> list[RawItem]:
         if not items:
             return items
         from social_research_probe.platforms.youtube import fetch
+
         client = fetch.build_client(self._api_key())
         video_ids = [it.id for it in items]
         hydrated = {v["id"]: v for v in fetch.hydrate_videos(client, video_ids=video_ids)}
@@ -120,19 +131,28 @@ class YouTubeAdapter(PlatformAdapter):
                 secs = self._parse_duration_seconds(duration_str)
                 if 0 < secs < 90:
                     continue  # skip Shorts
-            enriched.append(RawItem(
-                id=it.id, url=it.url, title=it.title,
-                author_id=it.author_id, author_name=it.author_name,
-                published_at=it.published_at,
-                metrics=metrics,
-                text_excerpt=it.text_excerpt,
-                thumbnail=it.thumbnail,
-                extras={**extras, "duration_seconds": self._parse_duration_seconds(duration_str)},
-            ))
+            enriched.append(
+                RawItem(
+                    id=it.id,
+                    url=it.url,
+                    title=it.title,
+                    author_id=it.author_id,
+                    author_name=it.author_name,
+                    published_at=it.published_at,
+                    metrics=metrics,
+                    text_excerpt=it.text_excerpt,
+                    thumbnail=it.thumbnail,
+                    extras={
+                        **extras,
+                        "duration_seconds": self._parse_duration_seconds(duration_str),
+                    },
+                )
+            )
         return enriched
 
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]:  # pragma: no cover
+    def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
         from datetime import datetime
+
         now = datetime.now(UTC)
         signals = []
         for it in items:
@@ -140,20 +160,22 @@ class YouTubeAdapter(PlatformAdapter):
             views = it.metrics.get("views", 0) or 0
             likes = it.metrics.get("likes", 0) or 0
             comments = it.metrics.get("comments", 0) or 0
-            signals.append(SignalSet(
-                views=views,
-                likes=likes,
-                comments=comments,
-                upload_date=it.published_at,
-                view_velocity=views / age_days,
-                engagement_ratio=(likes + comments) / max(1, views),
-                comment_velocity=comments / age_days,
-                cross_channel_repetition=0.0,
-                raw={},
-            ))
+            signals.append(
+                SignalSet(
+                    views=views,
+                    likes=likes,
+                    comments=comments,
+                    upload_date=it.published_at,
+                    view_velocity=views / age_days,
+                    engagement_ratio=(likes + comments) / max(1, views),
+                    comment_velocity=comments / age_days,
+                    cross_channel_repetition=0.0,
+                    raw={},
+                )
+            )
         return signals
 
-    def trust_hints(self, item: RawItem) -> TrustHints:  # pragma: no cover
+    def trust_hints(self, item: RawItem) -> TrustHints:
         return TrustHints(
             account_age_days=None,
             verified=None,
@@ -164,6 +186,7 @@ class YouTubeAdapter(PlatformAdapter):
 
     def url_normalize(self, url: str) -> str:
         from urllib.parse import parse_qs, urlparse, urlunparse
+
         parsed = urlparse(url)
         qs = parse_qs(parsed.query)
         keep = {"v": qs["v"]} if "v" in qs else {}

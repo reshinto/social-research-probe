@@ -1,4 +1,5 @@
 """Data-dir resolution order and config.toml loading."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,9 +55,7 @@ def test_config_load_reads_toml(tmp_data_dir: Path):
 
 
 def test_config_deep_merge_preserves_defaults_for_absent_keys(tmp_data_dir: Path):
-    (tmp_data_dir / "config.toml").write_text(
-        '[llm]\nrunner = "claude"\n', encoding="utf-8"
-    )
+    (tmp_data_dir / "config.toml").write_text('[llm]\nrunner = "claude"\n', encoding="utf-8")
     cfg = Config.load(tmp_data_dir)
     # Non-overridden sections still have defaults
     assert cfg.corroboration_backend == "host"

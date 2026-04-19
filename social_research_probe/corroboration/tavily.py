@@ -10,6 +10,7 @@ robustness of majority-vote aggregation by diversifying the search indices used.
 Who calls it: corroboration/host.py via the registry. Requires the environment
 variable SRP_TAVILY_API_KEY to be set.
 """
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -61,7 +62,7 @@ class TavilyBackend(CorroborationBackend):
             raise AdapterError("SRP_TAVILY_API_KEY not set")
         return key
 
-    def _search(self, query: str) -> list[dict]:  # pragma: no cover — live HTTP
+    def _search(self, query: str) -> list[dict]:
         """Call the Tavily search API and return raw result items.
 
         Args:
@@ -117,7 +118,7 @@ class TavilyBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:  # pragma: no cover — live HTTP
+    def corroborate(self, claim) -> CorroborationResult:
         """Search Tavily for evidence supporting or refuting the claim.
 
         Args:

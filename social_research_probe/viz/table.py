@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import tempfile
 
+from social_research_probe.viz.base import ChartResult
 
-def _render_with_matplotlib(rows: list[dict], path: str, label: str) -> None:  # pragma: no cover — optional matplotlib
+
+def _render_with_matplotlib(rows: list[dict], path: str, label: str) -> None:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -50,7 +53,7 @@ def render(
     rows: list[dict],
     label: str = "table",
     output_dir: str | None = None,
-) -> ChartResult:  # noqa: F821 — type resolved at runtime
+) -> ChartResult:
     """Render a simple text table as a PNG using matplotlib's table widget.
 
     Args:
@@ -67,17 +70,16 @@ def render(
     matplotlib is unavailable the pure-Python PNG fallback produces a
     placeholder file so callers always receive a valid path.
     """
-    from social_research_probe.viz.base import ChartResult
-
     save_dir = output_dir if output_dir is not None else tempfile.gettempdir()
     filename = f"{_sanitise(label)}_table.png"
     path = f"{save_dir}/{filename}"
 
     try:
         _render_with_matplotlib(rows, path, label)
-    except (ImportError, Exception):
+    except Exception:
         # Pure-Python fallback: write a minimal valid PNG placeholder.
         from social_research_probe.viz._png_writer import write_placeholder_png
+
         write_placeholder_png(path)
 
     return ChartResult(

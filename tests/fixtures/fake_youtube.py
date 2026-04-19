@@ -1,4 +1,5 @@
 """Deterministic YouTube-shaped adapter for tests. Registered on import."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -26,7 +27,11 @@ def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
                 author_id=f"channel-{i % 3}",
                 author_name=f"Channel {i % 3}",
                 published_at=now - timedelta(days=i * 3),
-                metrics={"views": 10_000 * (i + 1), "likes": 500 * (i + 1), "comments": 50 * (i + 1)},
+                metrics={
+                    "views": 10_000 * (i + 1),
+                    "likes": 500 * (i + 1),
+                    "comments": 50 * (i + 1),
+                },
                 text_excerpt=f"A video about {topic}. Content {i}.",
                 thumbnail=f"https://img/{i}.jpg",
                 extras={"channel_subscribers": 50_000 + i * 1000},

@@ -44,9 +44,7 @@ def run(
         # No spread — no outliers by definition.
         outlier_count = 0
     else:
-        outlier_count = sum(
-            1 for v in data if abs((v - mean_val) / std_val) > threshold
-        )
+        outlier_count = sum(1 for v in data if abs((v - mean_val) / std_val) > threshold)
 
     outlier_fraction = outlier_count / n
 
@@ -54,9 +52,7 @@ def run(
         StatResult(
             name="outlier_count",
             value=float(outlier_count),
-            caption=(
-                f"Outliers in {label} (|z| > {threshold}): {outlier_count} of {n}"
-            ),
+            caption=(f"Outliers in {label} (|z| > {threshold}): {outlier_count} of {n}"),
         ),
         StatResult(
             name="outlier_fraction",

@@ -6,6 +6,7 @@ and easy to review, tweak, or A/B-test without touching runner or pipeline code.
 Who calls it: synthesize (pipeline step that writes summaries) and the
 corroboration host. Callers use .format(**kwargs) to fill in the placeholders.
 """
+
 from __future__ import annotations
 
 # Used by the synthesis step: given collected evidence for a topic on a

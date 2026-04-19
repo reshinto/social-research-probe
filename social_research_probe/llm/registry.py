@@ -7,6 +7,7 @@ importing vendor-specific modules directly.
 Who calls it: llm/__init__.py (to trigger registration), the pipeline, the
 corroboration host, and CLI commands that need to select a runner.
 """
+
 from __future__ import annotations
 
 from social_research_probe.errors import ValidationError

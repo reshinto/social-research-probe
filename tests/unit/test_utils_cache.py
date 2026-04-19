@@ -74,7 +74,9 @@ def test_key_sanitisation(tmp_path: Path) -> None:
     filename = files[0].name
     # All characters (excluding the .json extension) should be safe.
     stem = filename[: -len(".json")]
-    assert all(c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for c in stem)
+    assert all(
+        c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for c in stem
+    )
 
     # The value must still be retrievable via the original key.
     assert cache.get(unsafe_key) == {"ok": True}

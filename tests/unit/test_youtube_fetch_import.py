@@ -2,4 +2,6 @@
 
 
 def test_fetch_module_imports():
-    import social_research_probe.platforms.youtube.fetch  # noqa: F401
+    import importlib
+
+    importlib.import_module("social_research_probe.platforms.youtube.fetch")

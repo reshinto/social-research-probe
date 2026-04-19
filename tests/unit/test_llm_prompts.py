@@ -5,6 +5,7 @@ Verifies that each template contains the expected format placeholders and that
 
 Who calls it: pytest, run as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 from social_research_probe.llm.prompts import CORROBORATION_PROMPT, SYNTHESIS_PROMPT

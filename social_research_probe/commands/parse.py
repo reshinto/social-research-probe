@@ -1,4 +1,5 @@
 """Recursive-descent parser for the srp command DSL. Never consults an LLM."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -12,6 +13,7 @@ class ParseError(SrpError):
 
 
 # --- AST ---------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class ParsedUpdateTopics:
@@ -90,6 +92,7 @@ Parsed = (
 
 # --- Lexer helpers -----------------------------------------------------------
 
+
 def _take_quoted(src: str, pos: int) -> tuple[str, int]:
     if pos >= len(src) or src[pos] != '"':
         raise ParseError(f"expected '\"' at position {pos}")
@@ -123,6 +126,7 @@ def _parse_id_selector(src: str) -> Literal["all"] | list[int]:
 
 
 # --- Command dispatch --------------------------------------------------------
+
 
 def parse(text: str) -> Parsed:
     text = text.strip()
@@ -200,7 +204,9 @@ def _parse_discard_pending(tail: str) -> ParsedDiscardPending:
     return ParsedDiscardPending(topic_ids=topic_ids, purpose_ids=purpose_ids)
 
 
-def _parse_pending_selectors(tail: str) -> tuple[Literal["all"] | list[int], Literal["all"] | list[int]]:
+def _parse_pending_selectors(
+    tail: str,
+) -> tuple[Literal["all"] | list[int], Literal["all"] | list[int]]:
     # Rebuild tokens: a token without ':' is a continuation of the previous value
     tokens = tail.split()
     merged: list[str] = []
@@ -246,7 +252,9 @@ def _parse_run_research(tail: str) -> ParsedRunResearch:
         # Validate purpose names are valid identifiers (alphanumeric + hyphens + underscores)
         for p in purposes:
             if not all(c.isalnum() or c in "-_" for c in p):
-                raise ParseError(f"invalid purpose name {p!r}: use alphanumeric, hyphens, and underscores only")
+                raise ParseError(
+                    f"invalid purpose name {p!r}: use alphanumeric, hyphens, and underscores only"
+                )
         topics.append((topic, purposes))
 
     if not topics:

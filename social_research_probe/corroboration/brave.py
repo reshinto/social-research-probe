@@ -9,6 +9,7 @@ giving a complementary signal to semantic-search backends like Exa.
 Who calls it: corroboration/host.py via the registry. Requires the environment
 variable SRP_BRAVE_API_KEY to be set.
 """
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -60,7 +61,7 @@ class BraveBackend(CorroborationBackend):
             raise AdapterError("SRP_BRAVE_API_KEY not set")
         return key
 
-    def _search(self, query: str) -> list[dict]:  # pragma: no cover — live HTTP
+    def _search(self, query: str) -> list[dict]:
         """Call the Brave Search API and return raw web result items.
 
         Args:
@@ -117,7 +118,7 @@ class BraveBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:  # pragma: no cover — live HTTP
+    def corroborate(self, claim) -> CorroborationResult:
         """Search Brave for evidence supporting or refuting the claim.
 
         Args:

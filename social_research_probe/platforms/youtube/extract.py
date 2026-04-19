@@ -11,10 +11,11 @@ Who calls it:
     - ``social_research_probe.platforms.youtube.source`` (YouTube platform adapter)
     - Any pipeline step that needs raw transcript text keyed by video ID.
 """
+
 from __future__ import annotations
 
 
-def fetch_transcript(url: str) -> str | None:  # pragma: no cover — network
+def fetch_transcript(url: str) -> str | None:
     """Download and return the English transcript for a YouTube video URL.
 
     Attempts to retrieve manually-uploaded subtitles first, then falls back to

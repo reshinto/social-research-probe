@@ -4,6 +4,7 @@ What: Verifies decorator registration, look-up by name, unknown-name error, and
 sorted listing.
 Who calls it: pytest, as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -69,7 +70,9 @@ def test_register_class_without_name_raises():
     """Line 37: @register on class without 'name' raises ValueError."""
 
     class NoName(CorroborationBackend):
-        def health_check(self) -> bool: return True
+        def health_check(self) -> bool:
+            return True
+
         def corroborate(self, claim) -> CorroborationResult:
             return CorroborationResult(verdict="inconclusive", confidence=0.0, reasoning="")
 

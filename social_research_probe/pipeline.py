@@ -24,16 +24,42 @@ Mode = Literal["skill", "cli"]
 
 _SRC_NUM = {"primary": 1.0, "secondary": 0.7, "commentary": 0.4, "unknown": 0.3}
 
-_STOPWORDS = frozenset({
-    "the", "a", "an", "of", "for", "to", "and", "or", "in", "on", "with",
-    "get", "my", "by", "via", "from", "about", "how", "what", "which", "track",
-    "latest", "across", "channels", "velocity", "saturation", "emergence",
-})
+_STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "of",
+        "for",
+        "to",
+        "and",
+        "or",
+        "in",
+        "on",
+        "with",
+        "get",
+        "my",
+        "by",
+        "via",
+        "from",
+        "about",
+        "how",
+        "what",
+        "which",
+        "track",
+        "latest",
+        "across",
+        "channels",
+        "velocity",
+        "saturation",
+        "emergence",
+    }
+)
 
 
 def _enrich_query(topic: str, method: str) -> str:
     words = [w for w in method.lower().split() if w not in _STOPWORDS and len(w) > 2][:3]
-    extra = " ".join(dict.fromkeys(words))  # dedupe preserving order
+    extra = " ".join(dict.fromkeys(words))
     return f"{topic} {extra}".strip() if extra else topic
 
 
@@ -53,7 +79,9 @@ def _zscore(values: list[float]) -> list[float]:
 
 def _maybe_register_fake() -> None:
     if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") == "1":
-        import tests.fixtures.fake_youtube  # noqa: F401
+        import importlib
+
+        importlib.import_module("tests.fixtures.fake_youtube")
 
 
 def _score_item(it, sig, h, z_vel: float, z_eng: float):
@@ -125,22 +153,24 @@ def run_research(cmd: ParsedRunResearch, data_dir, mode: Mode) -> dict:
             "commentary": sum(1 for d in top5 if d["source_class"] == "commentary"),
             "notes": "",
         }
-        packets.append(build_packet(
-            topic=topic,
-            platform=cmd.platform,
-            purpose_set=list(merged.names),
-            items_top5=top5,
-            source_validation_summary=svs,
-            platform_signals_summary=f"{len(items)} items fetched",
-            evidence_summary=(
-                "deterministic fixture"
-                if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE")
-                else "live fetch"
-            ),
-            stats_summary={"models_run": [], "highlights": [], "low_confidence": True},
-            chart_captions=[],
-            warnings=[],
-        ))
+        packets.append(
+            build_packet(
+                topic=topic,
+                platform=cmd.platform,
+                purpose_set=list(merged.names),
+                items_top5=top5,
+                source_validation_summary=svs,
+                platform_signals_summary=f"{len(items)} items fetched",
+                evidence_summary=(
+                    "deterministic fixture"
+                    if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE")
+                    else "live fetch"
+                ),
+                stats_summary={"models_run": [], "highlights": [], "low_confidence": True},
+                chart_captions=[],
+                warnings=[],
+            )
+        )
 
     combined = (
         packets[0]

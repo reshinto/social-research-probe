@@ -7,6 +7,7 @@ module. The side-effect import of llm.runners populates the registry.
 Who calls it: any module that calls llm.registry.get_runner() or
 llm.registry.list_runners().
 """
+
 from __future__ import annotations
 
-from social_research_probe.llm import runners  # noqa: F401  — triggers registration
+import social_research_probe.llm.runners

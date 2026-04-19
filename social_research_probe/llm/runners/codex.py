@@ -7,6 +7,7 @@ automatically when this module is imported.
 Who calls it: llm.registry.get_runner("codex"), triggered by importing
 llm.runners.
 """
+
 from __future__ import annotations
 
 import json
@@ -78,11 +79,9 @@ class CodexRunner(LLMRunner):
         try:
             return json.loads(stdout)
         except json.JSONDecodeError as exc:
-            raise AdapterError(
-                f"codex returned non-JSON: {stdout[:200]!r}"
-            ) from exc
+            raise AdapterError(f"codex returned non-JSON: {stdout[:200]!r}") from exc
 
-    def run(self, prompt: str, *, schema: dict | None = None) -> dict:  # pragma: no cover — live subprocess
+    def run(self, prompt: str, *, schema: dict | None = None) -> dict:
         """Send prompt to the codex CLI and return parsed JSON response.
 
         Args:

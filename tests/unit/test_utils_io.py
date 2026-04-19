@@ -79,7 +79,6 @@ def test_write_json_cleans_up_tmp_on_error(tmp_path: Path, monkeypatch) -> None:
     target = tmp_path / "output.json"
     tmp_file = target.with_suffix(".tmp")
 
-
     def exploding_replace(src, dst):
         raise OSError("simulated replace failure")
 

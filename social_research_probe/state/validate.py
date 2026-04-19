@@ -1,4 +1,5 @@
 """Thin wrapper around jsonschema that raises SrpError.ValidationError on failure."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -14,5 +15,7 @@ def validate(data: Any, schema: dict[str, Any]) -> None:
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
     if not errors:
         return
-    messages = [f"{'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}" for e in errors]
+    messages = [
+        f"{'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}" for e in errors
+    ]
     raise ValidationError("; ".join(messages))

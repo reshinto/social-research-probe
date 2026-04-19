@@ -1,4 +1,5 @@
 """Topics CRUD. Reads/writes topics.json through state.store, dedupes via dedupe.classify."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -51,7 +52,9 @@ def add_topics(data_dir: Path, values: list[str], *, force: bool) -> None:
 
     if conflicts and not force:
         descriptions = "; ".join(f"{v!r} ~ {m}" for v, m in conflicts)
-        raise DuplicateError(f"duplicate/near-duplicate topics: {descriptions} (use --force to override)")
+        raise DuplicateError(
+            f"duplicate/near-duplicate topics: {descriptions} (use --force to override)"
+        )
 
     # Deduplicate to_add against existing and within itself before saving
     seen = set(existing)
@@ -77,6 +80,7 @@ def rename_topic(data_dir: Path, old: str, new: str) -> None:
     existing = list(data["topics"])
     if old not in existing:
         from social_research_probe.errors import SrpError
+
         raise SrpError(f"topic {old!r} not found")
     if new in existing:
         raise DuplicateError(f"{new!r} already exists; rename would cause a duplicate")

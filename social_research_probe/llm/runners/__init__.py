@@ -8,6 +8,10 @@ callers needing to know which runner files exist.
 Who calls it: llm/__init__.py, which is itself imported by anything that uses
 the LLM subsystem.
 """
+
 from __future__ import annotations
 
-from social_research_probe.llm.runners import claude, codex, gemini, local  # noqa: F401
+import social_research_probe.llm.runners.claude
+import social_research_probe.llm.runners.codex
+import social_research_probe.llm.runners.gemini
+import social_research_probe.llm.runners.local

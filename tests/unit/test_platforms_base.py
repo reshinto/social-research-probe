@@ -1,4 +1,5 @@
 """Platform adapter dataclasses + ABC contract."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -22,8 +23,8 @@ def test_fetch_limits_defaults():
 
 def test_fetch_limits_is_frozen():
     limits = FetchLimits()
-    with pytest.raises(Exception):  # noqa: B017
-        limits.max_items = 5  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        limits.max_items = 5
 
 
 def test_raw_item_required_fields():
@@ -44,10 +45,14 @@ def test_raw_item_required_fields():
 
 def test_signal_set_allows_none_metrics():
     sig = SignalSet(
-        views=None, likes=None, comments=None,
+        views=None,
+        likes=None,
+        comments=None,
         upload_date=None,
-        view_velocity=None, engagement_ratio=None,
-        comment_velocity=None, cross_channel_repetition=None,
+        view_velocity=None,
+        engagement_ratio=None,
+        comment_velocity=None,
+        cross_channel_repetition=None,
         raw={},
     )
     assert sig.views is None
@@ -66,7 +71,7 @@ def test_trust_hints_defaults_allow_nones():
 
 def test_adapter_is_abstract():
     with pytest.raises(TypeError):
-        PlatformAdapter()  # type: ignore[abstract]
+        PlatformAdapter()
 
 
 def test_fetch_text_for_claim_extraction_returns_none():

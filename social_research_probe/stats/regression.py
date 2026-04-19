@@ -45,20 +45,15 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
     cov_xy = sum((xs[i] - mean_x) * (data[i] - mean_y) for i in range(n))
     var_x = sum((xs[i] - mean_x) ** 2 for i in range(n))
 
-    if var_x == 0:  # pragma: no cover
-        # All x values identical — degenerate case with a single point after dedup.
-        slope = 0.0
-        r_squared = 0.0
-    else:
-        slope = cov_xy / var_x
-        intercept = mean_y - slope * mean_x
+    slope = cov_xy / var_x
+    intercept = mean_y - slope * mean_x
 
-        # R-squared: 1 - SS_res / SS_tot
-        ss_res = sum((data[i] - (slope * xs[i] + intercept)) ** 2 for i in range(n))
-        ss_tot = sum((data[i] - mean_y) ** 2 for i in range(n))
+    # R-squared: 1 - SS_res / SS_tot
+    ss_res = sum((data[i] - (slope * xs[i] + intercept)) ** 2 for i in range(n))
+    ss_tot = sum((data[i] - mean_y) ** 2 for i in range(n))
 
-        # When all y values are identical, ss_tot==0; R-squared is defined as 1.
-        r_squared = 1.0 if ss_tot == 0 else 1.0 - ss_res / ss_tot
+    # When all y values are identical, ss_tot==0; R-squared is defined as 1.
+    r_squared = 1.0 if ss_tot == 0 else 1.0 - ss_res / ss_tot
 
     return [
         StatResult(

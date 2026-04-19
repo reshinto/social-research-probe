@@ -1,7 +1,7 @@
 """Tests for LLM runner argv builders and JSON parsers.
 
-Live subprocess calls are excluded from coverage (marked with
-# pragma: no cover — live subprocess on the run() methods themselves).
+Live subprocess calls are covered by monkeypatching subprocess_runner.run
+so that no real subprocess is spawned during testing.
 
 For each of the four runners (claude, gemini, codex, local) this module tests:
 - health_check() when the binary is found / missing
@@ -13,6 +13,7 @@ and path-nonexistent cases.
 
 Who calls it: pytest, run as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -300,3 +301,60 @@ def test_local_parse_response_invalid_json_raises_adapter_error() -> None:
     runner = LocalRunner()
     with pytest.raises(AdapterError, match="local LLM returned non-JSON"):
         runner._parse_response("definitely not json")
+
+
+# ---------------------------------------------------------------------------
+# run() integration — monkeypatched subprocess_runner
+# ---------------------------------------------------------------------------
+
+
+def _make_completed(stdout: str):
+    """Return a minimal subprocess.CompletedProcess stand-in."""
+    import subprocess
+
+    return subprocess.CompletedProcess(args=[], returncode=0, stdout=stdout, stderr="")
+
+
+def test_claude_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
+    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 1}')
+    )
+    runner = ClaudeRunner()
+    assert runner.run("hello") == {"ok": 1}
+
+
+def test_gemini_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
+    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 2}')
+    )
+    runner = GeminiRunner()
+    assert runner.run("hello") == {"ok": 2}
+
+
+def test_codex_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
+    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 3}')
+    )
+    runner = CodexRunner()
+    assert runner.run("hello") == {"ok": 3}
+
+
+def test_local_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
+    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 4}')
+    )
+    monkeypatch.setenv("SRP_LOCAL_LLM_BIN", "/fake/llm")
+    runner = LocalRunner()
+    assert runner.run("hello") == {"ok": 4}

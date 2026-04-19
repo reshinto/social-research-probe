@@ -3,6 +3,7 @@
 What: Verifies the dataclass defaults and that the ABC cannot be instantiated.
 Who calls it: pytest, as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -28,4 +29,4 @@ def test_corroboration_result_defaults():
 def test_corroboration_backend_is_abstract():
     """CorroborationBackend cannot be instantiated directly — it is an ABC."""
     with pytest.raises(TypeError):
-        CorroborationBackend()  # type: ignore[abstract]
+        CorroborationBackend()

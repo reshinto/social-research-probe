@@ -4,6 +4,7 @@ What: Verifies prompt construction, result parsing, verdict normalisation, and
 health_check delegation to the underlying LLM runner — all without subprocess calls.
 Who calls it: pytest, as part of the unit test suite.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -110,7 +111,33 @@ def test_health_check_returns_false_on_exception(monkeypatch):
     """Lines 59-61: health_check returns False when get_runner raises an exception."""
     import social_research_probe.llm.registry as llm_reg
 
-    monkeypatch.setattr(llm_reg, "get_runner", lambda name: (_ for _ in ()).throw(RuntimeError("no runner")))
+    monkeypatch.setattr(
+        llm_reg, "get_runner", lambda name: (_ for _ in ()).throw(RuntimeError("no runner"))
+    )
 
     backend = LLMCliBackend(runner_name="nonexistent")
     assert backend.health_check() is False
+
+
+def test_corroborate_end_to_end(monkeypatch):
+    """corroborate() calls the runner and parses the returned dict into a CorroborationResult."""
+    import social_research_probe.llm.registry as llm_reg
+
+    class _FakeRunner:
+        def health_check(self) -> bool:
+            return True
+
+        def run(self, prompt, *, schema=None):
+            return {"verdict": "supported", "confidence": 0.9, "reasoning": "looks good"}
+
+    monkeypatch.setattr(llm_reg, "get_runner", lambda name: _FakeRunner())
+
+    class _FakeClaim:
+        text = "Test claim"
+        source_text = "Some source"
+
+    backend = LLMCliBackend(runner_name="claude")
+    result = backend.corroborate(_FakeClaim())
+    assert result.verdict == "supported"
+    assert result.confidence == pytest.approx(0.9)
+    assert result.reasoning == "looks good"
