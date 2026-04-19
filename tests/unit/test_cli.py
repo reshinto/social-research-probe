@@ -302,6 +302,12 @@ class TestInstallSkill:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
         )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._copy_config_example", lambda d: None
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
 
@@ -451,6 +457,12 @@ class TestInstallSkillWithUvOrPipx:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
         )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._copy_config_example", lambda d: None
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
         assert any("uv" in str(c) for c in calls)
@@ -476,6 +488,12 @@ class TestInstallSkillWithUvOrPipx:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
         )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._copy_config_example", lambda d: None
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
+        )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
         assert any("pipx" in str(c) for c in calls)
@@ -495,6 +513,12 @@ class TestInstallSkillDestExists:
         monkeypatch.setattr("shutil.which", lambda x: None)
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_secrets", lambda d: None
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._copy_config_example", lambda d: None
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
         )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
@@ -658,3 +682,100 @@ class TestPromptForSecrets:
             tmp_path, _input=lambda prompt="": (_ for _ in ()).throw(KeyboardInterrupt())
         )
         assert write_calls == []
+
+
+class TestCopyConfigExample:
+    """Unit tests for install_skill._copy_config_example."""
+
+    def test_copies_example_when_config_absent(self, tmp_path):
+        from social_research_probe.commands.install_skill import _copy_config_example
+
+        _copy_config_example(tmp_path)
+        assert (tmp_path / "config.toml").exists()
+
+    def test_skips_copy_when_config_exists(self, tmp_path):
+        from social_research_probe.commands.install_skill import _copy_config_example
+
+        existing = tmp_path / "config.toml"
+        existing.write_text("original", encoding="utf-8")
+        _copy_config_example(tmp_path)
+        assert existing.read_text(encoding="utf-8") == "original"
+
+    def test_creates_data_dir_when_absent(self, tmp_path):
+        from social_research_probe.commands.install_skill import _copy_config_example
+
+        target = tmp_path / "nested" / "data"
+        _copy_config_example(target)
+        assert (target / "config.toml").exists()
+
+
+class TestPromptForRunner:
+    """Unit tests for install_skill._prompt_for_runner."""
+
+    def test_valid_choice_writes_runner(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        written = {}
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: written.update({k: v}),
+        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": "1")  # 1 = claude
+        assert written == {"llm.runner": "claude"}
+
+    def test_none_choice_writes_none(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        written = {}
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: written.update({k: v}),
+        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": "5")  # 5 = none
+        assert written == {"llm.runner": "none"}
+
+    def test_blank_input_skips(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: calls.append(v),
+        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": "")
+        assert calls == []
+
+    def test_invalid_choice_skips(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: calls.append(v),
+        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": "99")
+        assert calls == []
+
+    def test_eoferror_skips(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: calls.append(v),
+        )
+        _prompt_for_runner(tmp_path, _input=lambda p="": (_ for _ in ()).throw(EOFError()))
+        assert calls == []
+
+    def test_keyboardinterrupt_skips(self, tmp_path, monkeypatch):
+        from social_research_probe.commands.install_skill import _prompt_for_runner
+
+        calls = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.config.write_config_value",
+            lambda d, k, v: calls.append(v),
+        )
+        _prompt_for_runner(
+            tmp_path, _input=lambda p="": (_ for _ in ()).throw(KeyboardInterrupt())
+        )
+        assert calls == []

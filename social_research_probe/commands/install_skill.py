@@ -16,6 +16,7 @@ from social_research_probe.config import resolve_data_dir
 from social_research_probe.errors import ValidationError
 
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
+_BUNDLED_CONFIG = Path(__file__).parent.parent / "config.toml.example"
 
 # Ordered list of (secret_name, human_readable_description) pairs shown
 # during the interactive setup prompt.
@@ -24,6 +25,15 @@ _KEY_PROMPTS: list[tuple[str, str]] = [
     ("brave_api_key", "Brave Search API key (corroboration — paid)"),
     ("exa_api_key", "Exa search API key (corroboration — free tier available)"),
     ("tavily_api_key", "Tavily search API key (corroboration — free tier available)"),
+]
+
+
+_RUNNER_CHOICES: list[tuple[str, str]] = [
+    ("claude", "Claude CLI (claude) — requires Anthropic account"),
+    ("gemini", "Gemini CLI (gemini) — requires Google account"),
+    ("codex", "Codex CLI (codex) — requires OpenAI account"),
+    ("local", "Local model via SRP_LOCAL_LLM_BIN env var"),
+    ("none", "No LLM — skip all AI features"),
 ]
 
 
@@ -48,7 +58,10 @@ def run(target: str | None) -> int:
     shutil.copytree(src, dest)
     print(f"Skill installed to {dest}")
     _install_cli()
-    _prompt_for_secrets(resolve_data_dir(None))
+    data_dir = resolve_data_dir(None)
+    _copy_config_example(data_dir)
+    _prompt_for_secrets(data_dir)
+    _prompt_for_runner(data_dir)
     return 0
 
 
@@ -68,6 +81,53 @@ def _install_cli() -> None:
     else:
         print("warning: neither uv nor pipx found — srp CLI not permanently installed")
         print(f'  run: pipx install "{_PACKAGE_REPO}"')
+
+
+def _copy_config_example(data_dir: Path) -> None:
+    """Copy the bundled config.toml.example to data_dir/config.toml if absent.
+
+    Skips the copy if a config.toml already exists so user customisations are
+    never overwritten on reinstall.
+    """
+    from social_research_probe.commands.config import CONFIG_FILENAME
+
+    dest = data_dir / CONFIG_FILENAME
+    if dest.exists():
+        return
+    data_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(_BUNDLED_CONFIG, dest)
+    print(f"Default config written to {dest}")
+
+
+def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
+    """Prompt the user to choose a default LLM runner and persist it to config.toml.
+
+    Shows numbered choices and writes the selection via write_config_value so
+    the runner setting is stored in the resolved data dir's config.toml.
+    Exits early on EOFError or KeyboardInterrupt for non-interactive installs.
+    """
+    from social_research_probe.commands.config import write_config_value
+
+    print("\nDefault LLM runner — choose which AI backend srp should use:")
+    for i, (name, description) in enumerate(_RUNNER_CHOICES, start=1):
+        print(f"  {i}. {name:8}  {description}")
+    try:
+        raw = str(_input("  Enter number (or press Enter to skip): ")).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return
+    if not raw:
+        return
+    try:
+        index = int(raw) - 1
+        if index < 0 or index >= len(_RUNNER_CHOICES):
+            raise ValueError
+    except ValueError:
+        print(f"  invalid choice '{raw}' — skipping runner configuration")
+        return
+    chosen, _ = _RUNNER_CHOICES[index]
+    write_config_value(data_dir, "llm.runner", chosen)
+    print(f"  runner set to '{chosen}'.")
 
 
 def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:
