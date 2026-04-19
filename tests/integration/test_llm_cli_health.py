@@ -58,6 +58,10 @@ def test_codex_cli_responds():
     print(f"\ncodex response: {out!r}")
 
 
+@pytest.mark.skipif(
+    all(shutil.which(cli) is None for cli in ("claude", "gemini", "codex")),
+    reason="no LLM CLIs installed",
+)
 def test_ensemble_multi_llm_prompt_live():
     """End-to-end: multi_llm_prompt fans out to all available CLIs and synthesizes."""
     from social_research_probe.llm.ensemble import multi_llm_prompt
