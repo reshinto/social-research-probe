@@ -261,13 +261,15 @@ def test_render_charts_empty_returns_empty(tmp_path):
     assert _render_charts([], tmp_path) == []
 
 
-def test_render_charts_writes_three_captions(tmp_path):
+def test_render_charts_writes_five_captions(tmp_path):
     captions = _render_charts(_fake_top5(3), tmp_path)
-    assert len(captions) == 3
+    assert len(captions) == 5
     assert (tmp_path / "charts").is_dir()
     joined = "\n".join(captions)
     assert "Bar chart" in joined
-    assert "Scatter" in joined
+    assert "Line chart" in joined
+    assert "trust_vs_opportunity" in joined
+    assert "trust_vs_trend" in joined
     assert "Table" in joined or "table" in joined
 
 
@@ -307,7 +309,7 @@ def test_build_stats_summary_single_item_runs_only_descriptive():
 
 def test_render_charts_single_item_still_renders(tmp_path):
     captions = _render_charts(_fake_top5(1), tmp_path)
-    assert len(captions) == 3
+    assert len(captions) == 5
 
 
 def test_stats_models_for_zero_returns_empty():

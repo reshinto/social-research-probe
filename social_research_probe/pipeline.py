@@ -167,27 +167,48 @@ def _stats_models_for(n: int) -> list[str]:
 
 
 def _render_charts(top5: list[dict], data_dir) -> list[str]:
-    """Render bar (overall), scatter (trust vs opportunity), and table charts."""
+    """Render every applicable chart type for the top-5 dataset.
+
+    Produces one of each viz module — bar, line, scatter, table — plus an
+    extra scatter for trust vs trend so two correlations are visible.
+    """
     if not top5:
         return []
     charts_dir = data_dir / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
     overall = [d["scores"]["overall"] for d in top5]
     trust = [d["scores"]["trust"] for d in top5]
+    trend = [d["scores"]["trend"] for d in top5]
     opportunity = [d["scores"]["opportunity"] for d in top5]
 
     captions: list[str] = []
-    bar_chart = select_and_render(overall, label="overall_score", output_dir=str(charts_dir))
-    captions.append(bar_chart.caption)
+    captions.append(_render_bar(overall, charts_dir))
+    captions.append(_render_line(overall, charts_dir))
+    captions.append(_render_scatter(trust, opportunity, "trust_vs_opportunity", charts_dir))
+    captions.append(_render_scatter(trust, trend, "trust_vs_trend", charts_dir))
+    captions.append(_render_table(top5, charts_dir))
+    return captions
 
-    scatter_chart = scatter_viz.render(
-        trust, opportunity, label="trust_vs_opportunity", output_dir=str(charts_dir)
-    )
-    captions.append(
-        f"Scatter: trust vs opportunity ({len(trust)} items)\n_(see PNG: {scatter_chart.path})_"
-    )
 
-    table_rows = [
+def _render_bar(overall: list[float], charts_dir) -> str:
+    chart = select_and_render(overall, label="overall_score", output_dir=str(charts_dir))
+    return chart.caption
+
+
+def _render_line(overall: list[float], charts_dir) -> str:
+    from social_research_probe.viz import line as line_viz
+
+    chart = line_viz.render(overall, label="overall_score_by_rank", output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
+
+
+def _render_scatter(x: list[float], y: list[float], label: str, charts_dir) -> str:
+    chart = scatter_viz.render(x, y, label=label, output_dir=str(charts_dir))
+    return f"Scatter: {label.replace('_', ' ')} ({len(x)} items)\n_(see PNG: {chart.path})_"
+
+
+def _render_table(top5: list[dict], charts_dir) -> str:
+    rows = [
         {
             "rank": i + 1,
             "channel": d["channel"][:25],
@@ -198,10 +219,8 @@ def _render_charts(top5: list[dict], data_dir) -> list[str]:
         }
         for i, d in enumerate(top5)
     ]
-    table_chart = table_viz.render(table_rows, label="top5_summary", output_dir=str(charts_dir))
-    captions.append(f"{table_chart.caption}\n_(see PNG: {table_chart.path})_")
-
-    return captions
+    chart = table_viz.render(rows, label="top5_summary", output_dir=str(charts_dir))
+    return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
 def run_research(
