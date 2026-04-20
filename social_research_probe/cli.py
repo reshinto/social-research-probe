@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
 import sys
@@ -360,7 +361,7 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         pkt["html_report_path"] = report_uri
         return report_uri
 
-    packet = run_research(parse(raw), data_dir, adapter_config=config_extras)
+    packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
     _attach_synthesis(packet)
     if not no_html:
         if "multi" in packet:

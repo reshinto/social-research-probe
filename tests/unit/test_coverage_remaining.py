@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import subprocess
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -44,7 +44,7 @@ _VALID_PACKET = {
 def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys):
     calls = []
 
-    def fake_run_research(cmd, data_dir, adapter_config=None):
+    async def fake_run_research(cmd, data_dir, adapter_config=None):
         calls.append((cmd, data_dir, adapter_config))
         return _VALID_PACKET
 
@@ -62,7 +62,7 @@ def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys
 def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "social_research_probe.pipeline.run_research",
-        lambda cmd, data_dir, adapter_config=None: _VALID_PACKET,
+        AsyncMock(return_value=_VALID_PACKET),
     )
     monkeypatch.setattr(
         "social_research_probe.cli._attach_synthesis",
@@ -78,25 +78,31 @@ def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
         ("codex", ["codex", "exec", "hello"]),
     ],
 )
-def test_run_provider_uses_expected_command(monkeypatch, provider, expected_command):
+async def test_run_provider_uses_expected_command(monkeypatch, provider, expected_command):
+    import asyncio
+
     calls = []
 
-    class Result:
-        stdout = "  answer  "
+    class _FakeProc:
+        async def communicate(self, input=None):
+            return (b"  answer  ", b"")
 
-    def fake_run(cmd, **kwargs):
-        calls.append((cmd, kwargs))
-        return Result()
+        async def wait(self):
+            return 0
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    async def fake_create_subprocess(*cmd, stdin=None, stdout=None, stderr=None):
+        calls.append((list(cmd), {"stdin": stdin, "stdout": stdout, "stderr": stderr}))
+        return _FakeProc()
 
-    assert _run_provider(provider, "hello") == "answer"
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess)
+
+    result = await _run_provider(provider, "hello")
+    assert result == "answer"
     assert len(calls) == 1
     cmd, kwargs = calls[0]
     assert cmd == expected_command
-    assert kwargs["stdin"] == subprocess.DEVNULL
-    assert kwargs["capture_output"] is True
-    assert kwargs["text"] is True
+    assert kwargs["stdout"] == asyncio.subprocess.PIPE
+    assert kwargs["stderr"] == asyncio.subprocess.DEVNULL
 
 
 def test_fetch_best_transcript_returns_none_when_fallback_raises():
@@ -123,7 +129,7 @@ def test_fetch_best_transcript_swallows_primary_exception_and_tries_fallback():
     )
 
 
-def test_enrich_top5_uses_description_when_transcript_whitespace_only(monkeypatch):
+async def test_enrich_top5_uses_description_when_transcript_whitespace_only(monkeypatch):
     """When both transcript paths return whitespace-only text, the pipeline falls back
     to a description-based LLM summary instead of skipping entirely."""
     from social_research_probe.pipeline import _enrich_top5_with_transcripts
@@ -138,7 +144,7 @@ def test_enrich_top5_uses_description_when_transcript_whitespace_only(monkeypatc
     )
     monkeypatch.setattr(
         "social_research_probe.pipeline.multi_llm_prompt",
-        lambda prompt, task="": "Description-based summary.",
+        AsyncMock(return_value="Description-based summary."),
     )
 
     items = [
@@ -151,7 +157,7 @@ def test_enrich_top5_uses_description_when_transcript_whitespace_only(monkeypatc
             "one_line_takeaway": "keep me",
         }
     ]
-    _enrich_top5_with_transcripts(items)
+    await _enrich_top5_with_transcripts(items)
 
     assert "transcript" not in items[0]
     assert items[0].get("summary_source") == "description"
@@ -185,7 +191,7 @@ def test_fallback_transcript_summary_empty_string_returns_empty():
     assert _fallback_transcript_summary("") == ""
 
 
-def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path):
+async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path):
     """When backends config is non-none but no backends pass health-check, skip_reason
     is 'no API credentials usable' (the else-branch of the cfg_corr == 'none' check)."""
 
@@ -209,10 +215,10 @@ def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path):
     monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda d: _Cfg())
     monkeypatch.setattr("social_research_probe.pipeline._available_backends", lambda d: ["exa"])
     monkeypatch.setattr(
-        "social_research_probe.pipeline._corroborate_top5", lambda items, backends: []
+        "social_research_probe.pipeline._corroborate_top5", AsyncMock(return_value=[])
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline._enrich_top5_with_transcripts", lambda items: None
+        "social_research_probe.pipeline._enrich_top5_with_transcripts", AsyncMock(return_value=None)
     )
     from tests.unit.test_pipeline import _write_purposes
 
@@ -225,7 +231,7 @@ def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path):
             }
         },
     )
-    packet = run_research(parse('run-research platform:youtube "AI"->latest-news'), tmp_path)
+    packet = await run_research(parse('run-research platform:youtube "AI"->latest-news'), tmp_path)
     assert "topic" in packet
 
 

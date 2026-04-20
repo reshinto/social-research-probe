@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import io
 import json
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -271,8 +272,10 @@ class TestResearchCommand:
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: (
-                calls.append(adapter_config) or copy.deepcopy(_VALID_PACKET)
+            AsyncMock(
+                side_effect=lambda cmd, d, adapter_config=None: (
+                    calls.append(adapter_config) or copy.deepcopy(_VALID_PACKET)
+                )
             ),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -411,7 +414,7 @@ class TestCorroborateClaims:
         )
         monkeypatch.setattr(
             "social_research_probe.commands.corroborate_claims.corroborate_claim",
-            lambda c, backends: {"claim_text": c.text, "results": []},
+            AsyncMock(return_value={"claim_text": "AI is growing.", "results": []}),
         )
         assert (
             main(["--data-dir", str(tmp_path), "corroborate-claims", "--input", str(claims_file)])
@@ -551,7 +554,7 @@ class TestDispatchFallthrough:
 
 class TestSimpleResearch:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, adapter_config=None):
+        async def fake(cmd, d, adapter_config=None):
             captured.append((cmd, adapter_config))
             return copy.deepcopy(_VALID_PACKET)
 
@@ -672,7 +675,7 @@ class TestSimpleResearch:
 
 class TestSimpleResearchTranscripts:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, adapter_config=None):
+        async def fake(cmd, d, adapter_config=None):
             captured.append((cmd, adapter_config))
             return copy.deepcopy(_VALID_PACKET)
 
@@ -991,7 +994,7 @@ class TestRequiredSynthesis:
     def test_research_emits_envelope_with_html_path(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr(
             "social_research_probe.cli._attach_synthesis",
@@ -1009,7 +1012,7 @@ class TestRequiredSynthesis:
     def test_no_html_still_emits_synthesized_packet(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr(
             "social_research_probe.cli._attach_synthesis",
@@ -1036,7 +1039,7 @@ class TestRequiredSynthesis:
     def test_runner_none_emits_packet_without_sections_10_11(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         main(
@@ -1072,7 +1075,7 @@ class TestResearchPreflightWarning:
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _UnhealthyRunner())
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
@@ -1092,7 +1095,7 @@ class TestResearchPreflightWarning:
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _HealthyRunner())
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
@@ -1108,7 +1111,7 @@ class TestResearchPreflightWarning:
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: copy.deepcopy(multi),
+            AsyncMock(return_value=copy.deepcopy(multi)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         from social_research_probe.errors import ValidationError

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -53,7 +54,7 @@ def test_run_success_stdout(monkeypatch, tmp_path, capsys):
     """
     calls = []
 
-    def fake_corroborate(claim, backends):
+    async def fake_corroborate(claim, backends):
         calls.append((claim.text, backends))
         return _FAKE_VERDICT
 
@@ -74,7 +75,7 @@ def test_run_success_stdout(monkeypatch, tmp_path, capsys):
 
 def test_run_with_output_file(monkeypatch, tmp_path):
     """run() writes the JSON results to output_path when provided."""
-    monkeypatch.setattr(cc_cmd, "corroborate_claim", lambda c, b: _FAKE_VERDICT)
+    monkeypatch.setattr(cc_cmd, "corroborate_claim", AsyncMock(return_value=_FAKE_VERDICT))
 
     input_path = _write_claims(tmp_path, _CLAIMS_DATA)
     output_path = tmp_path / "out.json"

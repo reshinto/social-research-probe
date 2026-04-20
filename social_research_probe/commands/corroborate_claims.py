@@ -23,7 +23,6 @@ import sys
 from pathlib import Path
 
 from social_research_probe.corroboration.host import corroborate_claim
-from social_research_probe.utils.concurrency import run_coro
 from social_research_probe.validation.claims import Claim
 
 
@@ -72,14 +71,14 @@ def run(
         source = rc.get("source_text", text)
         claim = Claim(text=text, source_text=source, index=i)
         async with sem:
-            return await asyncio.to_thread(corroborate_claim, claim, backends)
+            return await corroborate_claim(claim, backends)
 
     async def _gather_claims() -> list[dict]:
         return await asyncio.gather(
             *[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)],
         )
 
-    results = run_coro(_gather_claims())
+    results = asyncio.run(_gather_claims())
 
     out = json.dumps({"results": results}, indent=2, ensure_ascii=False)
     if output_path:

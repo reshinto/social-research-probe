@@ -57,7 +57,6 @@ from social_research_probe.types import (
     SourceValidationSummary,
     StatsSummary,
 )
-from social_research_probe.utils.concurrency import run_coro
 from social_research_probe.utils.progress import log
 from social_research_probe.validation.source import classify as classify_source
 from social_research_probe.viz import bar as bar_viz
@@ -271,14 +270,14 @@ async def _enrich_one(
         prompt = _build_description_summary_prompt(item)
         task_label = f"summarising description for {title[:60]!r}"
 
-    summary = await asyncio.to_thread(multi_llm_prompt, prompt, task=task_label)
+    summary = await multi_llm_prompt(prompt, task=task_label)
     if summary:
         item["one_line_takeaway"] = summary
     elif cleaned:
         item["one_line_takeaway"] = _fallback_transcript_summary(cleaned)
 
 
-def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
+async def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
     """Fetch transcripts and AI summaries for top-5 items concurrently.
 
     Transcript sources tried in order per item:
@@ -311,7 +310,7 @@ def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
             return_exceptions=True,
         )
 
-    run_coro(_gather())
+    await _gather()
 
 
 def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:
@@ -600,10 +599,10 @@ async def _corroborate_one(
         index=0,
     )
     async with sem:
-        return await asyncio.to_thread(corroborate_claim, claim, backends)
+        return await corroborate_claim(claim, backends)
 
 
-def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]:
+async def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]:
     """Corroborate all top-5 items concurrently, one claim per item.
 
     Uses the video title as the claim text — short, factual, and searchable.
@@ -620,7 +619,7 @@ def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]
         )
         return [r if isinstance(r, dict) else {} for r in results]
 
-    results = run_coro(_gather())
+    results = await _gather()
     verdicts = [r.get("aggregate_verdict", "no_result") for r in results]
     summary = ", ".join(
         f"{v}={verdicts.count(v)}"
@@ -671,7 +670,7 @@ def _build_svs(
     }
 
 
-def run_research(
+async def run_research(
     cmd: ParsedRunResearch,
     data_dir: Path,
     adapter_config: AdapterConfig | None = None,
@@ -690,7 +689,7 @@ def run_research(
         recency_days=platform_config.get("recency_days", FetchLimits.recency_days),
     )
     adapter = get_adapter(cmd.platform, platform_config)
-    if not adapter.health_check():
+    if not await asyncio.to_thread(adapter.health_check):
         raise ValidationError(f"adapter {cmd.platform} failed health check")
 
     packets: list[ResearchPacket] = []
@@ -700,7 +699,9 @@ def run_research(
                 raise ValidationError(f"unknown purpose: {n!r}")
         merged = merge_purposes(purposes, list(purpose_names))
         search_topic = _enrich_query(topic, merged.method)
-        items = adapter.enrich(adapter.search(search_topic, limits))
+        items = await asyncio.to_thread(
+            lambda st=search_topic, lm=limits: adapter.enrich(adapter.search(st, lm))
+        )
         signals = adapter.to_signals(items)
         hints = [adapter.trust_hints(it) for it in items]
         z_vels = _zscore([s.view_velocity or 0.0 for s in signals])
@@ -715,9 +716,9 @@ def run_research(
         all_scored = [d for _, d in scored]
         top5 = all_scored[:5]
         if platform_config.get("fetch_transcripts", True) and cmd.platform == "youtube":
-            _enrich_top5_with_transcripts(top5)
+            await _enrich_top5_with_transcripts(top5)
         backends = _available_backends(data_dir)
-        corroboration_results = _corroborate_top5(top5, backends) if backends else []
+        corroboration_results = await _corroborate_top5(top5, backends) if backends else []
         svs = _build_svs(top5, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         chart_captions = _render_charts(all_scored, data_dir)

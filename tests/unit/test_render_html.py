@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import ClassVar
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -629,7 +629,7 @@ class TestResearchHtmlInCli:
     def _patch_pipeline(self, monkeypatch):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: self._PACKET_WITH_SYNTHESIS,
+            AsyncMock(return_value=self._PACKET_WITH_SYNTHESIS),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
@@ -695,7 +695,7 @@ class TestResearchHtmlInCli:
 
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, adapter_config=None: _PACKET,
+            AsyncMock(return_value=_PACKET),
         )
         monkeypatch.setattr(
             "social_research_probe.cli._attach_synthesis",
