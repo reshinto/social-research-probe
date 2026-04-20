@@ -3,6 +3,7 @@
 2. Run the research to get the JSON packet:
    - `srp research <topic> <purpose>` — platform defaults to `youtube`
    - `srp research <platform> <topic> <purpose1>,<purpose2>` — multiple purposes (comma-separated)
+   - `srp research [<platform>] "<natural language query>"` — single free-form sentence; the CLI auto-classifies it into a topic and purpose (using the configured LLM runner), persists any new topic/purpose to the taxonomy, then runs research. Requires `llm.runner != none`.
    - Add `--no-shorts` to exclude YouTube Shorts (<90s). Shorts are included by default.
    - Note: users invoke this skill as `/srp research <topic> <purpose>`.
 3. **HTML report is written automatically.** The CLI prints the report path to stderr as `[srp] HTML report: file:///...`. Surface that path to the user immediately:

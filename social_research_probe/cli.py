@@ -447,9 +447,9 @@ def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
 @dataclass(frozen=True)
 class _ResearchArgs:
     platform: str
-    topic: str       # empty string when query is set
+    topic: str  # empty string when query is set
     purposes: tuple[str, ...]  # empty tuple when query is set
-    query: str       # empty string when topic/purposes are set
+    query: str  # empty string when topic/purposes are set
 
 
 def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
@@ -458,9 +458,6 @@ def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
     If only one non-platform arg is given, treat it as a free-form NL query.
     """
     known_platforms = {"youtube"}
-    if not positional:
-        raise ValidationError("research needs at least TOPIC and PURPOSES (or a natural-language query)")
-
     # Detect platform prefix
     if positional[0] in known_platforms:
         platform = positional[0]
@@ -470,7 +467,9 @@ def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
         rest = positional
 
     if len(rest) == 0:
-        raise ValidationError("research needs at least TOPIC and PURPOSES (or a natural-language query)")
+        raise ValidationError(
+            "research needs at least TOPIC and PURPOSES (or a natural-language query)"
+        )
 
     if len(rest) == 1:
         # NL query mode: single free-form string

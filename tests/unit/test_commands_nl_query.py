@@ -189,9 +189,7 @@ def test_classify_query_returns_classified_query(
             "purpose_method": " Latest News And Updates ",
         }
     )
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: runner
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
     assert isinstance(result, ClassifiedQuery)
     assert result.topic == "ai"
@@ -211,9 +209,7 @@ def test_classify_query_topic_already_exists(
 
     cfg = _make_cfg("claude")
     runner = _make_runner()
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: runner
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
     assert result.topic_created is False
     assert result.purpose_created is True
@@ -229,9 +225,7 @@ def test_classify_query_purpose_already_exists(
 
     cfg = _make_cfg("claude")
     runner = _make_runner()
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: runner
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
     assert result.topic_created is True
     assert result.purpose_created is False
@@ -301,9 +295,7 @@ def test_classify_query_raises_when_all_runners_fail(
     """classify_query raises ValidationError when every runner fails."""
     cfg = _make_cfg("claude")
     broken = _make_runner(raises=RuntimeError("always fails"))
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: broken
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: broken)
     with pytest.raises(ValidationError, match="all LLM runners failed"):
         classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
 
@@ -314,9 +306,7 @@ def test_classify_query_propagates_unexpected_topic_error(
     """classify_query re-raises non-DuplicateError from add_topics."""
     cfg = _make_cfg("claude")
     runner = _make_runner()
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: runner
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     monkeypatch.setattr(
         "social_research_probe.commands.nl_query.add_topics",
         lambda *a, **kw: (_ for _ in ()).throw(OSError("disk full")),
@@ -331,9 +321,7 @@ def test_classify_query_propagates_unexpected_purpose_error(
     """classify_query re-raises non-DuplicateError from add_purpose."""
     cfg = _make_cfg("claude")
     runner = _make_runner()
-    monkeypatch.setattr(
-        "social_research_probe.commands.nl_query.get_runner", lambda name: runner
-    )
+    monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     monkeypatch.setattr(
         "social_research_probe.commands.nl_query.add_purpose",
         lambda *a, **kw: (_ for _ in ()).throw(OSError("disk full")),
