@@ -8,7 +8,9 @@ Who calls it: pytest, as part of the unit test suite.
 
 from __future__ import annotations
 
+import httpx
 import pytest
+import respx
 
 from social_research_probe.commands.config import write_secret
 from social_research_probe.corroboration.base import CorroborationResult
@@ -224,151 +226,122 @@ def test_tavily_api_key_returns_key_when_set(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# _search() — monkeypatched urllib.request.urlopen
+# _search() — respx httpx mocks
 # ---------------------------------------------------------------------------
 
 
-def _make_fake_urlopen(response_body: bytes):
-    """Return a fake urlopen context-manager that yields the given bytes."""
-
-    class _FakeResp:
-        def read(self):
-            return response_body
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            pass
-
-    return lambda req, timeout=15: _FakeResp()
-
-
-def test_exa_search_returns_results(monkeypatch):
+@pytest.mark.anyio
+async def test_exa_search_returns_results(monkeypatch):
     """_search() parses the 'results' list from the Exa API JSON response."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_EXA_API_KEY", "k")
-    body = json.dumps({"results": [{"url": "https://a.com"}, {"url": "https://b.com"}]}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    results = ExaBackend()._search("test query")
+    with respx.mock:
+        respx.post("https://api.exa.ai/search").mock(
+            return_value=httpx.Response(
+                200, json={"results": [{"url": "https://a.com"}, {"url": "https://b.com"}]}
+            )
+        )
+        results = await ExaBackend()._search("test query")
     assert len(results) == 2
     assert results[0]["url"] == "https://a.com"
 
 
-def test_exa_corroborate_end_to_end(monkeypatch):
+@pytest.mark.anyio
+async def test_exa_corroborate_end_to_end(monkeypatch):
     """corroborate() wires _search() to _build_result() and returns a CorroborationResult."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_EXA_API_KEY", "k")
-    body = json.dumps({"results": [{"url": "https://example.com"}]}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    result = ExaBackend().corroborate(_FakeClaim("some claim"))
+    with respx.mock:
+        respx.post("https://api.exa.ai/search").mock(
+            return_value=httpx.Response(200, json={"results": [{"url": "https://example.com"}]})
+        )
+        result = await ExaBackend().corroborate(_FakeClaim("some claim"))
     assert result.verdict == "supported"
     assert "https://example.com" in result.sources
 
 
-def test_brave_search_returns_results(monkeypatch):
+@pytest.mark.anyio
+async def test_brave_search_returns_results(monkeypatch):
     """_search() parses web.results from the Brave API JSON response."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
-    body = json.dumps({"web": {"results": [{"url": "https://brave.com"}]}}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    results = BraveBackend()._search("test query")
+    with respx.mock:
+        respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            return_value=httpx.Response(
+                200, json={"web": {"results": [{"url": "https://brave.com"}]}}
+            )
+        )
+        results = await BraveBackend()._search("test query")
     assert results == [{"url": "https://brave.com"}]
 
 
-def test_brave_corroborate_end_to_end(monkeypatch):
+@pytest.mark.anyio
+async def test_brave_corroborate_end_to_end(monkeypatch):
     """corroborate() wires _search() to _build_result() and returns a CorroborationResult."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
-    body = json.dumps({"web": {"results": [{"url": "https://brave.com"}]}}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    result = BraveBackend().corroborate(_FakeClaim("some claim"))
+    with respx.mock:
+        respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            return_value=httpx.Response(
+                200, json={"web": {"results": [{"url": "https://brave.com"}]}}
+            )
+        )
+        result = await BraveBackend().corroborate(_FakeClaim("some claim"))
     assert result.verdict == "supported"
     assert "https://brave.com" in result.sources
 
 
-def test_tavily_search_returns_results(monkeypatch):
+@pytest.mark.anyio
+async def test_tavily_search_returns_results(monkeypatch):
     """_search() parses the 'results' list from the Tavily API JSON response."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
-    body = json.dumps({"results": [{"url": "https://tavily.com"}]}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    results = TavilyBackend()._search("test query")
+    with respx.mock:
+        respx.post("https://api.tavily.com/search").mock(
+            return_value=httpx.Response(200, json={"results": [{"url": "https://tavily.com"}]})
+        )
+        results = await TavilyBackend()._search("test query")
     assert results == [{"url": "https://tavily.com"}]
 
 
-def test_tavily_corroborate_end_to_end(monkeypatch):
+@pytest.mark.anyio
+async def test_tavily_corroborate_end_to_end(monkeypatch):
     """corroborate() wires _search() to _build_result() and returns a CorroborationResult."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
-    body = json.dumps({"results": [{"url": "https://tavily.com"}]}).encode()
-    monkeypatch.setattr(urllib.request, "urlopen", _make_fake_urlopen(body))
-    result = TavilyBackend().corroborate(_FakeClaim("some claim"))
+    with respx.mock:
+        respx.post("https://api.tavily.com/search").mock(
+            return_value=httpx.Response(200, json={"results": [{"url": "https://tavily.com"}]})
+        )
+        result = await TavilyBackend().corroborate(_FakeClaim("some claim"))
     assert result.verdict == "supported"
     assert "https://tavily.com" in result.sources
 
 
-def test_exa_search_network_error_raises_adapter_error(monkeypatch):
-    """_search() wraps urllib.error.URLError in AdapterError."""
-    import urllib.error
-    import urllib.request
-
-    from social_research_probe.errors import AdapterError
-
+@pytest.mark.anyio
+async def test_exa_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps httpx.HTTPError in AdapterError."""
     monkeypatch.setenv("SRP_EXA_API_KEY", "k")
-    monkeypatch.setattr(
-        urllib.request,
-        "urlopen",
-        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
-    )
-    with pytest.raises(AdapterError, match="exa search failed"):
-        ExaBackend()._search("test")
+    with respx.mock:
+        respx.post("https://api.exa.ai/search").mock(side_effect=httpx.ConnectError("timeout"))
+        with pytest.raises(AdapterError, match="exa search failed"):
+            await ExaBackend()._search("test")
 
 
-def test_brave_search_network_error_raises_adapter_error(monkeypatch):
-    """_search() wraps urllib.error.URLError in AdapterError."""
-    import urllib.error
-    import urllib.request
-
-    from social_research_probe.errors import AdapterError
-
+@pytest.mark.anyio
+async def test_brave_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps httpx.HTTPError in AdapterError."""
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
-    monkeypatch.setattr(
-        urllib.request,
-        "urlopen",
-        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
-    )
-    with pytest.raises(AdapterError, match="brave search failed"):
-        BraveBackend()._search("test")
+    with respx.mock:
+        respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            side_effect=httpx.ConnectError("timeout")
+        )
+        with pytest.raises(AdapterError, match="brave search failed"):
+            await BraveBackend()._search("test")
 
 
-def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
-    """_search() wraps urllib.error.URLError in AdapterError."""
-    import urllib.error
-    import urllib.request
-
-    from social_research_probe.errors import AdapterError
-
+@pytest.mark.anyio
+async def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
+    """_search() wraps httpx.HTTPError in AdapterError."""
     monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
-    monkeypatch.setattr(
-        urllib.request,
-        "urlopen",
-        lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
-    )
-    with pytest.raises(AdapterError, match="tavily search failed"):
-        TavilyBackend()._search("test")
+    with respx.mock:
+        respx.post("https://api.tavily.com/search").mock(side_effect=httpx.ConnectError("timeout"))
+        with pytest.raises(AdapterError, match="tavily search failed"):
+            await TavilyBackend()._search("test")
 
 
 # ---------------------------------------------------------------------------
@@ -376,64 +349,43 @@ def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def _capture_urlopen(response_body: bytes):
-    """Return a fake urlopen that records the Request it was called with."""
-    captured = {}
-
-    class _FakeResp:
-        def read(self):
-            return response_body
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            pass
-
-    def _fake(req, timeout=15):
-        captured["req"] = req
-        return _FakeResp()
-
-    return _fake, captured
-
-
-def test_exa_search_sends_user_agent(monkeypatch):
+@pytest.mark.anyio
+async def test_exa_search_sends_user_agent(monkeypatch):
     """_search() includes a User-Agent header so Cloudflare does not block the request."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_EXA_API_KEY", "k")
-    body = json.dumps({"results": []}).encode()
-    fake_urlopen, captured = _capture_urlopen(body)
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    ExaBackend()._search("test")
-    ua = captured["req"].get_header("User-agent")
-    assert ua is not None and ua.startswith("social-research-probe/")
+    with respx.mock:
+        route = respx.post("https://api.exa.ai/search").mock(
+            return_value=httpx.Response(200, json={"results": []})
+        )
+        await ExaBackend()._search("test")
+    assert route.called
+    ua = route.calls[0].request.headers.get("user-agent", "")
+    assert ua.startswith("social-research-probe/")
 
 
-def test_brave_search_sends_user_agent(monkeypatch):
+@pytest.mark.anyio
+async def test_brave_search_sends_user_agent(monkeypatch):
     """_search() includes a User-Agent header on Brave requests."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
-    body = json.dumps({"web": {"results": []}}).encode()
-    fake_urlopen, captured = _capture_urlopen(body)
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    BraveBackend()._search("test")
-    ua = captured["req"].get_header("User-agent")
-    assert ua is not None and ua.startswith("social-research-probe/")
+    with respx.mock:
+        route = respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            return_value=httpx.Response(200, json={"web": {"results": []}})
+        )
+        await BraveBackend()._search("test")
+    assert route.called
+    ua = route.calls[0].request.headers.get("user-agent", "")
+    assert ua.startswith("social-research-probe/")
 
 
-def test_tavily_search_sends_user_agent(monkeypatch):
+@pytest.mark.anyio
+async def test_tavily_search_sends_user_agent(monkeypatch):
     """_search() includes a User-Agent header on Tavily requests."""
-    import json
-    import urllib.request
-
     monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
-    body = json.dumps({"results": []}).encode()
-    fake_urlopen, captured = _capture_urlopen(body)
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    TavilyBackend()._search("test")
-    ua = captured["req"].get_header("User-agent")
-    assert ua is not None and ua.startswith("social-research-probe/")
+    with respx.mock:
+        route = respx.post("https://api.tavily.com/search").mock(
+            return_value=httpx.Response(200, json={"results": []})
+        )
+        await TavilyBackend()._search("test")
+    assert route.called
+    ua = route.calls[0].request.headers.get("user-agent", "")
+    assert ua.startswith("social-research-probe/")

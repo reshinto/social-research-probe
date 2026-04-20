@@ -1,0 +1,39 @@
+graph LR
+    subgraph Pipeline ["Pipeline orchestrator (platform-agnostic)"]
+        P0["Pre-flight<br/>check adapter is usable"]
+        P1["Stage 1 · Fetch<br/>get raw items + metrics"]
+        P2["Stage 2 · Score<br/>compute signals and trust"]
+        P3["Stage 2b · Dedupe<br/>canonical URL matching"]
+    end
+
+    subgraph Adapter ["Your platform adapter"]
+        M1["health_check() -> bool"]
+        M2["search(topic, limits)<br/>-> list[RawItem]"]
+        M3["async enrich(items)<br/>-> list[RawItem]"]
+        M4["to_signals(items)<br/>-> list[SignalSet]"]
+        M5["trust_hints(item)<br/>-> TrustHints"]
+        M6["url_normalize(url)<br/>-> str"]
+    end
+
+    subgraph Downstream ["Downstream (reused as-is)"]
+        D1["scoring/<br/>trust · trend · opportunity"]
+        D2["stats/<br/>20 statistical models"]
+        D3["viz/<br/>10 chart renderers"]
+        D4["synthesize/ + render/<br/>HTML + Markdown report"]
+    end
+
+    P0 --> M1
+    P1 --> M2
+    P1 --> M3
+    P2 --> M4
+    P2 --> M5
+    P3 --> M6
+
+    M4 --> D1
+    D1 --> D2
+    D2 --> D3
+    D3 --> D4
+
+    style Adapter fill:#fff8e1,stroke:#f57c00
+    style Pipeline fill:#e3f2fd,stroke:#1976d2
+    style Downstream fill:#e8f5e9,stroke:#388e3c

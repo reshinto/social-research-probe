@@ -77,7 +77,7 @@ class PlatformAdapter(ABC):
         ...
 
     @abstractmethod
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:
+    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
         """Hydrate raw items with additional metrics or channel metadata."""
         ...
 

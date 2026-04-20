@@ -2,32 +2,70 @@
 
 from __future__ import annotations
 
+from social_research_probe.synthesize.explanations import (
+    contextual_explanation as _contextual_explanation,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_bayesian as _explain_bayesian,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_bootstrap as _explain_bootstrap,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_correlation as _explain_correlation,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_descriptive as _explain_descriptive,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_huber as _explain_huber,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_kaplan_meier as _explain_kaplan_meier,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_kmeans as _explain_kmeans,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_multi_regression as _explain_multi_regression,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_naive_bayes as _explain_naive_bayes,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_outliers as _explain_outliers,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_pca as _explain_pca,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_polynomial as _explain_polynomial,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_regression as _explain_regression,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_spearman as _explain_spearman,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_spread as _explain_spread,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_tests as _explain_tests,
+)
+from social_research_probe.synthesize.explanations import (
+    infer_model as _infer_model,
+)
+from social_research_probe.synthesize.explanations._common import parse_numeric as _val
 from social_research_probe.synthesize.formatter import (
-    _bulletise,
-    _contextual_explanation,
-    _explain_bayesian,
-    _explain_bootstrap,
-    _explain_correlation,
-    _explain_descriptive,
-    _explain_huber,
-    _explain_kaplan_meier,
-    _explain_kmeans,
-    _explain_multi_regression,
-    _explain_naive_bayes,
-    _explain_outliers,
-    _explain_pca,
-    _explain_polynomial,
-    _explain_regression,
-    _explain_spearman,
-    _explain_spread,
-    _explain_tests,
     _highlights_table,
-    _infer_model,
     _items_table,
-    _val,
     build_packet,
     render_full,
     render_sections_1_9,
+)
+from social_research_probe.synthesize.formatter import (
+    _to_bullets as _bulletise,
 )
 
 _ITEM = {

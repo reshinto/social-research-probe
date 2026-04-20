@@ -1,0 +1,20 @@
+graph TD
+    A["Start: decide platform<br/>e.g. TikTok / Reddit / RSS"] --> B["Step 1<br/>Create subpackage<br/>platforms/tiktok/"]
+    B --> C["Step 2<br/>Wire registry<br/>(__init__.py + parent __init__.py)"]
+    C --> D["Step 3<br/>Implement adapter<br/>subclass PlatformAdapter<br/>6 required methods"]
+    D --> E["Step 4<br/>Add config section<br/>[platforms.tiktok]<br/>to config.toml.example"]
+    E --> F{"Needs<br/>API key?"}
+    F -->|yes| G["Step 5<br/>Add _api_key() helper<br/>reads SRP_TIKTOK_API_KEY env<br/>or secrets.toml"]
+    F -->|no| H["Skip Step 5"]
+    G --> I["Step 6<br/>Register test fake<br/>tests/fixtures/fake_tiktok.py<br/>env-gated registration"]
+    H --> I
+    I --> J["Step 7<br/>Write tests<br/>unit + integration +<br/>contract auto-covers registry"]
+    J --> K{"100% branch<br/>coverage?"}
+    K -->|no| J
+    K -->|yes| L["Step 8<br/>Run it<br/>srp research tiktok '...' '...'"]
+    L --> M["Done"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style D fill:#fff3e0,stroke:#f57c00
+    style J fill:#fce4ec,stroke:#c62828
+    style M fill:#e8f5e9,stroke:#388e3c

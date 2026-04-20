@@ -1,0 +1,10 @@
+graph BT
+    U["Unit tests\ntests/unit/\nPure functions, no I/O"]
+    I["Integration tests\ntests/integration/\nOrchestrator + fake adapters"]
+    C["Contract tests\ntests/contract/\nCross-cutting invariants"]
+
+    U --> I --> C
+
+    style U fill:#d4edda,stroke:#28a745
+    style I fill:#fff3cd,stroke:#ffc107
+    style C fill:#f8d7da,stroke:#dc3545

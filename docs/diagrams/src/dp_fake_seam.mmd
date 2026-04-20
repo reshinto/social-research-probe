@@ -1,0 +1,12 @@
+graph TD
+    A["pytest run"] --> B{"SRP_TEST_USE_FAKE_YOUTUBE\nenv var set?"}
+
+    B -->|"yes (CI / unit tests)"| C["FakeYouTubeAdapter\ntests/fixtures/fake_youtube.py\nreturns deterministic items\nno network calls"]
+    B -->|"no (manual / integration)"| D["YouTubeAdapter\nplatforms/youtube/adapter.py\nhits real YouTube Data API"]
+
+    C --> E["Pipeline under test\nsame code path"]
+    D --> E
+    E --> F["Test assertions\non packet output"]
+
+    style C fill:#e8f5e9,stroke:#43a047
+    style D fill:#fff3e0,stroke:#f57c00

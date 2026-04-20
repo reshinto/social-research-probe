@@ -145,7 +145,7 @@ def test_default_runner_comes_from_config(monkeypatch):
     assert requested_names == ["gemini"]
 
 
-def test_corroborate_end_to_end(monkeypatch):
+async def test_corroborate_end_to_end(monkeypatch):
     """corroborate() calls the runner and parses the returned dict into a CorroborationResult."""
     import social_research_probe.llm.registry as llm_reg
 
@@ -163,7 +163,7 @@ def test_corroborate_end_to_end(monkeypatch):
         source_text = "Some source"
 
     backend = LLMCliBackend(runner_name="claude")
-    result = backend.corroborate(_FakeClaim())
+    result = await backend.corroborate(_FakeClaim())
     assert result.verdict == "supported"
     assert result.confidence == pytest.approx(0.9)
     assert result.reasoning == "looks good"

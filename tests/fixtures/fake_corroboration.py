@@ -28,7 +28,7 @@ class FakeExaBackend(CorroborationBackend):
     def health_check(self) -> bool:
         return bool(read_runtime_secret("exa_api_key"))
 
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         return CorroborationResult(
             verdict="supported",
             confidence=0.84,
@@ -47,7 +47,7 @@ class FakeTavilyBackend(CorroborationBackend):
     def health_check(self) -> bool:
         return bool(read_runtime_secret("tavily_api_key"))
 
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         return CorroborationResult(
             verdict="supported",
             confidence=0.79,

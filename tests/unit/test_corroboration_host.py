@@ -74,7 +74,7 @@ def test_aggregate_confidence_weighted_average():
     assert abs(confidence - 0.82) < 1e-6
 
 
-def test_corroborate_claim_skips_failed_backend(capsys):
+async def test_corroborate_claim_skips_failed_backend(capsys):
     """A backend that raises AdapterError is skipped; the run still returns results."""
 
     # Register a failing backend.
@@ -84,7 +84,7 @@ def test_corroborate_claim_skips_failed_backend(capsys):
         def health_check(self) -> bool:
             return True
 
-        def corroborate(self, claim) -> CorroborationResult:
+        async def corroborate(self, claim) -> CorroborationResult:
             raise AdapterError("simulated failure")
 
     reg_module.register(_FailingBackend)
@@ -96,13 +96,13 @@ def test_corroborate_claim_skips_failed_backend(capsys):
         def health_check(self) -> bool:
             return True
 
-        def corroborate(self, claim) -> CorroborationResult:
+        async def corroborate(self, claim) -> CorroborationResult:
             return CorroborationResult(verdict="supported", confidence=0.7, reasoning="ok")
 
     reg_module.register(_OkBackend)
 
     claim = Claim(text="Test claim text.", source_text="Some source.", index=0)
-    result = corroborate_claim(claim, ["failing_test_backend", "ok_test_backend"])
+    result = await corroborate_claim(claim, ["failing_test_backend", "ok_test_backend"])
 
     # The failing backend is skipped but the ok backend's result appears.
     assert result["aggregate_verdict"] == "supported"

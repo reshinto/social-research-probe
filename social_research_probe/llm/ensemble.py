@@ -17,8 +17,8 @@ Supported CLIs (must be installed and authenticated separately):
 
 from __future__ import annotations
 
-import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+import os
 
 from social_research_probe.config import load_active_config
 from social_research_probe.types import FreeTextRunnerName
@@ -31,83 +31,70 @@ _TIMEOUT = 60
 _PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
 
 
-def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
-    """Call one LLM CLI and return its stripped stdout, or None on any failure.
+async def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
+    """Call one LLM CLI subprocess asynchronously; return stripped stdout or None on failure.
 
     Silently catches all exceptions so a missing or rate-limited CLI never
     crashes the caller — it simply contributes nothing to the ensemble.
     """
     log(f"[srp] LLM ({name}): {task}")
     try:
+        stdin_data: bytes | None = None
         if name == "claude":
-            # stdin=DEVNULL prevents the 3-second stdin wait Claude emits otherwise.
-            result = subprocess.run(
-                ["claude", "-p", prompt],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
+            cmd = ["claude", "-p", prompt]
         elif name == "gemini":
-            result = subprocess.run(
-                ["gemini", "-p", prompt],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
+            cmd = ["gemini", "-p", prompt]
         elif name == "codex":
-            # "codex exec" is the non-interactive (headless) subcommand.
-            # Preamble and metadata go to stderr; stdout contains only the response.
-            result = subprocess.run(
-                ["codex", "exec", prompt],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
+            cmd = ["codex", "exec", prompt]
         elif name == "local":
-            import os
-
             bin_path = os.environ.get("SRP_LOCAL_LLM_BIN", "")
             if not bin_path:
                 return None
-            result = subprocess.run(
-                [bin_path],
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
+            cmd = [bin_path]
+            stdin_data = prompt.encode()
         else:
             return None
-        output = result.stdout.strip()
+
+        stdin = asyncio.subprocess.PIPE if stdin_data is not None else asyncio.subprocess.DEVNULL
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=stdin,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            stdout, _ = await asyncio.wait_for(proc.communicate(stdin_data), timeout=_TIMEOUT)
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return None
+        output = stdout.decode().strip()
         return output if output else None
     except Exception:
         return None
 
 
-def _collect_responses(
+async def _collect_responses(
     prompt: str,
     task: str = "generating response",
     providers: tuple[FreeTextRunnerName, ...] = _PROVIDERS,
 ) -> dict[str, str]:
-    """Fan out the prompt to all providers in parallel.
+    """Fan out the prompt to all providers concurrently via asyncio.gather.
 
     Returns a dict mapping provider name to response text for every provider
     that succeeded. Missing or failed providers are absent from the dict.
     """
-    responses: dict[str, str] = {}
     if not providers:
-        return responses
-    with ThreadPoolExecutor(max_workers=len(providers)) as pool:
-        futures = {pool.submit(_run_provider, name, prompt, task): name for name in providers}
-        for future in as_completed(futures):
-            name = futures[future]
-            response = future.result()
-            if response:
-                responses[name] = response
-    return responses
+        return {}
+    results = await asyncio.gather(
+        *[_run_provider(name, prompt, task) for name in providers],
+        return_exceptions=True,
+    )
+    return {
+        name: resp
+        for name, resp in zip(providers, results, strict=True)
+        if isinstance(resp, str) and resp
+    }
 
 
 def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> str:
@@ -123,7 +110,7 @@ def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> 
     )
 
 
-def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
+async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
     """Produce the final answer from collected responses.
 
     If only one provider responded, returns it directly.
@@ -137,7 +124,9 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
 
     synthesis_prompt = _build_synthesis_prompt(original_prompt, responses)
     for provider in _PROVIDERS:
-        result = _run_provider(provider, synthesis_prompt, task="synthesising ensemble responses")
+        result = await _run_provider(
+            provider, synthesis_prompt, task="synthesising ensemble responses"
+        )
         if result:
             return result
 
@@ -145,7 +134,7 @@ def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
     return responses.get("claude") or responses.get("gemini") or responses.get("codex")
 
 
-def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
+async def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
     """Run a free-text prompt through the configured default runner or ensemble.
 
     When runner is ``none``, returns None immediately without calling any LLM.
@@ -158,13 +147,13 @@ def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | No
         return None
     preferred = cfg.preferred_free_text_runner
     if preferred is not None:
-        preferred_result = _run_provider(preferred, prompt, task)
+        preferred_result = await _run_provider(preferred, prompt, task)
         if preferred_result:
             return preferred_result
         providers = (
             _PROVIDERS if preferred == "local" else tuple(p for p in _PROVIDERS if p != preferred)
         )
-        responses = _collect_responses(prompt, task, providers=providers)
-        return _synthesize(responses, prompt)
-    responses = _collect_responses(prompt, task)
-    return _synthesize(responses, prompt)
+        responses = await _collect_responses(prompt, task, providers=providers)
+        return await _synthesize(responses, prompt)
+    responses = await _collect_responses(prompt, task)
+    return await _synthesize(responses, prompt)

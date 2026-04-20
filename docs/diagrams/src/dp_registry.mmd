@@ -1,0 +1,22 @@
+graph TD
+    subgraph Startup ["Module import (startup)"]
+        P1["register_platform('youtube', YouTubeAdapter)"]
+        R1["register_runner('claude', ClaudeRunner)"]
+        R2["register_runner('gemini', GeminiRunner)"]
+        R3["register_runner('codex', CodexRunner)"]
+    end
+
+    subgraph Registries ["In-memory registries"]
+        PR["platforms/registry.py\n_PLATFORMS dict"]
+        LR["llm/registry.py\n_RUNNERS dict"]
+    end
+
+    subgraph Lookup ["Runtime lookup"]
+        PL["get_platform('youtube')"]
+        RL["get_runner('claude')"]
+    end
+
+    P1 --> PR
+    R1 & R2 & R3 --> LR
+    PR --> PL
+    LR --> RL

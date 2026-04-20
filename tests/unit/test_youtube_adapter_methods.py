@@ -11,7 +11,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import FetchLimits, RawItem
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter, _as_int
+from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+from social_research_probe.platforms.youtube.adapter import _coerce_int as _as_int
 
 
 def _make_adapter(monkeypatch, api_key="test-key"):
@@ -158,13 +159,13 @@ def test_search_no_recency_days(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_enrich_empty_returns_empty(monkeypatch):
+async def test_enrich_empty_returns_empty(monkeypatch):
     """enrich() returns empty list unchanged when given no items."""
     adapter = _make_adapter(monkeypatch)
-    assert adapter.enrich([]) == []
+    assert await adapter.enrich([]) == []
 
 
-def test_enrich_hydrates_items(monkeypatch):
+async def test_enrich_hydrates_items(monkeypatch):
     """enrich() merges video and channel stats into RawItem metrics."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod
 
@@ -192,14 +193,14 @@ def test_enrich_hydrates_items(monkeypatch):
     )
     adapter = _make_adapter(monkeypatch)
     items = [_raw_item()]
-    enriched = adapter.enrich(items)
+    enriched = await adapter.enrich(items)
     assert len(enriched) == 1
     assert enriched[0].metrics["views"] == 2000
     assert enriched[0].metrics["likes"] == 100
     assert enriched[0].extras["channel_subscribers"] == 10000
 
 
-def test_enrich_no_duration_string(monkeypatch):
+async def test_enrich_no_duration_string(monkeypatch):
     """enrich() handles items with no contentDetails.duration gracefully."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod
 
@@ -222,12 +223,12 @@ def test_enrich_no_duration_string(monkeypatch):
     )
     adapter = _make_adapter(monkeypatch)
     items = [_raw_item()]
-    enriched = adapter.enrich(items)
+    enriched = await adapter.enrich(items)
     assert len(enriched) == 1
     assert enriched[0].metrics["views"] == 300
 
 
-def test_enrich_includes_shorts_by_default(monkeypatch):
+async def test_enrich_includes_shorts_by_default(monkeypatch):
     """enrich() now keeps YouTube Shorts by default and tags them in extras."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod
 
@@ -245,12 +246,12 @@ def test_enrich_includes_shorts_by_default(monkeypatch):
     )
     monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
     adapter = _make_adapter(monkeypatch)
-    enriched = adapter.enrich([_raw_item()])
+    enriched = await adapter.enrich([_raw_item()])
     assert len(enriched) == 1
     assert enriched[0].extras["is_short"] is True
 
 
-def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
+async def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
     """When config has include_shorts=False, Shorts are filtered out."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod
 
@@ -269,7 +270,7 @@ def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
     monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
     adapter = _make_adapter(monkeypatch)
     adapter.config["include_shorts"] = False
-    assert adapter.enrich([_raw_item()]) == []
+    assert await adapter.enrich([_raw_item()]) == []
 
 
 # ---------------------------------------------------------------------------

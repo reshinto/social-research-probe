@@ -1,0 +1,25 @@
+graph TD
+    User["👤 Operator\nRuns srp from CLI\nor Claude Code skill"]
+
+    subgraph srp ["social-research-probe (srp)"]
+        CLI["cli/\nArgument parsing + dispatch"]
+        Pipeline["pipeline/\nFetch → Score → Enrich\n→ Corroborate → Synthesise"]
+        Report["HTML + Markdown\nReport"]
+        CLI --> Pipeline --> Report
+    end
+
+    subgraph External ["External APIs (HTTPS)"]
+        YouTube["YouTube Data API v3\nVideo metadata + search"]
+        Exa["Exa Search API\nCorroboration"]
+        Brave["Brave Search API\nCorroboration"]
+        Tavily["Tavily Search API\nCorroboration"]
+        LLM["LLM APIs\nClaude · Gemini · Codex\nSummarisation + synthesis"]
+    end
+
+    User -->|"srp research …"| CLI
+    Pipeline -->|"search + fetch"| YouTube
+    Pipeline -->|"corroborate top-5"| Exa
+    Pipeline -->|"corroborate top-5"| Brave
+    Pipeline -->|"corroborate top-5"| Tavily
+    Pipeline -->|"summarise + synthesise"| LLM
+    Report -->|"opens in browser"| User

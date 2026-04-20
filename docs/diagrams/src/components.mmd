@@ -1,0 +1,27 @@
+graph TD
+    CLI["cli/\nArgument parsing + dispatch"]
+    CMD["commands/\nParsedRunResearch"]
+    ORCH["pipeline/orchestrator\nrun_research()"]
+    SCORE["pipeline/scoring\nScore + z-score"]
+    ENRICH["pipeline/enrichment\nTranscripts + LLM summaries"]
+    STATS["pipeline/stats\n15+ statistical models"]
+    CHARTS["pipeline/charts\nPNG rendering"]
+    CORR["pipeline/corroboration\nTop-5 evidence"]
+    SVS["pipeline/svs\nSignal vectors"]
+    SYNTH["synthesize/\nbuild_packet + formatter"]
+    ADAPT["platforms/youtube\nYouTube Data API adapter"]
+    BACKENDS["corroboration/\nExa · Brave · Tavily"]
+    LLM["llm/ensemble\nClaude · Gemini · Codex"]
+
+    CLI --> CMD
+    CMD --> ORCH
+    ORCH --> ADAPT
+    ORCH --> SCORE
+    ORCH --> ENRICH
+    ORCH --> STATS
+    ORCH --> CHARTS
+    ORCH --> CORR
+    ORCH --> SVS
+    ORCH --> SYNTH
+    ENRICH --> LLM
+    CORR --> BACKENDS

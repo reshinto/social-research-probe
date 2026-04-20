@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -116,7 +117,7 @@ def test_score_item_returns_score_and_dict():
     assert "scores" in d
 
 
-def test_run_research_returns_packet(monkeypatch, tmp_path):
+async def test_run_research_returns_packet(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -129,13 +130,13 @@ def test_run_research_returns_packet(monkeypatch, tmp_path):
     )
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    packet = run_research(cmd, tmp_path)
+    packet = await run_research(cmd, tmp_path)
     assert "topic" in packet
     assert "items_top5" in packet
     assert isinstance(packet["items_top5"], list)
 
 
-def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
+async def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -148,13 +149,13 @@ def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
     )
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    packet = run_research(cmd, tmp_path)
+    packet = await run_research(cmd, tmp_path)
     assert packet["topic"] == "AI"
     assert "compiled_synthesis" not in packet
     assert "opportunity_analysis" not in packet
 
 
-def test_run_research_multi_topic(monkeypatch, tmp_path):
+async def test_run_research_multi_topic(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -167,11 +168,11 @@ def test_run_research_multi_topic(monkeypatch, tmp_path):
     )
     raw = 'run-research platform:youtube "AI"->latest-news;"blockchain"->latest-news'
     cmd = parse(raw)
-    result = run_research(cmd, tmp_path)
+    result = await run_research(cmd, tmp_path)
     assert "multi" in result
 
 
-def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
+async def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     # Write purposes.json but without "nonexistent_purpose"
     _write_purposes(
@@ -188,10 +189,10 @@ def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:youtube "AI"->nonexistent_purpose'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        run_research(cmd, tmp_path)
+        await run_research(cmd, tmp_path)
 
 
-def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
+async def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -207,7 +208,7 @@ def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:nonexistent "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        run_research(cmd, tmp_path)
+        await run_research(cmd, tmp_path)
 
 
 def _fake_top5(n: int) -> list[dict]:
@@ -294,7 +295,7 @@ def test_render_charts_writes_full_chart_suite(tmp_path):
     assert "Table" in joined or "table" in joined
 
 
-def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
+async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     """Line 97: adapter.health_check() == False raises ValidationError."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -307,19 +308,19 @@ def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
         },
     )
     # Patch get_adapter to return an adapter whose health_check returns False
-    import social_research_probe.pipeline as pipeline_mod
+    import social_research_probe.pipeline.orchestrator as orchestrator_mod
     from social_research_probe.errors import ValidationError
 
     class FailingAdapter:
         def health_check(self):
             return False
 
-    monkeypatch.setattr(pipeline_mod, "get_adapter", lambda name, cfg: FailingAdapter())
+    monkeypatch.setattr(orchestrator_mod, "get_adapter", lambda name, cfg: FailingAdapter())
 
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError, match="health check"):
-        run_research(cmd, tmp_path)
+        await run_research(cmd, tmp_path)
 
 
 def test_build_stats_summary_single_item_runs_only_descriptive():
@@ -340,7 +341,7 @@ def test_stats_models_for_zero_returns_empty():
 
 
 class TestEnrichTop5WithTranscripts:
-    def test_stores_transcript_and_summary_when_available(self, monkeypatch):
+    async def test_stores_transcript_and_summary_when_available(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
@@ -348,16 +349,16 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "first  line\nsecond  line " * 200,
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt, task="": "Multi-LLM generated summary.",
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
+            AsyncMock(return_value="Multi-LLM generated summary."),
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "desc"}]
-        _enrich_top5_with_transcripts(items)
+        await _enrich_top5_with_transcripts(items)
         assert "transcript" in items[0]
         assert len(items[0]["transcript"]) <= 6000
         assert items[0]["one_line_takeaway"] == "Multi-LLM generated summary."
 
-    def test_falls_back_to_transcript_excerpt_when_llm_unavailable(self, monkeypatch):
+    async def test_falls_back_to_transcript_excerpt_when_llm_unavailable(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
@@ -365,17 +366,17 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "some transcript content",
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt, task="": None,
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
+            AsyncMock(return_value=None),
         )
         items = [
             {"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "keep me"}
         ]
-        _enrich_top5_with_transcripts(items)
+        await _enrich_top5_with_transcripts(items)
         assert "transcript" in items[0]
         assert items[0]["one_line_takeaway"] == "some transcript content"
 
-    def test_no_transcript_key_when_fetch_returns_none(self, monkeypatch):
+    async def test_no_transcript_key_when_fetch_returns_none(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
@@ -387,11 +388,11 @@ class TestEnrichTop5WithTranscripts:
             lambda url: None,
         )
         items = [{"url": "https://x/1", "one_line_takeaway": "keep me"}]
-        _enrich_top5_with_transcripts(items)
+        await _enrich_top5_with_transcripts(items)
         assert "transcript" not in items[0]
         assert items[0]["one_line_takeaway"] == "keep me"
 
-    def test_silently_recovers_from_extractor_exception(self, monkeypatch):
+    async def test_silently_recovers_from_extractor_exception(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         def boom(url):
@@ -406,11 +407,11 @@ class TestEnrichTop5WithTranscripts:
             lambda url: None,
         )
         items = [{"url": "https://x/1", "one_line_takeaway": "still here"}]
-        _enrich_top5_with_transcripts(items)
+        await _enrich_top5_with_transcripts(items)
         assert "transcript" not in items[0]
         assert items[0]["one_line_takeaway"] == "still here"
 
-    def test_uses_whisper_when_caption_fetch_returns_none(self, monkeypatch):
+    async def test_uses_whisper_when_caption_fetch_returns_none(self, monkeypatch):
         from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
         monkeypatch.setattr(
@@ -422,16 +423,16 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "Whisper-produced transcript text.",
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
-            lambda prompt, task="": "Summary from whisper transcript.",
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
+            AsyncMock(return_value="Summary from whisper transcript."),
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "orig"}]
-        _enrich_top5_with_transcripts(items)
+        await _enrich_top5_with_transcripts(items)
         assert items[0]["transcript"] == "Whisper-produced transcript text."
         assert items[0]["one_line_takeaway"] == "Summary from whisper transcript."
 
 
-def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
+async def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
     from social_research_probe.pipeline import _enrich_top5_with_transcripts
 
     monkeypatch.setattr(
@@ -443,12 +444,36 @@ def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch):
         lambda url: None,
     )
     items = [{"url": "https://x", "one_line_takeaway": "orig"}]
-    _enrich_top5_with_transcripts(items)
+    await _enrich_top5_with_transcripts(items)
     assert "transcript" not in items[0]
     assert items[0]["one_line_takeaway"] == "orig"
 
 
-def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
+async def test_run_research_respects_enrich_top_n_config(monkeypatch, tmp_path):
+    """adapter_config.enrich_top_n=2 limits items_top5 to 2 entries instead of 5."""
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
+    )
+    cmd = parse('run-research platform:youtube "AI"->latest-news')
+    packet = await run_research(cmd, tmp_path, adapter_config={"enrich_top_n": 2})
+    assert len(packet["items_top5"]) == 2
+
+
+async def test_run_research_default_enrich_top_n_is_5(monkeypatch, tmp_path):
+    """Without enrich_top_n override, items_top5 keeps the 5-item default."""
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
+    )
+    cmd = parse('run-research platform:youtube "AI"->latest-news')
+    packet = await run_research(cmd, tmp_path)
+    assert len(packet["items_top5"]) == 5
+
+
+async def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
     """adapter_config.fetch_transcripts=False skips the _enrich_top5 call."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -457,11 +482,11 @@ def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_pat
     )
     called = []
     monkeypatch.setattr(
-        "social_research_probe.pipeline._enrich_top5_with_transcripts",
-        lambda items: called.append(items),
+        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts",
+        AsyncMock(side_effect=called.append),
     )
     cmd = parse('run-research platform:youtube "AI"->latest-news')
-    run_research(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
+    await run_research(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
     assert called == []
 
 
@@ -524,7 +549,9 @@ def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path
         def health_check(self) -> bool:
             return True
 
-    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
     monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
     assert _available_backends(tmp_path) == ["llm_cli"]
 
@@ -535,7 +562,9 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
     class _Cfg:
         corroboration_backend = "none"
 
-    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
     assert _available_backends(tmp_path) == []
 
 
@@ -544,11 +573,11 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
 # ---------------------------------------------------------------------------
 
 
-def test_corroborate_top5_calls_corroborate_claim_for_each_item(monkeypatch, tmp_path):
+async def test_corroborate_top5_calls_corroborate_claim_for_each_item(monkeypatch, tmp_path):
     """Each top-5 item produces one corroborate_claim call."""
     calls: list[str] = []
 
-    def fake_corroborate(claim, backends):
+    async def fake_corroborate(claim, backends):
         calls.append(claim.text)
         return {
             "claim_text": claim.text,
@@ -558,24 +587,22 @@ def test_corroborate_top5_calls_corroborate_claim_for_each_item(monkeypatch, tmp
         }
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline._corroborate_one.__globals__"
-        if False
-        else "social_research_probe.corroboration.host.corroborate_claim",
+        "social_research_probe.corroboration.host.corroborate_claim",
         fake_corroborate,
     )
     items = [
         {"title": f"Title {i}", "one_line_takeaway": "summary", "url": f"https://x/{i}"}
         for i in range(3)
     ]
-    results = _corroborate_top5(items, ["exa"])
+    results = await _corroborate_top5(items, ["exa"])
     assert len(results) == 3
     assert all(r.get("aggregate_verdict") == "supported" for r in results)
 
 
-def test_corroborate_top5_tolerates_backend_failure(monkeypatch, tmp_path):
+async def test_corroborate_top5_tolerates_backend_failure(monkeypatch, tmp_path):
     """A backend exception for one item returns an empty dict for that item."""
 
-    def fake_corroborate(claim, backends):
+    async def fake_corroborate(claim, backends):
         if "bad" in claim.text:
             raise RuntimeError("network error")
         return {"aggregate_verdict": "supported", "aggregate_confidence": 0.9, "results": []}
@@ -588,7 +615,7 @@ def test_corroborate_top5_tolerates_backend_failure(monkeypatch, tmp_path):
         {"title": "Good title", "one_line_takeaway": "ok", "url": "https://x/1"},
         {"title": "bad title", "one_line_takeaway": "fail", "url": "https://x/2"},
     ]
-    results = _corroborate_top5(items, ["exa"])
+    results = await _corroborate_top5(items, ["exa"])
     assert len(results) == 2
     # The good item has a verdict; the bad item got an empty fallback dict
     assert results[0].get("aggregate_verdict") == "supported"

@@ -1,0 +1,13 @@
+graph TD
+    START["asyncio.run(main())"]
+    START --> TOPICS["Topic loop\nasyncio.gather + Semaphore"]
+    TOPICS --> T1["Topic 1"]
+    TOPICS --> T2["Topic 2"]
+    TOPICS --> TN["Topic N"]
+    T1 --> ENRICH1["Enrichment fan-out\nasyncio.gather"]
+    ENRICH1 --> E1A["Transcript fetch"]
+    ENRICH1 --> E1B["LLM summary\n(Claude · Gemini · Codex)"]
+    T1 --> CORR1["Corroboration fan-out\nasyncio.gather"]
+    CORR1 --> C1A["Exa backend"]
+    CORR1 --> C1B["Brave backend"]
+    CORR1 --> C1C["Tavily backend"]

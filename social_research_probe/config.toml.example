@@ -35,5 +35,6 @@ max_claims_per_session = 15
 [platforms.youtube]
 recency_days = 90
 max_items = 20
+enrich_top_n = 5          # number of top-scored videos that get transcripts + LLM summaries
 cache_ttl_search_hours = 6
 cache_ttl_channel_hours = 24

@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Orchestrator
+    participant Adapter as YouTube Adapter
+    participant Enrichment
+    participant LLM
+    participant Corroboration
+    participant Stats
+    participant Synthesize
+
+    User->>CLI: srp research "topic" "purpose"
+    CLI->>Orchestrator: run_research(topic, purposes)
+    Orchestrator->>Adapter: health_check()
+    Adapter-->>Orchestrator: ok
+    Orchestrator->>Adapter: search(query, limits)
+    Adapter-->>Orchestrator: raw items
+    Orchestrator->>Orchestrator: score + z-score → top-5
+    Orchestrator->>Enrichment: enrich_top5(top5)
+    Enrichment->>Adapter: fetch transcript
+    Adapter-->>Enrichment: transcript text
+    Enrichment->>LLM: summarise(transcript)
+    LLM-->>Enrichment: 100-word summary
+    Enrichment-->>Orchestrator: enriched top-5
+    Orchestrator->>Corroboration: corroborate_top5(top5)
+    Corroboration-->>Orchestrator: evidence snippets
+    Orchestrator->>Stats: build_stats_summary(items)
+    Stats-->>Orchestrator: statistical summaries
+    Orchestrator->>Synthesize: build_packet(...)
+    Synthesize-->>Orchestrator: ResearchPacket
+    Orchestrator-->>CLI: ResearchPacket
+    CLI->>User: Markdown summary + HTML report path

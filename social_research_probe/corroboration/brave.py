@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import httpx
+
 from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
@@ -60,7 +62,7 @@ class BraveBackend(CorroborationBackend):
             )
         return key
 
-    def _search(self, query: str) -> list[dict]:
+    async def _search(self, query: str) -> list[dict]:
         """Call the Brave Search API and return raw web result items.
 
         Args:
@@ -73,26 +75,21 @@ class BraveBackend(CorroborationBackend):
         Raises:
             AdapterError: on network failures or missing API key.
         """
-        import json
-        import urllib.error
-        import urllib.parse
-        import urllib.request
-
-        encoded_query = urllib.parse.quote_plus(query)
-        url = f"https://api.search.brave.com/res/v1/web/search?q={encoded_query}"
-        req = urllib.request.Request(
-            url,
-            headers={
-                "Accept": "application/json",
-                "X-Subscription-Token": self._api_key(),
-                "User-Agent": HTTP_USER_AGENT,
-            },
-            method="GET",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read())
-        except urllib.error.URLError as exc:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://api.search.brave.com/res/v1/web/search",
+                    params={"q": query},
+                    headers={
+                        "Accept": "application/json",
+                        "X-Subscription-Token": self._api_key(),
+                        "User-Agent": HTTP_USER_AGENT,
+                    },
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+        except httpx.HTTPError as exc:
             raise AdapterError(f"brave search failed: {exc}") from exc
         return data.get("web", {}).get("results", [])
 
@@ -121,7 +118,7 @@ class BraveBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         """Search Brave for evidence supporting or refuting the claim.
 
         Args:
@@ -134,5 +131,5 @@ class BraveBackend(CorroborationBackend):
             AdapterError: if the API key is missing or the HTTP call fails.
         """
         log(f"[srp] brave: searching for claim: {claim.text[:80]!r}")
-        raw = self._search(claim.text)
+        raw = await self._search(claim.text)
         return self._build_result(claim, raw)

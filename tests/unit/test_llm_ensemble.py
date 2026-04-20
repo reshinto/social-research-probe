@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+from unittest.mock import AsyncMock
+
 from social_research_probe.llm.ensemble import (
     _build_synthesis_prompt,
     _collect_responses,
@@ -11,115 +14,124 @@ from social_research_probe.llm.ensemble import (
 )
 
 
-def test_run_provider_returns_none_when_command_not_found(monkeypatch):
+def _make_proc(stdout_bytes: bytes = b""):
+    """Return a minimal async subprocess mock."""
+
+    class _FakeProc:
+        async def communicate(self, input=None):
+            return (stdout_bytes, b"")
+
+        async def wait(self):
+            return 0
+
+        def kill(self):
+            pass
+
+    return _FakeProc()
+
+
+async def test_run_provider_returns_none_when_command_not_found(monkeypatch):
     """A missing CLI binary should return None, not raise."""
-    import subprocess
 
+    async def fake_create(*args, **kwargs):
+        raise FileNotFoundError("not found")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+    assert await _run_provider("claude", "hello") is None
+
+
+async def test_run_provider_returns_none_on_timeout(monkeypatch):
+    async def fake_create(*args, **kwargs):
+        return _make_proc(b"answer")
+
+    async def fake_wait_for(coro, timeout):
+        coro.close()
+        raise TimeoutError()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+    monkeypatch.setattr(asyncio, "wait_for", fake_wait_for)
+    assert await _run_provider("claude", "hello") is None
+
+
+async def test_run_provider_returns_none_on_empty_output(monkeypatch):
     monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError("not found")),
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=_make_proc(b"   "))
     )
-    assert _run_provider("claude", "hello") is None
+    assert await _run_provider("claude", "hello") is None
 
 
-def test_run_provider_returns_none_on_timeout(monkeypatch):
-    import subprocess
-
+async def test_run_provider_returns_stripped_output(monkeypatch):
     monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *a, **kw: (_ for _ in ()).throw(subprocess.TimeoutExpired(["claude"], 60)),
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=_make_proc(b"  great answer  "))
     )
-    assert _run_provider("claude", "hello") is None
+    assert await _run_provider("claude", "hello") == "great answer"
 
 
-def test_run_provider_returns_none_on_empty_output(monkeypatch):
-    import subprocess
-
-    class _Result:
-        stdout = "   "
-
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _Result())
-    assert _run_provider("claude", "hello") is None
+async def test_run_provider_unknown_name_returns_none():
+    assert await _run_provider("unknown_llm", "hello") is None
 
 
-def test_run_provider_returns_stripped_output(monkeypatch):
-    import subprocess
-
-    class _Result:
-        stdout = "  great answer  "
-
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _Result())
-    assert _run_provider("claude", "hello") == "great answer"
-
-
-def test_run_provider_unknown_name_returns_none():
-    assert _run_provider("unknown_llm", "hello") is None
-
-
-def test_collect_responses_empty_providers_returns_empty_dict():
+async def test_collect_responses_empty_providers_returns_empty_dict():
     """_collect_responses returns {} immediately when providers tuple is empty."""
-    assert _collect_responses("prompt", providers=()) == {}
+    assert await _collect_responses("prompt", providers=()) == {}
 
 
-def test_collect_responses_returns_only_successes(monkeypatch):
+async def test_collect_responses_returns_only_successes(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+    async def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         return "answer" if name == "claude" else None
 
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
-    responses = _collect_responses("test prompt")
+    responses = await _collect_responses("test prompt")
     assert responses == {"claude": "answer"}
 
 
-def test_collect_responses_all_fail(monkeypatch):
+async def test_collect_responses_all_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
-    assert _collect_responses("test") == {}
+    monkeypatch.setattr(llm_mod, "_run_provider", AsyncMock(return_value=None))
+    assert await _collect_responses("test") == {}
 
 
-def test_synthesize_none_when_no_responses():
-    assert _synthesize({}, "original") is None
+async def test_synthesize_none_when_no_responses():
+    assert await _synthesize({}, "original") is None
 
 
-def test_synthesize_returns_directly_for_single_response():
-    result = _synthesize({"claude": "only answer"}, "prompt")
+async def test_synthesize_returns_directly_for_single_response():
+    result = await _synthesize({"claude": "only answer"}, "prompt")
     assert result == "only answer"
 
 
-def test_synthesize_calls_provider_for_multi_response(monkeypatch):
+async def test_synthesize_calls_provider_for_multi_response(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(
-        llm_mod,
-        "_run_provider",
-        lambda name, prompt, task="": "synthesized" if name == "claude" else None,
-    )
-    result = _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
+    async def fake_run(name, prompt, task=""):
+        return "synthesized" if name == "claude" else None
+
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+    result = await _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
     assert result == "synthesized"
 
 
-def test_synthesize_falls_back_when_claude_synthesis_fails(monkeypatch):
+async def test_synthesize_falls_back_when_claude_synthesis_fails(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    def fake_run(name, prompt, task=""):
+    async def fake_run(name, prompt, task=""):
         if name == "gemini":
             return "gemini synthesis"
         return None
 
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
-    result = _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
+    result = await _synthesize({"claude": "a1", "gemini": "a2"}, "prompt")
     assert result == "gemini synthesis"
 
 
-def test_synthesize_returns_best_single_when_all_synthesis_fail(monkeypatch):
+async def test_synthesize_returns_best_single_when_all_synthesis_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
-    result = _synthesize({"claude": "claude_direct", "gemini": "gemini_direct"}, "prompt")
+    monkeypatch.setattr(llm_mod, "_run_provider", AsyncMock(return_value=None))
+    result = await _synthesize({"claude": "claude_direct", "gemini": "gemini_direct"}, "prompt")
     assert result == "claude_direct"
 
 
@@ -130,25 +142,21 @@ def test_build_synthesis_prompt_contains_original_and_responses():
     assert "r2" in prompt
 
 
-def test_run_provider_local_returns_none_when_bin_not_set(monkeypatch):
+async def test_run_provider_local_returns_none_when_bin_not_set(monkeypatch):
     """Local runner returns None when SRP_LOCAL_LLM_BIN is unset."""
     monkeypatch.delenv("SRP_LOCAL_LLM_BIN", raising=False)
-    assert _run_provider("local", "hello") is None
+    assert await _run_provider("local", "hello") is None
 
 
-def test_run_provider_local_calls_binary(monkeypatch):
-    import subprocess
-
+async def test_run_provider_local_calls_binary(monkeypatch):
     monkeypatch.setenv("SRP_LOCAL_LLM_BIN", "/usr/bin/mymodel")
-
-    class _Result:
-        stdout = "local answer"
-
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _Result())
-    assert _run_provider("local", "hello") == "local answer"
+    monkeypatch.setattr(
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=_make_proc(b"local answer"))
+    )
+    assert await _run_provider("local", "hello") == "local answer"
 
 
-def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
+async def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
     """runner = none must return None without calling any LLM."""
     from social_research_probe.llm import ensemble as llm_mod
 
@@ -158,15 +166,17 @@ def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
         llm_runner = "none"
         preferred_free_text_runner = None
 
+    async def fake_run(name, p, task=""):
+        calls.append(name)
+        return "x"
+
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(
-        llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "x"
-    )
-    assert multi_llm_prompt("anything") is None
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+    assert await multi_llm_prompt("anything") is None
     assert calls == []
 
 
-def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
+async def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     class _FakeConfig:
@@ -174,29 +184,29 @@ def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
         preferred_free_text_runner = "claude"
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(llm_mod, "_run_provider", lambda name, prompt, task="": None)
-    assert multi_llm_prompt("anything") is None
+    monkeypatch.setattr(llm_mod, "_run_provider", AsyncMock(return_value=None))
+    assert await multi_llm_prompt("anything") is None
 
 
-def test_multi_llm_prompt_end_to_end(monkeypatch):
+async def test_multi_llm_prompt_end_to_end(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     class _FakeConfig:
         llm_runner = "claude"
-        preferred_free_text_runner = None  # simulate unknown runner → triggers ensemble
+        preferred_free_text_runner = None
 
-    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+    async def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         if "synthesize" in prompt.lower() or "synthesise" in prompt.lower():
             return "final synthesis" if name == "claude" else None
         return f"{name} answer"
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
-    result = multi_llm_prompt("summarise this video")
+    result = await multi_llm_prompt("summarise this video")
     assert result == "final synthesis"
 
 
-def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
+async def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     calls = []
@@ -205,18 +215,18 @@ def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
         llm_runner = "gemini"
         preferred_free_text_runner = "gemini"
 
-    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+    async def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         calls.append((name, prompt))
         return "configured answer"
 
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
 
-    assert multi_llm_prompt("summarise this video") == "configured answer"
+    assert await multi_llm_prompt("summarise this video") == "configured answer"
     assert calls == [("gemini", "summarise this video")]
 
 
-def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch):
+async def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     calls = []
@@ -225,7 +235,7 @@ def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch)
         llm_runner = "gemini"
         preferred_free_text_runner = "gemini"
 
-    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+    async def fake_run(name: str, prompt: str, task: str = "") -> str | None:
         calls.append((name, prompt))
         if name == "gemini":
             return None
@@ -236,13 +246,13 @@ def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch)
     monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
     monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
 
-    assert multi_llm_prompt("summarise this video") == "synthesized fallback"
+    assert await multi_llm_prompt("summarise this video") == "synthesized fallback"
     assert calls[0] == ("gemini", "summarise this video")
     assert ("claude", "summarise this video") in calls
     assert ("codex", "summarise this video") in calls
 
 
-def test_multi_llm_prompt_uses_local_runner(monkeypatch):
+async def test_multi_llm_prompt_uses_local_runner(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
     calls = []
@@ -251,10 +261,12 @@ def test_multi_llm_prompt_uses_local_runner(monkeypatch):
         llm_runner = "local"
         preferred_free_text_runner = "local"
 
-    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
-    monkeypatch.setattr(
-        llm_mod, "_run_provider", lambda name, p, task="": calls.append(name) or "local answer"
-    )
+    async def fake_run(name, p, task=""):
+        calls.append(name)
+        return "local answer"
 
-    assert multi_llm_prompt("summarise this video") == "local answer"
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+
+    assert await multi_llm_prompt("summarise this video") == "local answer"
     assert calls == ["local"]

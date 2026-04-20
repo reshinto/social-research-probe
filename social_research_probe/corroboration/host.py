@@ -18,8 +18,6 @@ from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.registry import get_backend
-from social_research_probe.errors import AdapterError
-from social_research_probe.utils.concurrency import run_coro
 
 
 def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
@@ -29,8 +27,7 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
     - Majority vote across the verdicts in ``results``.
     - Ties (no single verdict has a strict majority) resolve to 'inconclusive'.
     - Aggregate confidence is the weighted average of individual confidences,
-      where each weight equals the backend's own confidence value. This rewards
-      high-confidence backends and discounts uncertain ones.
+      where each weight equals the backend's own confidence value.
 
     Args:
         results: Non-empty list of CorroborationResult objects from one or more
@@ -62,50 +59,38 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
     return (winner, avg_confidence)
 
 
-def corroborate_claim(claim, backend_names: list[str]) -> dict:
-    """Run a claim through multiple backends and aggregate results.
+async def corroborate_claim(claim, backend_names: list[str]) -> dict:
+    """Run a claim through multiple backends concurrently and aggregate results.
 
-    Each backend is fetched from the registry, called, and its result appended
-    to a list. Backends that raise AdapterError are skipped with a warning
-    printed to stderr so the pipeline can continue with partial data.
+    Each backend is fetched from the registry and awaited directly — backends
+    expose async corroborate() so no thread wrapping is needed.
+
+    Backends that raise any exception are skipped with a warning printed to
+    stderr so the pipeline can continue with partial data.
 
     Args:
         claim: A Claim dataclass instance (from validation/claims.py).
-            The field claim.text is passed to each backend.
-        backend_names: Ordered list of backend name strings to try, e.g.
-            ["exa", "brave", "llm_cli"]. Names must be registered in the
-            corroboration registry.
+        backend_names: Ordered list of backend name strings, e.g.
+            ["exa", "brave", "llm_cli"].
 
     Returns:
-        Dict with four keys:
-          - claim_text (str): the original claim text.
-          - results (list[dict]): each CorroborationResult serialised to a
-            plain dict via dataclasses.asdict().
-          - aggregate_verdict (str): majority-vote verdict across all
-            successful backends.
-          - aggregate_confidence (float): weighted-average confidence score.
-
-    Why: Returning a plain dict (not a dataclass) makes the output directly
-    JSON-serialisable, which simplifies pipeline storage and CLI display.
+        Dict with claim_text, results, aggregate_verdict, aggregate_confidence.
     """
     import dataclasses
 
     async def _call_backend(backend_name: str) -> CorroborationResult | None:
         try:
             backend = get_backend(backend_name)
-            return await asyncio.to_thread(backend.corroborate, claim)
-        except AdapterError as exc:
+            return await backend.corroborate(claim)
+        except Exception as exc:
             print(f"[corroboration] backend {backend_name!r} failed: {exc}", file=sys.stderr)
             return None
 
-    async def _gather_backends() -> list[CorroborationResult]:
-        outcomes = await asyncio.gather(
-            *[_call_backend(name) for name in backend_names],
-            return_exceptions=False,
-        )
-        return [r for r in outcomes if r is not None]
-
-    collected = run_coro(_gather_backends())
+    outcomes = await asyncio.gather(
+        *[_call_backend(name) for name in backend_names],
+        return_exceptions=False,
+    )
+    collected = [r for r in outcomes if r is not None]
     verdict, confidence = aggregate_verdict(collected)
 
     return {

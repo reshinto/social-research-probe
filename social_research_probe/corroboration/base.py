@@ -65,7 +65,7 @@ class CorroborationBackend(ABC):
         ...
 
     @abstractmethod
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         """Check whether the claim is supported by external evidence.
 
         Args:

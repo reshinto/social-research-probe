@@ -20,15 +20,14 @@ from social_research_probe.platforms.base import (
 )
 from social_research_probe.platforms.registry import register
 from social_research_probe.types import AdapterConfig, JSONObject
-from social_research_probe.utils.concurrency import run_coro
 
 
-def _as_object(value: object) -> JSONObject:
+def _coerce_object(value: object) -> JSONObject:
     """Return value when it is a dict-like object, otherwise an empty object."""
     return value if isinstance(value, dict) else {}
 
 
-def _as_string(value: object) -> str:
+def _coerce_string(value: object) -> str:
     """Return value when it is already a string, otherwise an empty string."""
     return value if isinstance(value, str) else ""
 
@@ -38,7 +37,7 @@ def _as_optional_string(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def _as_int(value: object) -> int:
+def _coerce_int(value: object) -> int:
     """Coerce integer-like values from the API payload into plain ints."""
     if isinstance(value, bool):
         return int(value)
@@ -115,26 +114,26 @@ class YouTubeAdapter(PlatformAdapter):
 
         items: list[RawItem] = []
         for r in raw:
-            id_block = _as_object(r.get("id"))
-            vid_id = _as_string(id_block.get("videoId"))
-            sn = _as_object(r.get("snippet"))
-            published_raw = _as_string(sn.get("publishedAt"))
+            id_block = _coerce_object(r.get("id"))
+            vid_id = _coerce_string(id_block.get("videoId"))
+            sn = _coerce_object(r.get("snippet"))
+            published_raw = _coerce_string(sn.get("publishedAt"))
             try:
                 published_at = datetime.fromisoformat(
                     published_raw.replace("Z", "+00:00")
                 ).astimezone(UTC)
             except ValueError:
                 published_at = datetime.now(UTC)
-            thumbnails = _as_object(sn.get("thumbnails"))
-            default_thumb = _as_object(thumbnails.get("default"))
+            thumbnails = _coerce_object(sn.get("thumbnails"))
+            default_thumb = _coerce_object(thumbnails.get("default"))
             thumb = _as_optional_string(default_thumb.get("url"))
             items.append(
                 RawItem(
                     id=vid_id,
                     url=f"https://www.youtube.com/watch?v={vid_id}",
-                    title=_as_string(sn.get("title")),
-                    author_id=_as_string(sn.get("channelId")),
-                    author_name=_as_string(sn.get("channelTitle")),
+                    title=_coerce_string(sn.get("title")),
+                    author_id=_coerce_string(sn.get("channelId")),
+                    author_name=_coerce_string(sn.get("channelTitle")),
                     published_at=published_at,
                     metrics={},
                     text_excerpt=_as_optional_string(sn.get("description")),
@@ -144,7 +143,7 @@ class YouTubeAdapter(PlatformAdapter):
             )
         return items
 
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:
+    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
         """Hydrate search results with video and channel statistics.
 
         ``hydrate_videos`` and ``hydrate_channels`` are independent API calls
@@ -166,26 +165,26 @@ class YouTubeAdapter(PlatformAdapter):
             )
             return await asyncio.gather(videos_task, channels_task)
 
-        raw_videos, raw_channels = run_coro(_fetch_both())
+        raw_videos, raw_channels = await _fetch_both()
         hydrated = {str(v["id"]): v for v in raw_videos}
         channels = {str(c["id"]): c for c in raw_channels}
         enriched: list[RawItem] = []
         for it in items:
             vid = hydrated.get(it.id, {})
-            stats = _as_object(vid.get("statistics"))
+            stats = _coerce_object(vid.get("statistics"))
             ch = channels.get(it.author_id, {})
-            ch_stats = _as_object(ch.get("statistics"))
+            ch_stats = _coerce_object(ch.get("statistics"))
             metrics = {
-                "views": _as_int(stats.get("viewCount")),
-                "likes": _as_int(stats.get("likeCount")),
-                "comments": _as_int(stats.get("commentCount")),
+                "views": _coerce_int(stats.get("viewCount")),
+                "likes": _coerce_int(stats.get("likeCount")),
+                "comments": _coerce_int(stats.get("commentCount")),
             }
             extras = {
-                "channel_subscribers": _as_int(ch_stats.get("subscriberCount")),
-                "channel_video_count": _as_int(ch_stats.get("videoCount")),
+                "channel_subscribers": _coerce_int(ch_stats.get("subscriberCount")),
+                "channel_video_count": _coerce_int(ch_stats.get("videoCount")),
             }
-            content_details = _as_object(vid.get("contentDetails"))
-            duration_str = _as_string(content_details.get("duration"))
+            content_details = _coerce_object(vid.get("contentDetails"))
+            duration_str = _coerce_string(content_details.get("duration"))
             secs = self._parse_duration_seconds(duration_str) if duration_str else 0
             is_short = 0 < secs < 90
             if is_short and not self.config.get("include_shorts", True):
@@ -218,9 +217,9 @@ class YouTubeAdapter(PlatformAdapter):
         signals: list[SignalSet] = []
         for it in items:
             age_days = max(1, (now - it.published_at).days)
-            views = _as_int(it.metrics.get("views"))
-            likes = _as_int(it.metrics.get("likes"))
-            comments = _as_int(it.metrics.get("comments"))
+            views = _coerce_int(it.metrics.get("views"))
+            likes = _coerce_int(it.metrics.get("likes"))
+            comments = _coerce_int(it.metrics.get("comments"))
             signals.append(
                 SignalSet(
                     views=views,
@@ -241,7 +240,7 @@ class YouTubeAdapter(PlatformAdapter):
         return TrustHints(
             account_age_days=None,
             verified=None,
-            subscriber_count=_as_int(item.extras.get("channel_subscribers")) or None,
+            subscriber_count=_coerce_int(item.extras.get("channel_subscribers")) or None,
             upload_cadence_days=None,
             citation_markers=[],
         )
