@@ -323,7 +323,7 @@ class TestSetup:
         )
         result = main(["--data-dir", str(tmp_path), "setup"])
         assert result == 0
-        assert calls == ["config", "runner", "secrets"]
+        assert calls == ["secrets", "config", "runner"]
 
 
 class TestInstallSkill:

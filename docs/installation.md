@@ -32,20 +32,6 @@ This wizard writes a default config and prompts for each API key in turn.
 Press Enter at any prompt to skip that step — you can re-run `srp setup`
 or `srp config set-secret <name>` later.
 
-Default config written to /Users/you/.social-research-probe/config.toml
-
-Default LLM runner — choose which AI backend srp should use:
-  1. claude    Claude CLI (claude) — requires Anthropic account
-           Register: https://claude.ai/download
-  2. gemini    Gemini CLI (gemini) — requires Google account
-           Register: https://github.com/google-gemini/gemini-cli
-  3. codex     Codex CLI (codex) — requires OpenAI account
-           Register: https://github.com/openai/codex
-  4. local     Local model via SRP_LOCAL_LLM_BIN env var
-  5. none      No LLM — skip all AI features
-  Enter number (or press Enter to skip): 1         ← you type 1 and press Enter
-  runner set to 'claude'.
-
 API key setup — press Enter to skip any key:
   Register: https://console.cloud.google.com/apis/library/youtube.googleapis.com
   YouTube Data API v3 key (required for YouTube search):
@@ -61,10 +47,26 @@ API key setup — press Enter to skip any key:
   Register: https://app.tavily.com/
   Tavily search API key (corroboration — free tier: 1000 credits/month):
   >                                           ← skip Tavily
+
+Default config written to /Users/you/.social-research-probe/config.toml
+
+Default LLM runner — choose which AI backend srp should use:
+  1. claude    Claude CLI (claude) — requires Anthropic account
+           Register: https://claude.ai/download
+  2. gemini    Gemini CLI (gemini) — requires Google account
+           Register: https://github.com/google-gemini/gemini-cli
+  3. codex     Codex CLI (codex) — requires OpenAI account
+           Register: https://github.com/openai/codex
+  4. local     Local model via SRP_LOCAL_LLM_BIN env var
+  5. none      No LLM — skip all AI features
+  Enter number (or press Enter to skip): 1         ← you type 1 and press Enter
+  runner set to 'claude'.
+
 Setup complete. Try: srp research "AI safety" "latest-news"
 ```
 
 Key points:
+
 - **LLM runner is a numbered choice.** Type `1`–`5` and press Enter, or press Enter alone to skip.
 - **Every secret prompt shows a "Register:" URL** above the input line so you can open the signup page before pasting.
 - **Input is visible, not hidden.** The wizard uses plain input so you can see what you paste — useful if your clipboard contains junk. If you prefer hidden input, use `srp config set-secret <NAME>` instead (that uses `getpass`).
@@ -186,6 +188,7 @@ YOUTUBE_API_KEY:
 Type or paste your key and press Enter. The key is stored in `~/.social-research-probe/secrets.toml` with permissions `0600` — readable only by your user account.
 
 To get a YouTube Data API v3 key:
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a project → Enable "YouTube Data API v3"
 3. Create credentials → API key
@@ -309,13 +312,13 @@ Restart Claude Code, then test:
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---|---|
-| `ffmpeg not found` | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
-| `YOUTUBE_API_KEY missing` | Run `srp config set-secret YOUTUBE_API_KEY` |
-| Sections 10–11 show placeholder text | Set `llm.runner` to a configured provider (Step 3) |
-| Corroboration skipped | Add at least one corroboration key (Step 4) |
-| `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root |
+| Problem                                      | Fix                                                           |
+| -------------------------------------------- | ------------------------------------------------------------- |
+| `ffmpeg not found`                           | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
+| `YOUTUBE_API_KEY missing`                    | Run `srp config set-secret YOUTUBE_API_KEY`                   |
+| Sections 10–11 show placeholder text         | Set `llm.runner` to a configured provider (Step 3)            |
+| Corroboration skipped                        | Add at least one corroboration key (Step 4)                   |
+| `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root                     |
 
 ---
 

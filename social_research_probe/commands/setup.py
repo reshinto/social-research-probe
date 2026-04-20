@@ -25,8 +25,8 @@ def run(data_dir: Path) -> int:
         "Press Enter at any prompt to skip that step — you can re-run `srp setup`\n"
         "or `srp config set-secret <name>` later.\n"
     )
+    _prompt_for_secrets(data_dir)
     _copy_config_example(data_dir)
     _prompt_for_runner(data_dir)
-    _prompt_for_secrets(data_dir)
     print('\nSetup complete. Try: srp research "AI safety" "latest-news"')
     return 0
