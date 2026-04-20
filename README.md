@@ -3,9 +3,9 @@
 **Evidence-first social-media research CLI + Claude Code skill**
 
 [![CI](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/social-research-probe)](https://pypi.org/project/social-research-probe/)
-[![Python versions](https://img.shields.io/pypi/pyversions/social-research-probe)](https://pypi.org/project/social-research-probe/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PyPI version](https://badge.fury.io/py/social-research-probe.svg)](https://pypi.org/project/social-research-probe/)
+[![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://pypi.org/project/social-research-probe/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/reshinto/social-research-probe/blob/main/LICENSE)
 
 `srp` fetches YouTube content, scores it by trust/trend/opportunity, auto-corroborates claims, runs 15+ statistical models, and renders an HTML report — all from a single CLI command.
 
@@ -121,12 +121,12 @@ See [docs/usage.md](docs/usage.md) for a complete guide including corroboration 
 
 Key settings in `~/.social-research-probe/config.toml`:
 
-| Setting | Default | What it controls |
-|---|---|---|
-| `platforms.youtube.max_items` | `20` | How many videos to fetch per search |
-| `platforms.youtube.recency_days` | `90` | How far back to search (days) |
-| `llm.runner` | `none` | Which LLM to use for summaries and synthesis |
-| `corroboration.backend` | `host` | Which web-search backend to corroborate with |
+| Setting                          | Default | What it controls                             |
+| -------------------------------- | ------- | -------------------------------------------- |
+| `platforms.youtube.max_items`    | `20`    | How many videos to fetch per search          |
+| `platforms.youtube.recency_days` | `90`    | How far back to search (days)                |
+| `llm.runner`                     | `none`  | Which LLM to use for summaries and synthesis |
+| `corroboration.backend`          | `host`  | Which web-search backend to corroborate with |
 
 Change any setting with `srp config set <key> <value>`, e.g.:
 
@@ -140,25 +140,25 @@ srp config set llm.runner claude
 
 ## Documentation
 
-| Document | What it covers |
-|---|---|
-| [docs/README.md](docs/README.md) | Documentation hub — all docs by audience |
-| [docs/how-it-works.md](docs/how-it-works.md) | How fetching, scoring, and transcripts work; vs pure-LLM approach |
-| [docs/installation.md](docs/installation.md) | Install (pip/pipx/uvx), API keys, LLM runner, verification |
-| [docs/usage.md](docs/usage.md) | Run research, read output, configure video count |
-| [docs/corroboration.md](docs/corroboration.md) | Claim corroboration: what it is, backends, configuration |
-| [docs/llm-runners.md](docs/llm-runners.md) | Supported runners, ensemble, what breaks without one |
-| [docs/statistics.md](docs/statistics.md) | All 15+ statistical models: what they measure, how to interpret |
-| [docs/charts.md](docs/charts.md) | Every chart: what it shows, where it's saved, file persistence |
-| [docs/commands.md](docs/commands.md) | Every flag, config key, exit code, environment variable |
-| [docs/architecture.md](docs/architecture.md) | System design, data flow, tradeoffs, known limitations |
-| [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS) |
-| [docs/design-patterns.md](docs/design-patterns.md) | Patterns with why/why-not rationale |
-| [docs/testing.md](docs/testing.md) | Test tiers, TDD workflow, 100% coverage gate |
-| [docs/security.md](docs/security.md) | Secret storage, network egress, hardening |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits |
-| [SECURITY.md](SECURITY.md) | Responsible disclosure policy |
-| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| Document                                               | What it covers                                                    |
+| ------------------------------------------------------ | ----------------------------------------------------------------- |
+| [docs/README.md](docs/README.md)                       | Documentation hub — all docs by audience                          |
+| [docs/how-it-works.md](docs/how-it-works.md)           | How fetching, scoring, and transcripts work; vs pure-LLM approach |
+| [docs/installation.md](docs/installation.md)           | Install (pip/pipx/uvx), API keys, LLM runner, verification        |
+| [docs/usage.md](docs/usage.md)                         | Run research, read output, configure video count                  |
+| [docs/corroboration.md](docs/corroboration.md)         | Claim corroboration: what it is, backends, configuration          |
+| [docs/llm-runners.md](docs/llm-runners.md)             | Supported runners, ensemble, what breaks without one              |
+| [docs/statistics.md](docs/statistics.md)               | All 15+ statistical models: what they measure, how to interpret   |
+| [docs/charts.md](docs/charts.md)                       | Every chart: what it shows, where it's saved, file persistence    |
+| [docs/commands.md](docs/commands.md)                   | Every flag, config key, exit code, environment variable           |
+| [docs/architecture.md](docs/architecture.md)           | System design, data flow, tradeoffs, known limitations            |
+| [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS)           |
+| [docs/design-patterns.md](docs/design-patterns.md)     | Patterns with why/why-not rationale                               |
+| [docs/testing.md](docs/testing.md)                     | Test tiers, TDD workflow, 100% coverage gate                      |
+| [docs/security.md](docs/security.md)                   | Secret storage, network egress, hardening                         |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                     | Development workflow, TDD rules, file-size limits                 |
+| [SECURITY.md](SECURITY.md)                             | Responsible disclosure policy                                     |
+| [CHANGELOG.md](CHANGELOG.md)                           | Release history                                                   |
 
 ---
 
