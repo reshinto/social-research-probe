@@ -26,7 +26,7 @@ class _ExecutableRequest(Protocol):
 class _ListResource(Protocol):
     """Protocol for resource wrappers exposing a .list(...).execute() chain."""
 
-    def list(self, **kwargs: object) -> _ExecutableRequest:
+    def list(self, **_kwargs: object) -> _ExecutableRequest:
         """Build a request object for one API call."""
 
 

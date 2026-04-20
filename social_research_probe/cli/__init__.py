@@ -160,26 +160,14 @@ def _attach_synthesis(packet: dict) -> None:
         packet.update(synthesis)
 
 
-def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
-    """Simple positional form. Examples:
-
-    srp research ai latest-news                 # platform defaults to youtube
-    srp research youtube ai latest-news
-    srp research youtube ai latest-news,trends  # multiple purposes
-    """
+def _resolve_topic_and_purposes(
+    research_args: _ResearchArgs,
+    data_dir: Path,
+    cfg: object,
+) -> tuple[str, tuple[str, ...]]:
+    """Resolve topic and purposes from either NL query or classic topic/purpose args."""
     from social_research_probe.commands.nl_query import classify_query
-    from social_research_probe.commands.parse import parse
-    from social_research_probe.pipeline import run_research
-    from social_research_probe.render.html import write_html_report
     from social_research_probe.utils.progress import log
-
-    research_args = _parse_simple_research_args(args.args)
-    config_extras = {
-        "include_shorts": not args.no_shorts,
-        "fetch_transcripts": not args.no_transcripts,
-    }
-
-    cfg = load_active_config()
 
     if research_args.query:
         classified = classify_query(research_args.query, data_dir=data_dir, cfg=cfg)
@@ -188,16 +176,13 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
             f" (new topic: {'yes' if classified.topic_created else 'no'},"
             f" new purpose: {'yes' if classified.purpose_created else 'no'})"
         )
-        topic = classified.topic
-        purposes = (classified.purpose_name,)
-    else:
-        topic = research_args.topic
-        purposes = research_args.purposes
+        return classified.topic, (classified.purpose_name,)
+    return research_args.topic, research_args.purposes
 
-    platform = research_args.platform
 
-    raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
-    no_html = getattr(args, "no_html", False)
+def _log_synthesis_runner_status(cfg: object) -> None:
+    """Log whether the configured synthesis runner is available."""
+    from social_research_probe.utils.progress import log
 
     preferred = cfg.default_structured_runner
     if preferred == "none":
@@ -211,18 +196,30 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
                 f"[srp] synthesis: runner '{preferred}' binary not found on PATH — sections 10-11 will be skipped. Install the CLI or pick a different runner."
             )
 
-    def _write_and_attach_html_path(pkt: dict) -> str:
-        report_path = write_html_report(pkt, data_dir)
-        report_uri = report_path.resolve().as_uri()
-        pkt["html_report_path"] = report_uri
-        return report_uri
 
+def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
+    """Dispatch research subcommand. Supports classic and NL-query forms."""
+    from social_research_probe.commands.parse import parse
+    from social_research_probe.pipeline import run_research
+    from social_research_probe.render.html import write_html_report
+
+    research_args = _parse_simple_research_args(args.args)
+    config_extras = {
+        "include_shorts": not args.no_shorts,
+        "fetch_transcripts": not args.no_transcripts,
+    }
+    cfg = load_active_config()
+    topic, purposes = _resolve_topic_and_purposes(research_args, data_dir, cfg)
+    platform = research_args.platform
+    raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
+    _log_synthesis_runner_status(cfg)
     packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
     _attach_synthesis(packet)
-    if not no_html:
+    if not getattr(args, "no_html", False):
         if "multi" in packet:
             raise ValidationError("HTML rendering is only available for single-topic research")
-        _write_and_attach_html_path(packet)
+        report_path = write_html_report(packet, data_dir)
+        packet["html_report_path"] = report_path.resolve().as_uri()
     emit_packet(packet, kind="synthesis")
     return 0
 

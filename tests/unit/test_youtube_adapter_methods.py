@@ -11,7 +11,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import FetchLimits, RawItem
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter, _as_int
+from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+from social_research_probe.platforms.youtube.adapter import _coerce_int as _as_int
 
 
 def _make_adapter(monkeypatch, api_key="test-key"):
