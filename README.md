@@ -143,6 +143,7 @@ srp config set llm.runner claude
 | Document | What it covers |
 |---|---|
 | [docs/README.md](docs/README.md) | Documentation hub — all docs by audience |
+| [docs/how-it-works.md](docs/how-it-works.md) | How fetching, scoring, and transcripts work; vs pure-LLM approach |
 | [docs/installation.md](docs/installation.md) | Install (pip/pipx/uvx), API keys, LLM runner, verification |
 | [docs/usage.md](docs/usage.md) | Run research, read output, configure video count |
 | [docs/corroboration.md](docs/corroboration.md) | Claim corroboration: what it is, backends, configuration |

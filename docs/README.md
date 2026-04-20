@@ -10,6 +10,7 @@
 
 | Document | What it covers |
 |---|---|
+| [How It Works](how-it-works.md) | What srp actually does: fetching, scoring formulas, transcripts, no video downloads |
 | [Installation](installation.md) | Step-by-step setup: install, API keys, LLM runner, verification |
 | [Usage Guide](usage.md) | Run your first research, read the output, configure video count |
 | [Corroboration](corroboration.md) | What claim corroboration is and how to configure it |
