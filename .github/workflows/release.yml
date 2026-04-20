@@ -5,14 +5,30 @@ on:
     branches:
       - main
     paths:
-      - "VERSION"
+      - VERSION
 
 permissions:
   contents: write
 
 jobs:
+  detect-version-change:
+    name: Detect VERSION change
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.filter.outputs.version }}
+    steps:
+      - name: Check changed files
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            version:
+              - 'VERSION'
+
   tag-and-release:
     name: Create tag and GitHub release from VERSION
+    needs: detect-version-change
+    if: needs.detect-version-change.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -39,7 +55,7 @@ jobs:
         run: |
           bash scripts/tag_release.sh --yes --skip-existing
 
-      - name: Build release tarball (operational files only)
+      - name: Build release tarball
         run: |
           pip install build
           python -m build
@@ -47,7 +63,7 @@ jobs:
       - name: Generate SHA-256 checksums
         run: sha256sum dist/* > dist/checksums-sha256.txt
 
-      - name: Store bootstrap installer distributions
+      - name: Store distributions
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
@@ -66,22 +82,22 @@ jobs:
           fail_on_unmatched_files: true
 
   publish-pypi:
-    needs: tag-and-release
+    name: Publish to PyPI
+    needs:
+      - detect-version-change
+      - tag-and-release
+    if: needs.detect-version-change.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
+
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Download distributions
+        uses: actions/download-artifact@v4
         with:
-          python-version: "3.13"
-
-      - name: Build distribution
-        run: |
-          pip install build
-          python -m build
+          name: python-package-distributions
+          path: dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
