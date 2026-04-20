@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-corroboration of top-5 items via Exa, Brave, or Tavily on every research run
 - `VERSION` file as single source of truth for package version (hatchling dynamic versioning)
 - Release workflow: `VERSION` push to main → GitHub release → PyPI publish via OIDC
-- ./.venv/bin/python 3.13 added to CI test matrix
+- Python 3.13 added to CI test matrix
 - MIT `LICENSE` file
 - This `CHANGELOG.md`
 
@@ -39,12 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Late-binding closure bug in pipeline `asyncio.to_thread` lambda
 - `strict=True` added to `zip()` in LLM ensemble response collection
 
-## [0.0.1] - 2026-04-19
 
-### Added
-
-- Initial release: `srp research`, `srp update-topics`, `srp update-purposes`, corroboration backends, stats suite, chart rendering, Claude Code skill integration
-
-[Unreleased]: https://github.com/user/social-research-probe/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/user/social-research-probe/compare/v0.0.1...v0.1.0
+[Unreleased]: https://github.com/user/social-research-probe/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/user/social-research-probe/releases/tag/v0.0.1
