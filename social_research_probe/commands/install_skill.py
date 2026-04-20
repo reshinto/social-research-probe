@@ -101,7 +101,9 @@ def _validate_target(dest: Path) -> None:
 
 def _install_cli() -> None:
     if shutil.which("uv"):
-        subprocess.run(["uv", "tool", "install", "--reinstall", _PACKAGE_REPO], check=True)
+        subprocess.run(
+            ["uv", "tool", "install", "--force", "--reinstall", _PACKAGE_REPO], check=True
+        )
         print("srp CLI installed via uv tool")
     elif shutil.which("pipx"):
         subprocess.run(["pipx", "install", "--force", _PACKAGE_REPO], check=True)

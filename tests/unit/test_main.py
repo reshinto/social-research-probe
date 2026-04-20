@@ -2,6 +2,7 @@
 
 import runpy
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +17,7 @@ def test_module_main_calls_cli(monkeypatch):
 
 
 def test_version_fallback_when_package_not_found(monkeypatch):
-    """__init__.py falls back to '0.1.0' when importlib.metadata.version raises."""
+    """__init__.py falls back to the repo VERSION file when metadata lookup fails."""
     from importlib.metadata import PackageNotFoundError
 
     monkeypatch.setattr(
@@ -27,4 +28,5 @@ def test_version_fallback_when_package_not_found(monkeypatch):
     monkeypatch.delitem(sys.modules, "social_research_probe", raising=False)
     import social_research_probe as srp
 
-    assert srp.__version__ == "0.0.1"
+    expected = (Path(__file__).resolve().parents[2] / "VERSION").read_text().strip()
+    assert srp.__version__ == expected

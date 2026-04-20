@@ -501,7 +501,16 @@ class TestInstallSkillWithUvOrPipx:
         )
         result = main(["install-skill", "--target", str(target)])
         assert result == 0
-        assert any("uv" in str(c) for c in calls)
+        assert calls == [
+            [
+                "uv",
+                "tool",
+                "install",
+                "--force",
+                "--reinstall",
+                "git+https://github.com/reshinto/social-research-probe",
+            ]
+        ]
         out = capsys.readouterr().out
         assert "uv" in out
 
