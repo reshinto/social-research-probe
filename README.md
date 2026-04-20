@@ -152,6 +152,7 @@ srp config set llm.runner claude
 | [docs/charts.md](docs/charts.md) | Every chart: what it shows, where it's saved, file persistence |
 | [docs/commands.md](docs/commands.md) | Every flag, config key, exit code, environment variable |
 | [docs/architecture.md](docs/architecture.md) | System design, data flow, tradeoffs, known limitations |
+| [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS) |
 | [docs/design-patterns.md](docs/design-patterns.md) | Patterns with why/why-not rationale |
 | [docs/testing.md](docs/testing.md) | Test tiers, TDD workflow, 100% coverage gate |
 | [docs/security.md](docs/security.md) | Secret storage, network egress, hardening |

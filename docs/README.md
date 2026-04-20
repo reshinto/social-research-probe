@@ -35,6 +35,7 @@
 | Document | What it covers |
 |---|---|
 | [Architecture](architecture.md) | System design, data flow, async model, design tradeoffs, known limitations |
+| [Adding a Platform](adding-a-platform.md) | Step-by-step guide to adding a new content source (TikTok, Reddit, RSS, …) |
 | [Design Patterns](design-patterns.md) | Adapter, registry, strategy, pipeline, and other patterns — with why/why-not rationale |
 | [Python Language Guide](python-language-guide.md) | TypedDicts, protocols, async/await, asyncio.gather, type hints, pytest fixtures |
 | [Python Language Guide — Part 2](python-language-guide-2.md) | f-strings, list comprehensions, context managers, dataclasses, import order, `__init__.py` |
