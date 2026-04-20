@@ -13,6 +13,77 @@ This guide walks you through installing `srp`, storing your API keys, choosing a
 
 ---
 
+## What the full install looks like
+
+Before diving into each step, here is a complete terminal transcript of a first-time setup from empty → working `srp research` run. Your terminal will show something very similar.
+
+```text
+$ pipx install social-research-probe
+  installed package social-research-probe 0.2.0, installed using Python 3.12.3
+  These apps are now globally available
+    - srp
+done! ✨ 🌟 ✨
+
+$ srp --version
+srp 0.2.0
+
+$ srp config set-secret YOUTUBE_API_KEY
+YOUTUBE_API_KEY:                                    ← you type your key here (hidden)
+                                                    ← Enter, no confirmation printed
+$                                                   ← returns silently on success
+
+$ srp config set llm.runner claude
+$                                                   ← also silent on success
+
+$ srp config set-secret EXA_API_KEY
+EXA_API_KEY:                                        ← hidden input again
+$
+
+$ srp config show
+{
+  "llm": {
+    "runner": "claude",
+    "timeout_seconds": 60
+  },
+  "corroboration": {
+    "backend": "host",
+    "max_claims_per_item": 5,
+    "max_claims_per_session": 15
+  },
+  "platforms": {
+    "youtube": {
+      "recency_days": 90,
+      "max_items": 20,
+      "enrich_top_n": 5
+    }
+  }
+}
+
+$ srp config check-secrets --needed-for research --platform youtube
+{
+  "present": ["youtube_api_key", "exa_api_key"],
+  "missing": []
+}
+
+$ srp research "AI safety" "latest-news"
+[srp] fetching youtube: AI safety / latest-news
+[srp] scored 20 items
+[srp] enriching top 5 with transcripts…
+[srp] transcript: fetching for 'Stuart Russell on AI alignment' …
+[srp] summary: transcript-based for 'Stuart Russell on AI alignment'
+[srp] corroborating via exa…
+[srp] running statistical analysis…
+[srp] HTML report: file:///Users/you/.social-research-probe/reports/ai-safety-youtube-20260420-193000.html
+
+## 1. Topic & Purpose
+AI safety — latest-news
+…(Markdown summary continues)…
+```
+
+The sections below explain each of those commands in detail, plus the optional extras (Claude Code skill, corroboration keys, uninstall, troubleshooting).
+
+---
+
 ## Step 1 — Install
 
 Choose the method that suits your workflow:
