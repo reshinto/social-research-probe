@@ -305,6 +305,27 @@ class TestInstallSkillTargetValidation:
         assert result != 0
 
 
+class TestSetup:
+    def test_setup_runs_config_copy_and_both_prompts(self, monkeypatch, tmp_path):
+        """`srp setup` invokes the config copy + runner + secrets prompts and exits 0."""
+        calls: list[str] = []
+        monkeypatch.setattr(
+            "social_research_probe.commands.setup._copy_config_example",
+            lambda d: calls.append("config"),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.setup._prompt_for_runner",
+            lambda d: calls.append("runner"),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.commands.setup._prompt_for_secrets",
+            lambda d: calls.append("secrets"),
+        )
+        result = main(["--data-dir", str(tmp_path), "setup"])
+        assert result == 0
+        assert calls == ["config", "runner", "secrets"]
+
+
 class TestInstallSkill:
     def test_install_skill(self, monkeypatch, tmp_path):
         monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))

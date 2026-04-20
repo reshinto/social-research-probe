@@ -135,6 +135,12 @@ def _handle_install_skill(args: argparse.Namespace, data_dir: Path) -> int:
     return install_skill.run(args.target)
 
 
+def _handle_setup(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.commands import setup as setup_cmd
+
+    return setup_cmd.run(data_dir)
+
+
 def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.commands import report as report_cmd
 

@@ -23,6 +23,7 @@ from .handlers import (
     _handle_install_skill,
     _handle_render,
     _handle_report,
+    _handle_setup,
     _handle_show_pending,
     _handle_show_purposes,
     _handle_show_topics,
@@ -239,6 +240,7 @@ _HANDLERS = {
     "corroborate-claims": _handle_corroborate_claims,
     "render": _handle_render,
     "install-skill": _handle_install_skill,
+    "setup": _handle_setup,
     "report": _handle_report,
     "config": lambda args, data_dir: _dispatch_config(args, data_dir),
 }

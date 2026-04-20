@@ -13,32 +13,67 @@ This guide walks you through installing `srp`, storing your API keys, choosing a
 
 ---
 
-## What the full install looks like
+## Fastest path — the interactive wizard
 
-Before diving into each step, here is a complete terminal transcript of a first-time setup from empty → working `srp research` run. Your terminal will show something very similar.
+The quickest way to get set up is to run `srp setup` after installing. It walks you through the default config, picks an LLM runner, and prompts you to paste each API key one by one. Press **Enter** at any prompt to skip that step; you can re-run the wizard or set individual secrets later.
+
+Here is exactly what appears on your terminal from a fresh machine:
 
 ```text
 $ pipx install social-research-probe
-  installed package social-research-probe 0.2.0, installed using Python 3.12.3
+  installed package social-research-probe 0.2.0
   These apps are now globally available
     - srp
-done! ✨ 🌟 ✨
+done! ✨
 
-$ srp --version
-srp 0.2.0
+$ srp setup
+Welcome to social-research-probe setup.
+This wizard writes a default config and prompts for each API key in turn.
+Press Enter at any prompt to skip that step — you can re-run `srp setup`
+or `srp config set-secret <name>` later.
 
-$ srp config set-secret YOUTUBE_API_KEY
-YOUTUBE_API_KEY:                                    ← you type your key here (hidden)
-                                                    ← Enter, no confirmation printed
-$                                                   ← returns silently on success
+Default config written to /Users/you/.social-research-probe/config.toml
 
-$ srp config set llm.runner claude
-$                                                   ← also silent on success
+Default LLM runner — choose which AI backend srp should use:
+  1. claude    Claude CLI (claude) — requires Anthropic account
+           Register: https://claude.ai/download
+  2. gemini    Gemini CLI (gemini) — requires Google account
+           Register: https://github.com/google-gemini/gemini-cli
+  3. codex     Codex CLI (codex) — requires OpenAI account
+           Register: https://github.com/openai/codex
+  4. local     Local model via SRP_LOCAL_LLM_BIN env var
+  5. none      No LLM — skip all AI features
+  Enter number (or press Enter to skip): 1         ← you type 1 and press Enter
+  runner set to 'claude'.
 
-$ srp config set-secret EXA_API_KEY
-EXA_API_KEY:                                        ← hidden input again
-$
+API key setup — press Enter to skip any key:
+  Register: https://console.cloud.google.com/apis/library/youtube.googleapis.com
+  YouTube Data API v3 key (required for YouTube search):
+  > AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXX   ← paste your key, press Enter
+    saved.
+  Register: https://brave.com/search/api/
+  Brave Search API key (corroboration — paid, no free tier):
+  >                                           ← just press Enter to skip
+  Register: https://dashboard.exa.ai/
+  Exa search API key (corroboration — free tier available):
+  > abcd1234-ef56-7890-abcd-ef1234567890  ← paste Exa key
+    saved.
+  Register: https://app.tavily.com/
+  Tavily search API key (corroboration — free tier: 1000 credits/month):
+  >                                           ← skip Tavily
+Setup complete. Try: srp research "AI safety" "latest-news"
+```
 
+Key points:
+- **LLM runner is a numbered choice.** Type `1`–`5` and press Enter, or press Enter alone to skip.
+- **Every secret prompt shows a "Register:" URL** above the input line so you can open the signup page before pasting.
+- **Input is visible, not hidden.** The wizard uses plain input so you can see what you paste — useful if your clipboard contains junk. If you prefer hidden input, use `srp config set-secret <NAME>` instead (that uses `getpass`).
+- **Blank input = skip.** Press Enter to leave any key unset. You can add missing keys later with `srp config set-secret <NAME>`.
+- **Re-running is safe.** `srp setup` never overwrites an existing `config.toml` or an existing secret you leave blank. The current masked value is shown like `[current: AIza…XXXX]` so you know what is already stored.
+
+After the wizard finishes, verify:
+
+```text
 $ srp config show
 {
   "llm": {
@@ -64,7 +99,11 @@ $ srp config check-secrets --needed-for research --platform youtube
   "present": ["youtube_api_key", "exa_api_key"],
   "missing": []
 }
+```
 
+Then run your first research:
+
+```text
 $ srp research "AI safety" "latest-news"
 [srp] fetching youtube: AI safety / latest-news
 [srp] scored 20 items
@@ -80,7 +119,7 @@ AI safety — latest-news
 …(Markdown summary continues)…
 ```
 
-The sections below explain each of those commands in detail, plus the optional extras (Claude Code skill, corroboration keys, uninstall, troubleshooting).
+The sections below drill into each of those commands if you prefer the manual path (one secret / one setting at a time), or need to change something the wizard already set.
 
 ---
 

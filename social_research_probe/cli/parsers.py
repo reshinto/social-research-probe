@@ -85,6 +85,7 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     rend.add_argument("--output-dir", default=None, help="Directory to save charts")
     ins = sub.add_parser("install-skill", help="Copy skill files into ~/.claude/skills/srp")
     ins.add_argument("--target", default=None, help="Destination (default: ~/.claude/skills/srp)")
+    sub.add_parser("setup", help="Interactive first-time setup: default config + LLM + API keys")
     rep = sub.add_parser("report", help="Re-render an HTML report from a saved packet file")
     rep.add_argument("--packet", required=True, help="Path to packet JSON file")
     rep.add_argument(
