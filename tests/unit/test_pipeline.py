@@ -525,7 +525,9 @@ def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path
         def health_check(self) -> bool:
             return True
 
-    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
     monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
     assert _available_backends(tmp_path) == ["llm_cli"]
 
@@ -536,7 +538,9 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
     class _Cfg:
         corroboration_backend = "none"
 
-    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
     assert _available_backends(tmp_path) == []
 
 

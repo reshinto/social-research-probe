@@ -221,12 +221,15 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
         llm_runner = "none"
 
     monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda d: _Cfg())
-    monkeypatch.setattr("social_research_probe.pipeline.orchestrator._available_backends", lambda d: ["exa"])
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator._available_backends", lambda d: ["exa"]
+    )
     monkeypatch.setattr(
         "social_research_probe.pipeline.corroboration._corroborate_top5", AsyncMock(return_value=[])
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts", AsyncMock(return_value=None)
+        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts",
+        AsyncMock(return_value=None),
     )
     from tests.unit.test_pipeline import _write_purposes
 
