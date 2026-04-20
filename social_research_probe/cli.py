@@ -8,6 +8,8 @@ import os
 import sys
 from pathlib import Path
 
+from dataclasses import dataclass
+
 from social_research_probe.commands import config as config_cmd
 from social_research_probe.commands import purposes as purposes_cmd
 from social_research_probe.commands import suggestions as suggestions_cmd
@@ -309,20 +311,39 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     srp research youtube ai latest-news
     srp research youtube ai latest-news,trends  # multiple purposes
     """
+    from social_research_probe.commands.nl_query import classify_query
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
     from social_research_probe.render.html import write_html_report
     from social_research_probe.utils.progress import log
 
-    platform, topic, purposes = _parse_simple_research_args(args.args)
+    research_args = _parse_simple_research_args(args.args)
     config_extras = {
         "include_shorts": not args.no_shorts,
         "fetch_transcripts": not args.no_transcripts,
     }
+
+    if research_args.query:
+        cfg = load_active_config()
+        classified = classify_query(research_args.query, data_dir=data_dir, cfg=cfg)
+        log(
+            f'[srp] query mapped to topic="{classified.topic}" purpose="{classified.purpose_name}"'
+            f" (new topic: {'yes' if classified.topic_created else 'no'},"
+            f" new purpose: {'yes' if classified.purpose_created else 'no'})"
+        )
+        platform = research_args.platform
+        topic = classified.topic
+        purposes = [classified.purpose_name]
+    else:
+        cfg = load_active_config()
+        platform = research_args.platform
+        topic = research_args.topic
+        purposes = research_args.purposes
+
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     no_html = getattr(args, "no_html", False)
 
-    cfg = load_active_config()
+    # Keep the existing runner health-check warning
     preferred = cfg.default_structured_runner
     if preferred == "none":
         log(
@@ -425,19 +446,44 @@ def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
     return [preferred, *[name for name in candidates if name != preferred]]
 
 
-def _parse_simple_research_args(positional: list[str]) -> tuple[str, str, list[str]]:
-    """Parse [platform] topic purposes into (platform, topic, purposes)."""
+@dataclass(frozen=True)
+class _ResearchArgs:
+    platform: str
+    topic: str       # empty string when query is set
+    purposes: list[str]  # empty list when query is set
+    query: str       # empty string when topic/purposes are set
+
+
+def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
+    """Parse [platform] topic purposes into a _ResearchArgs.
+
+    If only one non-platform arg is given, treat it as a free-form NL query.
+    """
     known_platforms = {"youtube"}
-    if len(positional) < 2:
-        raise ValidationError("research needs at least TOPIC and PURPOSES")
-    if positional[0] in known_platforms and len(positional) >= 3:
-        platform, topic, purpose_arg = positional[0], positional[1], positional[2]
+    if not positional:
+        raise ValidationError("research needs at least TOPIC and PURPOSES (or a natural-language query)")
+
+    # Detect platform prefix
+    if positional[0] in known_platforms:
+        platform = positional[0]
+        rest = positional[1:]
     else:
-        platform, topic, purpose_arg = "youtube", positional[0], positional[1]
+        platform = "youtube"
+        rest = positional
+
+    if len(rest) == 0:
+        raise ValidationError("research needs at least TOPIC and PURPOSES (or a natural-language query)")
+
+    if len(rest) == 1:
+        # NL query mode: single free-form string
+        return _ResearchArgs(platform=platform, topic="", purposes=[], query=rest[0])
+
+    # Classic mode: topic + purpose(s)
+    topic, purpose_arg = rest[0], rest[1]
     purposes = [p.strip() for p in purpose_arg.split(",") if p.strip()]
     if not purposes:
         raise ValidationError("research needs at least one purpose")
-    return platform, topic, purposes
+    return _ResearchArgs(platform=platform, topic=topic, purposes=purposes, query="")
 
 
 def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
