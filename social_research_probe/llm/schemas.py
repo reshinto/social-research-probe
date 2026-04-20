@@ -1,5 +1,7 @@
 """JSON schema constants for structured LLM responses."""
 
+from __future__ import annotations
+
 NL_QUERY_CLASSIFICATION_SCHEMA = {
     "type": "object",
     "properties": {

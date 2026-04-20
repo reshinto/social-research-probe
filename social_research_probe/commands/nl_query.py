@@ -19,6 +19,7 @@ from social_research_probe.llm.registry import get_runner
 from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 from social_research_probe.purposes.registry import load
 from social_research_probe.types import RunnerName
+from social_research_probe.utils.progress import log
 
 if TYPE_CHECKING:
     from social_research_probe.config import Config
@@ -40,7 +41,7 @@ class ClassifiedQuery:
     purpose_created: bool
 
 
-def classify_query(query: str, *, data_dir: Path, cfg: "Config") -> ClassifiedQuery:
+def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuery:
     """Classify a free-form query into (topic, purpose) and persist new entries."""
     if cfg.default_structured_runner == "none":
         raise ValidationError(
@@ -83,7 +84,8 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
             continue
         try:
             result = runner.run(prompt, schema=NL_QUERY_CLASSIFICATION_SCHEMA)
-        except Exception:
+        except Exception as exc:
+            log(f"[srp] nl-query: runner={name} outcome=error err={exc}")
             continue
         if _is_valid_result(result):
             return result

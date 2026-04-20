@@ -19,9 +19,8 @@ from social_research_probe.commands.nl_query import (
     _runner_order,
     classify_query,
 )
-from social_research_probe.errors import DuplicateError, ValidationError
+from social_research_probe.errors import ValidationError
 from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
-
 
 # ---------------------------------------------------------------------------
 # NL_QUERY_CLASSIFICATION_SCHEMA
@@ -174,7 +173,7 @@ def _make_runner(
 def test_classify_query_raises_when_runner_disabled(tmp_data_dir: Path) -> None:
     """classify_query raises ValidationError when runner is 'none'."""
     cfg = _make_cfg("none")
-    with pytest.raises(ValidationError, match="llm.runner is disabled"):
+    with pytest.raises(ValidationError, match=r"llm\.runner is disabled"):
         classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
 
 
