@@ -589,6 +589,9 @@ class TestSimpleResearch:
         assert cfg == {"include_shorts": False, "fetch_transcripts": True}
 
     def test_too_few_args_returns_validation_exit_code(self, monkeypatch, tmp_path):
+        # "srp research ai" triggers NL query mode. With runner="none" (the default
+        # in test configs), classify_query raises ValidationError, so the exit code
+        # is still ValidationError.exit_code — the same value as before this change.
         from social_research_probe.errors import ValidationError
 
         captured = []
@@ -602,6 +605,68 @@ class TestSimpleResearch:
         self._patch_pipeline(monkeypatch, captured)
         assert (
             main(["--data-dir", str(tmp_path), "research", "ai", ","]) == ValidationError.exit_code
+        )
+
+    def test_nl_query_dispatches_classify_then_run_research(self, monkeypatch, tmp_path):
+        # NL query mode: single non-platform positional → classify_query is called,
+        # and topic/purposes are taken from the ClassifiedQuery result.
+        from social_research_probe.commands.nl_query import ClassifiedQuery
+
+        def fake_classify_query(query, *, data_dir, cfg):
+            return ClassifiedQuery(
+                topic="quant-finance",
+                purpose_name="job-opportunities",
+                purpose_method="career paths in quant funds",
+                topic_created=True,
+                purpose_created=True,
+            )
+
+        monkeypatch.setattr(
+            "social_research_probe.commands.nl_query.classify_query", fake_classify_query
+        )
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        rc = main(
+            ["--data-dir", str(tmp_path), "research", "youtube", "i want to know about quant jobs"]
+        )
+        assert rc == 0
+        cmd, _cfg = captured[0]
+        assert cmd.topics == [("quant-finance", ["job-opportunities"])]
+        assert cmd.platform == "youtube"
+
+    def test_nl_query_default_platform_is_youtube(self, monkeypatch, tmp_path):
+        # When no platform is specified, NL query mode defaults to youtube.
+        from social_research_probe.commands.nl_query import ClassifiedQuery
+
+        def fake_classify_query(query, *, data_dir, cfg):
+            return ClassifiedQuery(
+                topic="ai",
+                purpose_name="trends",
+                purpose_method="current trends",
+                topic_created=False,
+                purpose_created=False,
+            )
+
+        monkeypatch.setattr(
+            "social_research_probe.commands.nl_query.classify_query", fake_classify_query
+        )
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        rc = main(["--data-dir", str(tmp_path), "research", "i want to know about ai trends"])
+        assert rc == 0
+        cmd, _cfg = captured[0]
+        assert cmd.platform == "youtube"
+        assert cmd.topics == [("ai", ["trends"])]
+
+    def test_platform_only_arg_returns_validation_exit_code(self, monkeypatch, tmp_path):
+        # "srp research youtube" — platform given but no topic/purpose follows.
+        # _parse_simple_research_args raises ValidationError for this case.
+        from social_research_probe.errors import ValidationError
+
+        captured = []
+        self._patch_pipeline(monkeypatch, captured)
+        assert (
+            main(["--data-dir", str(tmp_path), "research", "youtube"]) == ValidationError.exit_code
         )
 
 
