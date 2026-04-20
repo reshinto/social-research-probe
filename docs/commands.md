@@ -9,8 +9,34 @@
 | Flag | Description |
 |---|---|
 | `--data-dir PATH` | Override the data directory (default: `~/.social-research-probe`, env: `SRP_DATA_DIR`) |
+| `--verbose` | Enable extra progress logging |
 | `--version` | Print the installed version and exit |
 | `--help` | Print help for a command |
+
+---
+
+## Claude Code Skill
+
+Install the bundled skill once:
+
+```bash
+srp install-skill
+```
+
+Then run the same commands inside Claude Code by prefixing them with `/srp`:
+
+```text
+/srp research "AI safety" "latest-news"
+/srp show-topics
+/srp update-topics --add '"climate tech"'
+/srp show-purposes
+/srp update-purposes --add '"emerging-research"="Track peer-reviewed preprints"'
+/srp suggest-topics --count 3
+/srp show-pending
+/srp apply-pending --topics all --purposes all
+```
+
+The skill shells out to the CLI, so flags, quoting, and exit codes are identical.
 
 ---
 
@@ -33,6 +59,8 @@ srp research [<platform>] "<natural language query>"
 | Flag | Description |
 |---|---|
 | `--no-shorts` | Exclude YouTube Shorts (videos under 90 s) |
+| `--no-transcripts` | Skip transcript fetching for enriched items |
+| `--no-html` | Skip writing the HTML report file |
 
 Outputs a `ResearchPacket` (single topic) or `MultiResearchPacket` (multiple topics) to stdout as JSON, and writes an HTML report to the data directory.
 
@@ -61,16 +89,29 @@ srp report --packet <path> [--synthesis-10 <file>] [--synthesis-11 <file>] [--ou
 
 Print all registered topics as JSON.
 
+Flag: `--output text|json|markdown`
+
 ### `srp update-topics`
 
 ```bash
-srp update-topics --add "<topic>"
-srp update-topics --remove "<topic>"
+srp update-topics --add '"ai"|"climate tech"'
+srp update-topics --remove '"old topic"'
+srp update-topics --rename '"old"->"new"'
 ```
+
+Flags:
+- `--force` overrides duplicate-protection checks
+- `--output text|json|markdown`
 
 ### `srp suggest-topics`
 
 Generate LLM-driven topic suggestions and add them to the pending queue.
+
+Example: `srp suggest-topics --count 3`
+
+Flags:
+- `--count N`
+- `--output text|json|markdown`
 
 ---
 
@@ -80,16 +121,29 @@ Generate LLM-driven topic suggestions and add them to the pending queue.
 
 Print all registered purposes as JSON.
 
+Flag: `--output text|json|markdown`
+
 ### `srp update-purposes`
 
 ```bash
-srp update-purposes --add "<name>"="<description>"
-srp update-purposes --remove "<name>"
+srp update-purposes --add '"latest-news"="Track new developments and announcements"'
+srp update-purposes --remove '"old-purpose"'
+srp update-purposes --rename '"old"->"new"'
 ```
+
+Flags:
+- `--force` overrides duplicate-protection checks
+- `--output text|json|markdown`
 
 ### `srp suggest-purposes`
 
 Generate LLM-driven purpose suggestions and add them to the pending queue.
+
+Example: `srp suggest-purposes --count 3`
+
+Flags:
+- `--count N`
+- `--output text|json|markdown`
 
 ---
 
@@ -99,13 +153,35 @@ Generate LLM-driven purpose suggestions and add them to the pending queue.
 
 Print pending topic and purpose proposals.
 
+Flag: `--output text|json|markdown`
+
 ### `srp apply-pending`
 
-Accept all pending proposals, merging them into the registered topics and purposes.
+Merge staged proposals into the registered topics and purposes.
+
+```bash
+srp apply-pending --topics 1,2 --purposes 4
+srp apply-pending --topics all --purposes all
+```
+
+Flags:
+- `--topics <ids|all>`
+- `--purposes <ids|all>`
+- `--output text|json|markdown`
 
 ### `srp discard-pending`
 
-Reject all pending proposals without applying them.
+Remove staged proposals without applying them.
+
+```bash
+srp discard-pending --topics 1,2 --purposes 4
+srp discard-pending --topics all --purposes all
+```
+
+Flags:
+- `--topics <ids|all>`
+- `--purposes <ids|all>`
+- `--output text|json|markdown`
 
 ---
 
@@ -174,6 +250,11 @@ Prints `missing` and `present` keys. Exit code 0 even if keys are missing (to al
 ### `srp install-skill`
 
 Copy the Claude Code skill bundle to `~/.claude/skills/srp/`.
+
+```bash
+srp install-skill
+srp install-skill --target ~/.claude/skills/srp
+```
 
 ---
 

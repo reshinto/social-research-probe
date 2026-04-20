@@ -41,28 +41,11 @@ jobs:
 
       - name: Build release tarball (operational files only)
         run: |
-          mkdir -p release/social-research-probe
-          cp -r SKILL.md VERSION core adapters reference registry scripts release/social-research-probe/
-          mkdir -p release/social-research-probe/setup
-          cp setup/install.py setup/update.py setup/requirements.txt release/social-research-probe/setup/
-          cp .env.example release/social-research-probe/
-          cd release
-          tar -czf social-research-probe-${{ steps.version.outputs.version }}.tar.gz social-research-probe
-          cd ..
-
-      - name: Build bootstrap installer distributions
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install build
+          pip install build
           python -m build
 
       - name: Generate SHA-256 checksums
-        run: |
-          cd release
-          find social-research-probe -type f -exec sha256sum {} \; > checksums.txt
-          sha256sum social-research-probe-${{ steps.version.outputs.version }}.tar.gz >> checksums.txt
-          cd ..
-          sha256sum dist/* >> release/checksums.txt
+        run: sha256sum dist/* > dist/checksums-sha256.txt
 
       - name: Store bootstrap installer distributions
         uses: actions/upload-artifact@v4
@@ -76,25 +59,29 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
           files: |
-            release/social-research-probe-${{ steps.version.outputs.version }}.tar.gz
-            release/checksums.txt
-            dist/*
+            dist/*.whl
+            dist/*.tar.gz
+            dist/checksums-sha256.txt
           generate_release_notes: true
           fail_on_unmatched_files: true
 
   publish-pypi:
-    name: Publish bootstrap installer to PyPI
     needs: tag-and-release
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       id-token: write
-
     steps:
-      - name: Download bootstrap installer distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
+      - uses: actions/checkout@v4
 
-      - name: Publish bootstrap installer to PyPI
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build distribution
+        run: |
+          pip install build
+          python -m build
+
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

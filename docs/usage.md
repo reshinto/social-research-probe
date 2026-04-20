@@ -111,8 +111,8 @@ A topic is a search subject registered in `~/.social-research-probe/topics.json`
 
 ```bash
 srp show-topics
-srp update-topics --add "climate tech"
-srp update-topics --remove "old-topic"
+srp update-topics --add '"climate tech"'
+srp update-topics --remove '"old-topic"'
 ```
 
 ### Purposes
@@ -121,7 +121,7 @@ A purpose defines the research intent — it shapes how queries are enriched and
 
 ```bash
 srp show-purposes
-srp update-purposes --add "emerging-research"="Track peer-reviewed preprints"
+srp update-purposes --add '"emerging-research"="Track peer-reviewed preprints"'
 ```
 
 ### Pending proposals
@@ -131,8 +131,8 @@ srp update-purposes --add "emerging-research"="Track peer-reviewed preprints"
 ```bash
 srp suggest-topics
 srp show-pending
-srp apply-pending      # accept all
-srp discard-pending    # reject all
+srp apply-pending --topics all --purposes all
+srp discard-pending --topics all --purposes all
 ```
 
 ---
@@ -216,13 +216,24 @@ srp report \
 
 ## Claude Code skill
 
-After `srp install-skill`, use `srp` from inside Claude Code:
+After `srp install-skill`, the same CLI verbs are available inside Claude Code with a `/srp` prefix:
 
-```
+```text
 /srp research "AI safety" "latest-news"
+/srp show-topics
+/srp update-topics --add '"climate tech"'
+/srp show-purposes
+/srp update-purposes --add '"emerging-research"="Track peer-reviewed preprints"'
+/srp suggest-topics --count 3
+/srp suggest-purposes --count 3
+/srp show-pending
+/srp apply-pending --topics all --purposes all
+/srp discard-pending --topics all --purposes all
 ```
 
-The skill runs the CLI, parses the JSON packet, and formats sections 1–9 as a chat message. The HTML report path is surfaced so you can open it directly from the chat.
+The skill shells out to the `srp` CLI, so quoted payloads for `update-topics` and `update-purposes` work exactly the same as they do in a terminal. `show-pending` is the review step, and `apply-pending` / `discard-pending` only act on the IDs you pass or on `all`.
+
+For research runs, the skill parses the JSON packet and formats sections 1–9 as a chat message. The HTML report path is surfaced so you can open it directly from the chat.
 
 ---
 
