@@ -10,6 +10,8 @@ srp research tiktok "AI safety" "latest-news"
 
 The pipeline, scoring, statistics, charts, and report generation are all platform-agnostic. You only have to implement the adapter.
 
+![Workflow for adding a new platform adapter](diagrams/add_platform_flow.svg)
+
 ---
 
 ## Architecture in one paragraph
@@ -39,6 +41,8 @@ default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=50, recency_days=9
 ```
 
 Optionally, override `fetch_text_for_claim_extraction(item)` to supply text (e.g. a caption or description) for the corroboration stage. Default returns `None`.
+
+![How the adapter methods plug into the pipeline](diagrams/add_platform_contract.svg)
 
 ---
 
