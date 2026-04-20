@@ -323,8 +323,9 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         "fetch_transcripts": not args.no_transcripts,
     }
 
+    cfg = load_active_config()
+
     if research_args.query:
-        cfg = load_active_config()
         classified = classify_query(research_args.query, data_dir=data_dir, cfg=cfg)
         log(
             f'[srp] query mapped to topic="{classified.topic}" purpose="{classified.purpose_name}"'
@@ -335,7 +336,6 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
         topic = classified.topic
         purposes = [classified.purpose_name]
     else:
-        cfg = load_active_config()
         platform = research_args.platform
         topic = research_args.topic
         purposes = research_args.purposes
