@@ -449,6 +449,30 @@ async def test_enrich_top5_skips_when_transcript_is_whitespace_only(monkeypatch)
     assert items[0]["one_line_takeaway"] == "orig"
 
 
+async def test_run_research_respects_enrich_top_n_config(monkeypatch, tmp_path):
+    """adapter_config.enrich_top_n=2 limits items_top5 to 2 entries instead of 5."""
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
+    )
+    cmd = parse('run-research platform:youtube "AI"->latest-news')
+    packet = await run_research(cmd, tmp_path, adapter_config={"enrich_top_n": 2})
+    assert len(packet["items_top5"]) == 2
+
+
+async def test_run_research_default_enrich_top_n_is_5(monkeypatch, tmp_path):
+    """Without enrich_top_n override, items_top5 keeps the 5-item default."""
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
+    )
+    cmd = parse('run-research platform:youtube "AI"->latest-news')
+    packet = await run_research(cmd, tmp_path)
+    assert len(packet["items_top5"]) == 5
+
+
 async def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
     """adapter_config.fetch_transcripts=False skips the _enrich_top5 call."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")

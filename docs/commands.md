@@ -122,6 +122,7 @@ srp config set llm.runner claude
 srp config set corroboration.backend host
 srp config set platforms.youtube.max_items 50     # how many videos to fetch (default: 20)
 srp config set platforms.youtube.recency_days 30  # how far back to search in days (default: 90)
+srp config set platforms.youtube.enrich_top_n 10  # how many top videos get transcripts + summaries (default: 5)
 ```
 
 All settings and their defaults:
@@ -132,13 +133,21 @@ All settings and their defaults:
 | `llm.timeout_seconds` | `60` | Seconds before an LLM subprocess call times out |
 | `platforms.youtube.max_items` | `20` | Maximum videos fetched per search query |
 | `platforms.youtube.recency_days` | `90` | Only return videos published within this many days |
+| `platforms.youtube.enrich_top_n` | `5` | How many top-scored videos receive transcript fetch, LLM summary, and corroboration |
 | `platforms.youtube.cache_ttl_search_hours` | `6` | How long to cache search results |
 | `platforms.youtube.cache_ttl_channel_hours` | `24` | How long to cache channel metadata |
 | `corroboration.backend` | `host` | `host`, `exa`, `brave`, `tavily`, `llm_cli`, or `none` |
-| `corroboration.max_claims_per_item` | `5` | Maximum claims checked per top-5 item |
+| `corroboration.max_claims_per_item` | `5` | Maximum claims checked per enriched item |
 | `corroboration.max_claims_per_session` | `15` | Total claim budget per research run |
 
-> **Note:** The number of results that receive full enrichment (transcripts, LLM summaries, corroboration) is fixed at **5** — the top-scoring items from the fetched pool. Increasing `max_items` gives the scoring stage more candidates to rank, which can improve selection quality.
+> **Note on enrichment budget:** The `enrich_top_n` setting controls how many of the top-scored videos receive full enrichment (transcripts, LLM summaries, corroboration). The default is 5 — this balances report quality against transcript-fetch latency and LLM token cost. Increasing `max_items` gives the scoring stage more candidates to rank, and increasing `enrich_top_n` extends the full-enrichment pipeline to more of them. Example:
+>
+> ```bash
+> srp config set platforms.youtube.max_items 100     # rank a larger candidate pool
+> srp config set platforms.youtube.enrich_top_n 15   # enrich the top 15 instead of 5
+> ```
+>
+> Keep in mind that transcript fetch + Whisper fallback + LLM summary each add per-item latency, so runs with a large `enrich_top_n` will take proportionally longer.
 
 ### `srp config set-secret <name>`
 

@@ -35,7 +35,7 @@ srp config set platforms.youtube.max_items 50    # fetch up to 50 videos (defaul
 srp config set platforms.youtube.recency_days 30 # only videos from the last 30 days (default: 90)
 ```
 
-Fetching more videos gives the scoring and statistical models a bigger pool to work from, which improves ranking quality. The tradeoff is a longer fetch time: each batch of ~50 video IDs requires one `videos.list` API call. Fetching 100 videos takes roughly twice as long as fetching 20. The top-5 enrichment budget (transcripts and LLM summaries) is always fixed at 5 regardless of `max_items`.
+Fetching more videos gives the scoring and statistical models a bigger pool to work from, which improves ranking quality. The tradeoff is a longer fetch time: each batch of ~50 video IDs requires one `videos.list` API call. Fetching 100 videos takes roughly twice as long as fetching 20. The enrichment budget (transcripts and LLM summaries, covered in Stage 3) is a separate setting — see [`enrich_top_n` below](#controlling-how-many-videos-get-enriched).
 
 **Shorts filtering:** If `--no-shorts` is passed, any video under 90 seconds is dropped before scoring. Otherwise Shorts are included.
 
@@ -111,9 +111,24 @@ All videos are sorted by `overall` score descending. The top 5 proceed to enrich
 
 ---
 
-## Stage 3 — Enrich: what happens to the top 5?
+## Stage 3 — Enrich: what happens to the top scored videos?
 
-The 5 highest-scoring videos get more information fetched. This is the only stage that can take more than a few seconds.
+The highest-scoring videos get more information fetched. This is the only stage that can take more than a few seconds. By default the pipeline enriches the top **5** videos, but this is configurable.
+
+### Controlling how many videos get enriched
+
+```bash
+srp config set platforms.youtube.enrich_top_n 10   # enrich the top 10 instead of 5 (default)
+```
+
+Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top5 = all_scored[:enrich_top_n]` reads this config value. The packet field is still named `items_top5` for backwards compatibility, but the actual count is whatever `enrich_top_n` is set to.
+
+**Why this setting matters:** raising `enrich_top_n` is the biggest way to make a run longer and more expensive. Each enriched item triggers:
+- One caption download (fast) or one Whisper audio transcription (slow, CPU-intensive)
+- One LLM call to generate a 100-word summary
+- Up to `corroboration.max_claims_per_item` web-search API calls during Stage 5
+
+A run with `enrich_top_n = 20` takes roughly 4× longer and uses 4× the LLM tokens compared to the default.
 
 ### Transcripts (not video downloads)
 

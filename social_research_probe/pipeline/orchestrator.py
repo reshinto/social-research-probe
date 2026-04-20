@@ -114,7 +114,8 @@ async def run_research(
         ]
         scored.sort(key=lambda x: x[0], reverse=True)
         all_scored = [d for _, d in scored]
-        top5 = all_scored[:5]
+        enrich_top_n = int(platform_config.get("enrich_top_n", 5))
+        top5 = all_scored[:enrich_top_n]
         if platform_config.get("fetch_transcripts", True) and cmd.platform == "youtube":
             await _enrich_mod._enrich_top5_with_transcripts(top5)
         backends = _available_backends(data_dir)

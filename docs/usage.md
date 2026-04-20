@@ -168,13 +168,19 @@ srp research "AI agents" "latest-news" --no-shorts
 |---|---|---|
 | `platforms.youtube.max_items` | `20` | How many videos are fetched and scored |
 | `platforms.youtube.recency_days` | `90` | Only return videos from the last N days |
+| `platforms.youtube.enrich_top_n` | `5` | How many top-scored videos get transcripts + LLM summaries + corroboration |
 
-The top **5** scored videos always receive full enrichment (transcripts, LLM summaries, corroboration). Fetching more candidates improves the quality of that selection.
+By default, the top **5** scored videos receive full enrichment. You can widen both the candidate pool (`max_items`) and the enrichment budget (`enrich_top_n`) independently:
 
 ```bash
-srp config set platforms.youtube.max_items 50    # wider pool
+srp config set platforms.youtube.max_items 50    # wider candidate pool
 srp config set platforms.youtube.recency_days 30 # recent content only
+srp config set platforms.youtube.enrich_top_n 10 # enrich the top 10 instead of 5
 ```
+
+**Tradeoffs:**
+- `max_items` adds cheap API metadata fetches — negligible cost to raise.
+- `enrich_top_n` adds per-item transcript download + LLM summary + corroboration calls — the dominant cost of a research run. A run with `enrich_top_n = 20` takes roughly 4× longer than the default and uses 4× the LLM tokens.
 
 ---
 
