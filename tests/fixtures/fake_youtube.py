@@ -55,7 +55,7 @@ class FakeYouTubeAdapter(PlatformAdapter):
     def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
         return _fixture_items(topic, n=min(5, limits.max_items))
 
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:
+    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
         return items
 
     def to_signals(self, items: list[RawItem]) -> list[SignalSet]:

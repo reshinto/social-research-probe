@@ -95,7 +95,7 @@ def test_fetch_text_for_claim_extraction_returns_none():
         def search(self, topic, limits):
             return []
 
-        def enrich(self, items):
+        async def enrich(self, items):
             return items
 
         def to_signals(self, items):

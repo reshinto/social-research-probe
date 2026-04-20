@@ -31,7 +31,7 @@ def test_register_and_get():
         def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
             return []
 
-        def enrich(self, items: list[RawItem]) -> list[RawItem]:
+        async def enrich(self, items: list[RawItem]) -> list[RawItem]:
             return items
 
         def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
@@ -73,7 +73,7 @@ def test_register_class_without_name_raises():
             def search(self, topic, limits):
                 return []
 
-            def enrich(self, items):
+            async def enrich(self, items):
                 return items
 
             def to_signals(self, items):

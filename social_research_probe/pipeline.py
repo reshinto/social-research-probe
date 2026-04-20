@@ -699,9 +699,10 @@ async def run_research(
                 raise ValidationError(f"unknown purpose: {n!r}")
         merged = merge_purposes(purposes, list(purpose_names))
         search_topic = _enrich_query(topic, merged.method)
-        items = await asyncio.to_thread(
-            lambda st=search_topic, lm=limits: adapter.enrich(adapter.search(st, lm))
+        raw_items = await asyncio.to_thread(
+            lambda st=search_topic, lm=limits: adapter.search(st, lm)
         )
+        items = await adapter.enrich(raw_items)
         signals = adapter.to_signals(items)
         hints = [adapter.trust_hints(it) for it in items]
         z_vels = _zscore([s.view_velocity or 0.0 for s in signals])

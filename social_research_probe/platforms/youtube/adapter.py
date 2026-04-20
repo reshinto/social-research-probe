@@ -20,7 +20,6 @@ from social_research_probe.platforms.base import (
 )
 from social_research_probe.platforms.registry import register
 from social_research_probe.types import AdapterConfig, JSONObject
-from social_research_probe.utils.concurrency import run_coro
 
 
 def _as_object(value: object) -> JSONObject:
@@ -144,7 +143,7 @@ class YouTubeAdapter(PlatformAdapter):
             )
         return items
 
-    def enrich(self, items: list[RawItem]) -> list[RawItem]:
+    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
         """Hydrate search results with video and channel statistics.
 
         ``hydrate_videos`` and ``hydrate_channels`` are independent API calls
@@ -166,7 +165,7 @@ class YouTubeAdapter(PlatformAdapter):
             )
             return await asyncio.gather(videos_task, channels_task)
 
-        raw_videos, raw_channels = run_coro(_fetch_both())
+        raw_videos, raw_channels = await _fetch_both()
         hydrated = {str(v["id"]): v for v in raw_videos}
         channels = {str(c["id"]): c for c in raw_channels}
         enriched: list[RawItem] = []
