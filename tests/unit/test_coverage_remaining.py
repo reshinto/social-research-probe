@@ -10,12 +10,20 @@ from social_research_probe.cli import main
 from social_research_probe.errors import SynthesisError
 from social_research_probe.llm.ensemble import _run_provider
 from social_research_probe.pipeline import _fetch_best_transcript
-from social_research_probe.synthesize.formatter import (
-    _explain_bayesian,
-    _explain_descriptive,
-    _explain_huber,
-    _explain_polynomial,
-    _explain_regression,
+from social_research_probe.synthesize.explanations import (
+    explain_bayesian as _explain_bayesian,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_descriptive as _explain_descriptive,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_huber as _explain_huber,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_polynomial as _explain_polynomial,
+)
+from social_research_probe.synthesize.explanations import (
+    explain_regression as _explain_regression,
 )
 
 _VALID_PACKET = {
