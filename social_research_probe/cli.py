@@ -6,9 +6,8 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
-
 from dataclasses import dataclass
+from pathlib import Path
 
 from social_research_probe.commands import config as config_cmd
 from social_research_probe.commands import purposes as purposes_cmd
@@ -332,18 +331,17 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
             f" (new topic: {'yes' if classified.topic_created else 'no'},"
             f" new purpose: {'yes' if classified.purpose_created else 'no'})"
         )
-        platform = research_args.platform
         topic = classified.topic
-        purposes = [classified.purpose_name]
+        purposes = (classified.purpose_name,)
     else:
-        platform = research_args.platform
         topic = research_args.topic
         purposes = research_args.purposes
+
+    platform = research_args.platform
 
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     no_html = getattr(args, "no_html", False)
 
-    # Keep the existing runner health-check warning
     preferred = cfg.default_structured_runner
     if preferred == "none":
         log(
@@ -450,7 +448,7 @@ def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
 class _ResearchArgs:
     platform: str
     topic: str       # empty string when query is set
-    purposes: list[str]  # empty list when query is set
+    purposes: tuple[str, ...]  # empty tuple when query is set
     query: str       # empty string when topic/purposes are set
 
 
@@ -476,11 +474,11 @@ def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
 
     if len(rest) == 1:
         # NL query mode: single free-form string
-        return _ResearchArgs(platform=platform, topic="", purposes=[], query=rest[0])
+        return _ResearchArgs(platform=platform, topic="", purposes=(), query=rest[0])
 
     # Classic mode: topic + purpose(s)
     topic, purpose_arg = rest[0], rest[1]
-    purposes = [p.strip() for p in purpose_arg.split(",") if p.strip()]
+    purposes = tuple(p.strip() for p in purpose_arg.split(",") if p.strip())
     if not purposes:
         raise ValidationError("research needs at least one purpose")
     return _ResearchArgs(platform=platform, topic=topic, purposes=purposes, query="")
