@@ -40,7 +40,7 @@
 
 | Document | Description |
 |---|---|
-| [MODEL_APPLICABILITY.md](MODEL_APPLICABILITY.md) | Which LLM models are recommended for which pipeline stages |
+| [model-applicability.md](model-applicability.md) | Which LLM models are recommended for which pipeline stages |
 | [commands.md](commands.md) | Deep flag reference and exit-code table |
 
 ---

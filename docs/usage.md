@@ -2,24 +2,99 @@
 
 [Home](README.md) → Usage
 
+This guide covers running research, understanding the output, and tuning the pipeline. For installation and secret setup see [Installation](installation.md). For every flag and config key see [Commands](commands.md).
+
 ---
 
-## Quickstart
+## Your first research run
 
 ```bash
-srp config set-secret YOUTUBE_API_KEY
 srp research "AI safety" "latest-news"
 ```
 
-`srp` prints a Markdown summary to stdout and writes a self-contained HTML report to `~/.social-research-probe/reports/`. Open it in any browser.
+`srp` will:
+1. Query YouTube for recent "AI safety" videos
+2. Score and rank them by credibility and trend signals
+3. Fetch transcripts and generate LLM summaries for the top 5
+4. Corroborate the top claims with web-search APIs
+5. Run statistical analysis across all results
+6. Print a Markdown summary to stdout and write an HTML report
+
+The terminal shows progress as each stage completes:
+
+```
+[srp] fetching youtube: AI safety / latest-news
+[srp] scored 20 items
+[srp] enriching top 5 with transcripts…
+[srp] corroborating via exa…
+[srp] running statistical analysis…
+[srp] HTML report: file:///~/.social-research-probe/reports/ai-safety_latest-news_20260420.html
+```
 
 ---
 
-## Core Concepts
+## Understanding the output
+
+### Stdout — Markdown summary
+
+After the run, `srp` prints a structured Markdown document with 9 or 11 sections:
+
+| Section | What it contains |
+|---|---|
+| 1. Topic & Purpose | The topic searched and the research intent applied |
+| 2. Platform | Which platform adapter was used |
+| 3. Top Items | The 5 highest-scoring videos — title, channel, score, and a transcript summary |
+| 4. Platform Signals | Aggregate view velocity, credibility spread, and content-type breakdown |
+| 5. Source Validation | Channel credibility assessment for the top-5 sources |
+| 6. Evidence | Summary of corroboration results from web-search APIs |
+| 7. Statistics | Highlights from the 15+ statistical models (regression coefficients, cluster structure, etc.) |
+| 8. Charts | Paths to the rendered PNG chart files |
+| 9. Warnings | Any data quality flags (low result count, missing transcripts, etc.) |
+| 10. Compiled Synthesis | Plain-English LLM synthesis of what was found *(requires `llm.runner` configured)* |
+| 11. Opportunity Analysis | Actionable LLM-generated recommendations *(requires `llm.runner` configured)* |
+
+Sections 10–11 appear only when an LLM runner is configured. Without one they show:
+```
+_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_
+```
+
+### HTML report
+
+The full report is written to:
+```
+~/.social-research-probe/reports/<topic>_<purpose>_<date>.html
+```
+
+Open it in any browser. It is self-contained — all charts are embedded and it has a built-in text-to-speech player. The HTML report is the authoritative document; the stdout Markdown is a quick inline summary.
+
+### Chart PNGs
+
+All rendered charts are saved to:
+```
+~/.social-research-probe/charts/
+```
+
+Each run appends new files. Chart types include: score distribution bar, view-velocity trend line, cluster scatter, regression residuals, Kaplan–Meier survival curve, and others depending on the data.
+
+### JSON packet
+
+The raw structured output is also printed to stdout as a JSON envelope:
+```json
+{
+  "kind": "synthesis",
+  "packet": { ... }
+}
+```
+
+The packet contains every field used to render the report (scores, summaries, evidence, statistics, chart paths). Use it to pipe results to other tools or to regenerate the HTML report with custom synthesis sections via `srp report`.
+
+---
+
+## Core concepts
 
 ### Topics
 
-A topic is a search subject — e.g. `"AI safety"`, `"climate tech"`. Topics are registered in `~/.social-research-probe/topics.json` and reused across runs.
+A topic is a search subject registered in `~/.social-research-probe/topics.json`. Using registered topics lets you compare runs over time with consistent terminology.
 
 ```bash
 srp show-topics
@@ -29,7 +104,7 @@ srp update-topics --remove "old-topic"
 
 ### Purposes
 
-A purpose defines the research intent and shapes how queries are enriched and results are weighted — e.g. `"latest-news"` prioritises recency, `"emerging-research"` prioritises academic credibility.
+A purpose defines the research intent — it shapes how queries are enriched and how results are weighted. For example, `"latest-news"` prioritises recency; `"emerging-research"` prioritises academic credibility.
 
 ```bash
 srp show-purposes
@@ -38,88 +113,77 @@ srp update-purposes --add "emerging-research"="Track peer-reviewed preprints"
 
 ### Pending proposals
 
-`suggest-topics` and `suggest-purposes` use the configured LLM runner to generate proposals. Proposals land in a pending queue and do not take effect until you explicitly accept them.
+`suggest-topics` and `suggest-purposes` use the configured LLM runner to generate proposals. Proposals sit in a queue and do not take effect until you accept them — so the LLM cannot change your taxonomy without review.
 
 ```bash
 srp suggest-topics
 srp show-pending
-srp apply-pending          # accept all
-srp discard-pending        # reject all
+srp apply-pending      # accept all
+srp discard-pending    # reject all
 ```
 
 ---
 
-## Running Research
+## Running research
 
-### Single topic, single purpose
-
+### Single topic + purpose
 ```bash
 srp research "AI agents" "latest-news"
 ```
 
-### Multiple purposes (comma-separated)
-
+### Multiple purposes
 ```bash
 srp research "AI agents" "latest-news,trends"
 ```
 
-### Explicit platform
-
-```bash
-srp research youtube "AI agents" "latest-news"
-```
-
 ### Natural-language query
-
-When the argument looks like a question or sentence, `srp` auto-classifies it into a topic and purpose using the configured LLM runner. Requires `llm.runner != none`.
-
+When the argument is a full sentence, `srp` classifies it into a topic and purpose automatically. Requires `llm.runner != none`.
 ```bash
 srp research "who is winning the LLM benchmarks race?"
 ```
 
 ### Excluding YouTube Shorts
-
 ```bash
 srp research "AI agents" "latest-news" --no-shorts
 ```
 
 ---
 
-## Controlling the Number of Videos
+## Controlling the number of videos
 
-**How many videos are fetched** is set by `platforms.youtube.max_items` (default: 20). Increase it to cast a wider net; decrease it to run faster.
+| Setting | Default | Effect |
+|---|---|---|
+| `platforms.youtube.max_items` | `20` | How many videos are fetched and scored |
+| `platforms.youtube.recency_days` | `90` | Only return videos from the last N days |
 
-```bash
-srp config set platforms.youtube.max_items 50   # fetch up to 50 videos
-srp config set platforms.youtube.max_items 10   # fetch only 10 for a quick run
-```
-
-**How far back to search** is controlled by `platforms.youtube.recency_days` (default: 90 days).
+The top **5** scored videos always receive full enrichment (transcripts, LLM summaries, corroboration). Fetching more candidates improves the quality of that selection.
 
 ```bash
-srp config set platforms.youtube.recency_days 30   # last month only
-srp config set platforms.youtube.recency_days 365  # last year
+srp config set platforms.youtube.max_items 50    # wider pool
+srp config set platforms.youtube.recency_days 30 # recent content only
 ```
-
-**The top-N videos that get fully enriched** (transcripts fetched, LLM summaries generated, corroboration run) is fixed at **5**. These are the highest-scoring items from the fetched pool. Fetching more videos (`max_items`) gives the scoring stage more to rank, which can improve the quality of the top-5 selection.
 
 ---
 
-## Reading the Report
+## Corroboration modes
 
-After each run, `srp` prints:
+| Mode | When to use |
+|---|---|
+| `host` (default) | Auto-uses all backends whose API keys are configured |
+| `exa` / `brave` / `tavily` | Force a single backend |
+| `llm_cli` | No external search key — uses the LLM runner instead |
+| `none` | Disable corroboration entirely |
 
+```bash
+srp config set corroboration.backend llm_cli   # no search API needed
+srp config set corroboration.backend none      # skip corroboration
 ```
-[srp] HTML report: file:///~/.social-research-probe/reports/<filename>.html
-```
-
-The HTML report contains all 11 sections, embedded charts, and a built-in text-to-speech player. Sections 10–11 (Compiled Synthesis and Opportunity Analysis) are written inline when `llm.runner` is configured.
 
 ---
 
-## Generating a Report After the Fact
+## Regenerating a report
 
-To attach synthesis sections to an existing research packet:
+To attach new synthesis sections to an existing packet without re-running research:
 
 ```bash
 srp report \
@@ -131,50 +195,20 @@ srp report \
 
 ---
 
-## Corroboration Modes
+## Claude Code skill
 
-`srp` auto-corroborates the top-5 results using web-search backends. The mode is set by `corroboration.backend`:
-
-| Mode | Behaviour |
-|---|---|
-| `host` (default) | Auto-discovers which backends have valid API keys and uses all available ones |
-| `exa` / `brave` / `tavily` | Forces a specific backend regardless of other configured keys |
-| `llm_cli` | Uses the configured LLM runner to corroborate (no external search API needed) |
-| `none` | Disables corroboration entirely |
-
-```bash
-srp config set corroboration.backend exa    # force Exa only
-srp config set corroboration.backend none   # disable
-```
-
----
-
-## Configuration Reference
-
-```bash
-srp config show                                   # print all settings
-srp config set llm.runner claude                  # set LLM runner
-srp config set platforms.youtube.max_items 50     # fetch up to 50 videos
-srp config set platforms.youtube.recency_days 30  # limit to last 30 days
-srp config set corroboration.backend host         # auto-discover backends
-```
-
----
-
-## Skill Bundle
-
-After running `srp install-skill`, invoke `srp` from inside a Claude Code session:
+After `srp install-skill`, use `srp` from inside Claude Code:
 
 ```
 /srp research "AI safety" "latest-news"
 ```
 
-The skill shells out to the `srp` CLI and formats the output for chat.
+The skill runs the CLI, parses the JSON packet, and formats sections 1–9 as a chat message. The HTML report path is surfaced so you can open it directly from the chat.
 
 ---
 
 ## See also
 
-- [Command Reference](commands.md) — full flag listing and exit codes
-- [Installation](installation.md) — setup and secret configuration
-- [Architecture](architecture.md) — pipeline internals
+- [Commands](commands.md) — every flag, config key, and exit code
+- [Installation](installation.md) — API keys, LLM runner setup, verification
+- [Architecture](architecture.md) — how the pipeline works internally

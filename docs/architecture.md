@@ -185,7 +185,7 @@ All configured LLM runners are called concurrently; the first successful result 
 
 Running 15+ statistical models on a pool of 20–50 YouTube videos is more than most use cases require.
 
-**Tradeoff:** Adds 0.5–2 s to each run (pure Python, no network). The excess results are ignored by the synthesis layer unless the stated purpose calls for them. Removing models that never fire is a future cleanup task tracked in `docs/MODEL_APPLICABILITY.md`.
+**Tradeoff:** Adds 0.5–2 s to each run (pure Python, no network). The excess results are ignored by the synthesis layer unless the stated purpose calls for them. Removing models that never fire is a future cleanup task tracked in `docs/model-applicability.md`.
 
 ---
 
@@ -217,7 +217,7 @@ Running 15+ statistical models on a pool of 20–50 YouTube videos is more than 
 
 1. Add a function in the relevant `stats/` module.
 2. Register it in `_stats_models_for` in `pipeline/stats.py`.
-3. Update `docs/MODEL_APPLICABILITY.md`.
+3. Update `docs/model-applicability.md`.
 
 ### Add an LLM runner
 
