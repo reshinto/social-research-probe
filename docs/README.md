@@ -25,6 +25,7 @@
 | [Statistics](statistics.md) | All 15+ statistical models: what they measure and how to interpret output |
 | [Charts](charts.md) | Every chart: what it shows, how to read it, what to look for |
 | [Statistical Model Reference](model-applicability.md) | Model-to-module mapping, minimum dataset sizes, planned additions |
+| [Project Structure](project-structure.md) | Every root file and folder: what it is and why it exists |
 
 ---
 
