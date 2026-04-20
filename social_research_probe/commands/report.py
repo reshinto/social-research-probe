@@ -1,8 +1,8 @@
 """commands/report.py — Re-render an HTML report from a saved packet file.
 
-Intended as the escape hatch for skill mode when the host LLM wants to
-supply its own sections 10-11 (compiled synthesis and opportunity analysis)
-after the CLI has already emitted the packet JSON.
+Intended as the override path when an operator wants to replace sections
+10-11 (compiled synthesis and opportunity analysis) after research has
+already emitted the packet JSON.
 
 Usage:
     srp report --packet PATH [--synthesis-10 FILE] [--synthesis-11 FILE] [--out PATH]
@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from social_research_probe.errors import ValidationError
+from social_research_probe.packet import unwrap_packet
 
 
 def run(
@@ -38,9 +39,12 @@ def run(
         ValidationError: If the packet file cannot be read or is invalid JSON.
     """
     try:
-        packet = json.loads(Path(packet_path).read_text(encoding="utf-8"))
+        payload = json.loads(Path(packet_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValidationError(f"cannot read packet file: {exc}") from exc
+    packet = unwrap_packet(payload)
+    if not isinstance(packet, dict):
+        raise ValidationError("packet file must contain a JSON object")
 
     synthesis_10 = _read_text_file(synthesis_10_path)
     synthesis_11 = _read_text_file(synthesis_11_path)
@@ -53,12 +57,13 @@ def run(
     charts_dir = packet_parent / "charts"
     charts_dir_arg = charts_dir if charts_dir.is_dir() else None
 
-    html_content = render_html(
-        packet,
-        synthesis_10=synthesis_10,
-        synthesis_11=synthesis_11,
-        charts_dir=charts_dir_arg,
-    )
+    rendered_packet = dict(packet)
+    if synthesis_10 is not None:
+        rendered_packet["compiled_synthesis"] = synthesis_10
+    if synthesis_11 is not None:
+        rendered_packet["opportunity_analysis"] = synthesis_11
+
+    html_content = render_html(rendered_packet, charts_dir=charts_dir_arg)
 
     if out_path:
         dest = Path(out_path)

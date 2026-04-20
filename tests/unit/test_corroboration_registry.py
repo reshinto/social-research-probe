@@ -78,3 +78,9 @@ def test_register_class_without_name_raises():
 
     with pytest.raises(ValueError, match="must define class var `name`"):
         reg_module.register(NoName)
+
+
+def test_builtin_backends_are_registered_on_package_import():
+    """The package import side effect should register the built-in backends."""
+    names = reg_module.list_backends()
+    assert {"brave", "exa", "llm_cli", "tavily"} <= set(names)

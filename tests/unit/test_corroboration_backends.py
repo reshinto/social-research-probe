@@ -369,3 +369,71 @@ def test_tavily_search_network_error_raises_adapter_error(monkeypatch):
     )
     with pytest.raises(AdapterError, match="tavily search failed"):
         TavilyBackend()._search("test")
+
+
+# ---------------------------------------------------------------------------
+# User-Agent header — ensure every backend sets it on outbound requests
+# ---------------------------------------------------------------------------
+
+
+def _capture_urlopen(response_body: bytes):
+    """Return a fake urlopen that records the Request it was called with."""
+    captured = {}
+
+    class _FakeResp:
+        def read(self):
+            return response_body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+    def _fake(req, timeout=15):
+        captured["req"] = req
+        return _FakeResp()
+
+    return _fake, captured
+
+
+def test_exa_search_sends_user_agent(monkeypatch):
+    """_search() includes a User-Agent header so Cloudflare does not block the request."""
+    import json
+    import urllib.request
+
+    monkeypatch.setenv("SRP_EXA_API_KEY", "k")
+    body = json.dumps({"results": []}).encode()
+    fake_urlopen, captured = _capture_urlopen(body)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    ExaBackend()._search("test")
+    ua = captured["req"].get_header("User-agent")
+    assert ua is not None and ua.startswith("social-research-probe/")
+
+
+def test_brave_search_sends_user_agent(monkeypatch):
+    """_search() includes a User-Agent header on Brave requests."""
+    import json
+    import urllib.request
+
+    monkeypatch.setenv("SRP_BRAVE_API_KEY", "k")
+    body = json.dumps({"web": {"results": []}}).encode()
+    fake_urlopen, captured = _capture_urlopen(body)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    BraveBackend()._search("test")
+    ua = captured["req"].get_header("User-agent")
+    assert ua is not None and ua.startswith("social-research-probe/")
+
+
+def test_tavily_search_sends_user_agent(monkeypatch):
+    """_search() includes a User-Agent header on Tavily requests."""
+    import json
+    import urllib.request
+
+    monkeypatch.setenv("SRP_TAVILY_API_KEY", "k")
+    body = json.dumps({"results": []}).encode()
+    fake_urlopen, captured = _capture_urlopen(body)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    TavilyBackend()._search("test")
+    ua = captured["req"].get_header("User-agent")
+    assert ua is not None and ua.startswith("social-research-probe/")

@@ -1,11 +1,11 @@
 """Packet formatting and Markdown rendering for srp research output.
 
 Transforms a raw research packet (produced by the pipeline) into human-readable
-Markdown sections 1-11. Also builds the packet dict passed to skill mode.
+Markdown sections 1-11. Also builds the canonical research packet dict.
 
 Sections 1-9 are derived deterministically from packet data.
-Sections 10-11 (Compiled Synthesis, Opportunity Analysis) are filled by the
-caller when synthesis text is available; otherwise a placeholder is shown.
+Sections 10-11 (Compiled Synthesis, Opportunity Analysis) are read from the
+packet when available; otherwise a placeholder is shown.
 """
 
 from __future__ import annotations
@@ -14,16 +14,10 @@ import re
 
 from social_research_probe.types import (
     ResearchPacket,
-    ResponseSchema,
     ScoredItem,
     SourceValidationSummary,
     StatsSummary,
 )
-
-RESPONSE_SCHEMA: ResponseSchema = {
-    "compiled_synthesis": "string ≤150 words",
-    "opportunity_analysis": "string ≤150 words",
-}
 
 
 def build_packet(
@@ -51,7 +45,6 @@ def build_packet(
         "stats_summary": stats_summary,
         "chart_captions": chart_captions,
         "warnings": warnings,
-        "response_schema": RESPONSE_SCHEMA,
     }
 
 
@@ -586,18 +579,21 @@ def _bulletise(text: str) -> str:
 
 def render_full(
     packet: ResearchPacket,
-    compiled_synthesis: str | None = None,
-    opportunity_analysis: str | None = None,
 ) -> str:
     """Render all 11 sections as Markdown.
 
-    Sections 1-9 are derived from the packet. Sections 10-11 use the
-    provided synthesis strings; if omitted they indicate that the configured
-    synthesis runner was disabled or unavailable.
+    Sections 1-9 are derived from the packet. Sections 10-11 are read from
+    the packet itself; if omitted they indicate that synthesis was not stored.
     """
     body = render_sections_1_9(packet)
-    s10 = compiled_synthesis or "_(LLM synthesis not run — runner disabled or unavailable)_"
-    s11 = opportunity_analysis or "_(LLM synthesis not run — runner disabled or unavailable)_"
+    s10 = (
+        packet.get("compiled_synthesis")
+        or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
+    )
+    s11 = (
+        packet.get("opportunity_analysis")
+        or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
+    )
     body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
     body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
     return body

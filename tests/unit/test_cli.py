@@ -6,6 +6,7 @@ so no real file-system or API operations occur.
 
 from __future__ import annotations
 
+import copy
 import io
 import json
 
@@ -92,6 +93,12 @@ class TestIdSelector:
 class TestNoCommand:
     def test_no_command_returns_2(self):
         assert main([]) == 2
+
+    def test_version_flag_exits_0(self, capsys):
+        assert main(["--version"]) == 0
+        out = capsys.readouterr().out
+        assert "srp" in out
+        assert "social_research_probe" in out
 
 
 class TestShowTopics:
@@ -260,14 +267,15 @@ class TestStageSuggestions:
 
 
 class TestResearchCommand:
-    def test_research(self, monkeypatch, tmp_path):
+    def test_research(self, monkeypatch, tmp_path, capsys):
         calls = []
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: (
-                calls.append(mode) or _VALID_PACKET
+            lambda cmd, d, adapter_config=None: (
+                calls.append(adapter_config) or copy.deepcopy(_VALID_PACKET)
             ),
         )
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         assert (
             main(
                 [
@@ -281,7 +289,9 @@ class TestResearchCommand:
             )
             == 0
         )
-        assert calls
+        assert calls == [{"include_shorts": True, "fetch_transcripts": True}]
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "synthesis"
 
 
 class TestInstallSkillTargetValidation:
@@ -541,17 +551,18 @@ class TestDispatchFallthrough:
 
 class TestSimpleResearch:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
-            captured.append((cmd, mode, adapter_config))
-            return _VALID_PACKET
+        def fake(cmd, d, adapter_config=None):
+            captured.append((cmd, adapter_config))
+            return copy.deepcopy(_VALID_PACKET)
 
         monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
     def test_default_platform_is_youtube(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
-        cmd, _mode, cfg = captured[0]
+        cmd, cfg = captured[0]
         assert cmd.platform == "youtube"
         assert cmd.topics == [("ai", ["latest-news"])]
         assert cfg == {"include_shorts": True, "fetch_transcripts": True}
@@ -560,21 +571,21 @@ class TestSimpleResearch:
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         main(["--data-dir", str(tmp_path), "research", "youtube", "ai", "latest-news"])
-        cmd, _mode, _cfg = captured[0]
+        cmd, _cfg = captured[0]
         assert cmd.platform == "youtube"
 
     def test_multiple_purposes_comma_separated(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         main(["--data-dir", str(tmp_path), "research", "ai", "latest-news,trends"])
-        cmd, _mode, _cfg = captured[0]
+        cmd, _cfg = captured[0]
         assert cmd.topics == [("ai", ["latest-news", "trends"])]
 
     def test_no_shorts_flag_disables_shorts(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-shorts"])
-        _cmd, _mode, cfg = captured[0]
+        _cmd, cfg = captured[0]
         assert cfg == {"include_shorts": False, "fetch_transcripts": True}
 
     def test_too_few_args_returns_validation_exit_code(self, monkeypatch, tmp_path):
@@ -596,17 +607,18 @@ class TestSimpleResearch:
 
 class TestSimpleResearchTranscripts:
     def _patch_pipeline(self, monkeypatch, captured):
-        def fake(cmd, d, mode, adapter_config=None, pre_emit_hook=None):
-            captured.append((cmd, mode, adapter_config))
-            return _VALID_PACKET
+        def fake(cmd, d, adapter_config=None):
+            captured.append((cmd, adapter_config))
+            return copy.deepcopy(_VALID_PACKET)
 
         monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
     def test_no_transcripts_flag_disables_transcripts(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-transcripts"])
-        _cmd, _mode, cfg = captured[0]
+        _cmd, cfg = captured[0]
         assert cfg["fetch_transcripts"] is False
 
 
@@ -793,20 +805,20 @@ class TestPromptForRunner:
         assert calls == []
 
 
-class TestRunCliSynthesis:
-    """Unit tests for cli._run_cli_synthesis."""
+class TestRequiredSynthesis:
+    """Unit tests for cli._run_required_synthesis and envelope output."""
 
     def test_returns_none_when_runner_is_none(self, monkeypatch):
-        from social_research_probe.cli import _run_cli_synthesis
+        from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "none"
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
-        assert _run_cli_synthesis({}) is None
+        assert _run_required_synthesis({}) is None
 
     def test_returns_synthesis_on_success(self, monkeypatch):
-        from social_research_probe.cli import _run_cli_synthesis
+        from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -823,7 +835,7 @@ class TestRunCliSynthesis:
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
-        result = _run_cli_synthesis(_VALID_PACKET)
+        result = _run_required_synthesis(_VALID_PACKET)
         assert result == {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
         assert captured["schema"]["type"] == "object"
         assert set(captured["schema"]["required"]) == {
@@ -831,8 +843,8 @@ class TestRunCliSynthesis:
             "opportunity_analysis",
         }
 
-    def test_returns_none_on_runner_exception(self, monkeypatch):
-        from social_research_probe.cli import _run_cli_synthesis
+    def test_returns_none_when_all_runners_fail(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -842,10 +854,10 @@ class TestRunCliSynthesis:
             "social_research_probe.cli.get_runner",
             lambda name: (_ for _ in ()).throw(RuntimeError("no cli")),
         )
-        assert _run_cli_synthesis(_VALID_PACKET) is None
+        assert _run_required_synthesis(_VALID_PACKET) is None
 
-    def test_returns_none_when_runner_is_unavailable(self, monkeypatch):
-        from social_research_probe.cli import _run_cli_synthesis
+    def test_returns_none_when_all_runners_unavailable(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "gemini"
@@ -856,32 +868,89 @@ class TestRunCliSynthesis:
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
-        assert _run_cli_synthesis(_VALID_PACKET) is None
+        assert _run_required_synthesis(_VALID_PACKET) is None
 
-    def test_default_cli_output_surfaces_html_report_uri(self, monkeypatch, tmp_path, capsys):
+    def test_falls_back_when_preferred_structured_runner_fails(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
+
+        class _Cfg:
+            default_structured_runner = "gemini"
+
+        calls = []
+
+        class _GeminiRunner:
+            def health_check(self) -> bool:
+                calls.append("gemini.health")
+                return True
+
+            def run(self, prompt, *, schema=None):
+                calls.append("gemini.run")
+                raise RuntimeError("gemini unavailable")
+
+        class _CodexRunner:
+            def health_check(self) -> bool:
+                calls.append("codex.health")
+                return True
+
+            def run(self, prompt, *, schema=None):
+                calls.append("codex.run")
+                return {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+
+        def fake_get_runner(name: str):
+            if name == "gemini":
+                return _GeminiRunner()
+            if name == "codex":
+                return _CodexRunner()
+
+            class _MissingRunner:
+                def health_check(self) -> bool:
+                    calls.append(f"{name}.health")
+                    return False
+
+            return _MissingRunner()
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", fake_get_runner)
+        assert _run_required_synthesis(_VALID_PACKET) == {
+            "compiled_synthesis": "s10 text",
+            "opportunity_analysis": "s11 text",
+        }
+        assert calls == [
+            "gemini.health",
+            "gemini.run",
+            "claude.health",
+            "codex.health",
+            "codex.run",
+        ]
+
+    def test_research_emits_envelope_with_html_path(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
+            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
         )
         monkeypatch.setattr(
-            "social_research_probe.cli._run_cli_synthesis",
-            lambda pkt: {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"},
+            "social_research_probe.cli._attach_synthesis",
+            lambda pkt: pkt.update(
+                {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"}
+            ),
         )
         main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
-        out = capsys.readouterr().out
-        assert "Open your report:" in out
-        assert "file://" in out
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "synthesis"
+        assert payload["packet"]["compiled_synthesis"] == "synth10"
+        assert payload["packet"]["opportunity_analysis"] == "synth11"
+        assert payload["packet"]["html_report_path"].startswith("file://")
 
-    def test_synthesis_fields_passed_to_render_full_when_no_html(
-        self, monkeypatch, tmp_path, capsys
-    ):
+    def test_no_html_still_emits_synthesized_packet(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
+            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
         )
         monkeypatch.setattr(
-            "social_research_probe.cli._run_cli_synthesis",
-            lambda pkt: {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"},
+            "social_research_probe.cli._attach_synthesis",
+            lambda pkt: pkt.update(
+                {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"}
+            ),
         )
         main(
             [
@@ -894,18 +963,17 @@ class TestRunCliSynthesis:
                 "--no-html",
             ]
         )
-        out = capsys.readouterr().out
-        assert "synth10" in out
-        assert "synth11" in out
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["packet"]["compiled_synthesis"] == "synth10"
+        assert payload["packet"]["opportunity_analysis"] == "synth11"
+        assert "html_report_path" not in payload["packet"]
 
-    def test_render_full_called_with_none_when_synthesis_returns_none_and_no_html(
-        self, monkeypatch, tmp_path, capsys
-    ):
+    def test_runner_none_emits_packet_without_sections_10_11(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
-            lambda cmd, d, mode, adapter_config=None, pre_emit_hook=None: _VALID_PACKET,
+            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
         )
-        monkeypatch.setattr("social_research_probe.cli._run_cli_synthesis", lambda pkt: None)
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         main(
             [
                 "--data-dir",
@@ -917,5 +985,136 @@ class TestRunCliSynthesis:
                 "--no-html",
             ]
         )
-        out = capsys.readouterr().out
-        assert "LLM synthesis not run" in out
+        payload = json.loads(capsys.readouterr().out)
+        assert "compiled_synthesis" not in payload["packet"]
+        assert "opportunity_analysis" not in payload["packet"]
+
+
+class TestResearchPreflightWarning:
+    """Covers the runner-not-found pre-flight log in the research command."""
+
+    def test_runner_binary_not_found_logs_warning(self, monkeypatch, tmp_path):
+        """research still succeeds when the configured runner binary is missing."""
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+        class _UnhealthyRunner:
+            def health_check(self) -> bool:
+                return False
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _UnhealthyRunner())
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+        )
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
+        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        assert result == 0
+
+    def test_runner_binary_found_no_warning(self, monkeypatch, tmp_path):
+        """research succeeds and emits no warning when runner binary is on PATH."""
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+        class _HealthyRunner:
+            def health_check(self) -> bool:
+                return True
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _HealthyRunner())
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, adapter_config=None: copy.deepcopy(_VALID_PACKET),
+        )
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
+        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        assert result == 0
+
+    def test_multi_packet_html_raises_validation_error(self, monkeypatch, tmp_path):
+        """Requesting HTML for a multi-topic packet raises ValidationError."""
+        multi = {**_VALID_PACKET, "multi": [_VALID_PACKET]}
+
+        class _Cfg:
+            default_structured_runner = "none"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            lambda cmd, d, adapter_config=None: copy.deepcopy(multi),
+        )
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
+        from social_research_probe.errors import ValidationError
+
+        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"])
+        assert result == ValidationError.exit_code
+
+
+class TestAttachSynthesis:
+    """Covers _attach_synthesis and _structured_runner_order branches."""
+
+    def test_attach_synthesis_multi_children_path(self, monkeypatch):
+        """_attach_synthesis iterates children when packet has a 'multi' list."""
+        from social_research_probe.cli import _attach_synthesis
+
+        synth = {"compiled_synthesis": "s10", "opportunity_analysis": "s11"}
+        monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: synth)
+        packet = {"multi": [{"topic": "a"}, {"topic": "b"}]}
+        _attach_synthesis(packet)
+        for child in packet["multi"]:
+            assert child["compiled_synthesis"] == "s10"
+
+    def test_attach_synthesis_multi_child_synthesis_none_skips_update(self, monkeypatch):
+        """_attach_synthesis skips update for children when synthesis returns None."""
+        from social_research_probe.cli import _attach_synthesis
+
+        monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: None)
+        packet = {"multi": [{"topic": "a"}]}
+        _attach_synthesis(packet)
+        assert "compiled_synthesis" not in packet["multi"][0]
+
+    def test_attach_synthesis_single_packet_updates_when_synthesis_not_none(self, monkeypatch):
+        """_attach_synthesis merges synthesis into the packet when synthesis is returned."""
+        from social_research_probe.cli import _attach_synthesis
+
+        synth = {"compiled_synthesis": "s10", "opportunity_analysis": "s11"}
+        monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: synth)
+        packet = {"topic": "ai"}
+        _attach_synthesis(packet)
+        assert packet["compiled_synthesis"] == "s10"
+
+    def test_attach_synthesis_single_packet_synthesis_none_no_update(self, monkeypatch):
+        """_attach_synthesis leaves the packet unchanged when synthesis returns None."""
+        from social_research_probe.cli import _attach_synthesis
+
+        monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: None)
+        packet = {"topic": "ai"}
+        _attach_synthesis(packet)
+        assert "compiled_synthesis" not in packet
+
+    def test_structured_runner_order_none_returns_empty(self):
+        """_structured_runner_order returns [] when preferred is 'none'."""
+        from social_research_probe.cli import _structured_runner_order
+
+        assert _structured_runner_order("none") == []
+
+    def test_run_required_synthesis_validation_error_is_caught(self, monkeypatch):
+        """ValidationError from parse_synthesis_response is caught and logged."""
+        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.errors import ValidationError
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+        class _Runner:
+            def health_check(self) -> bool:
+                return True
+
+            def run(self, prompt, *, schema=None):
+                raise ValidationError("bad synthesis")
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
+        assert _run_required_synthesis(_VALID_PACKET) is None

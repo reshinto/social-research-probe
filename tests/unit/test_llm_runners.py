@@ -85,21 +85,19 @@ def test_claude_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base claude invocation only."""
     runner = ClaudeRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["claude", "--output-format", "json"]
-    # --schema flag must not appear when no schema is supplied.
-    assert "--schema" not in argv
+    assert argv == ["claude", "--print", "--output-format", "json"]
+    assert "--json-schema" not in argv
 
 
 def test_claude_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
+    """_build_argv with a schema appends Claude's JSON-schema flag."""
     import json
 
     runner = ClaudeRunner()
     schema = {"type": "object", "properties": {"result": {"type": "string"}}}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    # The value immediately after --schema must be the JSON encoding of the schema.
-    idx = argv.index("--schema")
+    assert "--json-schema" in argv
+    idx = argv.index("--json-schema")
     assert json.loads(argv[idx + 1]) == schema
 
 
@@ -144,26 +142,35 @@ def test_gemini_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base gemini invocation only."""
     runner = GeminiRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["gemini", "--format", "json"]
+    assert argv == ["gemini", "--output-format", "json"]
     assert "--schema" not in argv
 
 
 def test_gemini_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
-    import json
-
+    """Gemini ignores schema at argv-build time because it lacks inline schema support."""
     runner = GeminiRunner()
     schema = {"type": "object"}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    idx = argv.index("--schema")
-    assert json.loads(argv[idx + 1]) == schema
+    assert argv == ["gemini", "--output-format", "json"]
+    assert "--schema" not in argv
 
 
 def test_gemini_parse_response_valid_json() -> None:
-    """_parse_response returns a dict when stdout is valid JSON."""
+    """_parse_response unwraps the gemini CLI envelope and parses the inner JSON."""
     runner = GeminiRunner()
-    result = runner._parse_response('{"key": "value"}')
+    envelope = '{"session_id": "x", "response": "{\\"key\\": \\"value\\"}", "stats": {}}'
+    result = runner._parse_response(envelope)
+    assert result == {"key": "value"}
+
+
+def test_gemini_parse_response_markdown_fenced_json() -> None:
+    """_parse_response strips markdown fences before parsing the inner JSON."""
+    runner = GeminiRunner()
+    inner = '```json\n{"key": "value"}\n```'
+    import json as _json
+
+    envelope = _json.dumps({"response": inner})
+    result = runner._parse_response(envelope)
     assert result == {"key": "value"}
 
 
@@ -201,20 +208,17 @@ def test_codex_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base codex invocation only."""
     runner = CodexRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["codex", "--json"]
+    assert argv == ["codex", "exec"]
     assert "--schema" not in argv
 
 
 def test_codex_build_argv_with_schema() -> None:
-    """_build_argv with a schema appends --schema and the JSON-encoded schema."""
-    import json
-
+    """Codex handles schema via temp files during run(), not inline argv."""
     runner = CodexRunner()
     schema = {"type": "object"}
     argv = runner._build_argv(schema=schema)
-    assert "--schema" in argv
-    idx = argv.index("--schema")
-    assert json.loads(argv[idx + 1]) == schema
+    assert argv == ["codex", "exec"]
+    assert "--schema" not in argv
 
 
 def test_codex_parse_response_valid_json() -> None:
@@ -341,11 +345,14 @@ def test_claude_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_gemini_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
-    """run() calls subprocess_runner.run and parses JSON from stdout."""
+    """run() calls subprocess_runner.run, unwraps the gemini envelope, and parses inner JSON."""
+    import json as _json
+
     import social_research_probe.utils.subprocess_runner as sp_mod
 
+    envelope = _json.dumps({"session_id": "s", "response": '{"ok": 2}', "stats": {}})
     monkeypatch.setattr(
-        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed('{"ok": 2}')
+        sp_mod, "run", lambda argv, input=None, timeout=30: _make_completed(envelope)
     )
     runner = GeminiRunner()
     assert runner.run("hello") == {"ok": 2}
@@ -364,9 +371,13 @@ def test_gemini_run_uses_configured_timeout(monkeypatch: pytest.MonkeyPatch) -> 
 
     captured = {}
 
+    import json as _json
+
+    envelope = _json.dumps({"session_id": "s", "response": '{"ok": 2}', "stats": {}})
+
     def fake_run(argv, input=None, timeout=30):
         captured["timeout"] = timeout
-        return _make_completed('{"ok": 2}')
+        return _make_completed(envelope)
 
     monkeypatch.setattr(base_mod, "load_active_config", lambda: _Cfg())
     monkeypatch.setattr(sp_mod, "run", fake_run)
@@ -396,3 +407,94 @@ def test_local_run_monkeypatched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SRP_LOCAL_LLM_BIN", "/fake/llm")
     runner = LocalRunner()
     assert runner.run("hello") == {"ok": 4}
+
+
+# ---------------------------------------------------------------------------
+# Base class _prompt_args and _stdin_input default implementations
+# ---------------------------------------------------------------------------
+
+
+class _MinimalRunner(
+    __import__(
+        "social_research_probe.llm.runners.cli_json_base", fromlist=["JsonCliRunner"]
+    ).JsonCliRunner
+):
+    """Minimal concrete subclass that uses the base-class prompt/stdin defaults."""
+
+    name = "minimal"
+    binary_name = "minimal"
+    base_argv = ()
+    schema_flag = None
+
+
+def test_base_prompt_args_returns_empty_list() -> None:
+    """The default _prompt_args implementation returns [] (prompt goes via stdin)."""
+    runner = _MinimalRunner()
+    assert runner._prompt_args("hello") == []
+
+
+def test_base_stdin_input_returns_prompt() -> None:
+    """The default _stdin_input implementation returns the prompt string unchanged."""
+    runner = _MinimalRunner()
+    assert runner._stdin_input("hello") == "hello"
+
+
+# ---------------------------------------------------------------------------
+# CodexRunner — schema file path and AdapterError re-raise
+# ---------------------------------------------------------------------------
+
+
+def test_codex_run_with_schema_writes_schema_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CodexRunner.run() with a schema writes it to a temp file and adds --output-schema."""
+
+    captured_argv: list[str] = []
+
+    class _FakeResult:
+        returncode = 0
+        stdout = '{"ok": 1}'
+        stderr = ""
+
+    def fake_run(argv, input=None, timeout=30):
+        captured_argv.extend(argv)
+        return _FakeResult()
+
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    monkeypatch.setattr(sp_mod, "run", fake_run)
+    runner = CodexRunner()
+    schema = {"type": "object", "properties": {"x": {"type": "string"}}}
+    result = runner.run("hello", schema=schema)
+    assert result == {"ok": 1}
+    assert "--output-schema" in captured_argv
+
+
+def test_codex_run_raises_adapter_error_when_output_json_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodexRunner.run() re-raises AdapterError when the output file contains invalid JSON."""
+    import social_research_probe.utils.subprocess_runner as sp_mod
+
+    class _FakeResult:
+        returncode = 0
+        stdout = "not json"
+        stderr = ""
+
+    monkeypatch.setattr(sp_mod, "run", lambda argv, input=None, timeout=30: _FakeResult())
+    runner = CodexRunner()
+    with pytest.raises(AdapterError, match="codex returned non-JSON final message"):
+        runner.run("hello")
+
+
+# ---------------------------------------------------------------------------
+# GeminiRunner — invalid inner JSON in response field
+# ---------------------------------------------------------------------------
+
+
+def test_gemini_parse_response_invalid_inner_json_raises_adapter_error() -> None:
+    """_parse_response raises AdapterError when the 'response' field is not valid JSON."""
+    import json as _json
+
+    runner = GeminiRunner()
+    envelope = _json.dumps({"response": "this is not json", "stats": {}})
+    with pytest.raises(AdapterError, match="gemini response field is not valid JSON"):
+        runner._parse_response(envelope)

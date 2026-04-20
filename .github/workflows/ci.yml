@@ -23,7 +23,7 @@ jobs:
         run: ruff check social_research_probe/ tests/
       - name: Format check
         run: ruff format --check social_research_probe/ tests/
-      - name: Test
-        run: pytest
-      - name: Unit coverage
-        run: pytest tests/unit --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+      - name: Integration tests
+        run: pytest tests/integration --no-cov
+      - name: Unit and contract coverage
+        run: pytest tests/unit tests/contract --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100

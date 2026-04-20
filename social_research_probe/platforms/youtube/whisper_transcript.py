@@ -15,6 +15,27 @@ import tempfile
 
 from social_research_probe.utils.progress import log
 
+_bot_hint_shown = False
+
+
+def _log_ytdlp_failure(stderr: str) -> None:
+    """Log a diagnostic when yt-dlp audio download fails."""
+    global _bot_hint_shown
+    if not stderr:
+        return
+    if "Sign in to confirm" in stderr:
+        if not _bot_hint_shown:
+            _bot_hint_shown = True
+            log(
+                "[srp] whisper: yt-dlp hit YouTube bot-check — audio transcription unavailable.\n"
+                "  Fix: export SRP_YTDLP_COOKIES_FILE=/path/to/cookies.txt"
+                " or SRP_YTDLP_BROWSER=chrome"
+            )
+    else:
+        first_line = stderr.strip().splitlines()[0] if stderr.strip() else ""
+        if first_line:
+            log(f"[srp] whisper: yt-dlp failed: {first_line}")
+
 
 def fetch_transcript_whisper(url: str) -> str | None:
     """Download audio from *url* and return a Whisper transcript, or None on failure.
@@ -28,7 +49,7 @@ def fetch_transcript_whisper(url: str) -> str | None:
     or the transcription produces no text.
     """
     try:
-        import whisper  # type: ignore[import-untyped]
+        import whisper
     except ImportError:
         return None
 
@@ -46,10 +67,15 @@ def fetch_transcript_whisper(url: str) -> str | None:
             audio_path,
             "--no-playlist",
             "--quiet",
+            "--no-warnings",
         ]
-        browser = os.environ.get("SRP_YTDLP_BROWSER", "none")
-        if browser and browser.lower() != "none":
-            cmd += ["--cookies-from-browser", browser]
+        cookies_file = os.environ.get("SRP_YTDLP_COOKIES_FILE")
+        if cookies_file:
+            cmd += ["--cookies", cookies_file]
+        else:
+            browser = os.environ.get("SRP_YTDLP_BROWSER", "none")
+            if browser and browser.lower() != "none":
+                cmd += ["--cookies-from-browser", browser]
         cmd.append(url)
         dl = subprocess.run(
             cmd,
@@ -58,6 +84,7 @@ def fetch_transcript_whisper(url: str) -> str | None:
             timeout=300,
         )
         if dl.returncode != 0:
+            _log_ytdlp_failure(dl.stderr)
             return None
 
         mp3_files = [f for f in os.listdir(tmpdir) if f.endswith(".mp3")]

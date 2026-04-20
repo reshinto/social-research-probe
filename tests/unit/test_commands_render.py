@@ -113,3 +113,11 @@ def test_run_missing_file_raises_validation_error(tmp_path):
     missing = tmp_path / "no_such_file.json"
     with pytest.raises(ValidationError, match="cannot read packet file"):
         render_cmd.run(str(missing))
+
+
+def test_run_non_dict_packet_raises_validation_error(tmp_path):
+    """run() raises ValidationError when the packet JSON is not an object."""
+    bad = tmp_path / "list.json"
+    bad.write_text("[1, 2, 3]")
+    with pytest.raises(ValidationError, match="packet file must contain a JSON object"):
+        render_cmd.run(str(bad))

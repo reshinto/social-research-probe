@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 
-def test_run_research_skill_mode_emits_packet(tmp_path):
+def test_run_research_emits_packet_envelope(tmp_path):
     env = {
         **os.environ,
         "SRP_DATA_DIR": str(tmp_path),
@@ -29,8 +29,6 @@ def test_run_research_skill_mode_emits_packet(tmp_path):
             "-m",
             "social_research_probe.cli",
             "research",
-            "--mode",
-            "skill",
             "youtube",
             "ai agents",
             "trends",
@@ -41,11 +39,9 @@ def test_run_research_skill_mode_emits_packet(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
-    assert payload["skill_mode"] is True
     assert payload["kind"] == "synthesis"
     pkt = payload["packet"]
     assert pkt["topic"] == "ai agents"
     assert pkt["platform"] == "youtube"
     assert pkt["purpose_set"] == ["trends"]
-    assert "response_schema" in pkt
     assert pkt["html_report_path"].startswith("file://")

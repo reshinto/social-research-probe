@@ -48,17 +48,12 @@ _SECTIONS = [
 
 def render_html(
     packet: ResearchPacket,
-    *,
-    synthesis_10: str | None = None,
-    synthesis_11: str | None = None,
     charts_dir: Path | None = None,
 ) -> str:
     """Render a complete self-contained HTML report for a research packet.
 
     Args:
         packet: The research packet produced by pipeline.run_research().
-        synthesis_10: Compiled synthesis text (sections 10). None → placeholder.
-        synthesis_11: Opportunity analysis text (section 11). None → placeholder.
         charts_dir: Directory containing chart PNGs to embed. None → skip images.
 
     Returns:
@@ -74,8 +69,8 @@ def render_html(
         section_7_statistics(packet),
         section_8_charts(packet, charts_dir),
         section_9_warnings(packet),
-        section_10_synthesis(synthesis_10),
-        section_11_opportunity(synthesis_11),
+        section_10_synthesis(packet.get("compiled_synthesis")),
+        section_11_opportunity(packet.get("opportunity_analysis")),
     ]
     body_html = _build_body(packet, section_bodies)
     toc_html = _build_toc()
@@ -84,15 +79,12 @@ def render_html(
 
 def write_html_report(
     packet: ResearchPacket,
-    synthesis: dict | None,
     data_dir: Path,
 ) -> Path:
     """Write an HTML report to data_dir/reports/ and return its path.
 
     Args:
         packet: Research packet from the pipeline.
-        synthesis: Dict with 'compiled_synthesis' and 'opportunity_analysis',
-                   or None when LLM synthesis was not run.
         data_dir: Root data directory (charts live at data_dir/charts/).
 
     Returns:
@@ -106,15 +98,7 @@ def write_html_report(
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     out_path = reports_dir / f"{slug}-{platform}-{ts}.html"
 
-    compiled = synthesis["compiled_synthesis"] if synthesis else None
-    opportunity = synthesis["opportunity_analysis"] if synthesis else None
-
-    html_content = render_html(
-        packet,
-        synthesis_10=compiled,
-        synthesis_11=opportunity,
-        charts_dir=data_dir / "charts",
-    )
+    html_content = render_html(packet, charts_dir=data_dir / "charts")
     out_path.write_text(html_content, encoding="utf-8")
     print(f"[srp] HTML report: {out_path.resolve().as_uri()}", file=sys.stderr)
     return out_path

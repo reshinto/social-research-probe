@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.corroboration._secret_utils import read_runtime_secret
+from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
@@ -85,6 +85,7 @@ class ExaBackend(CorroborationBackend):
             headers={
                 "Content-Type": "application/json",
                 "x-api-key": self._api_key(),
+                "User-Agent": HTTP_USER_AGENT,
             },
             method="POST",
         )

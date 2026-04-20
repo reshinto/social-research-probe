@@ -1,92 +1,104 @@
-"""Tests for social_research_probe.platforms.youtube.extract.fetch_transcript.
+"""Complementary tests for fetch_transcript and whisper diagnostic helpers.
 
-Covers the yt_dlp path using a monkeypatched YoutubeDL, the ImportError
-fallback, and the no-English-track case.
+The main fetch_transcript coverage lives in test_youtube_extract.py.
+This file covers:
+- _log_ytdlp_failure in whisper_transcript (bot-check hint + stderr logging)
+- fetch_transcript graceful degradation with both API flags combined
 """
 
 from __future__ import annotations
 
-import sys
-import types
-
-import social_research_probe.platforms.youtube.extract as yt_extract
+import social_research_probe.platforms.youtube.whisper_transcript as wt
 
 
-class _FakeYDL:
-    """Minimal yt_dlp.YoutubeDL stand-in."""
+class TestLogYtdlpFailure:
+    def test_bot_check_hint_emitted_once(self, monkeypatch):
+        """Bot-check hint fires at most once per process."""
+        monkeypatch.setattr(wt, "_bot_hint_shown", False)
+        logged: list[str] = []
+        monkeypatch.setattr(wt, "log", logged.append)
 
-    def __init__(self, opts):
-        self._opts = opts
+        wt._log_ytdlp_failure("Sign in to confirm you're not a bot.")
+        wt._log_ytdlp_failure("Sign in to confirm you're not a bot.")
 
-    def __enter__(self):
-        return self
+        hint_lines = [m for m in logged if "bot-check" in m]
+        assert len(hint_lines) == 1
 
-    def __exit__(self, *a):
-        pass
+    def test_non_bot_failure_logs_first_stderr_line(self, monkeypatch):
+        """Non-bot-check stderr logs the first line of stderr output."""
+        monkeypatch.setattr(wt, "_bot_hint_shown", False)
+        logged: list[str] = []
+        monkeypatch.setattr(wt, "log", logged.append)
 
-    def extract_info(self, url, download=False):
-        return self._info
+        wt._log_ytdlp_failure("ERROR: network timeout\nsome other line")
 
-    @classmethod
-    def returning(cls, info: dict):
-        inst = object.__new__(cls)
-        inst._info = info
-        return inst
+        assert any("yt-dlp failed: ERROR: network timeout" in m for m in logged)
 
+    def test_empty_stderr_logs_nothing(self, monkeypatch):
+        """Empty stderr produces no log output."""
+        logged: list[str] = []
+        monkeypatch.setattr(wt, "log", logged.append)
 
-def _patch_yt_dlp(monkeypatch, ydl_instance):
-    """Install a fake yt_dlp module that returns ydl_instance from YoutubeDL(...)."""
-    fake_yt_dlp = types.ModuleType("yt_dlp")
-    fake_yt_dlp.YoutubeDL = lambda opts: ydl_instance
-    monkeypatch.setitem(sys.modules, "yt_dlp", fake_yt_dlp)
+        wt._log_ytdlp_failure("")
 
+        assert logged == []
 
-def test_fetch_transcript_returns_none_when_yt_dlp_missing(monkeypatch):
-    """fetch_transcript returns None when yt_dlp is not installed."""
-    monkeypatch.setitem(sys.modules, "yt_dlp", None)
-    result = yt_extract.fetch_transcript("https://www.youtube.com/watch?v=abc")
-    assert result is None
+    def test_bot_hint_not_shown_after_non_bot_failure(self, monkeypatch):
+        """Bot-check hint is still available after a non-bot failure."""
+        monkeypatch.setattr(wt, "_bot_hint_shown", False)
+        logged: list[str] = []
+        monkeypatch.setattr(wt, "log", logged.append)
 
+        wt._log_ytdlp_failure("ERROR: some other problem")
+        wt._log_ytdlp_failure("Sign in to confirm you're not a bot.")
 
-def test_fetch_transcript_returns_none_when_no_english_track(monkeypatch):
-    """fetch_transcript returns None when subtitles have no 'en' key."""
-    ydl = _FakeYDL({})
-    ydl._info = {"subtitles": {"fr": []}, "automatic_captions": {}}
-    _patch_yt_dlp(monkeypatch, ydl)
-    result = yt_extract.fetch_transcript("https://www.youtube.com/watch?v=abc")
-    assert result is None
+        hint_lines = [m for m in logged if "bot-check" in m]
+        assert len(hint_lines) == 1
 
+    def test_whitespace_only_stderr_logs_nothing(self, monkeypatch):
+        """Stderr that is only whitespace produces no log output."""
+        monkeypatch.setattr(wt, "_bot_hint_shown", False)
+        logged: list[str] = []
+        monkeypatch.setattr(wt, "log", logged.append)
 
-def test_fetch_transcript_returns_text_from_subtitles(monkeypatch):
-    """fetch_transcript joins subtitle data strings when 'en' subtitles are present."""
-    ydl = _FakeYDL({})
-    ydl._info = {
-        "subtitles": {"en": [{"data": "Hello"}, {"data": " world"}]},
-        "automatic_captions": {},
-    }
-    _patch_yt_dlp(monkeypatch, ydl)
-    result = yt_extract.fetch_transcript("https://www.youtube.com/watch?v=abc")
-    assert result == "Hello\n world"
+        wt._log_ytdlp_failure("   \n\t  ")
+
+        assert logged == []
 
 
-def test_fetch_transcript_falls_back_to_auto_captions(monkeypatch):
-    """fetch_transcript uses automatic_captions when subtitles has no 'en' key."""
-    ydl = _FakeYDL({})
-    ydl._info = {
-        "subtitles": {},
-        "automatic_captions": {"en": [{"data": "Auto caption"}]},
-    }
-    _patch_yt_dlp(monkeypatch, ydl)
-    result = yt_extract.fetch_transcript("https://www.youtube.com/watch?v=abc")
-    assert result == "Auto caption"
+class TestFetchTranscriptWhisperCookies:
+    def test_cookies_file_arg_added_when_env_set(self, monkeypatch, tmp_path):
+        """SRP_YTDLP_COOKIES_FILE adds --cookies to the yt-dlp command."""
+        import subprocess
+
+        cookie_file = str(tmp_path / "cookies.txt")
+        monkeypatch.setenv("SRP_YTDLP_COOKIES_FILE", cookie_file)
+
+        captured_cmd: list = []
+
+        def fake_run(cmd, **kwargs):
+            captured_cmd.extend(cmd)
+            result = subprocess.CompletedProcess(cmd, returncode=1, stdout="", stderr="")
+            return result
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+        wt.fetch_transcript_whisper("https://www.youtube.com/watch?v=abc")
+
+        assert "--cookies" in captured_cmd
+        assert cookie_file in captured_cmd
 
 
-def test_fetch_transcript_skips_non_dict_entries(monkeypatch):
-    """fetch_transcript skips subtitle entries that are not dicts."""
-    ydl = _FakeYDL({})
-    ydl._info = {
-        "subtitles": {"en": ["not a dict", {"data": "valid"}]},
-    }
-    _patch_yt_dlp(monkeypatch, ydl)
-    result = yt_extract.fetch_transcript("https://www.youtube.com/watch?v=abc")
-    assert result == "valid"
+class TestFetchTranscriptIntegration:
+    def test_returns_none_when_api_unavailable(self, monkeypatch):
+        """fetch_transcript returns None gracefully when youtube-transcript-api is absent."""
+        import social_research_probe.platforms.youtube.extract as ext
+
+        monkeypatch.setattr(ext, "_API_AVAILABLE", False)
+        assert ext.fetch_transcript("https://www.youtube.com/watch?v=dQw4w9WgXcQ") is None
+
+    def test_returns_none_for_unknown_url_scheme(self, monkeypatch):
+        """fetch_transcript returns None for a URL with no parseable video ID."""
+        import social_research_probe.platforms.youtube.extract as ext
+
+        monkeypatch.setattr(ext, "_API_AVAILABLE", True)
+        assert ext.fetch_transcript("not-a-url-at-all") is None

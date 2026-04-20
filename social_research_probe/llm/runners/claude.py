@@ -14,4 +14,13 @@ class ClaudeRunner(JsonCliRunner):
 
     name: ClassVar[str] = "claude"
     binary_name: ClassVar[str] = "claude"
-    base_argv: ClassVar[tuple[str, ...]] = ("--output-format", "json")
+    base_argv: ClassVar[tuple[str, ...]] = ("--print", "--output-format", "json")
+    schema_flag: ClassVar[str | None] = "--json-schema"
+
+    def _prompt_args(self, prompt: str) -> list[str]:
+        """Claude expects the prompt as a positional arg in print mode."""
+        return [prompt]
+
+    def _stdin_input(self, prompt: str) -> str | None:
+        """Claude print mode should not wait on stdin."""
+        return None

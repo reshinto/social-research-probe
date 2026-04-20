@@ -58,6 +58,11 @@ def test_run_provider_unknown_name_returns_none():
     assert _run_provider("unknown_llm", "hello") is None
 
 
+def test_collect_responses_empty_providers_returns_empty_dict():
+    """_collect_responses returns {} immediately when providers tuple is empty."""
+    assert _collect_responses("prompt", providers=()) == {}
+
+
 def test_collect_responses_returns_only_successes(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
@@ -209,6 +214,32 @@ def test_multi_llm_prompt_uses_configured_provider(monkeypatch):
 
     assert multi_llm_prompt("summarise this video") == "configured answer"
     assert calls == [("gemini", "summarise this video")]
+
+
+def test_multi_llm_prompt_falls_back_when_configured_provider_fails(monkeypatch):
+    from social_research_probe.llm import ensemble as llm_mod
+
+    calls = []
+
+    class _FakeConfig:
+        llm_runner = "gemini"
+        preferred_free_text_runner = "gemini"
+
+    def fake_run(name: str, prompt: str, task: str = "") -> str | None:
+        calls.append((name, prompt))
+        if name == "gemini":
+            return None
+        if "synthesize" in prompt.lower() or "synthesise" in prompt.lower():
+            return "synthesized fallback"
+        return "fallback answer"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+
+    assert multi_llm_prompt("summarise this video") == "synthesized fallback"
+    assert calls[0] == ("gemini", "summarise this video")
+    assert ("claude", "summarise this video") in calls
+    assert ("codex", "summarise this video") in calls
 
 
 def test_multi_llm_prompt_uses_local_runner(monkeypatch):
