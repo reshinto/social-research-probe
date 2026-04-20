@@ -47,6 +47,13 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **Example finding:** "Mean overall score: 0.62. Std dev: 0.21 — moderate spread, suggesting a few high-quality sources among average results."
 
+**Example output:**
+
+```
+mean_overall: 0.6147    median_overall: 0.6300
+stdev_overall: 0.1284   min_overall: 0.3200   max_overall: 0.8700
+```
+
 ---
 
 ### Spread analysis
@@ -56,6 +63,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 2.
 
 **How to interpret:** High skewness (> 1) means most results cluster at the low end with a few outliers at the top — common when one viral channel dominates. Kurtosis indicates how extreme the tail outliers are. A wide IQR means the middle 50% of results are very diverse.
+
+**Example output:**
+
+```
+iqr_overall: 0.1950   skewness_overall: 0.3820   kurtosis_overall: -0.6140
+```
 
 ---
 
@@ -67,6 +80,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** A steep negative slope means the top-ranked video is significantly better than the others. A shallow slope means the results are roughly equal in quality and the ranking is less decisive.
 
+**Example output:**
+
+```
+ols_slope: -0.0241   ols_intercept: 0.7310   ols_r2: 0.6803
+```
+
 ---
 
 ### Correlation (Pearson)
@@ -76,6 +95,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 2.
 
 **How to interpret:** A strong positive correlation (+0.7 or above) means channels with high credibility also have high engagement opportunity — credible sources are also accessible. A near-zero correlation means trust and opportunity are independent, and you may need to choose between authoritative sources and engaging ones.
+
+**Example output:**
+
+```
+pearson_r (trust vs opportunity): 0.7412  (positive correlation)
+```
 
 ---
 
@@ -87,6 +112,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** Compare with the Pearson result. If Spearman is much higher than Pearson, the relationship is monotonic but not linear (e.g. exponential). If they are similar, the relationship is roughly linear.
 
+**Example output:**
+
+```
+spearman_r (trust vs opportunity): 0.7908  (positive correlation)
+```
+
 ---
 
 ### Mann–Whitney U test
@@ -96,6 +127,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 2.
 
 **How to interpret:** A statistically significant result (p < 0.05) means there is a real quality gap between the top and bottom halves of your results. An insignificant result means the divide between "good" and "bad" results is not statistically meaningful — the dataset may be uniformly mediocre or uniformly good.
+
+**Example output:**
+
+```
+mann_whitney_u: 52.0   mann_whitney_p: 0.0183   (significant split, top vs bottom half)
+```
 
 ---
 
@@ -107,6 +144,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** Use alongside the normality test. If the normality test passes, Welch's t-test is reliable. If the normality test fails, trust Mann–Whitney instead.
 
+**Example output:**
+
+```
+welch_t: 2.8841   welch_p: 0.0117   (significant mean difference, top vs bottom half)
+```
+
 ---
 
 ### Normality test (Shapiro–Wilk)
@@ -116,6 +159,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 4.
 
 **How to interpret:** If the test passes (scores are normal), parametric tests like Welch's t are valid. If it fails, the distribution is skewed or has heavy tails — use the non-parametric results (Spearman, Mann–Whitney) instead.
+
+**Example output:**
+
+```
+shapiro_w: 0.9612   shapiro_p: 0.2340   (normality not rejected — parametric tests valid)
+```
 
 ---
 
@@ -127,6 +176,13 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** A good quadratic fit means quality drops sharply in the top few results, then flattens — a typical "power law" content distribution. If the cubic fit is significantly better than quadratic, there is a more complex structure (e.g. a cluster of mid-tier results above a floor).
 
+**Example output:**
+
+```
+poly2_r2: 0.7441   poly3_r2: 0.7508
+poly2_coeffs: [-0.0018, -0.0093, 0.7621]
+```
+
 ---
 
 ### Bootstrap confidence intervals
@@ -136,6 +192,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 4.
 
 **How to interpret:** A tight confidence interval (e.g. [0.58, 0.65]) means the mean is stable and the dataset is consistent. A wide interval means the mean is sensitive to which specific videos appeared in this run — results would likely vary significantly on a re-run.
+
+**Example output:**
+
+```
+bootstrap_mean: 0.6147   bootstrap_ci_95: [0.5712, 0.6581]   (n_resamples=1000)
+```
 
 ---
 
@@ -147,6 +209,14 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** A high trust coefficient means credibility dominates the ranking on this topic. A high trend coefficient means view velocity is the main driver. Use this to understand what kind of content your scoring is rewarding for the current topic and purpose.
 
+**Example output:**
+
+```
+multi_reg_r2: 0.9871
+coefficients — trust: 0.4421  trend: 0.2978  opportunity: 0.2503
+intercept: 0.0041
+```
+
 ---
 
 ### Logistic regression
@@ -156,6 +226,16 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 5.
 
 **How to interpret:** The feature with the highest coefficient is the strongest predictor of top-5 inclusion. This is more actionable than multiple regression when you want to understand "what makes a video stand out" rather than "what drives the overall score."
+
+**Example output:**
+
+```
+logistic_accuracy: 0.8000
+top_predictor: trust (coeff 2.1840)
+feature_coeffs — trust: 2.1840  trend: 0.9312  opportunity: 0.6774
+                 view_velocity: 0.3201  engagement_ratio: 0.1903
+                 age_days: -0.0041  subscriber_count: 0.0000
+```
 
 ---
 
@@ -167,6 +247,15 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** Typical clusters are "credible established channels," "new viral content," and "niche low-engagement sources." The cluster labels are not fixed — look at the centroid values to characterise each group. A cluster with very few members is an outlier group.
 
+**Example output:**
+
+```
+kmeans_k: 3   inertia: 1.2340
+cluster_0: 7 items  centroid_overall=0.7190  centroid_trust=0.7840
+cluster_1: 6 items  centroid_overall=0.5810  centroid_trust=0.5230
+cluster_2: 2 items  centroid_overall=0.3410  centroid_trust=0.3120
+```
+
 ---
 
 ### PCA (Principal Component Analysis)
@@ -176,6 +265,14 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 5.
 
 **How to interpret:** The first principal component typically separates high-overall from low-overall items. The second often separates trust-dominated from trend-dominated items. If PC1 explains > 70% of variance, the dataset has a single dominant dimension and one score (likely trust) is driving everything.
+
+**Example output:**
+
+```
+pca_pc1_variance_explained: 0.6823
+pca_pc2_variance_explained: 0.1741
+pca_cumulative_2pc: 0.8564
+```
 
 ---
 
@@ -187,6 +284,13 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** A steep early drop in the survival curve means most videos hit 100k views quickly (viral content). A flat curve means most videos never reach 100k — content on this topic has limited viral potential. The median survival time (50% mark on the curve) tells you how long it typically takes for a breakout video to become visible.
 
+**Example output:**
+
+```
+km_median_survival_days: 42   km_events_observed: 9 of 15
+km_survival_at_30d: 0.6800   km_survival_at_90d: 0.3100
+```
+
 ---
 
 ### Naive Bayes
@@ -196,6 +300,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 5.
 
 **How to interpret:** Accuracy above 70% means the features are good predictors of top-5 inclusion. Low accuracy (below 60%) suggests that top-5 status is not well-explained by the available features — other factors (e.g. timing, thumbnails) may matter more.
+
+**Example output:**
+
+```
+naive_bayes_accuracy: 0.7333   naive_bayes_top5_precision: 0.8000
+```
 
 ---
 
@@ -207,6 +317,12 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 
 **How to interpret:** Compare with the OLS regression result. If the Huber slope is much less steep than OLS, there is at least one outlier video inflating the apparent quality gap. The Huber result is the more reliable summary of the typical rank-score relationship.
 
+**Example output:**
+
+```
+huber_slope: -0.0189   huber_intercept: 0.7021   (cf. ols_slope: -0.0241 — outlier dampened)
+```
+
 ---
 
 ### Bayesian linear regression
@@ -216,6 +332,14 @@ Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note th
 **When it runs:** n ≥ 5.
 
 **How to interpret:** The credible interval tells you how uncertain the coefficient estimate is given this data size. A narrow interval (e.g. trust: 0.35 ± 0.04) means the result is reliable. A wide interval means you need more data before drawing conclusions about which sub-score matters most.
+
+**Example output:**
+
+```
+bayesian_trust:       mean=0.4418  ci95=[0.3901, 0.4941]
+bayesian_trend:       mean=0.2981  ci95=[0.2310, 0.3650]
+bayesian_opportunity: mean=0.2489  ci95=[0.1804, 0.3172]
+```
 
 ---
 

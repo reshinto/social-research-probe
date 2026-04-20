@@ -44,6 +44,8 @@ srp config set corroboration.max_claims_per_item 3    # fewer queries per video
 srp config set corroboration.max_claims_per_session 30 # more total claims
 ```
 
+![Corroboration pipeline flow](diagrams/corroboration_flow.svg)
+
 ---
 
 ## Backends
@@ -144,6 +146,27 @@ Section 6 shows a summary for each top-5 item. For each item you will see:
 - **Supported** — the number of independent sources that confirm or are consistent with the video's claims
 - **Contradicted** — sources that directly disagree
 - **Snippets** — short excerpts from the most relevant sources, with URLs
+
+**Example output:**
+
+```
+### Evidence — "AI researchers warn of model collapse risk" (DeepMindChannel)
+
+Claim: "Training on AI-generated data causes quality degradation over iterations"
+  ✓ Supported by 4 sources
+  → Nature (2025): "Recursive training on synthetic data accelerates capability degradation..."
+  → arXiv:2502.14891: "Model collapse: a systematic review of causes and mitigations..."
+
+Claim: "GPT-4 level models require 10T tokens of human-generated text"
+  ✓ Supported by 2 sources
+  → OpenAI technical report (2024): "Pre-training corpus totalled approximately 10 trillion tokens..."
+
+Claim: "Synthetic data can replace human data by 2027"
+  ✗ Contradicted by 3 sources
+  → MIT Technology Review: "Experts dispute timeline; synthetic data quality remains inconsistent..."
+
+Corroboration score: 7/9 claims supported  |  Backend: exa
+```
 
 A high supported count does not mean the video is correct — it means the claim is *common* on the web, which could mean it is widely accepted or widely repeated misinformation. Always follow the source links and read them in context.
 

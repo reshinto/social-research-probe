@@ -146,6 +146,7 @@ srp config set llm.runner claude
 | [docs/installation.md](docs/installation.md) | Install (pip/pipx/uvx), API keys, LLM runner, verification |
 | [docs/usage.md](docs/usage.md) | Run research, read output, configure video count |
 | [docs/corroboration.md](docs/corroboration.md) | Claim corroboration: what it is, backends, configuration |
+| [docs/llm-runners.md](docs/llm-runners.md) | Supported runners, ensemble, what breaks without one |
 | [docs/statistics.md](docs/statistics.md) | All 15+ statistical models: what they measure, how to interpret |
 | [docs/charts.md](docs/charts.md) | Every chart: what it shows, where it's saved, file persistence |
 | [docs/commands.md](docs/commands.md) | Every flag, config key, exit code, environment variable |

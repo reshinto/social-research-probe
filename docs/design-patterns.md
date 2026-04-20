@@ -26,6 +26,8 @@ The simplest alternative would be to pass the platform name as a string and `if 
 
 Adapters add one layer of indirection. If you never add a second platform, the interface is overhead that buys nothing. It was included here because the data model (YouTube video metadata) is not generic and the effort to abstract it would have been wasted if the project stays YouTube-only. The bet is that the overhead is small enough to justify the extensibility.
 
+![Adapter pattern diagram](diagrams/dp_adapter.svg)
+
 ---
 
 ## Registry Pattern
@@ -47,6 +49,8 @@ For a single platform with no config, a direct import is simpler: `from .youtube
 ### The tradeoff
 
 Registries hide which implementations are available — you can't see them by reading a single file. The registry files themselves (`registry.py`) are the single source of truth and are kept small to mitigate this.
+
+![Registry pattern diagram](diagrams/dp_registry.svg)
 
 ---
 
@@ -73,6 +77,8 @@ You could hard-code Exa as the only corroboration backend and remove the selecti
 
 Strategy selection adds a runtime dispatch step and makes it harder to trace "what actually runs" from reading the code alone. The config file is now part of understanding the execution path, which is an operational cost.
 
+![Strategy pattern diagram](diagrams/dp_strategy.svg)
+
 ---
 
 ## Pipeline / Chain-of-Steps
@@ -94,6 +100,8 @@ A dynamic pipeline would let you register stages in any order, skip stages via c
 ### The tradeoff
 
 The fixed sequence is inflexible. If a future use case needs to run corroboration before enrichment (to filter low-credibility items before spending LLM budget), the orchestrator would need refactoring. For now, the simplicity of "read top-to-bottom and you understand the whole pipeline" is the right tradeoff.
+
+![Pipeline pattern diagram](diagrams/dp_pipeline.svg)
 
 ---
 
@@ -166,6 +174,8 @@ Mocks test that the code *calls* the right method with the right arguments. Fake
 ### The tradeoff
 
 The env-based seam is invisible in the code — there is no import statement to follow. A reader unfamiliar with the pattern may not realise the fake is registered. The `_maybe_register_fake` function makes this explicit; the comment in `conftest.py` explains the convention to new contributors.
+
+![Fake-via-environment test seam diagram](diagrams/dp_fake_seam.svg)
 
 ---
 

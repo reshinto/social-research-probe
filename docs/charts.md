@@ -64,6 +64,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 ## Chart reference
 
+> All sample charts below use randomly generated data with 15 videos to illustrate what each chart looks like. Your actual charts will reflect real research results.
+
 ### Overall Score Bar Chart
 
 **File:** `overall_score_bar.png`
@@ -73,6 +75,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 **How to read it:** The longer the bar, the higher the video ranked. A steep step-down between the first and second bars means one video is a clear standout. Bars of similar length mean the top results are closely matched.
 
 **What to look for:** Large gaps between adjacent bars indicate natural quality tiers. If all bars are roughly the same length, the scoring did not find strong differentiation — consider widening your search with a different purpose.
+
+![Sample overall score bar chart](images/overall_score_bar.png)
 
 ---
 
@@ -86,6 +90,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **What to look for:** A sharp cliff between rank 5 and rank 6 confirms that the top-5 enrichment budget is well-targeted. A flat line across all ranks suggests you may want to widen `max_items` to find more differentiated content.
 
+![Sample score rank decay line chart](images/overall_score_by_rank_line.png)
+
 ---
 
 ### Overall Score Histogram
@@ -97,6 +103,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 **How to read it:** A right-skewed histogram (most bars on the left, long tail to the right) means most videos scored low with a few high-quality outliers. A symmetric, bell-shaped histogram means results are evenly distributed around an average quality level.
 
 **What to look for:** If the histogram is bimodal (two peaks), there are two distinct quality tiers — credible sources and low-quality sources — which is useful to know when interpreting the top-5 selection.
+
+![Sample overall score histogram](images/overall_score_histogram.png)
 
 ---
 
@@ -110,6 +118,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **What to look for:** Points far above the regression line are high-opportunity, high-trust videos that stand out on both dimensions — the best candidates for deep analysis. Points below the line are sources with credibility but low engagement, suggesting specialist or niche content.
 
+![Sample trust vs opportunity regression scatter](images/trust_vs_opportunity_regression.png)
+
 ---
 
 ### Trust vs Trend Regression Scatter
@@ -122,6 +132,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **What to look for:** A cluster of high-trust, high-trend points indicates authoritative sources that are gaining momentum — strong candidates for the top-5. Points with high trend but low trust are viral but unverified; treat their claims with extra scrutiny.
 
+![Sample trust vs trend regression scatter](images/trust_vs_trend_regression.png)
+
 ---
 
 ### Trust vs Opportunity Scatter (raw)
@@ -132,6 +144,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **How to read it:** Look for clusters, gaps, and outliers. A tight cluster in the bottom-left means most content is low-trust and low-opportunity. Isolated points in the top-right are rare high-quality finds.
 
+![Sample trust vs opportunity scatter](images/trust_vs_opportunity_scatter.png)
+
 ---
 
 ### Trust vs Trend Scatter (raw)
@@ -141,6 +155,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 **What it shows:** Raw scatter of trust vs trend without a fitted line.
 
 **How to read it:** Same as the trust vs opportunity scatter but for trend dynamics. Useful for identifying videos that are spiking in views (high trend) regardless of their channel credibility.
+
+![Sample trust vs trend scatter](images/trust_vs_trend_scatter.png)
 
 ---
 
@@ -157,6 +173,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 - A negative age–trend correlation means newer videos are trending faster — the topic is accelerating.
 - A high engagement–opportunity correlation is expected and confirms the scoring is internally consistent.
 
+![Sample feature correlation heatmap](images/feature_correlations.png)
+
 ---
 
 ### Regression Residuals Plot
@@ -169,6 +187,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **What to look for:** A large positive outlier at a low rank (e.g. rank 15) suggests a hidden gem that the scoring placed low but whose quality exceeds its rank — worth investigating manually.
 
+![Sample regression residuals plot](images/overall_by_rank_residuals.png)
+
 ---
 
 ### Top-10 Summary Table
@@ -180,6 +200,8 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 **How to read it:** This is a quick reference for the scores of each item. Use it alongside the report's Section 3 (Top Items) which includes the video title and transcript summary.
 
 **What to look for:** Entries where trust is high but trend is low are authoritative but not currently viral — good candidates for "under the radar" expert commentary. Entries where trend is high but trust is low are viral but unverified — proceed with critical scrutiny.
+
+![Sample top-10 summary table](images/top5_summary_table.png)
 
 ---
 
