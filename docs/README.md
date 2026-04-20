@@ -2,54 +2,48 @@
 
 [Home](README.md)
 
-`srp` is an evidence-first social-media research CLI that fetches YouTube content, scores it by trust and trend signals, auto-corroborates claims, generates LLM synthesis, and renders an HTML report — all from a single command.
+`srp` is an evidence-first social-media research CLI. You give it a topic and an intent; it fetches YouTube content, scores it, enriches the top results with transcripts and LLM summaries, cross-checks claims with web-search APIs, runs statistical analysis, and produces an HTML report.
 
 ---
 
-## For New Users
+## New here? Start with these
 
-| Document | Description |
+| Document | What it covers |
 |---|---|
-| [Installation](installation.md) | Install from PyPI or source, configure secrets, verify setup |
-| [Usage Guide](usage.md) | Run your first research, understand topics/purposes, view reports |
-| [Command Reference](commands.md) | Every command, flag, and exit code |
-
----
-
-## For Operators
-
-| Document | Description |
-|---|---|
-| [Security](security.md) | Threat model, secret storage, network egress, hardening checklist |
-| [Command Reference](commands.md) | Config subcommands, secret management, environment variables |
-
----
-
-## For Contributors
-
-| Document | Description |
-|---|---|
-| [Architecture](architecture.md) | System design, module map, data flow, extension points |
-| [Design Patterns](design-patterns.md) | Patterns used in the codebase (adapter, registry, strategy, pipeline) |
-| [Python Language Guide](python-language-guide.md) | TypedDicts, protocols, async patterns, fixture conventions |
-| [Testing](testing.md) | Test tiers, TDD workflow, coverage gate, fake adapters |
+| [Installation](installation.md) | Step-by-step setup: install, API keys, LLM runner, verification |
+| [Usage Guide](usage.md) | Run your first research, read the output, configure video count |
+| [Corroboration](corroboration.md) | What claim corroboration is and how to configure it |
 
 ---
 
 ## Reference
 
-| Document | Description |
+| Document | What it covers |
 |---|---|
-| [model-applicability.md](model-applicability.md) | Which LLM models are recommended for which pipeline stages |
-| [commands.md](commands.md) | Deep flag reference and exit-code table |
+| [Command Reference](commands.md) | Every flag, config key, exit code, and environment variable |
+| [Statistics](statistics.md) | All 15+ statistical models: what they measure and how to interpret output |
+| [Charts](charts.md) | Every chart: what it shows, how to read it, what to look for |
+| [Statistical Model Reference](model-applicability.md) | Model-to-module mapping, minimum dataset sizes, planned additions |
 
 ---
 
-## Project Files
+## For contributors
 
-| File | Description |
+| Document | What it covers |
 |---|---|
-| [CHANGELOG.md](../CHANGELOG.md) | Release history in Keep-a-Changelog format |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits, versioning |
+| [Architecture](architecture.md) | System design, data flow, async model, design tradeoffs, known limitations |
+| [Design Patterns](design-patterns.md) | Adapter, registry, strategy, pipeline, and other patterns — with why/why-not rationale |
+| [Python Language Guide](python-language-guide.md) | TypedDicts, protocols, async conventions, pytest fixtures |
+| [Testing](testing.md) | Test tiers, TDD workflow, 100% coverage gate, fake adapters |
+| [Security](security.md) | Secret storage, network egress, trust boundaries, hardening checklist |
+
+---
+
+## Project files
+
+| File | What it covers |
+|---|---|
+| [CHANGELOG.md](../CHANGELOG.md) | Release history |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits |
 | [SECURITY.md](../SECURITY.md) | Responsible disclosure policy |
 | [LICENSE](../LICENSE) | MIT license |

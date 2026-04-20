@@ -142,14 +142,17 @@ srp config set llm.runner claude
 
 | Document | What it covers |
 |---|---|
-| [docs/README.md](docs/README.md) | Documentation hub — all docs indexed by audience |
-| [docs/installation.md](docs/installation.md) | pip / pipx / uvx install, secrets, Claude Code skill |
-| [docs/usage.md](docs/usage.md) | Research commands, reports, corroboration modes |
-| [docs/commands.md](docs/commands.md) | Every flag, exit code, and environment variable |
-| [docs/architecture.md](docs/architecture.md) | System design, data flow, async model, tradeoffs |
-| [docs/design-patterns.md](docs/design-patterns.md) | Adapter, registry, strategy, pipeline patterns |
+| [docs/README.md](docs/README.md) | Documentation hub — all docs by audience |
+| [docs/installation.md](docs/installation.md) | Install (pip/pipx/uvx), API keys, LLM runner, verification |
+| [docs/usage.md](docs/usage.md) | Run research, read output, configure video count |
+| [docs/corroboration.md](docs/corroboration.md) | Claim corroboration: what it is, backends, configuration |
+| [docs/statistics.md](docs/statistics.md) | All 15+ statistical models: what they measure, how to interpret |
+| [docs/charts.md](docs/charts.md) | Every chart: what it shows, where it's saved, file persistence |
+| [docs/commands.md](docs/commands.md) | Every flag, config key, exit code, environment variable |
+| [docs/architecture.md](docs/architecture.md) | System design, data flow, tradeoffs, known limitations |
+| [docs/design-patterns.md](docs/design-patterns.md) | Patterns with why/why-not rationale |
 | [docs/testing.md](docs/testing.md) | Test tiers, TDD workflow, 100% coverage gate |
-| [docs/security.md](docs/security.md) | Secret storage, network egress, hardening checklist |
+| [docs/security.md](docs/security.md) | Secret storage, network egress, hardening |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits |
 | [SECURITY.md](SECURITY.md) | Responsible disclosure policy |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |

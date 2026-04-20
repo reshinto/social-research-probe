@@ -62,19 +62,32 @@ _(LLM synthesis unavailable — runner disabled or all runners failed; see termi
 
 The full report is written to:
 ```
-~/.social-research-probe/reports/<topic>_<purpose>_<date>.html
+~/.social-research-probe/reports/<topic-slug>-<platform>-<YYYYMMDD-HHMMSS>.html
 ```
 
-Open it in any browser. It is self-contained — all charts are embedded and it has a built-in text-to-speech player. The HTML report is the authoritative document; the stdout Markdown is a quick inline summary.
+For example: `ai-safety-youtube-20260420-183000.html`
+
+Each run creates a **new file** — old reports are never overwritten. Open the file in any browser. It is self-contained — all charts are embedded and it includes a built-in text-to-speech player. The HTML report is the authoritative document; the stdout Markdown is a quick inline summary.
 
 ### Chart PNGs
 
-All rendered charts are saved to:
+Charts are saved to `~/.social-research-probe/charts/` with fixed filenames:
+
 ```
 ~/.social-research-probe/charts/
+├── overall_score_bar.png
+├── overall_score_by_rank_line.png
+├── overall_score_histogram.png
+├── trust_vs_opportunity_regression.png
+├── trust_vs_trend_regression.png
+├── trust_vs_opportunity_scatter.png
+├── trust_vs_trend_scatter.png
+├── feature_correlations_heatmap.png
+├── overall_by_rank_residuals.png
+└── top5_summary_table.png
 ```
 
-Each run appends new files. Chart types include: score distribution bar, view-velocity trend line, cluster scatter, regression residuals, Kaplan–Meier survival curve, and others depending on the data.
+**Charts are overwritten on every run.** If you need to preserve charts from a specific run, either copy them out of the directory or use the HTML report — the HTML embeds all charts at generation time and is not affected by later runs.
 
 ### JSON packet
 
