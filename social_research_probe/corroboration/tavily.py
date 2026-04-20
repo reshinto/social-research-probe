@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import httpx
+
 from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
@@ -61,7 +63,7 @@ class TavilyBackend(CorroborationBackend):
             )
         return key
 
-    def _search(self, query: str) -> list[dict]:
+    async def _search(self, query: str) -> list[dict]:
         """Call the Tavily search API and return raw result items.
 
         Args:
@@ -74,27 +76,21 @@ class TavilyBackend(CorroborationBackend):
         Raises:
             AdapterError: on network failures or missing API key.
         """
-        import json
-        import urllib.error
-        import urllib.request
-
-        payload = json.dumps({"query": query, "max_results": 5}).encode()
-        req = urllib.request.Request(
-            "https://api.tavily.com/search",
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self._api_key()}",
-                "User-Agent": HTTP_USER_AGENT,
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read())
-        except urllib.error.URLError as exc:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.tavily.com/search",
+                    json={"query": query, "max_results": 5},
+                    headers={
+                        "Authorization": f"Bearer {self._api_key()}",
+                        "User-Agent": HTTP_USER_AGENT,
+                    },
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                return resp.json().get("results", [])
+        except httpx.HTTPError as exc:
             raise AdapterError(f"tavily search failed: {exc}") from exc
-        return data.get("results", [])
 
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:
         """Convert Tavily API result items into a CorroborationResult.
@@ -121,7 +117,7 @@ class TavilyBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         """Search Tavily for evidence supporting or refuting the claim.
 
         Args:
@@ -134,5 +130,5 @@ class TavilyBackend(CorroborationBackend):
             AdapterError: if the API key is missing or the HTTP call fails.
         """
         log(f"[srp] tavily: searching for claim: {claim.text[:80]!r}")
-        raw = self._search(claim.text)
+        raw = await self._search(claim.text)
         return self._build_result(claim, raw)

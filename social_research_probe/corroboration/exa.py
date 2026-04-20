@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import httpx
+
 from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
@@ -61,7 +63,7 @@ class ExaBackend(CorroborationBackend):
             )
         return key
 
-    def _search(self, query: str) -> list[dict]:
+    async def _search(self, query: str) -> list[dict]:
         """Call the Exa search API and return raw result items.
 
         Args:
@@ -74,25 +76,20 @@ class ExaBackend(CorroborationBackend):
         Raises:
             AdapterError: on network failures or non-200 responses.
         """
-        import json
-        import urllib.error
-        import urllib.request
-
-        payload = json.dumps({"query": query, "numResults": 5}).encode()
-        req = urllib.request.Request(
-            "https://api.exa.ai/search",
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": self._api_key(),
-                "User-Agent": HTTP_USER_AGENT,
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())["results"]
-        except (urllib.error.URLError, KeyError) as exc:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.exa.ai/search",
+                    json={"query": query, "numResults": 5},
+                    headers={
+                        "x-api-key": self._api_key(),
+                        "User-Agent": HTTP_USER_AGENT,
+                    },
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                return resp.json()["results"]
+        except (httpx.HTTPError, KeyError) as exc:
             raise AdapterError(f"exa search failed: {exc}") from exc
 
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:
@@ -124,7 +121,7 @@ class ExaBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:
+    async def corroborate(self, claim) -> CorroborationResult:
         """Search Exa for evidence supporting or refuting the claim.
 
         Args:
@@ -137,5 +134,5 @@ class ExaBackend(CorroborationBackend):
             AdapterError: if the API key is missing or the HTTP call fails.
         """
         log(f"[srp] exa: searching for claim: {claim.text[:80]!r}")
-        raw = self._search(claim.text)
+        raw = await self._search(claim.text)
         return self._build_result(claim, raw)

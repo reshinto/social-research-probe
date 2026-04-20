@@ -90,7 +90,11 @@ async def _collect_responses(
         *[_run_provider(name, prompt, task) for name in providers],
         return_exceptions=True,
     )
-    return {name: resp for name, resp in zip(providers, results, strict=True) if isinstance(resp, str) and resp}
+    return {
+        name: resp
+        for name, resp in zip(providers, results, strict=True)
+        if isinstance(resp, str) and resp
+    }
 
 
 def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> str:

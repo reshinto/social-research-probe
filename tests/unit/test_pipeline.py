@@ -308,14 +308,14 @@ async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
         },
     )
     # Patch get_adapter to return an adapter whose health_check returns False
-    import social_research_probe.pipeline as pipeline_mod
+    import social_research_probe.pipeline.orchestrator as orchestrator_mod
     from social_research_probe.errors import ValidationError
 
     class FailingAdapter:
         def health_check(self):
             return False
 
-    monkeypatch.setattr(pipeline_mod, "get_adapter", lambda name, cfg: FailingAdapter())
+    monkeypatch.setattr(orchestrator_mod, "get_adapter", lambda name, cfg: FailingAdapter())
 
     raw = 'run-research platform:youtube "AI"->latest-news'
     cmd = parse(raw)
@@ -349,7 +349,7 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "first  line\nsecond  line " * 200,
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
             AsyncMock(return_value="Multi-LLM generated summary."),
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "desc"}]
@@ -366,7 +366,7 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "some transcript content",
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
             AsyncMock(return_value=None),
         )
         items = [
@@ -423,7 +423,7 @@ class TestEnrichTop5WithTranscripts:
             lambda url: "Whisper-produced transcript text.",
         )
         monkeypatch.setattr(
-            "social_research_probe.pipeline.multi_llm_prompt",
+            "social_research_probe.pipeline.enrichment.multi_llm_prompt",
             AsyncMock(return_value="Summary from whisper transcript."),
         )
         items = [{"url": "https://x/1", "title": "T", "channel": "C", "one_line_takeaway": "orig"}]
@@ -458,7 +458,7 @@ async def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, t
     )
     called = []
     monkeypatch.setattr(
-        "social_research_probe.pipeline._enrich_top5_with_transcripts",
+        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts",
         AsyncMock(side_effect=called.append),
     )
     cmd = parse('run-research platform:youtube "AI"->latest-news')
@@ -525,7 +525,7 @@ def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path
         def health_check(self) -> bool:
             return True
 
-    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg())
     monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
     assert _available_backends(tmp_path) == ["llm_cli"]
 
@@ -536,7 +536,7 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
     class _Cfg:
         corroboration_backend = "none"
 
-    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda data_dir: _Cfg())
+    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg())
     assert _available_backends(tmp_path) == []
 
 

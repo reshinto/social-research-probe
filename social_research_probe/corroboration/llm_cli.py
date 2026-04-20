@@ -12,6 +12,7 @@ at import time when the corroboration package is loaded.
 
 from __future__ import annotations
 
+import asyncio
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
@@ -118,19 +119,8 @@ class LLMCliBackend(CorroborationBackend):
             backend_name=self.name,
         )
 
-    def corroborate(self, claim) -> CorroborationResult:
-        """Send the claim to the LLM runner and parse the corroboration verdict.
-
-        Args:
-            claim: A Claim dataclass instance to corroborate.
-
-        Returns:
-            CorroborationResult parsed from the LLM's JSON response.
-
-        Raises:
-            AdapterError: if the LLM runner raises or returns an unparseable
-                response.
-        """
+    def _corroborate_sync(self, claim) -> CorroborationResult:
+        """Blocking corroboration call — executed in a thread by corroborate()."""
         from social_research_probe.llm.registry import get_runner
 
         runner_name = self._resolve_runner_name()
@@ -149,3 +139,21 @@ class LLMCliBackend(CorroborationBackend):
             },
         )
         return self._parse_result(raw, claim)
+
+    async def corroborate(self, claim) -> CorroborationResult:
+        """Send the claim to the LLM runner and parse the corroboration verdict.
+
+        Delegates the blocking subprocess call to a thread so the event loop
+        is not blocked during LLM CLI execution.
+
+        Args:
+            claim: A Claim dataclass instance to corroborate.
+
+        Returns:
+            CorroborationResult parsed from the LLM's JSON response.
+
+        Raises:
+            AdapterError: if the LLM runner raises or returns an unparseable
+                response.
+        """
+        return await asyncio.to_thread(self._corroborate_sync, claim)

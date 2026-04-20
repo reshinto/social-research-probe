@@ -151,7 +151,7 @@ async def test_enrich_top5_uses_description_when_transcript_whitespace_only(monk
         lambda _url: "  \n\t  ",
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline.multi_llm_prompt",
+        "social_research_probe.pipeline.enrichment.multi_llm_prompt",
         AsyncMock(return_value="Description-based summary."),
     )
 
@@ -220,13 +220,13 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
         default_structured_runner = "none"
         llm_runner = "none"
 
-    monkeypatch.setattr("social_research_probe.pipeline.Config.load", lambda d: _Cfg())
-    monkeypatch.setattr("social_research_probe.pipeline._available_backends", lambda d: ["exa"])
+    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda d: _Cfg())
+    monkeypatch.setattr("social_research_probe.pipeline.orchestrator._available_backends", lambda d: ["exa"])
     monkeypatch.setattr(
-        "social_research_probe.pipeline._corroborate_top5", AsyncMock(return_value=[])
+        "social_research_probe.pipeline.corroboration._corroborate_top5", AsyncMock(return_value=[])
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline._enrich_top5_with_transcripts", AsyncMock(return_value=None)
+        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts", AsyncMock(return_value=None)
     )
     from tests.unit.test_pipeline import _write_purposes
 
