@@ -120,7 +120,25 @@ Print all current settings.
 ```bash
 srp config set llm.runner claude
 srp config set corroboration.backend host
+srp config set platforms.youtube.max_items 50     # how many videos to fetch (default: 20)
+srp config set platforms.youtube.recency_days 30  # how far back to search in days (default: 90)
 ```
+
+All settings and their defaults:
+
+| Key | Default | Description |
+|---|---|---|
+| `llm.runner` | `none` | LLM provider: `claude`, `gemini`, `codex`, `local`, or `none` |
+| `llm.timeout_seconds` | `60` | Seconds before an LLM subprocess call times out |
+| `platforms.youtube.max_items` | `20` | Maximum videos fetched per search query |
+| `platforms.youtube.recency_days` | `90` | Only return videos published within this many days |
+| `platforms.youtube.cache_ttl_search_hours` | `6` | How long to cache search results |
+| `platforms.youtube.cache_ttl_channel_hours` | `24` | How long to cache channel metadata |
+| `corroboration.backend` | `host` | `host`, `exa`, `brave`, `tavily`, `llm_cli`, or `none` |
+| `corroboration.max_claims_per_item` | `5` | Maximum claims checked per top-5 item |
+| `corroboration.max_claims_per_session` | `15` | Total claim budget per research run |
+
+> **Note:** The number of results that receive full enrichment (transcripts, LLM summaries, corroboration) is fixed at **5** — the top-scoring items from the fetched pool. Increasing `max_items` gives the scoring stage more candidates to rank, which can improve selection quality.
 
 ### `srp config set-secret <name>`
 

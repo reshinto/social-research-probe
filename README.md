@@ -2,14 +2,12 @@
 
 **Evidence-first social-media research CLI + Claude Code skill**
 
-[![CI](https://github.com/user/social-research-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/user/social-research-probe/actions/workflows/ci.yml)
+[![CI](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/social-research-probe)](https://pypi.org/project/social-research-probe/)
 [![Python versions](https://img.shields.io/pypi/pyversions/social-research-probe)](https://pypi.org/project/social-research-probe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-`srp` fetches YouTube content, scores it by trust/trend/opportunity, runs a
-statistical analysis suite, auto-corroborates claims, generates LLM synthesis
-sections, and renders an HTML report — all from a single CLI command.
+`srp` fetches YouTube content, scores it by trust/trend/opportunity, auto-corroborates claims, runs 15+ statistical models, and renders an HTML report — all from a single CLI command.
 
 ---
 
@@ -19,12 +17,13 @@ sections, and renders an HTML report — all from a single CLI command.
 2. [Quickstart](#quickstart)
 3. [Installation](#installation)
 4. [Usage](#usage)
-5. [Documentation map](#documentation-map)
-6. [Architecture](#architecture)
-7. [Contributing](#contributing)
-8. [Security](#security)
-9. [License](#license)
-10. [Changelog](#changelog)
+5. [Configuration](#configuration)
+6. [Documentation](#documentation)
+7. [Architecture](#architecture)
+8. [Contributing](#contributing)
+9. [Security](#security)
+10. [License](#license)
+11. [Changelog](#changelog)
 
 ---
 
@@ -32,20 +31,13 @@ sections, and renders an HTML report — all from a single CLI command.
 
 `srp research` runs a five-stage evidence pipeline:
 
-1. **Fetch** — queries YouTube (or other adapters) for recent content on a topic,
-   applying purpose-driven search enrichment.
-2. **Score** — ranks items by a composite trust / trend / opportunity score
-   derived from channel credibility, view velocity, and cross-channel repetition.
-3. **Enrich** — fetches transcripts (yt-dlp captions → Whisper fallback) and
-   generates 100-word+ LLM summaries via a Claude + Gemini + Codex ensemble.
-4. **Analyse** — runs 15+ statistical models (regression, Bayesian linear,
-   bootstrap, k-means, PCA, Kaplan-Meier, …) and renders charts as PNGs.
-5. **Synthesise** — auto-corroborates top-5 claims via Exa/Brave/Tavily, attaches
-   structured LLM synthesis sections, and emits a Markdown + HTML report.
+1. **Fetch** — queries YouTube for recent content on a topic (configurable count and recency window).
+2. **Score** — ranks items by a composite trust / trend / opportunity score derived from channel credibility, view velocity, and cross-channel repetition.
+3. **Enrich** — fetches transcripts (yt-dlp captions → Whisper fallback) and generates 100-word LLM summaries for the top results.
+4. **Analyse** — runs 15+ statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, …) and renders charts as PNGs.
+5. **Synthesise** — auto-corroborates the top results via Exa/Brave/Tavily, attaches structured LLM synthesis sections, and emits a Markdown + HTML report.
 
-It also ships as a **Claude Code skill** (`/srp`) so you can invoke research,
-manage topics/purposes, and receive formatted reports directly inside a Claude
-Code session.
+It also ships as a **Claude Code skill** (`/srp`) so you can invoke research, manage topics/purposes, and receive formatted reports directly inside a Claude Code session.
 
 ---
 
@@ -53,10 +45,11 @@ Code session.
 
 ```bash
 pip install social-research-probe
+srp config set-secret YOUTUBE_API_KEY
 srp research "AI safety" "latest-news"
 ```
 
-Or in natural-language mode:
+Or in natural-language mode (requires `llm.runner` configured):
 
 ```bash
 srp research "what are researchers saying about model collapse?"
@@ -67,25 +60,28 @@ srp research "what are researchers saying about model collapse?"
 ## Installation
 
 ```bash
-# From PyPI
+# pip
 pip install social-research-probe
 
+# pipx (isolated environment, recommended for CLI tools)
+pipx install social-research-probe
+
+# uvx (run without installing)
+uvx social-research-probe research "AI safety" "latest-news"
+
 # From source (development)
-git clone https://github.com/user/social-research-probe
+git clone https://github.com/reshinto/social-research-probe
 cd social-research-probe
 pip install -e '.[dev]'
 ```
 
-Required environment variables (copy `.env.example` and fill in):
+After installing, set your YouTube API key:
 
-```
-YOUTUBE_API_KEY=...
-EXA_API_KEY=...          # optional — corroboration
-BRAVE_API_KEY=...        # optional — corroboration
-TAVILY_API_KEY=...       # optional — corroboration
+```bash
+srp config set-secret YOUTUBE_API_KEY
 ```
 
-Secrets are stored securely via `srp config set-secret <name>`.
+See [docs/installation.md](docs/installation.md) for full setup including optional keys and the Claude Code skill bundle.
 
 ---
 
@@ -98,6 +94,9 @@ srp research youtube "AI agents" "latest-news,trends"
 
 # Natural-language query (auto-classifies topic + purpose)
 srp research "who is winning the LLM benchmarks race?"
+
+# Change how many videos are fetched (default: 20)
+srp config set platforms.youtube.max_items 50
 
 # Manage topics and purposes
 srp update-topics --add "climate tech"
@@ -114,39 +113,54 @@ srp install-skill
 
 Full flag reference: `srp --help` / `srp <subcommand> --help`.
 
+See [docs/usage.md](docs/usage.md) for a complete guide including corroboration modes, report generation, and the pending-proposal workflow.
+
 ---
 
-## Documentation map
+## Configuration
 
-| Document | Description |
+Key settings in `~/.social-research-probe/config.toml`:
+
+| Setting | Default | What it controls |
+|---|---|---|
+| `platforms.youtube.max_items` | `20` | How many videos to fetch per search |
+| `platforms.youtube.recency_days` | `90` | How far back to search (days) |
+| `llm.runner` | `none` | Which LLM to use for summaries and synthesis |
+| `corroboration.backend` | `host` | Which web-search backend to corroborate with |
+
+Change any setting with `srp config set <key> <value>`, e.g.:
+
+```bash
+srp config set platforms.youtube.max_items 50
+srp config set platforms.youtube.recency_days 30
+srp config set llm.runner claude
+```
+
+---
+
+## Documentation
+
+| Document | What it covers |
 |---|---|
-| [docs/MODEL_APPLICABILITY.md](docs/MODEL_APPLICABILITY.md) | Which LLM models are recommended for which pipeline stages |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, TDD rules, file size limits, versioning |
-| [SECURITY.md](SECURITY.md) | Responsible disclosure policy and scope |
-| [CHANGELOG.md](CHANGELOG.md) | Release history in Keep-a-Changelog format |
+| [docs/README.md](docs/README.md) | Documentation hub — all docs indexed by audience |
+| [docs/installation.md](docs/installation.md) | pip / pipx / uvx install, secrets, Claude Code skill |
+| [docs/usage.md](docs/usage.md) | Research commands, reports, corroboration modes |
+| [docs/commands.md](docs/commands.md) | Every flag, exit code, and environment variable |
+| [docs/architecture.md](docs/architecture.md) | System design, data flow, async model, tradeoffs |
+| [docs/design-patterns.md](docs/design-patterns.md) | Adapter, registry, strategy, pipeline patterns |
+| [docs/testing.md](docs/testing.md) | Test tiers, TDD workflow, 100% coverage gate |
+| [docs/security.md](docs/security.md) | Secret storage, network egress, hardening checklist |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits |
+| [SECURITY.md](SECURITY.md) | Responsible disclosure policy |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ---
 
 ## Architecture
 
-`srp` is a Python CLI (`social_research_probe/cli/`) that delegates to a
-research pipeline (`social_research_probe/pipeline/`). The pipeline calls
-platform adapters, a scoring layer, a stats suite, an LLM ensemble, and
-corroboration backends, then feeds the result to the synthesis layer which
-produces Markdown + HTML output.
+`srp` is a layered Python CLI. The CLI parses arguments and delegates to the research pipeline, which calls platform adapters, a scoring layer, a stats suite, an LLM ensemble, and corroboration backends, then feeds the result to the synthesis layer.
 
-Key packages:
-
-| Package | Responsibility |
-|---|---|
-| `cli/` | Argument parsing, subcommand dispatch, synthesis attachment |
-| `pipeline/` | Orchestration: fetch → score → enrich → stats → corroborate |
-| `platforms/` | Platform adapters (YouTube today; extensible) |
-| `synthesize/` | Packet formatting, statistical explanations, LLM contracts |
-| `corroboration/` | Exa / Brave / Tavily backends + claim host |
-| `llm/` | Multi-LLM ensemble, runner registry, async subprocess execution |
-| `stats/` | 15+ statistical models (regression, clustering, survival, …) |
-| `viz/` | PNG chart rendering via matplotlib |
+See [docs/architecture.md](docs/architecture.md) for the full system design including data flow diagrams, async model, design tradeoffs, and extension points.
 
 ---
 

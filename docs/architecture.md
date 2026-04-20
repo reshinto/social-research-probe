@@ -2,7 +2,15 @@
 
 [Home](README.md) → Architecture
 
-`srp` is a Python CLI that delegates to a five-stage research pipeline. This document describes the module layout, data flow, and extension points.
+---
+
+## What is this system?
+
+`srp` is a **local research pipeline** that turns a topic and intent into an evidence-backed report. You give it a subject (e.g. `"AI safety"`) and a purpose (e.g. `"latest-news"`), and it fetches relevant YouTube content, scores it for credibility and trend signal, enriches the top results with transcripts and LLM summaries, corroborates the top claims with web-search APIs, runs statistical analysis, and outputs a structured Markdown + HTML report.
+
+**Who is it for?** Researchers, analysts, and content strategists who want a reproducible, evidence-first view of what is being said on a topic — without manually watching dozens of videos or trusting a single search result.
+
+**Why does it exist?** Manual social-media research is slow, non-reproducible, and susceptible to recency bias and algorithmic bubbles. `srp` applies a consistent scoring and evidence pipeline so every run on the same topic produces a comparable, auditable result.
 
 ---
 
@@ -16,45 +24,84 @@
 
 ![Component diagram](diagrams/components.svg)
 
+---
+
 ## Layered Module Map
 
-| Package | Responsibility |
-|---|---|
-| `cli/` | Argument parsing, subcommand dispatch, synthesis attachment. Zero pipeline logic. |
-| `commands/` | Parsed command value objects (`ParsedRunResearch`) built from raw argparse namespaces. |
-| `pipeline/` | Orchestration: adapter setup → search → enrich → score → corroborate → synthesize. |
-| `platforms/` | Platform adapter interface (`PlatformAdapter`) + YouTube implementation. |
-| `corroboration/` | Exa, Brave, and Tavily web-search backends plus `host` auto-discovery mode. |
-| `llm/` | Multi-LLM ensemble — Claude, Gemini, and Codex fan-out with first-success fallback. |
-| `stats/` | 15+ statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, …). |
-| `viz/` | PNG chart rendering via matplotlib. |
-| `synthesize/` | Evidence summaries, packet builder, warning detection, Markdown + HTML formatter. |
-| `scoring/` | Composite trust / trend / opportunity score formulas. |
-| `purposes/` | Purpose registry, merge semantics, pending-proposal workflow. |
-| `state/` | Persistent on-disk state for topics, purposes, and proposals. |
-| `config.py` | `Config` dataclass loaded from TOML; single source of truth for all settings. |
+| Package | Who uses it | What it does |
+|---|---|---|
+| `cli/` | Operator (shell / Claude Code) | Parses arguments, dispatches subcommands, formats output. Zero pipeline logic. |
+| `commands/` | `cli/` | Typed value objects (e.g. `ParsedRunResearch`) built from raw argparse namespaces. |
+| `pipeline/` | `cli/` | Orchestrates the five-stage research loop. |
+| `platforms/` | `pipeline/orchestrator` | Platform adapter interface + YouTube implementation. Extensible to other platforms. |
+| `corroboration/` | `pipeline/corroboration` | Exa, Brave, and Tavily backends; `host` auto-discovery; `llm_cli` fallback. |
+| `llm/` | `pipeline/enrichment`, `commands/config` | Multi-LLM ensemble (Claude, Gemini, Codex) with first-success fallback. |
+| `stats/` | `pipeline/stats` | 15+ statistical models: regression, Bayesian, bootstrap, clustering, survival. |
+| `viz/` | `pipeline/charts` | Headless PNG chart rendering via matplotlib. |
+| `synthesize/` | `pipeline/orchestrator` | Evidence summaries, warning detection, packet builder, Markdown + HTML formatter. |
+| `scoring/` | `pipeline/orchestrator` | Composite trust / trend / opportunity score; z-score normalisation. |
+| `purposes/` | `pipeline/orchestrator`, `commands/` | Purpose registry, merge semantics, pending-proposal workflow. |
+| `state/` | `commands/` | On-disk persistence for topics, purposes, and pending proposals. |
+| `config.py` | Everywhere | `Config` dataclass loaded from TOML. Single source of truth for all settings. |
 
 ---
 
 ## Pipeline Walkthrough
 
-The core pipeline runs inside `pipeline/orchestrator.py::run_research`.
+The core loop runs in `pipeline/orchestrator.py::run_research`.
 
-![Research sequence](diagrams/research-sequence.svg)
+![Research sequence diagram](diagrams/research-sequence.svg)
 
-### Stages
+### Stage 1 — Fetch
 
-1. **Adapter setup** — resolve the platform adapter from the registry; run `health_check()`.
-2. **Per-topic loop** — for each `(topic, purpose)` pair:
-   - Enrich the query using topic keywords and purpose metadata.
-   - Search the platform adapter (`adapter.search(query, limits)`).
-   - Enrich each result: fetch transcripts (YouTube captions → Whisper fallback), generate a 100-word LLM summary.
-   - Compute signals: view velocity, channel credibility, cross-channel repetition.
-   - Score and z-score each item; extract the top-5.
-3. **Corroboration** — for each top-5 item, query one or more corroboration backends (Exa / Brave / Tavily) concurrently; attach evidence snippets.
-4. **Statistics** — run `_build_stats_summary` over all scored items: 15+ models including regression, Bayesian, bootstrap, clustering, and survival analysis.
-5. **Charts** — render PNGs for score distribution, trend lines, cluster maps, etc.
-6. **Packet assembly** — `synthesize/formatter.build_packet` assembles a `ResearchPacket`; multi-topic runs produce a `MultiResearchPacket`.
+**What:** Queries the platform adapter for recent content matching the topic and purpose.
+
+**Why this design:** The adapter interface (`PlatformAdapter`) decouples the pipeline from any specific platform. Today that is YouTube; adding Twitter/X, Reddit, or a podcast index means implementing one class, not touching the pipeline.
+
+**Key config:** `platforms.youtube.max_items` (default 20) — how many videos to fetch. `platforms.youtube.recency_days` (default 90) — how far back to search.
+
+### Stage 2 — Score
+
+**What:** Each item receives a composite score from three sub-scores:
+
+- **Trust** — channel credibility based on subscriber count, verified status, and historic performance.
+- **Trend** — view velocity (views per hour since publish) and cross-channel repetition.
+- **Opportunity** — engagement rate relative to channel size.
+
+Scores are z-score normalised across the fetched pool so results are comparable across runs with different pool sizes.
+
+**Why:** A raw view count favours established channels and viral content. The composite + z-score approach surfaces credible, trending, *and* underexposed material that a simple sort-by-views would miss.
+
+### Stage 3 — Enrich
+
+**What:** The top-5 scored items receive:
+
+1. Full transcripts — fetched via yt-dlp captions; Whisper transcription as fallback if captions are unavailable.
+2. A 100-word LLM summary of the transcript, generated by the configured LLM ensemble.
+
+**Why top-5 only:** Transcript fetching and LLM calls are expensive (time and API cost). Enriching all 20+ fetched items would make runs impractically slow. The scoring stage acts as a gate.
+
+**Note:** The top-5 count is not currently configurable. Increasing `max_items` improves selection quality by giving the scorer more candidates to rank — it does not change the enrichment budget.
+
+### Stage 4 — Analyse
+
+**What:** Runs 15+ statistical models over all scored items (not just top-5):
+
+- Regression: OLS, Bayesian linear, Lasso/Ridge
+- Unsupervised: k-means, PCA, DBSCAN
+- Distribution: bootstrap confidence intervals, KDE
+- Survival: Kaplan–Meier on publish → peak-views time
+- Time-series: trend decomposition, autocorrelation
+
+Renders PNGs for score distribution, trend lines, cluster maps, residual plots.
+
+**Why so many models?** Different research purposes call for different lenses. A `"trends"` purpose benefits from time-series decomposition; `"emerging-research"` benefits from outlier detection. Running all models lets the synthesis layer select which results are most relevant to the stated purpose.
+
+### Stage 5 — Synthesise
+
+**What:** Corroborates the top-5 claims with external web-search APIs (Exa / Brave / Tavily), then assembles a `ResearchPacket` containing all scored items, evidence snippets, statistical summaries, and chart paths. The formatter renders Markdown and a self-contained HTML report.
+
+**Why external corroboration:** YouTube video claims are self-reported. Corroboration checks whether independent sources (news articles, papers, other web content) support the same claims, giving a credibility signal that no amount of in-platform analysis can provide.
 
 ---
 
@@ -69,16 +116,15 @@ topics + purposes
   Platform search  ──► raw items (title, channel, views, url)
        │
        ▼
-  Transcript enrichment  ──► LLM summary (100 words)
+  Score + z-score  ──► ranked list → top-5 selected
        │
        ▼
-  Scoring + z-score  ──► ranked list, top-5
+  Transcript enrichment  ──► LLM summary (top-5 only)
        │
        ▼
-  Corroboration  ──► evidence snippets per top-5 item
+  Corroboration  ──► evidence snippets (top-5 only)
        │
-       ▼
-  Stats + charts  ──► statistical summaries, PNG files
+       ├──► Stats + charts  ──► all scored items
        │
        ▼
   build_packet  ──► ResearchPacket (JSON-serialisable)
@@ -93,12 +139,63 @@ topics + purposes
 
 ![Async fan-out](diagrams/async-fanout.svg)
 
-The pipeline uses `asyncio` for concurrency:
+The pipeline uses `asyncio` throughout to keep the I/O-heavy stages from blocking each other:
 
-- The outer topic loop runs tasks concurrently up to a configurable semaphore limit.
-- Transcript enrichment, LLM ensemble calls, and corroboration backend queries all use `asyncio.gather` for fan-out.
-- Platform adapters that are still synchronous are wrapped with `asyncio.to_thread`.
-- `cli.main` is an async entry point wrapped by a top-level `asyncio.run`.
+| Operation | Concurrency mechanism |
+|---|---|
+| Multi-topic research runs | `asyncio.gather` + `Semaphore` on the outer topic loop |
+| Transcript fetch + LLM summary | `asyncio.gather` across top-5 items |
+| LLM ensemble (Claude + Gemini + Codex) | `asyncio.gather` fan-out; first-success wins |
+| Corroboration backends | `asyncio.gather` across all available backends per item |
+| LLM synthesis fallback | `asyncio.wait(FIRST_COMPLETED)` race between primary and fallback |
+
+Platform adapters that have not been converted to native async are wrapped with `asyncio.to_thread`. The top-level `main()` entry point is `async def`, wrapped by `asyncio.run`.
+
+**Why asyncio over threading?** The hot path is network I/O (YouTube API, LLM APIs, corroboration APIs). `asyncio` handles many concurrent I/O operations efficiently with a single OS thread. Thread pools add overhead and can cause subtle ordering bugs when coroutines are mixed with blocking calls.
+
+---
+
+## Design Tradeoffs
+
+### Local-first vs cloud service
+
+`srp` runs entirely on the operator's machine. All data stays local; nothing is sent to any third party except the APIs you explicitly configure.
+
+**Tradeoff:** No shared state, no caching across users, no horizontal scaling. For a team use case, each analyst runs their own pipeline. A shared service model would need a database, auth, and a job queue — complexity that the current scope does not justify.
+
+### Fixed top-5 enrichment budget
+
+Only the top-5 items receive transcripts and LLM summaries.
+
+**Tradeoff:** You may miss a high-quality item ranked 6th. The mitigation is to increase `max_items` (more candidates) and tune `recency_days` (tighter recency window improves signal-to-noise). Making the enrichment budget configurable is a planned improvement.
+
+### Synchronous platform adapters wrapped in `asyncio.to_thread`
+
+The YouTube adapter uses the sync Google API client library. Wrapping it in `asyncio.to_thread` is a temporary compatibility shim.
+
+**Tradeoff:** Thread overhead on every YouTube API call. A native async adapter using `httpx` would eliminate this, but requires reimplementing the Google API authentication flow. This is on the roadmap but not yet done.
+
+### Multi-LLM ensemble fan-out
+
+All configured LLM runners are called concurrently; the first successful result wins.
+
+**Tradeoff:** Wastes API calls and cost on the runners that lose the race. The benefit is lower latency and resilience to partial outages. A smarter strategy (prefer cheapest available, fall back on failure) is possible but adds routing complexity.
+
+### Statistical overkill
+
+Running 15+ statistical models on a pool of 20–50 YouTube videos is more than most use cases require.
+
+**Tradeoff:** Adds 0.5–2 s to each run (pure Python, no network). The excess results are ignored by the synthesis layer unless the stated purpose calls for them. Removing models that never fire is a future cleanup task tracked in `docs/MODEL_APPLICABILITY.md`.
+
+---
+
+## Known Limitations
+
+- **YouTube only.** No Twitter/X, Reddit, podcast, or blog adapter exists yet.
+- **Top-5 enrichment count is not configurable** without code changes.
+- **No deduplication across runs.** Running the same topic twice generates two separate packets; there is no cross-run comparison or trending view.
+- **LLM summaries require a configured runner.** Without one (`llm.runner = none`), enrichment is skipped and sections 10–11 of the report show placeholders.
+- **Corroboration is best-effort.** If no API keys are configured and `llm.runner = none`, corroboration is silently skipped.
 
 ---
 
@@ -106,15 +203,15 @@ The pipeline uses `asyncio` for concurrency:
 
 ### Add a platform adapter
 
-1. Implement `PlatformAdapter` from `platforms/base.py` (search, enrich, health_check).
+1. Implement `PlatformAdapter` from `platforms/base.py` (`search`, `enrich`, `health_check`).
 2. Register it in `platforms/registry.py`.
 3. Add a fake for tests; register via `SRP_TEST_USE_FAKE_<NAME>=1`.
 
 ### Add a corroboration backend
 
-1. Implement `CorroborationBackend` from `corroboration/base.py` (corroborate, health_check).
+1. Implement `CorroborationBackend` from `corroboration/base.py` (`corroborate`, `health_check`).
 2. Register it in `corroboration/registry.py`.
-3. Backend is auto-discovered when `corroboration.backend = host` and `health_check()` passes.
+3. The backend is auto-discovered when `corroboration.backend = host` and `health_check()` passes.
 
 ### Add a stats model
 
@@ -132,13 +229,11 @@ The pipeline uses `asyncio` for concurrency:
 
 ## Configuration and Data Directory
 
-`Config.load(data_dir)` reads `<data_dir>/config.toml`. The data directory defaults to `~/.social-research-probe` and can be overridden with `$SRP_DATA_DIR`.
-
-The directory layout:
+`Config.load(data_dir)` reads `<data_dir>/config.toml`. Resolution order: `--data-dir` flag → `$SRP_DATA_DIR` env → `.skill-data/` in current directory → `~/.social-research-probe`.
 
 ```
 ~/.social-research-probe/
-├── config.toml          # all settings (llm.runner, corroboration.backend, …)
+├── config.toml          # all settings (see docs/commands.md for full key listing)
 ├── topics.json          # registered topics
 ├── purposes.json        # registered purposes
 ├── pending.json         # proposals awaiting apply/discard
@@ -152,10 +247,13 @@ The directory layout:
 
 ![Release pipeline](diagrams/release-pipeline.svg)
 
-When a `VERSION` file change is pushed to `main`, the `release.yml` workflow creates a git tag, builds the distribution, computes SHA-256 checksums, creates a GitHub release, and publishes to PyPI via OIDC trusted-publishing.
+Pushing a `VERSION` file change to `main` triggers `release.yml`: creates a git tag, builds the wheel and sdist, computes SHA-256 checksums, creates a GitHub release with attached artifacts, then publishes to PyPI via OIDC trusted-publishing (no stored `PYPI_API_TOKEN`).
+
+---
 
 ## See also
 
-- [Design Patterns](design-patterns.md) — patterns that shape the module structure
-- [Testing](testing.md) — how the pipeline is exercised in tests
-- [Security](security.md) — trust boundaries and secret handling
+- [Design Patterns](design-patterns.md) — adapter, registry, strategy, pipeline patterns in the codebase
+- [Testing](testing.md) — test tiers, TDD workflow, 100% coverage gate
+- [Security](security.md) — trust boundaries, secret storage, network egress
+- [Commands](commands.md) — full configuration key reference
