@@ -27,4 +27,4 @@ def test_version_fallback_when_package_not_found(monkeypatch):
     monkeypatch.delitem(sys.modules, "social_research_probe", raising=False)
     import social_research_probe as srp
 
-    assert srp.__version__ == "0.1.0"
+    assert srp.__version__ == "0.0.1"

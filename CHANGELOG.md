@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-04-20
+## [0.0.1] - 2026-04-20
 
 ### Added
+
 - Async hot path: all API calls, corroboration, and LLM ensemble now run concurrently via `asyncio` and `httpx`
 - Multi-LLM transcript summarisation: Claude + Gemini + Codex fan-out with first-success fallback
 - Whisper transcript fallback when YouTube captions unavailable
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This `CHANGELOG.md`
 
 ### Changed
+
 - `pipeline.py` (757L) split into `pipeline/` package: scoring, enrichment, stats, charts, corroboration, svs, orchestrator
 - `cli.py` (611L) split into `cli/` package: parsers, handlers, utils, `__init__`
 - `synthesize/formatter.py` split into `synthesize/explanations/` package with per-model explanation modules
@@ -32,15 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All broad exception handlers narrowed; `asyncio.TimeoutError` replaced with built-in `TimeoutError`
 
 ### Fixed
+
 - Nested `asyncio.run()` inside `asyncio.to_thread()` when adapter called `run_coro()`
 - Late-binding closure bug in pipeline `asyncio.to_thread` lambda
 - `strict=True` added to `zip()` in LLM ensemble response collection
 
-## [0.1.0] - 2026-04-19
+## [0.0.1] - 2026-04-19
 
 ### Added
+
 - Initial release: `srp research`, `srp update-topics`, `srp update-purposes`, corroboration backends, stats suite, chart rendering, Claude Code skill integration
 
-[Unreleased]: https://github.com/user/social-research-probe/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/user/social-research-probe/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/user/social-research-probe/releases/tag/v0.1.0
+[Unreleased]: https://github.com/user/social-research-probe/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/user/social-research-probe/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/user/social-research-probe/releases/tag/v0.0.1
