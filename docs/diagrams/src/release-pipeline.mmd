@@ -1,0 +1,9 @@
+graph LR
+    V["Bump VERSION file\npush to main"]
+    V --> CI["CI workflow\nlint + test (3.11/3.12/3.13)"]
+    V --> REL["release.yml triggers"]
+    REL --> TAG["Create git tag\nv{VERSION}"]
+    TAG --> BUILD["python -m build\ndist/*.whl + *.tar.gz"]
+    BUILD --> SHA["sha256sum checksums"]
+    SHA --> GH["GitHub Release\nsoftprops/action-gh-release"]
+    GH --> PYPI["publish-pypi job\npypa/gh-action-pypi-publish\nOIDC trusted-publishing"]

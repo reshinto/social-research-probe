@@ -1,0 +1,12 @@
+graph LR
+    A["topics + purposes"] --> B["Platform search\nraw items"]
+    B --> C["Transcript enrichment\nLLM summary per item"]
+    C --> D["Scoring + z-score\nranked list"]
+    D --> E["Top-5 selection"]
+    E --> F["Corroboration\nevidence snippets"]
+    E --> G["Stats models\n15+ outputs"]
+    E --> H["Chart rendering\nPNG files"]
+    F --> I["build_packet\nResearchPacket"]
+    G --> I
+    H --> I
+    I --> J["HTML + Markdown report"]

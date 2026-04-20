@@ -16,6 +16,10 @@ Invoke from Claude Code:
 | generating suggestions | suggest-topics, suggest-purposes | [suggest.md](suggest.md) |
 | running research | research | [research.md](research.md) |
 
+## Deep Reference
+
+Full flag listing, environment variables, and exit-code table: `docs/commands.md` in the project repository.
+
 ## Exit Codes
 
 - `0` success (may include warnings)

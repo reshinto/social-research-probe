@@ -1,5 +1,7 @@
 # Statistical Model Coverage Roadmap
 
+[Home](README.md) → Model Applicability
+
 This document catalogues **every** model family listed in the analyst's decision
 tree, maps each to whether it currently runs on the `srp research` output, and
 names the **specific data capture work** required to land the remaining

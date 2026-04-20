@@ -1,0 +1,19 @@
+C4Context
+    title social-research-probe — System Context
+
+    Person(user, "Operator", "Runs srp from CLI or Claude Code session")
+
+    System(srp, "social-research-probe (srp)", "Fetches, scores, corroborates, and synthesises social media research")
+
+    System_Ext(youtube, "YouTube Data API v3", "Video metadata and search")
+    System_Ext(exa, "Exa Search API", "Corroboration web search")
+    System_Ext(brave, "Brave Search API", "Corroboration web search")
+    System_Ext(tavily, "Tavily Search API", "Corroboration web search")
+    System_Ext(llm, "LLM APIs (Claude / Gemini / Codex)", "Transcript summarisation and synthesis")
+
+    Rel(user, srp, "Runs CLI commands", "shell / Claude Code skill")
+    Rel(srp, youtube, "Searches and fetches video metadata", "HTTPS")
+    Rel(srp, exa, "Corroborates top-5 claims", "HTTPS")
+    Rel(srp, brave, "Corroborates top-5 claims", "HTTPS")
+    Rel(srp, tavily, "Corroborates top-5 claims", "HTTPS")
+    Rel(srp, llm, "Generates summaries and synthesis", "HTTPS / subprocess")
