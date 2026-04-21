@@ -71,6 +71,45 @@ class ScoringConfigSection(TypedDict):
     weights: dict[str, float]
 
 
+class FeaturesConfigSection(TypedDict):
+    """Per-feature on/off flags. All default True.
+
+    Flags are independent: disabling one never causes another to fail. A
+    feature whose upstream dependency is disabled silently no-ops. The final
+    report is never gated by these flags.
+    """
+
+    corroboration_enabled: bool
+    gemini_search_enabled: bool
+    exa_enabled: bool
+    brave_enabled: bool
+    tavily_enabled: bool
+    llm_cli_corroboration_enabled: bool
+    enrichment_enabled: bool
+    transcript_fetch_enabled: bool
+    media_url_summary_enabled: bool
+    merged_summary_enabled: bool
+    stats_enabled: bool
+    charts_enabled: bool
+    chart_takeaways_enabled: bool
+    synthesis_enabled: bool
+    html_report_enabled: bool
+    markdown_report_enabled: bool
+
+
+class TunablesConfigSection(TypedDict):
+    """Numeric tunables with no on/off semantics."""
+
+    summary_divergence_threshold: float
+    per_item_summary_words: int
+
+
+class LoggingConfigSection(TypedDict):
+    """Service-log master switch. Default False; env SRP_LOGS overrides."""
+
+    service_logs_enabled: bool
+
+
 class AppConfig(TypedDict):
     """Canonical in-memory shape of config.toml after defaults are applied."""
 
@@ -78,6 +117,9 @@ class AppConfig(TypedDict):
     corroboration: CorroborationConfigSection
     platforms: PlatformsConfigSection
     scoring: ScoringConfigSection
+    features: FeaturesConfigSection
+    tunables: TunablesConfigSection
+    logging: LoggingConfigSection
 
 
 class AdapterConfig(TypedDict, total=False):
@@ -189,7 +231,12 @@ class ScoredItem(TypedDict, total=False):
     scores: ScoreBreakdown
     features: ItemFeatures
     one_line_takeaway: str
+    summary: str
+    url_summary: str
+    summary_divergence: float
+    summary_source: str
     transcript: str
+    corroboration_verdict: str
 
 
 class SourceValidationSummary(TypedDict):
@@ -213,6 +260,47 @@ class StatsSummary(TypedDict):
     low_confidence: bool
 
 
+class Coverage(TypedDict):
+    """What the pipeline fetched vs. what it deeply analysed.
+
+    Lets the synthesis LLM disclose scope (e.g. stats cover all fetched items
+    but transcripts only the enriched top-N) instead of silently over-claiming.
+    """
+
+    fetched: int
+    enriched: int
+    platforms: list[str]
+
+
+class SynthesisItem(TypedDict, total=False):
+    """Compact per-item card seen by the final synthesis LLM."""
+
+    rank: int
+    title: str
+    url: str
+    scores: ScoreBreakdown
+    takeaway: str
+    summary: str
+    corroboration: str
+
+
+class SynthesisContext(TypedDict):
+    """The exact shape passed to the synthesis prompt.
+
+    Pure pass-through from ``ResearchPacket`` — no LLM work, no recomputation,
+    just the already-derived digests. Tolerates every optional upstream field
+    being absent/empty so disabled features silently produce empty sections.
+    """
+
+    topic: str
+    platform: str
+    coverage: Coverage
+    items: list[SynthesisItem]
+    stats_highlights: list[str]
+    chart_takeaways: list[str]
+    warnings: list[str]
+
+
 class ResearchPacket(TypedDict, total=False):
     """Canonical single-topic research packet emitted by the pipeline."""
 
@@ -225,7 +313,9 @@ class ResearchPacket(TypedDict, total=False):
     evidence_summary: str
     stats_summary: StatsSummary
     chart_captions: list[str]
+    chart_takeaways: list[str]
     warnings: list[str]
+    stage_timings: list[dict]
     compiled_synthesis: str
     opportunity_analysis: str
     html_report_path: str

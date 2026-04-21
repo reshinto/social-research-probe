@@ -13,6 +13,11 @@ from __future__ import annotations
 import os
 import re
 
+from social_research_probe.utils.pipeline_cache import (
+    get_str,
+    set_str,
+    transcript_cache,
+)
 from social_research_probe.utils.progress import log
 
 _VIDEO_ID_RE = re.compile(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})")
@@ -37,6 +42,10 @@ def fetch_transcript(url: str) -> str | None:
 
     Uses youtube-transcript-api to access YouTube's public timedtext
     endpoint. Does not require cookies or yt-dlp for the caption path.
+
+    Transcripts are cached by video_id on disk so repeat research runs on the
+    same topic skip the network call entirely. Cache lookup is skipped for
+    fake-test URLs so integration tests remain deterministic.
     """
     if fake := _fake_test_transcript(url):
         return fake
@@ -46,11 +55,19 @@ def fetch_transcript(url: str) -> str | None:
     if not video_id:
         log(f"[srp] captions: cannot parse video id from {url}")
         return None
+    cache = transcript_cache()
+    cached = get_str(cache, video_id)
+    if cached is not None:
+        log(f"[srp] captions: cache hit for {video_id}")
+        return cached
     log(f"[srp] captions: fetching via youtube-transcript-api for {url}")
     try:
         entries = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
         text = "\n".join(e["text"] for e in entries if e.get("text", "").strip())
-        return text or None
+        if text:
+            set_str(cache, video_id, text)
+            return text
+        return None
     except Exception as exc:
         log(f"[srp] captions: unavailable for {url} ({type(exc).__name__})")
         return None

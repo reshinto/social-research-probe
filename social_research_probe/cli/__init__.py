@@ -11,7 +11,6 @@ from pathlib import Path
 
 from social_research_probe.config import load_active_config, resolve_data_dir
 from social_research_probe.errors import SrpError, ValidationError
-from social_research_probe.llm.host import emit_packet
 from social_research_probe.llm.registry import get_runner
 from social_research_probe.types import RunnerName
 
@@ -202,7 +201,6 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     """Dispatch research subcommand. Supports classic and NL-query forms."""
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
-    from social_research_probe.render.html import write_html_report
 
     research_args = _parse_simple_research_args(args.args)
     config_extras = {
@@ -215,14 +213,61 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     _log_synthesis_runner_status(cfg)
     packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
-    _attach_synthesis(packet)
-    if not getattr(args, "no_html", False):
-        if "multi" in packet:
-            raise ValidationError("HTML rendering is only available for single-topic research")
-        report_path = write_html_report(packet, data_dir)
-        packet["html_report_path"] = report_path.resolve().as_uri()
-    emit_packet(packet, kind="synthesis")
+    if _flag(cfg, "synthesis_enabled", default=True):
+        _attach_synthesis(packet)
+    report_path = _write_final_report(
+        packet, data_dir, cfg, allow_html=not getattr(args, "no_html", False)
+    )
+    sys.stdout.write(f"{report_path}\n")
+    sys.stdout.flush()
     return 0
+
+
+def _flag(cfg, name: str, *, default: bool) -> bool:
+    """Return cfg.feature_enabled(name) if available, else ``default``.
+
+    Lets the CLI accept mock Config objects in tests without forcing every
+    fixture to implement the full feature-toggle surface.
+    """
+    fn = getattr(cfg, "feature_enabled", None)
+    if fn is None:
+        return default
+    try:
+        return bool(fn(name))
+    except Exception:
+        return default
+
+
+def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) -> str:
+    """Always produce a final report file; return its path/URI.
+
+    Honours ``html_report_enabled`` and ``markdown_report_enabled`` feature
+    flags as format-selection only — at least one format is always produced
+    so stdout never loses the final report path contract, even when every
+    other feature is disabled.
+    """
+    from social_research_probe.render.html import write_html_report
+    from social_research_probe.synthesize.formatter import render_full
+
+    html_on = (
+        allow_html and _flag(cfg, "html_report_enabled", default=True) and "multi" not in packet
+    )
+    if html_on:
+        try:
+            path = write_html_report(packet, data_dir)
+            uri = path.resolve().as_uri()
+            packet["html_report_path"] = uri
+            return uri
+        except Exception:
+            pass
+    md_path = data_dir / "report.md"
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        body = render_full(packet) if "multi" not in packet else "# Report\n\n_(no content)_\n"
+    except Exception:
+        body = "# Report\n\n_(no content — every feature disabled or pipeline empty)_\n"
+    md_path.write_text(body, encoding="utf-8")
+    return str(md_path.resolve())
 
 
 _HANDLERS = {

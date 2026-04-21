@@ -70,3 +70,30 @@ def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     data_dir.mkdir(exist_ok=True)
     monkeypatch.setenv("SRP_DATA_DIR", str(data_dir))
     return data_dir
+
+
+@pytest.fixture(autouse=True)
+def _disable_pipeline_cache_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable disk caches in tests unless a test explicitly re-enables them.
+
+    Without this, tests that don't patch SRP_DATA_DIR would write cache entries
+    into the user's real ~/.cache/srp directory and cross-pollute each other.
+    Tests that exercise caching behaviour call ``monkeypatch.delenv`` on
+    ``SRP_DISABLE_CACHE`` and point ``SRP_DATA_DIR`` at ``tmp_path``.
+    """
+    monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+
+
+@pytest.fixture(autouse=True)
+def _reset_whisper_model_cache() -> None:
+    """Clear the in-process Whisper model cache between tests.
+
+    The cache key uses ``id(module)`` which CPython can reuse across freed
+    objects, so a stale mock model from an earlier test could masquerade as a
+    hit for a later test's fresh mock. Clearing avoids that cross-contamination.
+    """
+    from social_research_probe.platforms.youtube import whisper_transcript
+
+    whisper_transcript._MODEL_CACHE.clear()
+    yield
+    whisper_transcript._MODEL_CACHE.clear()

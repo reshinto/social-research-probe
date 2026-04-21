@@ -62,6 +62,18 @@ class YouTubeAdapter(PlatformAdapter):
         """Store the merged config built from config.toml and CLI overrides."""
         self.config = config
 
+    def _client(self) -> object:
+        """Build a fresh Google API client per call.
+
+        A previous implementation cached the client across ``search`` and
+        ``enrich`` for a ~300ms cold-start saving, but httplib2's keep-alive
+        socket could go stale in the gap between calls and surface as an SSL
+        record-layer failure. Rebuilding is cheap enough and fully robust.
+        """
+        from social_research_probe.platforms.youtube import fetch
+
+        return fetch.build_client(self._api_key())
+
     def _api_key(self) -> str:
         """Resolve the YouTube API key from env first, then the secrets file."""
         key = os.environ.get("SRP_YOUTUBE_API_KEY")
@@ -98,7 +110,7 @@ class YouTubeAdapter(PlatformAdapter):
 
         from social_research_probe.platforms.youtube import fetch
 
-        client = fetch.build_client(self._api_key())
+        client = self._client()
         published_after = None
         if limits.recency_days:
             dt = datetime.now(UTC) - timedelta(days=limits.recency_days)
@@ -154,7 +166,7 @@ class YouTubeAdapter(PlatformAdapter):
             return items
         from social_research_probe.platforms.youtube import fetch
 
-        client = fetch.build_client(self._api_key())
+        client = self._client()
         video_ids = [it.id for it in items]
         channel_ids = list({it.author_id for it in items if it.author_id})
 

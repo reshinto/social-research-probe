@@ -31,6 +31,29 @@ def test_overall_weights_sum_to_one():
     assert math.isclose(s, 1.0, abs_tol=1e-9)
 
 
+def test_overall_custom_weights_override_defaults():
+    # trust-heavy: only trust contributes to the score
+    s = overall_score(
+        trust=1.0,
+        trend=0.0,
+        opportunity=0.0,
+        weights={"trust": 1.0, "trend": 0.0, "opportunity": 0.0},
+    )
+    assert math.isclose(s, 1.0, abs_tol=1e-9)
+
+
+def test_overall_partial_weights_fill_from_defaults():
+    # Only override trust; trend and opportunity fall back to their defaults (0.30 + 0.25)
+    s = overall_score(trust=0.0, trend=1.0, opportunity=1.0, weights={"trust": 0.0})
+    assert math.isclose(s, 0.55, abs_tol=1e-9)
+
+
+def test_overall_weights_clipped_above_one():
+    # Weighted sum 2.0 — must clip to 1.0
+    s = overall_score(trust=1.0, trend=1.0, opportunity=1.0, weights={"trust": 1.0, "trend": 1.0})
+    assert s == 1.0
+
+
 # --- Additional trend.py coverage (lines 3->exit, 10-11) ---
 
 

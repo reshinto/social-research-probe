@@ -91,6 +91,41 @@ def test_build_synthesis_prompt_empty_items():
 # ---------------------------------------------------------------------------
 
 
+def test_build_synthesis_prompt_contains_synthesis_context_fields():
+    """Prompt must surface stats_highlights, chart_takeaways, coverage, warnings."""
+    packet = {
+        "topic": "ai",
+        "platform": "youtube",
+        "items_top5": [
+            {
+                "title": "T",
+                "url": "u",
+                "scores": {"trust": 0.5, "trend": 0.5, "opportunity": 0.5, "overall": 0.5},
+            }
+        ],
+        "stats_summary": {
+            "highlights": ["trust↔overall r=+0.71"],
+            "models_run": [],
+            "low_confidence": False,
+        },
+        "chart_takeaways": ["Overall distribution: n=5"],
+        "warnings": ["sparse fetch"],
+    }
+    prompt = build_synthesis_prompt(packet)
+    assert "stats_highlights" in prompt
+    assert "chart_takeaways" in prompt
+    assert "coverage" in prompt
+    assert "warnings" in prompt
+    assert "Ground claims" in prompt  # grounding rule
+
+
+def test_build_synthesis_prompt_tolerates_minimal_packet():
+    """A near-empty packet must still produce a renderable prompt."""
+    prompt = build_synthesis_prompt({"topic": "x", "platform": "youtube"})
+    assert "x" in prompt
+    assert "youtube" in prompt
+
+
 def test_parse_synthesis_response_valid():
     """Valid response dict returns both required string fields."""
     raw = {

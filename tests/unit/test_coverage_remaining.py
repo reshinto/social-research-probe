@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
 from unittest.mock import AsyncMock
 
 import pytest
@@ -63,8 +64,8 @@ def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys
     assert calls
     _cmd, _data_dir, adapter_config = calls[0]
     assert adapter_config == {"include_shorts": True, "fetch_transcripts": True}
-    out = capsys.readouterr().out
-    assert '"kind": "synthesis"' in out
+    out = capsys.readouterr().out.strip()
+    assert out.endswith(".html") or out.endswith(".md")
 
 
 def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
@@ -210,6 +211,7 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
 
     class _Cfg:
         corroboration_backend = "exa"
+        raw: ClassVar[dict] = {"scoring": {"weights": {}}}
 
         def platform_defaults(self, name):
             return {}
@@ -222,7 +224,8 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
 
     monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda d: _Cfg())
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator._available_backends", lambda d: ["exa"]
+        "social_research_probe.pipeline.orchestrator._available_backends",
+        lambda d, cfg=None: ["exa"],
     )
     monkeypatch.setattr(
         "social_research_probe.pipeline.corroboration._corroborate_top5", AsyncMock(return_value=[])

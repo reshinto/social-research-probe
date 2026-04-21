@@ -270,3 +270,61 @@ async def test_multi_llm_prompt_uses_local_runner(monkeypatch):
 
     assert await multi_llm_prompt("summarise this video") == "local answer"
     assert calls == ["local"]
+
+
+async def test_service_flags_skip_disabled_providers_in_fanout(monkeypatch):
+    """Providers with <name>_service_enabled=False are excluded from the ensemble."""
+    from social_research_probe.llm import ensemble as llm_mod
+
+    calls: list[str] = []
+
+    class _FakeConfig:
+        llm_runner = "claude"
+        preferred_free_text_runner = None
+
+        def feature_enabled(self, name):
+            # gemini disabled as a service; codex enabled
+            return name != "gemini_service_enabled"
+
+    async def fake_run(name, prompt, task=""):
+        calls.append(name)
+        return f"{name} answer" if "synthesize" not in prompt.lower() else "final"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+    result = await multi_llm_prompt("summarise this")
+    assert result == "final"
+    assert "gemini" not in calls
+
+
+async def test_primary_runner_always_allowed_even_when_service_flag_off(monkeypatch):
+    """If llm_runner matches a provider, its service flag is ignored."""
+    from social_research_probe.llm import ensemble as llm_mod
+
+    class _FakeConfig:
+        llm_runner = "claude"
+        preferred_free_text_runner = "claude"
+
+        def feature_enabled(self, name):
+            return False  # all service flags off
+
+    calls: list[str] = []
+
+    async def fake_run(name, prompt, task=""):
+        calls.append(name)
+        return "ok"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+    assert await multi_llm_prompt("x") == "ok"
+    assert calls == ["claude"]
+
+
+async def test_service_enabled_falls_back_when_cfg_lacks_feature_enabled():
+    """Stub Configs without feature_enabled default to allowing every service."""
+    from social_research_probe.llm.ensemble import _service_enabled
+
+    class _Stub:
+        llm_runner = "none"
+
+    assert _service_enabled(_Stub(), "claude") is True
