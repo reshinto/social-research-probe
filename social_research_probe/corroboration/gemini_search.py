@@ -1,20 +1,35 @@
-"""Gemini CLI google-search corroboration backend.
+"""LLM-backed search corroboration backend (runner-agnostic).
 
-Fact-checks claims by issuing a google-search-grounded query via the Gemini
-CLI. The answer text is classified with a deterministic keyword heuristic to
-produce a verdict; the top citations become sources. Fails silent (returns
-``inconclusive``) when the Gemini CLI is missing or the adapter errors.
+Legacy module name ``gemini_search`` is preserved so existing user configs
+that reference the backend key ``gemini_search`` keep working without
+migration. The implementation no longer hard-codes Gemini: it dispatches
+through the :class:`~social_research_probe.llm.base.LLMRunner` abstraction so
+whichever runner the user has configured (Gemini google-search, Claude
+``web_search``, Codex ``--search``) performs the agentic search.
+
+Flow:
+    1. Resolve the active LLM runner from user config.
+    2. If the runner does not support agentic search, return a no-op result
+       (``health_check`` gates most callers so this is a defensive path).
+    3. Invoke ``runner.agentic_search(claim.text)``; apply the source-quality
+       filter from :mod:`._filters` to strip self-source URLs and video-host
+       domains; classify the answer into a verdict and wrap in a
+       :class:`CorroborationResult`.
 """
 
 from __future__ import annotations
 
-import shutil
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
+from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
-from social_research_probe.llm.gemini_cli import GeminiSearchResult, gemini_search
+from social_research_probe.errors import AdapterError
+from social_research_probe.llm.base import CapabilityUnavailable, LLMRunner
+from social_research_probe.llm.registry import get_runner
+from social_research_probe.llm.types import AgenticSearchResult
+from social_research_probe.utils.progress import log
 
 _SUPPORT_TOKENS = (
     "support",
@@ -61,44 +76,99 @@ def _classify_verdict(answer: str) -> tuple[str, float]:
     return ("inconclusive", 0.3)
 
 
-def _top_source_urls(search: GeminiSearchResult, limit: int = 3) -> list[str]:
-    """Return up to ``limit`` citation URLs, skipping empties."""
-    urls = [c["url"] for c in search["citations"] if c.get("url")]
-    return urls[:limit]
+def _resolve_active_runner() -> LLMRunner | None:
+    """Return the user's configured LLM runner, or ``None`` when unavailable.
+
+    Honours ``config.llm_runner``; returns ``None`` when the runner is set to
+    ``"none"`` or when the configured runner cannot be instantiated (e.g.
+    binary missing). Callers treat ``None`` as "skip this backend".
+    """
+    runner_name = load_active_config().llm_runner
+    if runner_name in {"none", "auto"}:
+        return None
+    try:
+        return get_runner(runner_name)
+    except KeyError:
+        return None
+
+
+def _filter_citations(
+    result: AgenticSearchResult, source_url: str | None
+) -> list[str]:
+    """Apply the source-quality filter to the runner's citations.
+
+    Delegates to :func:`filter_results` so the same self-source and
+    video-domain rules used by Brave/Exa/Tavily apply here too.
+    """
+    as_dicts = [
+        {"url": c.url, "title": c.title} for c in result.citations if c.url
+    ]
+    kept, self_excluded, video_excluded = filter_results(as_dicts, source_url)
+    if self_excluded or video_excluded:
+        log(
+            f"[llm_search] filtered {self_excluded} self-source + "
+            f"{video_excluded} video-domain citation(s) from "
+            f"{len(as_dicts)} (runner={result.runner_name})"
+        )
+    return [d["url"] for d in kept if d.get("url")]
 
 
 @register
 class GeminiSearchBackend(CorroborationBackend):
-    """Corroboration backend that uses Gemini CLI's ``--google-search`` flag."""
+    """Runner-agnostic agentic-search corroboration backend.
+
+    Registry key ``gemini_search`` is preserved for config compatibility —
+    the class name is historical; the implementation routes through whatever
+    LLM runner the user has selected in config.
+    """
 
     name: ClassVar[str] = "gemini_search"
 
     def health_check(self) -> bool:
-        """Return True iff the Gemini CLI binary is present on PATH.
+        """True iff the configured LLM runner can perform an agentic search.
 
-        Uses a sync check (``shutil.which``) because the base contract is sync;
-        the async adapter also memoises availability, so call-time cost is
-        negligible.
+        Two conditions must hold:
+        - ``config.llm_runner`` resolves to a registered runner.
+        - That runner flips ``supports_agentic_search = True`` and its own
+          ``health_check()`` passes.
         """
-        binary = load_active_config().llm_settings("gemini").get("binary", "gemini")
-        return shutil.which(binary) is not None
+        runner = _resolve_active_runner()
+        if runner is None:
+            return False
+        if not runner.supports_agentic_search:
+            return False
+        try:
+            return bool(runner.health_check())
+        except Exception:
+            return False
 
     async def corroborate(self, claim) -> CorroborationResult:
-        """Run the claim through Gemini google-search and return a verdict."""
-        search = await gemini_search(claim.text)
-        if search is None:
+        """Run the claim through the active runner's agentic_search and classify."""
+        runner = _resolve_active_runner()
+        if runner is None or not runner.supports_agentic_search:
             return CorroborationResult(
                 verdict="inconclusive",
                 confidence=0.0,
-                reasoning="gemini CLI unavailable or returned no usable output",
+                reasoning="no LLM runner with agentic_search capability configured",
                 sources=[],
                 backend_name=self.name,
             )
-        verdict, confidence = _classify_verdict(search["answer"])
+        try:
+            result = await runner.agentic_search(claim.text)
+        except (CapabilityUnavailable, AdapterError) as exc:
+            return CorroborationResult(
+                verdict="inconclusive",
+                confidence=0.0,
+                reasoning=f"agentic_search failed: {exc}",
+                sources=[],
+                backend_name=self.name,
+            )
+        sources = _filter_citations(result, getattr(claim, "source_url", None))
+        verdict, confidence = _classify_verdict(result.answer)
         return CorroborationResult(
             verdict=verdict,
             confidence=confidence,
-            reasoning=search["answer"][:500],
-            sources=_top_source_urls(search),
+            reasoning=result.answer[:500],
+            sources=sources,
             backend_name=self.name,
         )

@@ -14,6 +14,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+from social_research_probe.llm.types import AgenticSearchResult
+
+
+class CapabilityUnavailable(RuntimeError):
+    """Raised when a caller invokes a capability the active runner doesn't support.
+
+    Example: calling ``agentic_search`` on a runner whose
+    ``supports_agentic_search`` is False.
+    """
+
 
 class LLMRunner(ABC):
     """Contract that every LLM runner must fulfil.
@@ -39,6 +49,13 @@ class LLMRunner(ABC):
     # this to True, without needing runner-specific code paths.
     supports_media_url: ClassVar[bool] = False
 
+    # Opt-in capability flag for runners that can perform an agentic web
+    # search using their native tool (Gemini google-search, Claude web_search,
+    # Codex --search). Default False — runners that do not support it must
+    # leave this untouched so callers can dispatch based on the flag rather
+    # than catching CapabilityUnavailable.
+    supports_agentic_search: ClassVar[bool] = False
+
     async def summarize_media(
         self, url: str, *, word_limit: int = 100, timeout_s: float = 60.0
     ) -> str | None:
@@ -49,6 +66,42 @@ class LLMRunner(ABC):
         unavailable" and continue. Must never raise.
         """
         return None
+
+    async def agentic_search(
+        self,
+        query: str,
+        *,
+        max_results: int = 5,
+        timeout_s: float = 60.0,
+    ) -> AgenticSearchResult:
+        """Perform an agentic web search and return a structured payload.
+
+        Runners that support it (flip ``supports_agentic_search`` to True) use
+        their vendor-native capability: Gemini's google-search grounding,
+        Claude's ``web_search`` tool, Codex's ``--search`` flag. Runners that
+        don't support it must leave ``supports_agentic_search`` False; calling
+        this method on them raises :class:`CapabilityUnavailable` so mis-routed
+        callers fail loudly instead of silently returning no evidence.
+
+        Args:
+            query: The free-text search query (usually a factual claim).
+            max_results: Soft cap on citations returned. Runners may return
+                fewer.
+            timeout_s: Maximum wall-clock time for the vendor call.
+
+        Returns:
+            :class:`AgenticSearchResult` with answer, citations, and the
+            runner's own name.
+
+        Raises:
+            CapabilityUnavailable: If the runner does not support agentic
+                search.
+            AdapterError: If the vendor call fails at runtime.
+        """
+        raise CapabilityUnavailable(
+            f"runner {getattr(self, 'name', type(self).__name__)!r} does not "
+            f"support agentic_search"
+        )
 
     @abstractmethod
     def health_check(self) -> bool:
