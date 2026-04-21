@@ -9,6 +9,7 @@ from typing import ClassVar
 
 from social_research_probe.llm.registry import register
 from social_research_probe.llm.runners.cli_json_base import AdapterError, JsonCliRunner
+from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.utils.subprocess_runner import run as sp_run
 
 
@@ -32,6 +33,7 @@ class GeminiRunner(JsonCliRunner):
     base_argv: ClassVar[tuple[str, ...]] = ("--output-format", "json")
     schema_flag: ClassVar[str | None] = None
     supports_media_url: ClassVar[bool] = True
+    supports_agentic_search: ClassVar[bool] = True
 
     def _prompt_args(self, prompt: str) -> list[str]:
         """Gemini uses --prompt for non-interactive execution."""
@@ -84,3 +86,32 @@ class GeminiRunner(JsonCliRunner):
         if not isinstance(answer, str):
             return None
         return answer.strip() or None
+
+    async def agentic_search(
+        self,
+        query: str,
+        *,
+        max_results: int = 5,
+        timeout_s: float = 60.0,
+    ) -> AgenticSearchResult:
+        """Run ``query`` through Gemini CLI's grounded-search mode.
+
+        Delegates to the existing gemini_search helper in llm.gemini_cli —
+        this runner owns the Gemini-specific plumbing (flag, envelope parse)
+        and presents a vendor-neutral AgenticSearchResult to callers.
+        """
+        # Local import to avoid a circular dependency at module load time
+        # (llm.gemini_cli imports from llm.base transitively via types).
+        from social_research_probe.llm.gemini_cli import gemini_search
+
+        raw = await gemini_search(query, timeout_s=timeout_s)
+        citations = [
+            AgenticSearchCitation(url=c.get("url", ""), title=c.get("title", ""))
+            for c in raw.get("citations", [])
+            if c.get("url")
+        ][:max_results]
+        return AgenticSearchResult(
+            answer=str(raw.get("answer", "")),
+            citations=citations,
+            runner_name=self.name,
+        )

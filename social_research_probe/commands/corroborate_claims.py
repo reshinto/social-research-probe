@@ -40,7 +40,7 @@ def run(
 
     Args:
         input_path: Path to the JSON file containing claims.
-        backends: List of backend names to use (e.g. ['exa', 'llm_cli']).
+        backends: List of backend names to use (e.g. ['exa', 'llm_search']).
         output_path: If given, write JSON results here; otherwise print to
             stdout.
 

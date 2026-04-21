@@ -140,7 +140,7 @@ This launches all `_run_provider` calls concurrently. If there are three provide
 
 ```python
 await asyncio.gather(
-    *[_enrich_one(item, ...) for item in top5_items]
+    *[_enrich_one(item, ...) for item in top_n_items]
 )
 ```
 
@@ -230,7 +230,7 @@ def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 ```python
 async def test_run_research_returns_packet(tmp_data_dir):
     packet = await run_research(topic="ai", purposes=("latest-news",), data_dir=tmp_data_dir)
-    assert packet["items_top5"]
+    assert packet["items_top_n"]
 ```
 
 pytest sees the parameter name `tmp_data_dir`, finds the matching fixture, calls it, and passes the result in.

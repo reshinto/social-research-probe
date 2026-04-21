@@ -1,0 +1,20 @@
+{
+  "service_id": "summary",
+  "description": "Reliability corpus for the transcript summarization service. Points at the same reference transcripts used by Phase 9's narrow eval; no duplication.",
+  "items": [
+    {
+      "title": "Claude 3.5 Sonnet extended thinking",
+      "channel": "Anthropic Research",
+      "transcript": "tests/fixtures/golden/transcripts/sample_tech_talk.vtt",
+      "reference": "tests/fixtures/golden/transcripts/sample_tech_talk.reference.md",
+      "keyphrases": "tests/fixtures/golden/transcripts/sample_tech_talk.keyphrases.json"
+    },
+    {
+      "title": "EU fines Meta 1.2B euros under GDPR",
+      "channel": "News Brief",
+      "transcript": "tests/fixtures/golden/transcripts/sample_news_brief.vtt",
+      "reference": "tests/fixtures/golden/transcripts/sample_news_brief.reference.md",
+      "keyphrases": "tests/fixtures/golden/transcripts/sample_news_brief.keyphrases.json"
+    }
+  ]
+}

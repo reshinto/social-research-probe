@@ -59,11 +59,11 @@ def _maybe_register_fake() -> None:
         importlib.import_module("tests.fixtures.fake_youtube")
 
 
-def _divergence_warnings(top5: list, cfg: Config) -> list[str]:
-    """Return warning strings for top-5 items whose summary divergence exceeds threshold."""
+def _divergence_warnings(top_n: list, cfg: Config) -> list[str]:
+    """Return warning strings for top-N items whose summary divergence exceeds threshold."""
     threshold = float(getattr(cfg, "tunables", {}).get("summary_divergence_threshold", 0.4))
     out: list[str] = []
-    for item in top5:
+    for item in top_n:
         divergence = item.get("summary_divergence")
         if divergence is None:
             continue
@@ -86,7 +86,7 @@ def _host_mode_backends(cfg: Config, feature_enabled=None) -> tuple[str, ...]:
         ("exa", "exa_enabled"),
         ("brave", "brave_enabled"),
         ("tavily", "tavily_enabled"),
-        ("gemini_search", "gemini_search_enabled"),
+        ("llm_search", "llm_search_enabled"),
     )
     return tuple(name for name, flag in flag_by_backend if fn(flag))
 
@@ -94,9 +94,9 @@ def _host_mode_backends(cfg: Config, feature_enabled=None) -> tuple[str, ...]:
 def _available_backends(data_dir: Path, cfg=None) -> list[str]:
     """Return corroboration backends allowed by config and available at runtime.
 
-    ``backend = host`` auto-discovers the web-search backends whose credentials
-    are configured. ``backend = llm_cli`` or a specific search backend uses only
-    that backend. ``backend = none`` disables corroboration entirely.
+    ``backend = host`` auto-discovers the configured search backends whose
+    credentials or runner capabilities are usable. A specific backend value
+    uses only that backend. ``backend = none`` disables corroboration entirely.
     """
     from social_research_probe.corroboration.registry import get_backend
 
@@ -183,26 +183,26 @@ async def run_research(
         enrich_top_n = int(platform_config.get("enrich_top_n", 5))
         if fast_mode_enabled():
             enrich_top_n = min(enrich_top_n, FAST_MODE_TOP_N)
-        top5 = all_scored[:enrich_top_n]
+        top_n = all_scored[:enrich_top_n]
         if (
             platform_config.get("fetch_transcripts", True)
             and cmd.platform == "youtube"
             and feature_enabled("enrichment_enabled")
         ):
             async with service_log("enrich", packet=timings, cfg_logs_enabled=cfg_logs):
-                await _enrich_mod._enrich_top5_with_transcripts(top5)
+                await _enrich_mod._enrich_top_n_with_transcripts(top_n)
         backends = _available_backends(data_dir, cfg=cfg)
         if fast_mode_enabled():
             backends = backends[:FAST_MODE_MAX_BACKENDS]
         async with service_log("corroborate", packet=timings, cfg_logs_enabled=cfg_logs):
             corroboration_results = (
-                await _corr_mod._corroborate_top5(top5, backends) if backends else []
+                await _corr_mod._corroborate_top_n(top_n, backends) if backends else []
             )
-        for item, result in zip(top5, corroboration_results, strict=False):
+        for item, result in zip(top_n, corroboration_results, strict=False):
             verdict = result.get("aggregate_verdict")
             if isinstance(verdict, str):
                 item["corroboration_verdict"] = verdict
-        svs = _build_svs(top5, corroboration_results, backends)
+        svs = _build_svs(top_n, corroboration_results, backends)
         stats_summary = _build_stats_summary(all_scored)
         async with service_log("charts", packet=timings, cfg_logs_enabled=cfg_logs):
             chart_captions = (
@@ -222,20 +222,20 @@ async def run_research(
         warnings = detect_warnings(
             items,
             signals,
-            top5,
-            corroboration_ran=bool(backends and top5),
+            top_n,
+            corroboration_ran=bool(backends and top_n),
             corroboration_skip_reason=skip_reason,
         )
-        warnings.extend(_divergence_warnings(top5, cfg))
+        warnings.extend(_divergence_warnings(top_n, cfg))
         async with service_log("synthesize", packet=timings, cfg_logs_enabled=cfg_logs):
             packet = build_packet(
                 topic=topic,
                 platform=cmd.platform,
                 purpose_set=list(merged.names),
-                items_top5=top5,
+                items_top_n=top_n,
                 source_validation_summary=svs,
                 platform_signals_summary=summarize_signals(signals),
-                evidence_summary=summarize_evidence(items, signals, top5),
+                evidence_summary=summarize_evidence(items, signals, top_n),
                 stats_summary=stats_summary,
                 chart_captions=chart_captions,
                 chart_takeaways=chart_takeaways,

@@ -1,7 +1,7 @@
 """commands/render.py — CLI command to render charts and stats for a research packet.
 
 Takes a research packet (produced by run-research) and generates:
-  - Statistical summaries of the top-5 items' scores.
+  - Statistical summaries of the top-N items' scores.
   - Chart images saved as PNG files.
   - A text report with section captions.
 
@@ -21,9 +21,9 @@ from social_research_probe.viz.selector import select_and_render
 
 
 def run(packet_path: str, output_dir: str | None = None) -> int:
-    """Read a packet JSON file and render stats + charts for the top-5 items.
+    """Read a packet JSON file and render stats + charts for the top-N items.
 
-    Loads the packet, extracts the "overall" score from each top-5 item,
+    Loads the packet, extracts the "overall" score from each top-N item,
     passes those scores to the stats and viz selectors, then prints a JSON
     report with stat names/values/captions and chart path/caption to stdout.
 
@@ -50,7 +50,7 @@ def run(packet_path: str, output_dir: str | None = None) -> int:
     if not isinstance(packet, dict):
         raise ValidationError("packet file must contain a JSON object")
 
-    items = packet.get("items_top5", [])
+    items = packet.get("items_top_n", [])
     # Extract the "overall" composite score from each item's scores dict.
     # Items that lack the key default to 0.0 so the lists stay aligned.
     overall_scores = [it.get("scores", {}).get("overall", 0.0) for it in items]

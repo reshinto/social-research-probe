@@ -241,10 +241,10 @@ def _flag(cfg, name: str, *, default: bool) -> bool:
 def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) -> str:
     """Always produce a final report file; return its path/URI.
 
-    Honours ``html_report_enabled`` and ``markdown_report_enabled`` feature
-    flags as format-selection only — at least one format is always produced
-    so stdout never loses the final report path contract, even when every
-    other feature is disabled.
+    Honours the ``html_report_enabled`` feature flag as format-selection
+    only — Markdown is always written as the fallback so stdout never
+    loses the final report path contract, even when every other feature
+    is disabled.
     """
     from social_research_probe.render.html import write_html_report
     from social_research_probe.synthesize.formatter import render_full

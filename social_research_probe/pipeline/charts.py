@@ -111,7 +111,7 @@ def _render_residuals(x: list[float], y: list[float], label: str, charts_dir: Pa
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 
-def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
+def _render_table(top_n: list[ScoredItem], charts_dir: Path) -> str:
     rows = [
         {
             "rank": i + 1,
@@ -121,9 +121,9 @@ def _render_table(top5: list[ScoredItem], charts_dir: Path) -> str:
             "opp": f"{d['scores']['opportunity']:.2f}",
             "overall": f"{d['scores']['overall']:.2f}",
         }
-        for i, d in enumerate(top5)
+        for i, d in enumerate(top_n)
     ]
-    chart = table_viz.render(rows, label="top5_summary", output_dir=str(charts_dir))
+    chart = table_viz.render(rows, label="top_n_summary", output_dir=str(charts_dir))
     return f"{chart.caption}\n_(see PNG: {chart.path})_"
 
 

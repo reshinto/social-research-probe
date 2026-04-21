@@ -106,3 +106,12 @@ def test_config_deep_merge_preserves_defaults_for_absent_keys(tmp_data_dir: Path
     cfg.raw["corroboration"]["backend"] = "mutated"
     cfg2 = Config.load(tmp_data_dir)
     assert cfg2.corroboration_backend == "host"
+
+
+def test_corroboration_backend_normalizes_legacy_llm_cli(tmp_data_dir: Path):
+    (tmp_data_dir / "config.toml").write_text(
+        '[corroboration]\nbackend = "llm_cli"\n',
+        encoding="utf-8",
+    )
+    cfg = Config.load(tmp_data_dir)
+    assert cfg.corroboration_backend == "llm_search"

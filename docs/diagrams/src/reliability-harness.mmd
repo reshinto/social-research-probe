@@ -1,0 +1,8 @@
+flowchart LR
+    Corpus["Reference corpus<br/>tests/fixtures/golden/eval/"] --> Gen
+    Gen["Generator runner<br/>(config.llm_runner)"]
+    Gen -->|N samples| Sample["SampleOutcome<br/>coverage / hallucinations / length"]
+    Sample --> Gate["apply_gates<br/>mean + stdev + max"]
+    Sample -->|optional| Judge["Judge runner<br/>(independent; skipped if 1 runner)"]
+    Judge --> Gate
+    Gate -->|pass/fail| Report[".srp-eval/&lt;service&gt;/&lt;ts&gt;.{json,md}"]

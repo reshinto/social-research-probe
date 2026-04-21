@@ -83,4 +83,10 @@ def test_register_class_without_name_raises():
 def test_builtin_backends_are_registered_on_package_import():
     """The package import side effect should register the built-in backends."""
     names = reg_module.list_backends()
-    assert {"brave", "exa", "llm_cli", "tavily"} <= set(names)
+    assert {"brave", "exa", "llm_search", "tavily"} <= set(names)
+
+
+def test_get_backend_accepts_legacy_llm_cli_alias():
+    """Older callers may still request llm_cli, but it resolves to llm_search."""
+    backend = reg_module.get_backend("llm_cli")
+    assert backend.name == "llm_search"

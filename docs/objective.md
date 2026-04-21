@@ -34,7 +34,7 @@ Every stage of the pipeline prefers the cheaper path:
 | Corroboration | web-search API (Gemini / Tavily / Brave / Exa) | bounded |
 | Synthesis (sections 10–11) | LLM on one summary prompt | bounded |
 
-Translation: an average run spends **tens of kilobytes** of LLM context, not megabytes. If the LLM is unavailable, the report still renders — sections 10–11 are the only ones that become placeholders.
+Translation: an average run spends **tens of kilobytes** of LLM context, not megabytes. If the runner is unavailable, the report still renders — sections 10–11 are the only fields that become placeholders, while per-item summaries fall back to transcript or description excerpts.
 
 Because the LLM is behind a swappable runner interface (`llm/registry.py`), the project is not tied to any one model provider. If your preferred LLM becomes expensive, slow, or discontinued, you change `llm.runner` in `config.toml` and keep going.
 
@@ -52,7 +52,7 @@ Breaking changes may ship until v1.0. Pin a version in production.
 
 ![Supported today vs planned platforms/backends](diagrams/roadmap.svg)
 
-Today `srp` supports **one platform (YouTube), four LLM runners (claude, gemini, codex, local), and five corroboration backends (gemini_search, tavily, brave, exa, llm_cli)**. The extension points ([platforms/base.py](../social_research_probe/platforms/base.py), [llm/registry.py](../social_research_probe/llm/registry.py), [corroboration/registry.py](../social_research_probe/corroboration/registry.py)) are designed so adding any of the below is a matter of implementing one interface and registering it.
+Today `srp` supports **one platform (YouTube), four LLM runners (claude, gemini, codex, local), and four corroboration backends (llm_search, tavily, brave, exa)**. The extension points ([platforms/base.py](../social_research_probe/platforms/base.py), [llm/registry.py](../social_research_probe/llm/registry.py), [corroboration/registry.py](../social_research_probe/corroboration/registry.py)) are designed so adding any of the below is a matter of implementing one interface and registering it.
 
 Planned platforms:
 

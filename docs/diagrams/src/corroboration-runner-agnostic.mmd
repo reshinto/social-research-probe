@@ -1,0 +1,23 @@
+flowchart LR
+    Claim["Claim<br/>(text, source_url)"] --> Filter["filter_results<br/>drop self-source +<br/>video-hosting domains"]
+    Filter --> Backends
+    subgraph Backends ["Registered backends"]
+        Brave[Brave Web Search]
+        Exa[Exa Search]
+        Tavily[Tavily Search]
+        LLMSearch["llm_search backend<br/>(routes via active runner)"]
+    end
+    LLMSearch -->|active runner| Runner
+    subgraph Runner ["LLM runner.agentic_search"]
+        Gemini["Gemini<br/>--google-search"]
+        Claude["Claude<br/>web_search tool"]
+        Codex["Codex<br/>--search"]
+        Local["Local<br/>CapabilityUnavailable"]
+    end
+    Brave --> Aggregate[aggregate_verdict]
+    Exa --> Aggregate
+    Tavily --> Aggregate
+    Gemini --> Aggregate
+    Claude --> Aggregate
+    Codex --> Aggregate
+    Aggregate --> Result["CorroborationResult<br/>(verdict + confidence + sources)"]

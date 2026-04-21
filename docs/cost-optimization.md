@@ -11,7 +11,7 @@
 ![Cost flow — CPU vs LLM, cache branches, top-N cutoff](diagrams/cost_flow.svg)
 
 
-A typical run (top-5 of 50 items, corroboration enabled, runner configured):
+A typical run (top-N of 50 items, corroboration enabled, runner configured):
 
 | Stage | Mechanism | Per-run LLM tokens | CPU cost |
 |---|---|---|---|
@@ -100,7 +100,7 @@ This means you can list Gemini (free) first, Claude second, and only pay for Cla
 runner = "gemini"          # free tier via browser auth
 
 [corroboration]
-backend = "gemini_search"  # free tier too
+backend = "llm_search"  # free tier too
 
 [platforms.youtube]
 max_items = 20
@@ -116,7 +116,7 @@ Runs under the free Gemini tier for most workloads; Whisper stays on your machin
 runner = "claude"
 
 [corroboration]
-backend = "host"           # multi-source: tavily + brave + exa + gemini_search
+backend = "host"           # multi-source: tavily + brave + exa + llm_search
 
 [platforms.youtube]
 max_items = 100
@@ -150,13 +150,13 @@ runner = "local"           # SRP_LOCAL_LLM_BIN points at your binary
 backend = "none"           # skip corroboration entirely
 ```
 
-Sections 10–11 use placeholders; everything else works.
+CLI sections 10–11 use placeholders; transcript/description fallback summaries still work. In the Claude Code skill, the host model can still draft sections 10–11 separately.
 
 ---
 
 ## What happens when things go wrong
 
-- **LLM runner misconfigured** — enrichment summaries + synthesis are skipped; stats and charts still render.
+- **LLM runner misconfigured** — runner-written summaries + synthesis are skipped; per-item summaries fall back to transcript/description text, and stats and charts still render.
 - **Corroboration backend unreachable** — the affected backend is excluded; others continue. If none work, corroboration is skipped with a warning in section 9.
 - **Whisper fails** — the item's transcript is empty; its summary falls back to title + description.
 - **Cache directory unwritable** — the pipeline runs uncached (no crash) but the next run pays the full cost.

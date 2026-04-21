@@ -145,8 +145,9 @@ def _service_enabled(cfg, provider: str) -> bool:
     The primary runner is always allowed; secondary providers are gated by
     their ``<name>_service_enabled`` feature flag so users can disable LLMs
     they have installed but do not want invoked in the ensemble fan-out.
-    Gemini's web-search corroboration backend uses its own separate flag
-    (``gemini_search_enabled``) and is not affected by these toggles.
+    The runner-agnostic agentic-search corroboration backend uses its own
+    separate flag (``llm_search_enabled``) and is not affected by these
+    toggles.
     """
     if cfg.llm_runner == provider:
         return True

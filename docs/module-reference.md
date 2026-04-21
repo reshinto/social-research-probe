@@ -164,7 +164,7 @@ Five-stage research orchestrator. Called by the `research` command handler.
 Top-level `run_research()` function. Wires the five stages: fetch → score → enrich → stats/charts → synthesise. Loops over topics, assembles `ResearchPacket` objects, and produces a `MultiResearchPacket` when multiple topics are requested. Also resolves available corroboration backends from config.
 
 **`enrichment.py`**
-Stage 3: fetches transcripts and LLM summaries for the top-5 scored items. Calls the YouTube transcript pipeline and the LLM runner to generate `one_line_takeaway` strings.
+Stage 3: fetches transcripts and LLM summaries for the top-N scored items. Calls the YouTube transcript pipeline and the LLM runner to generate `one_line_takeaway` strings.
 
 **`corroboration.py`**
 Stage 5 (claim checking): invokes configured corroboration backends against the top items, collecting verdict counts and evidence notes.
@@ -221,13 +221,13 @@ Claim corroboration backends. Each backend checks a claim against external evide
 Maps backend name strings to backend instances. `get_backend(name)` is the single lookup point. Register new backends here.
 
 **`host.py`**
-Auto-discovery backend: tries `exa`, `brave`, and `tavily` in order and uses the first that passes `health_check()`.
+Corroboration fan-out + aggregation. Normalises backend names, dispatches to the requested backends concurrently, and caches the aggregate result.
 
 **`exa.py`**, **`brave.py`**, **`tavily.py`**
 Individual search-API backends. Each reads its API key from `secrets.toml` via `_secret_utils.py`, issues an HTTP search query via `httpx`, and returns a structured `CorroborationResult`.
 
-**`llm_cli.py`**
-LLM-based backend: prompts the configured LLM runner to assess a claim and returns a verdict. Used when no web-search key is available.
+**`llm_search.py`**
+Runner-backed search backend. Calls the active runner's `agentic_search(...)` capability, filters citations, and returns a corroboration verdict from live web evidence.
 
 **`_secret_utils.py`**
 Shared helper for loading API keys from `secrets.toml` and injecting the `HTTP_USER_AGENT` header constant.
@@ -407,7 +407,7 @@ Loads `purposes.json` and provides typed lookup by purpose name. Returns `Purpos
 Claude Code skill bundle installed by `srp install-skill`.
 
 **`SKILL.md`**
-Skill manifest consumed by Claude Code. Declares the `srp` skill name, disables direct model invocation (Claude must shell out to `srp`), and points to `references/index.md` for the command map.
+Skill manifest consumed by Claude Code. Declares the `srp` skill name, points to `references/index.md` for the command map, and documents the split between CLI mechanics and host-LLM fallback: when `llm.runner = none`, Claude handles the skill-only language work; when a concrete runner is configured, Claude defers to the CLI-produced LLM output.
 
 **`references/`**
 Reference documents that the Claude Code skill reads to understand how to invoke each `srp` subcommand correctly. Includes `research.md` with the NL query form and full flag reference.

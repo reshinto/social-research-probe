@@ -25,11 +25,11 @@ All models below run automatically on every `srp research` output. Each contribu
 | 11 | Mann–Whitney U test | `stats.nonparametric` | 2 | Top half vs bottom half |
 | 12 | Welch's t-test | `stats.hypothesis_tests` | 2 | Top half vs bottom half |
 | 13 | Bootstrap confidence intervals | `stats.bootstrap` | 4 | Overall score (percentile method) |
-| 14 | Logistic regression | `stats.logistic_regression` | 5 | is_top_5 ~ 7 features |
+| 14 | Logistic regression | `stats.logistic_regression` | 5 | is_top_n ~ 7 features |
 | 15 | K-means clustering (k=3) | `stats.kmeans` | 5 | 7-feature matrix |
 | 16 | PCA | `stats.pca` | 5 | 7-feature matrix → 2 principal components |
 | 17 | Kaplan–Meier survival | `stats.kaplan_meier` | 5 | Time to reach 100k views |
-| 18 | Naive Bayes | `stats.naive_bayes` | 5 | is_top_5 ~ 7 features |
+| 18 | Naive Bayes | `stats.naive_bayes` | 5 | is_top_n ~ 7 features |
 | 19 | Huber regression | `stats.huber_regression` | 5 | Rank → overall (outlier-robust) |
 | 20 | Bayesian linear regression | `stats.bayesian_linear` | 5 | Overall ~ trust + trend + opportunity |
 
@@ -83,7 +83,7 @@ The trust, trend, and opportunity scores are each composites of 3–5 sub-indica
 
 - **Single-snapshot data.** Most models run on a single point-in-time snapshot. Survival and longitudinal models are structurally limited until the history store is built.
 
-- **Self-referential classification.** Models that predict `is_top_5` use the pipeline's own scoring as the ground truth label. R² will be artificially high — these models reveal which features *drive the scoring*, not which features predict external quality.
+- **Self-referential classification.** Models that predict `is_top_n` use the pipeline's own scoring as the ground truth label. R² will be artificially high — these models reveal which features *drive the scoring*, not which features predict external quality.
 
 - **Transcript rate-limiting.** Enriching more than ~20 items per run with transcripts is slow due to yt-dlp rate limits. Increase `max_items` for better statistical coverage, but expect longer run times.
 

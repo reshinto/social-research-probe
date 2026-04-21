@@ -18,10 +18,18 @@ The `# pragma: no cover` inline comment is banned. Use `exclude_lines` in `pypro
 
 ```
 tests/
-├── unit/        # pure functions, no I/O
-├── integration/ # orchestrator + fake adapters, no network
-└── contract/    # cross-cutting invariants (version consistency, doc navigation)
+├── unit/
+│   └── evidence/     # value-tier: input/expected/why receipts for every service
+├── integration/      # orchestrator + fake adapters, no network
+└── contract/         # cross-cutting invariants (version consistency, doc nav)
 ```
+
+The `unit/evidence/` subdirectory holds tests whose primary value is
+**value verification** — each test docstring carries an
+*(input / expected output / why)* receipt with a formula citation,
+published-dataset reference, or recorded API payload. These run as part
+of the normal unit suite (no special invocation needed), but also have a
+shortcut: `make test-evidence`.
 
 ### Unit tests
 
@@ -76,20 +84,168 @@ monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", .
 
 ---
 
+## Makefile targets
+
+The repo ships a small `Makefile` for common developer workflows. Run
+`make help` to list targets:
+
+| Target | What it does | Underlying command |
+|---|---|---|
+| `make test` | Full test suite sequentially (easier to debug) | `pytest -q` |
+| `make test-fast` | Full test suite in parallel via pytest-xdist (~4× faster; same gate) | `pytest -n auto --dist=loadfile -q` |
+| `make test-evidence` | Only the value-tier evidence tests (fast, no coverage gate) | `pytest tests/unit/evidence -v --no-cov` |
+| `make eval-summary-quality` | Real-LLM nightly: runs the active runner over the reference transcripts, reports coverage / hallucinations / length compliance (exits non-zero below thresholds) | `python scripts/eval_summary_quality.py` |
+| `make record-golden` | Prints the recorder CLI help — run it manually with `--service` / `--url` / `--auth-env` / `--auth-header` / `--out` to refresh a golden fixture with a real API response | `python scripts/record_golden.py --help` |
+| `make help` | Lists every target above | — |
+
+Override `PY` or `PYTEST` if your virtualenv lives somewhere other than
+`./.venv/`:
+
+```bash
+PY=python3 PYTEST=pytest make test
+```
+
+`make test-evidence` and `make eval-summary-quality` are **not** CI
+gates. CI runs `pytest -q` (the full suite) on every push; the eval
+target runs nightly or on demand and writes timestamped reports under
+`.srp-eval/<service>/`. See
+[llm-reliability-harness.md](llm-reliability-harness.md) for the eval
+methodology and gates.
+
+---
+
 ## Running Tests
 
 ```bash
-# Full suite with coverage
-pytest tests/unit tests/contract --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+# Full suite with coverage gate (1500+ tests, ~30 s) — THE gate
+pytest -q
 
-# Integration tests (no coverage enforcement)
+# Same run via the traditional subset invocation (hits 100% because
+# tests/unit/evidence/ lives under tests/unit/)
+pytest tests/unit tests/contract \
+    --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+
+# Integration tests only (no coverage enforcement)
 pytest tests/integration --no-cov
 
 # Fast iteration on a single file
 pytest tests/unit/test_scoring.py -x -q
 ```
 
-CI runs all three tiers on Python 3.11, 3.12, and 3.13.
+CI runs all tiers on Python 3.11, 3.12, and 3.13 **in parallel** via
+`pytest-xdist` (`-n auto --dist=loadfile`). Local runs default to
+sequential for easier debugging; use `make test-fast` for the parallel
+equivalent.
+
+### Parallel test execution (sharding)
+
+For faster feedback on the 1500-test suite (~28 s sequential → ~18 s at 8
+cores), the project ships with [`pytest-xdist`](https://pytest-xdist.readthedocs.io/)
+as a dev dependency.
+
+```bash
+# Parallel, auto worker count (typically = CPU cores)
+make test-fast
+# …equivalent to:
+pytest -n auto --dist=loadfile -q
+
+# Fixed worker count if auto picks too many for your machine
+JOBS=4 make test-fast
+
+# Parallel + verbose coverage output
+pytest tests/unit tests/contract -n auto --dist=loadfile \
+    --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+```
+
+**Why `--dist=loadfile` and not the default `load`?** `loadfile` keeps
+all tests from the same file on the same worker, preserving within-file
+ordering. A few existing tests (notably in `test_pipeline.py`) rely on
+monkeypatches set earlier in the same file, which `--dist=load` would
+scatter across workers. `loadfile` avoids the fragility while still
+giving ~4× speed-up on an 8-core machine.
+
+CI workflow: `.github/workflows/ci.yml` already uses
+`-n auto --dist=loadfile` so PR checks finish faster.
+
+### Evidence suite — running the new tests in `tests/unit/evidence/`
+
+`tests/unit/evidence/` is an additive tier that proves each service produces
+the **correct numeric / structural output** for documented inputs (not just
+"did not crash"). Every test docstring includes a receipt table of
+*input / expected output / why* so a reviewer can trace every assertion
+back to a formula, stdlib reference, golden payload, or hand-worked
+example.
+
+```bash
+# Run only the evidence tier (fast, no network)
+make test-evidence
+# …equivalent to:
+pytest tests/unit/evidence -v --no-cov
+```
+
+The Makefile target disables the project-wide `--cov-fail-under=100`
+gate because the evidence slice alone covers only ~43% of lines (it
+deliberately doesn't exercise CLI parsers, command entry points, or
+state-migration shims — those live in the rest of the unit tier). The
+full 100% gate runs against `pytest -q` or `pytest tests/unit tests/contract`.
+
+> **Why `make test-evidence` disables `--cov-fail-under=100`.** The
+> evidence slice is a narrow subset focused on *value* (formula /
+> dataset / golden payload). Enforcing a coverage number against a
+> narrow slice is misleading, not useful. The full run still hits 100%.
+> If you want the gate, run `pytest -q`. If you want fast feedback on
+> value-tier assertions while iterating, use `make test-evidence`.
+
+See [`tests/unit/evidence/MUTATION_REPORT.md`](../tests/unit/evidence/MUTATION_REPORT.md)
+for the register of documented drift drills (deliberate one-line
+mutations paired with the evidence test each one should fail), plus the
+recommended `mutmut` command for the nightly mutation run against the
+scoring and stats packages.
+
+#### LLM quality evaluators (out of CI)
+
+Two scripts exercise real LLM runners against the reference corpus
+under `tests/fixtures/golden/transcripts/`. They are **not** part of
+the deterministic evidence suite — they require API keys and network
+access, so run them locally or in a nightly cron rather than in CI.
+
+```bash
+# Phase 9 narrow summary-quality eval (single run per corpus item)
+make eval-summary-quality
+# …equivalent to:
+python scripts/eval_summary_quality.py --word-limit 100
+
+# Phase 10 reliability harness (N samples, optional judge runner)
+python scripts/eval_llm_quality.py --service summary --runs 5 \
+    --judge-runner claude
+```
+
+`eval_llm_quality.py` enforces that `--judge-runner` differs from
+`config.llm_runner` (no self-grading) and writes timestamped
+JSON + Markdown reports under `.srp-eval/<service>/`. See
+[docs/llm-reliability-harness.md](llm-reliability-harness.md) for the
+full methodology, gates, and worked examples.
+
+#### Recording goldens with real APIs (optional)
+
+Phase 4/5 corroboration + YouTube goldens ship as hand-crafted
+schema-faithful payloads. If you have API keys and want higher-fidelity
+replays, re-record them:
+
+```bash
+# Example — re-record the Brave "supported" fixture
+python scripts/record_golden.py \
+    --service brave \
+    --url "https://api.search.brave.com/res/v1/web/search?q=GPT-4+release+date" \
+    --auth-env SRP_BRAVE_API_KEY \
+    --auth-header X-Subscription-Token \
+    --out brave_supported.json
+```
+
+The recorder redacts `Authorization` / `X-Api-Key` / `X-Subscription-Token`
+headers plus email/credit-card-shaped strings before writing the JSON.
+See [docs/data-directory.md](data-directory.md) for where data lives
+at runtime.
 
 ---
 

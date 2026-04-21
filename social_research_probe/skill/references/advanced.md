@@ -1,5 +1,5 @@
 - Setup (first run): `srp setup` — interactive wizard; writes missing config keys + prompts for secrets. Never overwrites existing values.
 - Install skill: `srp install-skill [--target <dir>]` — copies skill files to `~/.claude/skills/srp`.
-- Corroborate claims (standalone): `srp corroborate-claims --input <claims.json> --backends <name[,name...]> [--output <path>]`. Backends: `gemini_search`, `tavily`, `brave`, `exa`, `llm_cli`.
+- Corroborate claims (standalone): `srp corroborate-claims --input <claims.json> --backends <name[,name...]> [--output <path>]`. Backends: `llm_search`, `tavily`, `brave`, `exa`.
 - Render charts for a saved packet: `srp render --packet <packet.json> [--output-dir <dir>]`.
 - Re-render report: `srp report --packet <packet.json> [--synthesis-10 <file>] [--synthesis-11 <file>] [--out <html>]`. Bypasses the LLM runner.

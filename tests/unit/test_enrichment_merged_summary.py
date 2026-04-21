@@ -329,7 +329,10 @@ async def test_reconcile_summaries_caches_by_content(_enable_summary_cache):
     assert llm_calls[0] == 1
 
 
-def test_first_media_url_runner_skips_unhealthy(monkeypatch):
+def test_first_media_url_runner_skips_unhealthy():
+    class _Cfg:
+        llm_runner = "gemini"
+
     class _R:
         supports_media_url = True
 
@@ -337,21 +340,91 @@ def test_first_media_url_runner_skips_unhealthy(monkeypatch):
             return False
 
     with (
-        patch("social_research_probe.llm.registry.list_runners", return_value=["a"]),
         patch("social_research_probe.llm.registry.get_runner", return_value=_R()),
     ):
-        assert enrichment._first_media_url_runner() is None
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+
+
+def test_first_media_url_runner_loads_active_config_when_cfg_omitted():
+    class _Cfg:
+        llm_runner = "gemini"
+
+    class _Runner:
+        supports_media_url = True
+
+        def health_check(self):
+            return True
+
+    with (
+        patch("social_research_probe.pipeline.enrichment.load_active_config", return_value=_Cfg()),
+        patch("social_research_probe.llm.registry.get_runner", return_value=_Runner()),
+    ):
+        runner = enrichment._first_media_url_runner()
+
+    assert runner is not None
+    assert runner.supports_media_url is True
 
 
 def test_first_media_url_runner_skips_runners_without_capability():
+    class _Cfg:
+        llm_runner = "claude"
+
     class _NotCapable:
         supports_media_url = False
 
         def health_check(self):
             return True
 
-    with (
-        patch("social_research_probe.llm.registry.list_runners", return_value=["x"]),
-        patch("social_research_probe.llm.registry.get_runner", return_value=_NotCapable()),
-    ):
-        assert enrichment._first_media_url_runner() is None
+    with patch("social_research_probe.llm.registry.get_runner", return_value=_NotCapable()):
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+
+
+def test_first_media_url_runner_returns_none_when_health_check_raises():
+    class _Cfg:
+        llm_runner = "gemini"
+
+    class _Runner:
+        supports_media_url = True
+
+        def health_check(self):
+            raise RuntimeError("boom")
+
+    with patch("social_research_probe.llm.registry.get_runner", return_value=_Runner()):
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+
+
+def test_first_media_url_runner_returns_none_when_llm_runner_disabled():
+    class _Cfg:
+        llm_runner = "none"
+
+    with patch("social_research_probe.llm.registry.get_runner") as get_runner:
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+    get_runner.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_url_based_summary_does_not_use_other_runner_when_llm_runner_disabled(monkeypatch):
+    class _Cfg:
+        llm_runner = "none"
+
+        def feature_enabled(self, name):
+            return True
+
+    async def _unexpected_summary(url, word_limit):
+        raise AssertionError("summarize_media must not run when llm.runner is disabled")
+
+    class _Runner:
+        summarize_media = _unexpected_summary
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.enrichment.load_active_config",
+        lambda: _Cfg(),
+    )
+    with patch(
+        "social_research_probe.llm.registry.get_runner",
+        return_value=_Runner(),
+    ) as get_runner:
+        out = await enrichment._url_based_summary("https://y/1", word_limit=100)
+
+    assert out is None
+    get_runner.assert_not_called()

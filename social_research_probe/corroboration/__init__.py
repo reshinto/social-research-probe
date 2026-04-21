@@ -12,8 +12,7 @@ import os
 for _module in (
     "social_research_probe.corroboration.brave",
     "social_research_probe.corroboration.exa",
-    "social_research_probe.corroboration.gemini_search",
-    "social_research_probe.corroboration.llm_cli",
+    "social_research_probe.corroboration.llm_search",
     "social_research_probe.corroboration.tavily",
 ):
     importlib.import_module(_module)

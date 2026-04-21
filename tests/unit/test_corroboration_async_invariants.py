@@ -1,10 +1,9 @@
-"""TDD RED tests for Phase A — async conversion structural invariants.
+"""Async-contract invariants for corroboration backends.
 
-Each test asserts a structural invariant that will be TRUE after the async
-refactor. All tests here should FAIL against the pre-refactor codebase.
-
-Tests are pure structural checks (inspect, source scan) so they run fast
-without any I/O or network access.
+Each test asserts a structural invariant the async corroboration
+architecture depends on — every backend's ``corroborate`` is a coroutine
+function, no backend uses blocking ``urllib.request``, etc. Pure
+structural checks (inspect, source scan); no I/O or network.
 """
 
 from __future__ import annotations

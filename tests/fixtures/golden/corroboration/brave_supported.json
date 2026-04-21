@@ -1,0 +1,31 @@
+{
+  "query": {
+    "original": "GPT-4 was released in March 2023",
+    "show_strict_warning": false,
+    "altered": "GPT-4 released March 2023",
+    "safesearch": true
+  },
+  "web": {
+    "type": "search",
+    "results": [
+      {
+        "title": "GPT-4 - OpenAI",
+        "url": "https://openai.com/index/gpt-4/",
+        "description": "We've created GPT-4, the latest milestone in OpenAI's effort in scaling up deep learning. GPT-4 is a large multimodal model, available via ChatGPT Plus and the API.",
+        "age": "2023-03-14"
+      },
+      {
+        "title": "GPT-4 Technical Report",
+        "url": "https://arxiv.org/abs/2303.08774",
+        "description": "We report the development of GPT-4, a large-scale, multimodal model...",
+        "age": "2023-03-15"
+      },
+      {
+        "title": "GPT-4 release date and features",
+        "url": "https://www.nature.com/articles/d41586-023-00816-5",
+        "description": "Nature feature on GPT-4 release, published March 2023.",
+        "age": "2023-03-20"
+      }
+    ]
+  }
+}

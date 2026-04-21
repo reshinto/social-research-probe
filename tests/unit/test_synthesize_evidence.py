@@ -55,13 +55,13 @@ class TestSummarize:
             _signal(upload_date=now - timedelta(days=4)),
             _signal(upload_date=now - timedelta(days=6)),
         ]
-        top5 = [{"source_class": "primary"}, {"source_class": "secondary"}]
-        result = summarize(items, signals, top5, now=now)
+        top_n = [{"source_class": "primary"}, {"source_class": "secondary"}]
+        result = summarize(items, signals, top_n, now=now)
         assert "3 items from 2 channels" in result
         assert "median upload age 4d" in result
         assert "avg view velocity 100/day" in result
         assert "avg engagement 0.050" in result
-        assert "top-5 source mix:" in result
+        assert "top-N source mix:" in result
 
     def test_no_upload_dates_omits_age(self):
         items = [_item()]
@@ -76,7 +76,7 @@ class TestSummarize:
         assert "avg view velocity" not in result
         assert "avg engagement" not in result
 
-    def test_empty_top5_omits_mix(self):
+    def test_empty_top_n_omits_mix(self):
         items = [_item()]
         signals = [_signal()]
         result = summarize(items, signals, [])

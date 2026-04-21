@@ -55,6 +55,7 @@ class YouTubePlatformConfig(TypedDict, total=False):
 
     recency_days: int
     max_items: int
+    enrich_top_n: int
     cache_ttl_search_hours: int
     cache_ttl_channel_hours: int
 
@@ -80,21 +81,22 @@ class FeaturesConfigSection(TypedDict):
     """
 
     corroboration_enabled: bool
-    gemini_search_enabled: bool
+    llm_search_enabled: bool
     exa_enabled: bool
     brave_enabled: bool
     tavily_enabled: bool
-    llm_cli_corroboration_enabled: bool
     enrichment_enabled: bool
     transcript_fetch_enabled: bool
     media_url_summary_enabled: bool
     merged_summary_enabled: bool
-    stats_enabled: bool
     charts_enabled: bool
     chart_takeaways_enabled: bool
     synthesis_enabled: bool
     html_report_enabled: bool
-    markdown_report_enabled: bool
+    claude_service_enabled: bool
+    gemini_service_enabled: bool
+    codex_service_enabled: bool
+    local_service_enabled: bool
 
 
 class TunablesConfigSection(TypedDict):
@@ -130,6 +132,7 @@ class AdapterConfig(TypedDict, total=False):
     fetch_transcripts: bool
     recency_days: int
     max_items: int
+    enrich_top_n: int
     cache_ttl_search_hours: int
     cache_ttl_channel_hours: int
 
@@ -307,7 +310,7 @@ class ResearchPacket(TypedDict, total=False):
     topic: str
     platform: str
     purpose_set: list[str]
-    items_top5: list[ScoredItem]
+    items_top_n: list[ScoredItem]
     source_validation_summary: SourceValidationSummary
     platform_signals_summary: str
     evidence_summary: str

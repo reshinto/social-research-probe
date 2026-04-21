@@ -225,7 +225,7 @@ intercept: 0.0041
 
 **When it runs:** n ≥ 5.
 
-**How to interpret:** The feature with the highest coefficient is the strongest predictor of top-5 inclusion. This is more actionable than multiple regression when you want to understand "what makes a video stand out" rather than "what drives the overall score."
+**How to interpret:** The feature with the highest coefficient is the strongest predictor of top-N inclusion. This is more actionable than multiple regression when you want to understand "what makes a video stand out" rather than "what drives the overall score."
 
 **Example output:**
 
@@ -295,16 +295,16 @@ km_survival_at_30d: 0.6800   km_survival_at_90d: 0.3100
 
 ### Naive Bayes
 
-**What it measures:** A probabilistic classifier that predicts top-5 membership using the seven features, treating each feature independently. Provides a baseline accuracy score.
+**What it measures:** A probabilistic classifier that predicts top-N membership using the seven features, treating each feature independently. Provides a baseline accuracy score.
 
 **When it runs:** n ≥ 5.
 
-**How to interpret:** Accuracy above 70% means the features are good predictors of top-5 inclusion. Low accuracy (below 60%) suggests that top-5 status is not well-explained by the available features — other factors (e.g. timing, thumbnails) may matter more.
+**How to interpret:** Accuracy above 70% means the features are good predictors of top-N inclusion. Low accuracy (below 60%) suggests that top-N status is not well-explained by the available features — other factors (e.g. timing, thumbnails) may matter more.
 
 **Example output:**
 
 ```
-naive_bayes_accuracy: 0.7333   naive_bayes_top5_precision: 0.8000
+naive_bayes_accuracy: 0.7333   naive_bayes_top_n_precision: 0.8000
 ```
 
 ---

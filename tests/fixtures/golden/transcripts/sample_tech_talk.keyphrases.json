@@ -1,0 +1,27 @@
+{
+  "description": "Required tokens that must appear verbatim in any summary of sample_tech_talk.vtt. Case-insensitive substring match. Missing tokens lower coverage score; presence of any token not in the transcript counts as hallucination.",
+  "source_transcript": "sample_tech_talk.vtt",
+  "required_tokens": [
+    "Claude",
+    "Anthropic",
+    "3.5 Sonnet",
+    "GSM8K",
+    "MMLU",
+    "HumanEval",
+    "96.4",
+    "88.7",
+    "92",
+    "64,000",
+    "extended thinking",
+    "chain-of-thought"
+  ],
+  "allowed_proper_nouns": [
+    "Claude",
+    "Anthropic",
+    "OpenAI",
+    "Sonnet",
+    "GSM8K",
+    "MMLU",
+    "HumanEval"
+  ]
+}

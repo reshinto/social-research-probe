@@ -24,7 +24,7 @@ def test_full_packet_passthrough():
     packet = {
         "topic": "ai",
         "platform": "youtube",
-        "items_top5": [
+        "items_top_n": [
             {
                 "title": "T1",
                 "url": "https://y/1",
@@ -61,7 +61,7 @@ def test_full_packet_passthrough():
 
 def test_summary_falls_back_to_takeaway_when_missing():
     packet = {
-        "items_top5": [
+        "items_top_n": [
             {"title": "T", "url": "u", "scores": _scores(), "one_line_takeaway": "only-takeaway"}
         ]
     }
@@ -70,7 +70,7 @@ def test_summary_falls_back_to_takeaway_when_missing():
 
 
 def test_corroboration_absent_when_verdict_missing():
-    packet = {"items_top5": [{"title": "T", "url": "u", "scores": _scores()}]}
+    packet = {"items_top_n": [{"title": "T", "url": "u", "scores": _scores()}]}
     [item] = build_synthesis_context(packet)["items"]
     assert "corroboration" not in item
 
@@ -78,7 +78,7 @@ def test_corroboration_absent_when_verdict_missing():
 def test_coverage_fetched_falls_back_to_enriched_when_no_n_token():
     packet = {
         "platform": "youtube",
-        "items_top5": [{"title": "A", "url": "u"}, {"title": "B", "url": "u2"}],
+        "items_top_n": [{"title": "A", "url": "u"}, {"title": "B", "url": "u2"}],
         "stats_summary": {
             "highlights": ["no count token here"],
             "models_run": [],

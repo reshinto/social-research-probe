@@ -1,0 +1,20 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:15.000
+Today I'm going to walk through how Anthropic's Claude 3.5 Sonnet handles
+extended thinking on complex reasoning tasks.
+
+00:00:15.000 --> 00:00:35.000
+We'll cover three benchmarks: GSM8K, MMLU, and HumanEval. Claude 3.5 Sonnet
+scores 96.4% on GSM8K, 88.7% on MMLU, and 92% on HumanEval when extended
+thinking is enabled.
+
+00:00:35.000 --> 00:00:55.000
+The key architectural insight is that Claude is given a scratchpad where it
+can spend up to 64,000 tokens reasoning before emitting the final answer.
+This is similar to OpenAI's o1 approach but with a different training
+objective focused on faithful chain-of-thought.
+
+00:00:55.000 --> 00:01:15.000
+Target audience: ML engineers evaluating reasoning models for production
+workloads where correctness matters more than latency.

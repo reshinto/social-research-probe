@@ -1,9 +1,9 @@
 graph TD
-    A["Top-5 scored videos\n(with transcripts)"] --> B["Claim extraction\nLLM reads transcript\nand identifies factual claims"]
-    B --> C["Query backends\ngemini_search · tavily · brave ·\nexa · llm_cli\nmax_claims_per_item checked"]
+    A["Top-N scored videos\n(with transcripts)"] --> B["Claim extraction\nLLM reads transcript\nand identifies factual claims"]
+    B --> C["Query backends\nllm_search · tavily · brave ·\nexa\nmax_claims_per_item checked"]
     C --> D["Collect evidence\ncount supporting search results\nper claim"]
     D --> E["Score corroboration\n0 = no support found\n1–3 = partial support\n4+ = strong support"]
-    E --> F["Attach to item\npacket.items_top5[i].evidence"]
+    E --> F["Attach to item\npacket.items_topN[i].evidence"]
     F --> G["Section 6 of report\nthe Evidence table with\ncorroboration score per claim"]
 
     style A fill:#e3f2fd,stroke:#1976d2

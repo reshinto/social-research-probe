@@ -36,7 +36,7 @@ Then run the same commands inside Claude Code by prefixing them with `/srp`:
 /srp apply-pending --topics all --purposes all
 ```
 
-The skill shells out to the CLI, so flags, quoting, and exit codes are identical.
+The skill shells out to the CLI for all commands, so flags, quoting, and exit codes are identical. The host LLM remains available for skill-only language work when `llm.runner = none` such as mapping a free-form request to topic + purpose, summarizing the packet inline, and drafting sections 10-11. If `llm.runner` is set to a concrete provider, prefer the CLI-produced LLM output instead of duplicating it in the host.
 
 ---
 
@@ -222,7 +222,7 @@ All settings and their defaults:
 | `platforms.youtube.enrich_top_n` | `5` | How many top-scored videos receive transcript fetch, LLM summary, and corroboration |
 | `platforms.youtube.cache_ttl_search_hours` | `6` | How long to cache search results |
 | `platforms.youtube.cache_ttl_channel_hours` | `24` | How long to cache channel metadata |
-| `corroboration.backend` | `host` | `host`, `exa`, `brave`, `tavily`, `llm_cli`, or `none` |
+| `corroboration.backend` | `host` | `host`, `llm_search`, `exa`, `brave`, `tavily`, or `none` |
 | `corroboration.max_claims_per_item` | `5` | Maximum claims checked per enriched item |
 | `corroboration.max_claims_per_session` | `15` | Total claim budget per research run |
 
@@ -294,7 +294,7 @@ Also triggers the same config/secret flow as `setup` — re-running is safe.
 Run claim corroboration standalone against a JSON file of claims. Useful for reprocessing an existing packet without re-running the fetch/score stages.
 
 ```bash
-srp corroborate-claims --input claims.json --backends gemini_search,tavily --output out.json
+srp corroborate-claims --input claims.json --backends llm_search,tavily --output out.json
 ```
 
 ### `srp render`

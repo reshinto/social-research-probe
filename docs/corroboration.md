@@ -10,13 +10,13 @@ Corroboration is the process of cross-checking the claims made in YouTube videos
 
 When a YouTube video makes a claim — "AI safety researchers at DeepMind published a new paper" — that claim is self-reported. The video creator has no independent verification. Corroboration asks: **does any other source on the web support or contradict this claim?**
 
-`srp` automatically extracts the key claims from each of the top-5 scored videos and queries one or more web-search APIs (Exa, Brave Search, or Tavily) to find supporting or contradicting evidence. The results appear in **Section 6 (Evidence)** of your report.
+`srp` automatically extracts the key claims from each of the top-N scored videos and queries one or more web-search APIs (Exa, Brave Search, or Tavily) to find supporting or contradicting evidence. The results appear in **Section 6 (Evidence)** of your report.
 
 ---
 
 ## Why it matters
 
-Without corroboration, your research report is a curated list of YouTube opinions. With corroboration, each top-5 item is annotated with:
+Without corroboration, your research report is a curated list of YouTube opinions. With corroboration, each top-N item is annotated with:
 
 - Whether independent sources confirm the claim
 - Links to those sources (news articles, academic papers, other web content)
@@ -28,7 +28,7 @@ This is especially important for topics where misinformation spreads easily (hea
 
 ## How it works
 
-For each of the top-5 scored videos, the pipeline:
+For each of the top-N scored videos, the pipeline:
 
 1. **Extracts claims** — from the LLM-generated transcript summary, the video title, and channel metadata.
 2. **Queries backends** — sends each claim to the configured corroboration backend(s) as a web search query.
@@ -46,19 +46,33 @@ srp config set corroboration.max_claims_per_session 30 # more total claims
 
 ![Corroboration pipeline flow](diagrams/corroboration_flow.svg)
 
+### Runner-agnostic agentic search
+
+The `llm_search` backend dispatches through the configured `llm_runner`
+— whichever runner you select uses its own native search capability
+(Gemini's `--google-search`, Claude's `web_search` tool, Codex's
+`--search` flag). Every result is passed through the same source-quality
+filter that drops self-source URLs and video-hosting domains before a
+verdict is computed.
+
+![Runner-agnostic corroboration flow](diagrams/corroboration-runner-agnostic.svg)
+
+*(Mermaid source: [diagrams/src/corroboration-runner-agnostic.mmd](diagrams/src/corroboration-runner-agnostic.mmd).
+See [llm-runners.md](llm-runners.md#capability-matrix) for which runners support agentic search.)*
+
 ---
 
 ## Backends
 
-### Gemini Search (`gemini_search`) ⭐ free default
+### LLM Search (`llm_search`) ⭐ runner-agnostic default
 
-**What it is:** Uses the `gemini google-search` subcommand of the Gemini CLI. The CLI handles the search + response; `srp` parses the structured JSON output for snippets and citations.
+**What it is:** Runner-backed web search. `srp` calls the configured LLM runner's native search capability — Gemini `--google-search`, Claude `web_search`, or Codex `--search` — then filters and scores the returned citations the same way it treats Exa, Brave, and Tavily evidence.
 
-**Best for:** Anyone who already uses Gemini as their LLM runner — same tool, no extra key, free tier.
+**Best for:** Anyone who already uses an LLM runner and wants corroboration to behave like the other search-style backends without storing another API key.
 
-**Configuration:** requires the `gemini` CLI installed and authenticated (browser OAuth, no API key on disk). Enabled via the `gemini_search_enabled = true` flag in `config.toml` (default).
+**Configuration:** the matching runner CLI must be installed and authenticated, and that runner must support agentic search. The backend is gated by `llm_search_enabled = true` in `config.toml` (default). See [llm-runners.md](llm-runners.md#capability-matrix) for support by runner.
 
-Since this backend piggybacks on the Gemini CLI's auth, there is no separate secret to store.
+Older configs that still say `llm_cli` are treated as a legacy alias for `llm_search`.
 
 ### Exa
 
@@ -96,16 +110,6 @@ srp config set-secret brave_api_key
 srp config set-secret tavily_api_key
 ```
 
-### LLM CLI (`llm_cli`)
-
-Uses the configured LLM runner to generate corroboration evidence from its training data rather than querying a live search API. No external search key is required.
-
-**Best for:** Air-gapped environments or when you do not want to register for search APIs. Less reliable than live web search for recent events.
-
-```bash
-srp config set corroboration.backend llm_cli
-```
-
 ---
 
 ## Configuration
@@ -114,11 +118,10 @@ srp config set corroboration.backend llm_cli
 
 ```bash
 srp config set corroboration.backend host           # auto-discover all configured backends (default)
-srp config set corroboration.backend gemini_search  # free via Gemini CLI — no API key
+srp config set corroboration.backend llm_search     # route through the configured LLM runner — no search API key
 srp config set corroboration.backend exa            # force Exa only
 srp config set corroboration.backend brave          # force Brave only
 srp config set corroboration.backend tavily         # force Tavily only
-srp config set corroboration.backend llm_cli        # use LLM runner (no search API needed)
 srp config set corroboration.backend none           # disable corroboration entirely
 ```
 
@@ -126,11 +129,10 @@ srp config set corroboration.backend none           # disable corroboration enti
 
 | Backend | API key required | Free tier | Notes |
 |---|---|---|---|
-| `gemini_search` | No (browser OAuth via Gemini CLI) | Yes | Recommended free default |
+| `llm_search` | No (uses the configured runner's CLI auth) | Runner-dependent | Live web search via the configured runner. Default LLM mode. |
 | `exa` | `exa_api_key` | Yes | Neural / semantic search |
 | `brave` | `brave_api_key` | **No** — paid only | Independent index |
 | `tavily` | `tavily_api_key` | Yes (~1000 credits/mo) | LLM-optimised snippets |
-| `llm_cli` | No (uses configured LLM runner) | Depends on runner | Training-data only, no live web |
 
 ### Auto-discovery (`host` mode)
 
@@ -162,7 +164,7 @@ When skipped, Section 6 (Evidence) of the report shows `_(corroboration skipped)
 
 ## Interpreting Section 6 (Evidence)
 
-Section 6 shows a summary for each top-5 item. For each item you will see:
+Section 6 shows a summary for each top-N item. For each item you will see:
 
 - **Supported** — the number of independent sources that confirm or are consistent with the video's claims
 - **Contradicted** — sources that directly disagree

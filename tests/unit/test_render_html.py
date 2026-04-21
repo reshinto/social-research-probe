@@ -57,7 +57,7 @@ _PACKET = {
     "topic": "AI agents",
     "platform": "youtube",
     "purpose_set": ["latest-news", "trends"],
-    "items_top5": [_ITEM],
+    "items_top_n": [_ITEM],
     "source_validation_summary": _SVS,
     "platform_signals_summary": "high engagement; many views",
     "evidence_summary": "strong data; reliable sources",
@@ -163,7 +163,7 @@ class TestSectionBuilders:
         assert "https://example.com/v" in html
 
     def test_section_3_no_items(self):
-        pkt = {**_PACKET, "items_top5": []}
+        pkt = {**_PACKET, "items_top_n": []}
         html = section_3_top_items(pkt)
         assert "no items" in html
 

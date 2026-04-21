@@ -1,0 +1,23 @@
+{
+  "query": "universal basic income effectiveness",
+  "results": [
+    {
+      "title": "UBI pilot shows mixed results in Finland",
+      "url": "https://www.nature.com/articles/d41586-020-00304-0",
+      "content": "Finland's UBI trial showed partially positive outcomes; some measures improved, others did not.",
+      "score": 0.92
+    },
+    {
+      "title": "UBI criticized as economically unsustainable",
+      "url": "https://www.economist.com/finance-and-economics/2023/ubi-critique",
+      "content": "Economists note the nuanced reality; UBI has some truth but also significant tradeoffs.",
+      "score": 0.88
+    },
+    {
+      "title": "Mixed evidence on UBI from OECD review",
+      "url": "https://www.oecd.org/publications/ubi-review-2024.pdf",
+      "content": "OECD finds partially true claims on both sides of the UBI debate.",
+      "score": 0.85
+    }
+  ]
+}

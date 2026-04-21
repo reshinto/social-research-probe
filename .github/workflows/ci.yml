@@ -27,6 +27,6 @@ jobs:
         env:
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
           PYTHONPATH: ${{ github.workspace }}
-        run: pytest tests/integration tests/unit tests/contract --cov=social_research_probe --cov-fail-under=0
+        run: pytest tests/integration tests/unit tests/contract -n auto --dist=loadfile --cov=social_research_probe --cov-fail-under=0
       - name: Coverage report (fail under 100%)
         run: coverage report --show-missing --fail-under=100

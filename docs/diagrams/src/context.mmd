@@ -1,25 +1,104 @@
-graph TD
-    User["👤 Operator\nRuns srp from CLI\nor Claude Code skill"]
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "lineColor": "#111111",
+    "fontFamily": "\"Comic Sans MS\", \"Marker Felt\", \"Chalkboard SE\", cursive",
+    "primaryTextColor": "#111111",
+    "fontSize": "18px"
+  }
+}}%%
 
-    subgraph srp ["social-research-probe (srp)"]
-        CLI["cli/\nArgument parsing + dispatch"]
-        Pipeline["pipeline/\nFetch → Score → Enrich\n→ Corroborate → Synthesise"]
-        Report["HTML + Markdown\nReport"]
-        CLI --> Pipeline --> Report
-    end
+flowchart TB
 
-    subgraph External ["External APIs (HTTPS)"]
-        YouTube["YouTube Data API v3\nVideo metadata + search"]
-        Exa["Exa Search API\nCorroboration"]
-        Brave["Brave Search API\nCorroboration"]
-        Tavily["Tavily Search API\nCorroboration"]
-        LLM["LLM APIs\nClaude · Gemini · Codex\nSummarisation + synthesis"]
-    end
+  User["Operator"]
 
-    User -->|"srp research …"| CLI
-    Pipeline -->|"search + fetch"| YouTube
-    Pipeline -->|"corroborate top-5"| Exa
-    Pipeline -->|"corroborate top-5"| Brave
-    Pipeline -->|"corroborate top-5"| Tavily
-    Pipeline -->|"summarise + synthesise"| LLM
-    Report -->|"opens in browser"| User
+  subgraph EntryRow[" "]
+    direction LR
+    Terminal["Terminal CLI\nsrp research ..."]
+    Skill["Claude Code skill\n/srp"]
+    Host["Host LLM\nonly when llm.runner = none"]
+  end
+
+  CLI["srp CLI\nparse + dispatch"]
+
+  subgraph MainRow[" "]
+    direction LR
+    Fetch["Fetch\nadapter search + metadata load"]
+    Score["Scoring\ntrust + trend + opportunity"]
+
+    Enrich@{ shape: st-rect, label: "Enrichment\ntranscripts + per-item summaries" }
+    Corroborate@{ shape: st-rect, label: "Corroboration\nclaim checks on top-N" }
+
+    Synthesize["Synthesis + render\npacket -> Markdown + HTML"]
+  end
+
+  subgraph AnalysisRow[" "]
+    direction LR
+    Stats["Stats\n20+ models on scored pool"]
+    Charts["Charts\nPNG renders + chart takeaways"]
+  end
+
+  subgraph ExternalRow[" "]
+    direction LR
+    YouTube["YouTube API\nmetadata + transcripts"]
+    Search["Corroboration backends\nExa · Brave · Tavily · llm_search"]
+    Runner["Runner CLIs\nvideo summaries + report synthesis\nCompiled Synthesis + Opportunity Analysis\nalso power llm_search\nonly when llm.runner != none"]
+  end
+
+  Report["HTML + Markdown report"]
+
+  User --> Terminal
+  User --> Skill
+  Terminal --> CLI
+  Skill --> CLI
+  Skill -. "skill-only mapping\n+ inline narrative" .-> Host
+  Host -.-> Skill
+
+  CLI --> Fetch
+  Fetch --> Score
+  Score --> Enrich
+  Enrich --> Corroborate
+  Corroborate --> Synthesize
+  Synthesize --> Report
+
+  Fetch --> YouTube
+  YouTube --> Fetch
+
+  Score --> Stats --> Charts
+  Stats --> Synthesize
+  Charts --> Synthesize
+
+  Corroborate --> Search
+  Search --> Corroborate
+  Search -.-> Runner
+  Runner -.-> Search
+
+  Enrich --> Runner
+  Runner --> Enrich
+
+  Synthesize --> Runner
+  Runner --> Synthesize
+
+  style EntryRow fill:none,stroke:none
+  style MainRow fill:none,stroke:none
+  style AnalysisRow fill:none,stroke:none
+  style ExternalRow fill:none,stroke:none
+
+  classDef operator fill:#41ff36,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef entry fill:#d9f99d,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef support fill:#93e5ff,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef gateway fill:#f48cc8,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef pipeline fill:#f7cc54,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef analysis fill:#ffe082,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef external fill:#79e7da,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef runner fill:#ffd580,stroke:#111111,color:#111111,stroke-width:2px;
+  classDef output fill:#90caf9,stroke:#111111,color:#111111,stroke-width:2px;
+
+  class User operator
+  class Terminal,Skill entry
+  class Host,YouTube,Search support
+  class CLI gateway
+  class Fetch,Score,Enrich,Corroborate,Synthesize pipeline
+  class Stats,Charts analysis
+  class Runner runner
+  class Report output

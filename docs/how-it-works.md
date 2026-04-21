@@ -121,7 +121,7 @@ The highest-scoring videos get more information fetched. This is the only stage 
 srp config set platforms.youtube.enrich_top_n 10   # enrich the top 10 instead of 5 (default)
 ```
 
-Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top5 = all_scored[:enrich_top_n]` reads this config value. The packet field is still named `items_top5` for backwards compatibility, but the actual count is whatever `enrich_top_n` is set to.
+Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top_n = all_scored[:enrich_top_n]` reads this config value. The packet field is still named `items_top_n` for backwards compatibility, but the actual count is whatever `enrich_top_n` is set to.
 
 **Why this setting matters:** raising `enrich_top_n` is the biggest way to make a run longer and more expensive. Each enriched item triggers:
 - One caption download (fast) or one Whisper audio transcription (slow, CPU-intensive)
@@ -147,7 +147,7 @@ The transcript is trimmed to 6 000 characters before being sent to the LLM.
 
 With the transcript (or description) in hand, the LLM ensemble is called to write a 100-word+ summary covering: main topic, key arguments or findings, target audience, and specific claims. The summary becomes the transcript excerpt shown in Section 3 of the report.
 
-All 5 summaries are requested concurrently.
+When a runner is configured, all 5 summaries are requested concurrently. If `llm.runner = none`, no runner subprocess is called; the summary falls back to a transcript-derived excerpt (or description fallback if no transcript exists).
 
 ---
 
@@ -161,7 +161,7 @@ No network calls happen in this stage.
 
 ## Stage 5 — Synthesise: corroboration and report
 
-Specific factual claims are extracted from the top-5 summaries and sent to web-search APIs (Exa, Brave, or Tavily) as queries. The number of supporting or contradicting results is counted and attached to each item.
+Specific factual claims are extracted from the top-N summaries and sent to web-search APIs (Exa, Brave, or Tavily) as queries. The number of supporting or contradicting results is counted and attached to each item.
 
 The LLM ensemble writes Sections 10 and 11 (compiled synthesis and opportunity analysis). The full HTML report is written to disk.
 
@@ -248,22 +248,76 @@ No approach is perfect. Here is what can go wrong with `srp`'s method:
 
 ## Local-compute first — what that means in practice
 
-The pipeline is deliberately structured so **the LLM does the minimum possible work**. A typical run touches an LLM only for:
+The pipeline is deliberately structured so **the LLM does the minimum possible work**. A typical run with a configured runner touches an LLM only for:
 
 - One 100-word summary per top-N item (default N = 5).
 - One final synthesis pass (sections 10–11).
 - Optional: one query classification when you use the natural-language form.
 
-Everything else — fetching, scoring, deduplication, stats, chart rendering, transcripts (via captions or on-device Whisper), and caching — runs on your machine with standard Python libraries. If the LLM runner is unavailable, the report still produces stages 1–9; only sections 10–11 become placeholders.
+Everything else — fetching, scoring, deduplication, stats, chart rendering, transcripts (via captions or on-device Whisper), and caching — runs on your machine with standard Python libraries. If the LLM runner is unavailable, per-item summaries fall back to transcript/description text and only sections 10–11 become placeholders.
 
 This is why adding a new platform or a new statistical model does not require any new LLM capability. The cost of one more statistic is a CPU cycle, not a token. See [Cost Optimization](cost-optimization.md) for each lever the design provides.
 
 ---
 
+## Where data lives
+
+Every artefact `srp` writes lives under `~/.social-research-probe/`
+(or whatever you set `SRP_DATA_DIR` to):
+
+| Path | What |
+| --- | --- |
+| `config.toml` | resolved runtime configuration |
+| `secrets.toml` | API keys for backends |
+| `topics.json` / `purposes.json` | saved research queries and profiles |
+| `cache/` | hashed payload cache (fetch, transcript, summary, corroboration) |
+| `charts/` | generated chart PNGs per run |
+| `reports/` | generated HTML reports per run |
+
+See [docs/data-directory.md](data-directory.md) for the full reference —
+when each file is written, where it's read, who writes it, and whether
+it's safe to delete.
+
+## Corroboration is runner-agnostic
+
+The `llm_search` corroboration backend routes
+through `get_runner(config.llm_runner).agentic_search(...)`, so
+**whichever LLM runner you configure** does the web search using its
+native capability:
+
+- Gemini → `--google-search` grounded search
+- Claude → `web_search` tool
+- Codex → `--search` flag
+- Local → not supported (backend reports unhealthy and is skipped)
+
+Runners also filter their results through the source-quality filter that
+drops the claim's own URL and any video-hosting domains before computing
+a verdict, because search snippets can't actually verify videos. See
+[docs/corroboration.md](corroboration.md) and
+[docs/diagrams/src/corroboration-runner-agnostic.mmd](diagrams/src/corroboration-runner-agnostic.mmd).
+
+## Summary quality has a nightly reliability gate
+
+Transcript summaries feed corroboration, scoring, and the HTML report,
+so their quality matters. `srp` protects it two ways:
+
+1. **Redesigned prompt** — explicit anti-hallucination clause, filler
+   blocklist, one-shot exemplar, and sentence-boundary truncation
+   ([pipeline/enrichment.py](../social_research_probe/pipeline/enrichment.py)
+   `_build_summary_prompt`).
+2. **Nightly reliability harness** — multi-sample runs with an
+   independent judge runner enforce both a mean-coverage floor and a
+   consistency ceiling on variance. See
+   [docs/llm-reliability-harness.md](llm-reliability-harness.md) and
+   [docs/summary-quality-report.md](summary-quality-report.md).
+
 ## See also
 
 - [Objective](objective.md) — project mission, audience, roadmap
 - [Cost Optimization](cost-optimization.md) — every place the design avoids an LLM call
+- [Data & Storage](data-directory.md) — every file under `~/.social-research-probe/`
+- [LLM Reliability Harness](llm-reliability-harness.md) — multi-sample judge-LLM quality gate
+- [Summary Quality Report](summary-quality-report.md) — diagnosis + prompt redesign
 - [Statistics](statistics.md) — the 20+ models that run on scored results
 - [Charts](charts.md) — visual outputs derived from the scoring data
 - [Corroboration](corroboration.md) — how claims are cross-checked

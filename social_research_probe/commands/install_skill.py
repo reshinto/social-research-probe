@@ -200,6 +200,9 @@ def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
     chosen, _, _url = _RUNNER_CHOICES[index]
     write_config_value(data_dir, "llm.runner", chosen)
     print(f"  runner set to '{chosen}'.")
+    if chosen != "none":
+        write_config_value(data_dir, f"features.{chosen}_service_enabled", "true")
+        print(f"  features.{chosen}_service_enabled set to true.")
 
 
 def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:

@@ -182,8 +182,8 @@ async def run_research(cmd: ParsedRunResearch, config: Config) -> ResearchPacket
     items   = await adapter.enrich(raw)
     scored  = sorted((_score_item(i, config) for i in items), reverse=True)
     top_n   = scored[: config.enrich_top_n]
-    summaries = await _enrich_top5_with_transcripts(top_n, config)
-    evidence  = await _corroborate_top5(top_n, _available_backends(config))
+    summaries = await _enrich_top_n_with_transcripts(top_n, config)
+    evidence  = await _corroborate_top_n(top_n, _available_backends(config))
     stats     = _build_stats_summary(scored)
     charts    = _render_charts(scored, stats)
     return build_packet(cmd, scored, summaries, evidence, stats, charts)
@@ -276,7 +276,7 @@ def build_packet(
 ) -> ResearchPacket:
     packet: ResearchPacket = {
         "query": {"platform": cmd.platform, "topic": cmd.topic},
-        "items_top5": _attach(scored[:5], summaries, evidence),
+        "items_top_n": _attach(scored[:5], summaries, evidence),
         "stats": stats,
         "chart_captions": charts,
         "warnings": [],
@@ -359,7 +359,7 @@ Soft failures can hide configuration problems. An operator who has not set up co
 
 ```python
 # social_research_probe/pipeline/orchestrator.py — corroboration step
-async def _corroborate_top5(items, backends, warnings):
+async def _corroborate_top_n(items, backends, warnings):
     for backend in backends:
         try:
             return await backend.check_claims(items)

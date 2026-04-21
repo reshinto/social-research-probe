@@ -19,7 +19,7 @@ _VALID_PACKET = {
     "topic": "ai",
     "platform": "youtube",
     "purpose_set": ["latest-news"],
-    "items_top5": [],
+    "items_top_n": [],
     "source_validation_summary": {
         "validated": 0,
         "partially": 0,
@@ -449,7 +449,7 @@ class TestRender:
         from social_research_probe.viz.base import ChartResult
 
         packet_file = tmp_path / "packet.json"
-        packet_file.write_text(json.dumps({"items_top5": [{"scores": {"overall": 0.75}}]}))
+        packet_file.write_text(json.dumps({"items_top_n": [{"scores": {"overall": 0.75}}]}))
         monkeypatch.setattr(
             "social_research_probe.commands.render.select_and_run",
             lambda d, label: [StatResult("x", 1.0, "caption")],
@@ -869,7 +869,10 @@ class TestPromptForRunner:
             lambda d, k, v: written.update({k: v}),
         )
         _prompt_for_runner(tmp_path, _input=lambda p="": "1")  # 1 = claude
-        assert written == {"llm.runner": "claude"}
+        assert written == {
+            "llm.runner": "claude",
+            "features.claude_service_enabled": "true",
+        }
 
     def test_none_choice_writes_none(self, tmp_path, monkeypatch):
         from social_research_probe.commands.install_skill import _prompt_for_runner

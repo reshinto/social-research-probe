@@ -1,6 +1,7 @@
 # Copy to ~/.social-research-probe/config.toml (or pass --data-dir).
 # Secrets live in a separate ~/.social-research-probe/secrets.toml (chmod 0600).
 # The [llm].runner setting is the default runner for config-aware LLM features.
+# See docs/data-directory.md for every file srp writes under ~/.social-research-probe/.
 
 [llm]
 runner = "none"           # claude | gemini | codex | local | none
@@ -34,7 +35,7 @@ extra_flags = []
 # opportunity = 0.2
 
 [corroboration]
-backend = "host"          # host | llm_cli | exa | brave | tavily | none
+backend = "host"          # host | llm_search | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 
@@ -49,40 +50,33 @@ cache_ttl_channel_hours = 24
 # Each toggle is independent: disabling one never breaks another. The final
 # report is exempt and always emits (HTML when possible, Markdown fallback).
 corroboration_enabled = true
-gemini_search_enabled = true         # gemini --google-search backend (requires gemini CLI)
+llm_search_enabled = true            # runner-agnostic agentic-search corroboration backend
 exa_enabled = true
 brave_enabled = true
 tavily_enabled = true
-llm_cli_corroboration_enabled = true
 enrichment_enabled = true
 transcript_fetch_enabled = true
 media_url_summary_enabled = true     # runner.summarize_media() (Gemini CLI only today)
 merged_summary_enabled = true        # reconcile transcript + URL views into one 100-word summary
-stats_enabled = true
 charts_enabled = true
 chart_takeaways_enabled = true       # deterministic 1-line chart interpretations
 synthesis_enabled = true
 html_report_enabled = true
-markdown_report_enabled = true
 
 # Per-LLM service gates. The primary runner (llm.runner above) is always
 # allowed; these flags only affect whether each LLM is invoked as a secondary
 # service (e.g. the ensemble fan-out used when the primary runner fails or
 # when runner = "none" and multi-provider synthesis is desired). Disable any
 # LLM you have installed but do not want srp to call from the ensemble.
-# NOTE: gemini_service_enabled does NOT gate the Gemini web-search
-# corroboration backend — that keeps its own gemini_search_enabled flag.
-claude_service_enabled = true
-gemini_service_enabled = true
-codex_service_enabled = true
-local_service_enabled = true
+claude_service_enabled = false
+gemini_service_enabled = false
+codex_service_enabled = false
+local_service_enabled = false
 
 [tunables]
 summary_divergence_threshold = 0.4   # transcript/URL summary divergence that triggers a warning
-                                     # AND gates merged-summary reconciliation (below this value
-                                     # the two summaries already agree, so merge is skipped).
 per_item_summary_words = 100         # target word count for merged per-item summary
 
 [logging]
-service_logs_enabled = false         # stderr start/end pairs for fetch/enrich/corroborate stages
+service_logs_enabled = true          # stderr start/end pairs for fetch/enrich/corroborate stages
                                      # (override at runtime with SRP_LOGS=1)

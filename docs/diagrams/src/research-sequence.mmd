@@ -15,14 +15,14 @@ sequenceDiagram
     Adapter-->>Orchestrator: ok
     Orchestrator->>Adapter: search(query, limits)
     Adapter-->>Orchestrator: raw items
-    Orchestrator->>Orchestrator: score + z-score → top-5
-    Orchestrator->>Enrichment: enrich_top5(top5)
+    Orchestrator->>Orchestrator: score + z-score → top-N
+    Orchestrator->>Enrichment: enrich_topN(topN)
     Enrichment->>Adapter: fetch transcript
     Adapter-->>Enrichment: transcript text
     Enrichment->>LLM: summarise(transcript)
     LLM-->>Enrichment: 100-word summary
-    Enrichment-->>Orchestrator: enriched top-5
-    Orchestrator->>Corroboration: corroborate_top5(top5)
+    Enrichment-->>Orchestrator: enriched top-N
+    Orchestrator->>Corroboration: corroborate_topN(topN)
     Corroboration-->>Orchestrator: evidence snippets
     Orchestrator->>Stats: build_stats_summary(items)
     Stats-->>Orchestrator: statistical summaries

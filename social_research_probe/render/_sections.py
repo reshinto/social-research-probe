@@ -41,8 +41,8 @@ def section_2_platform(packet: ResearchPacket) -> str:
 
 
 def section_3_top_items(packet: ResearchPacket) -> str:
-    """Section 3: Scored top-5 items with table and per-item links."""
-    items = packet.get("items_top5", [])
+    """Section 3: Scored top-N items with table and per-item links."""
+    items = packet.get("items_top_n", [])
     if not items:
         return "<p><em>(no items returned)</em></p>"
     return _items_score_table(items) + "\n" + _items_links(items)

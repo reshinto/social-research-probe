@@ -42,6 +42,7 @@ DEFAULT_CONFIG: AppConfig = {
         "youtube": {
             "recency_days": 90,
             "max_items": 20,
+            "enrich_top_n": 5,
             "cache_ttl_search_hours": 6,
             "cache_ttl_channel_hours": 24,
         },
@@ -49,25 +50,22 @@ DEFAULT_CONFIG: AppConfig = {
     "scoring": {"weights": {}},
     "features": {
         "corroboration_enabled": True,
-        "gemini_search_enabled": True,
+        "llm_search_enabled": True,
         "exa_enabled": True,
         "brave_enabled": True,
         "tavily_enabled": True,
-        "llm_cli_corroboration_enabled": True,
         "enrichment_enabled": True,
         "transcript_fetch_enabled": True,
         "media_url_summary_enabled": True,
         "merged_summary_enabled": True,
-        "stats_enabled": True,
         "charts_enabled": True,
         "chart_takeaways_enabled": True,
         "synthesis_enabled": True,
         "html_report_enabled": True,
-        "markdown_report_enabled": True,
-        "claude_service_enabled": True,
-        "gemini_service_enabled": True,
-        "codex_service_enabled": True,
-        "local_service_enabled": True,
+        "claude_service_enabled": False,
+        "gemini_service_enabled": False,
+        "codex_service_enabled": False,
+        "local_service_enabled": False,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,
@@ -132,8 +130,13 @@ class Config:
 
     @property
     def corroboration_backend(self) -> str:
-        """Return the configured corroboration backend name."""
-        return self.raw["corroboration"]["backend"]
+        """Return the configured corroboration backend name.
+
+        Older configs may still say ``llm_cli``; normalize that legacy value to
+        the canonical runner-backed search backend name, ``llm_search``.
+        """
+        backend = self.raw["corroboration"]["backend"]
+        return "llm_search" if backend == "llm_cli" else backend
 
     def llm_settings(self, name: RunnerName) -> RunnerSettings:
         """Return the nested settings block for one runner.
