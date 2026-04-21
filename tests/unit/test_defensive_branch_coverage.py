@@ -1,4 +1,8 @@
-"""Targeted coverage backfills for Phase 0-5 additions."""
+"""Defensive-branch coverage across LLM runners, enrichment, viz, and reporting.
+
+Grab-bag of tests that exercise fallback / error / empty-input branches
+that aren't naturally covered by happy-path tests elsewhere.
+"""
 
 from __future__ import annotations
 

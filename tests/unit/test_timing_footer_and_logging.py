@@ -1,4 +1,4 @@
-"""Coverage for Phase 5 additions: timing footer + log gate emission paths."""
+"""Timing footer rendering and progress-log gating."""
 
 from __future__ import annotations
 
