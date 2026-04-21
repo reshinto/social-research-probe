@@ -17,3 +17,6 @@ test-evidence:
 
 record-golden:
 	$(PY) scripts/record_golden.py --help
+
+eval-summary-quality:
+	$(PY) scripts/eval_summary_quality.py

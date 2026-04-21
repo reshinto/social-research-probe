@@ -21,15 +21,62 @@ from social_research_probe.utils.pipeline_cache import (
 from social_research_probe.utils.progress import log
 
 
+_FILLER_BLOCKLIST = (
+    "this video",
+    "in this video",
+    "the speaker discusses",
+    "the video discusses",
+    "overall,",
+    "in conclusion,",
+    "stay tuned",
+    "don't forget to like",
+)
+
+
 def _build_summary_prompt(title: str, channel: str, transcript: str, word_limit: int) -> str:
-    """Build the prompt sent to the LLM ensemble for a ``word_limit``-word summary."""
+    """Build the prompt sent to the LLM ensemble for a ``word_limit``-word summary.
+
+    Redesigned in Phase 9 of the evidence-suite plan to address observed
+    failure modes in cached summaries (generic filler, missing numbers,
+    hallucinated proper nouns, mid-sentence truncation). The prompt is now
+    structured as:
+
+    1. Explicit word budget (``≤ word_limit``, not "approximately").
+    2. Required content list (numbers, organizations, factual claims).
+    3. Anti-hallucination rule (never introduce info not in the transcript).
+    4. Filler blocklist with concrete forbidden phrases.
+    5. One-shot exemplar showing the desired style.
+    6. Title / Channel / Transcript block the model rewrites.
+    """
+    exemplar = (
+        "EXAMPLE INPUT: Transcript of a 15-minute talk by Prof. Jane Liu at"
+        " Stanford explaining how transformer attention scales to 1M tokens"
+        " via sliding windows.\n"
+        "EXAMPLE OUTPUT: Stanford's Prof. Jane Liu explains how sliding-window"
+        " attention lets transformer models scale to 1,000,000-token contexts"
+        " without quadratic memory cost. She contrasts dense attention (O(n²))"
+        " with windowed variants (O(n·w)), citing specific benchmarks where"
+        " the windowed approach matches or beats the dense baseline on long-"
+        "context retrieval tasks. Target audience: ML practitioners evaluating"
+        " long-context architectures."
+    )
     return (
-        f"Write a summary of this YouTube video in approximately {word_limit} words. Cover:\n"
-        "- The main topic and what the video is about\n"
-        "- The key arguments, findings, demonstrations, or announcements\n"
-        "- Who the target audience is and what they should take away\n"
-        "- Specific claims, tools, people, companies, or data points mentioned\n\n"
-        "Be specific and factual. Do not start with 'This video' or 'In this video'.\n\n"
+        f"Summarise the YouTube video below in at most {word_limit} words.\n\n"
+        "Required content:\n"
+        "- Main topic and what the video argues, demonstrates, or announces.\n"
+        "- Every specific number (counts, percentages, dates, durations) from"
+        " the transcript.\n"
+        "- Every named organization, person, product, or paper mentioned.\n"
+        "- Target audience and the concrete takeaway for them.\n\n"
+        "Hard rules:\n"
+        "- Never introduce information that isn't in the transcript. If a"
+        " fact isn't there, leave it out.\n"
+        "- Never start with 'This video', 'In this video', or 'The speaker"
+        " discusses'.\n"
+        "- Never end with 'Overall,', 'In conclusion,', or 'Stay tuned'.\n"
+        "- End on a complete sentence within the word limit. Prefer being"
+        " one sentence short over being cut mid-sentence.\n\n"
+        f"{exemplar}\n\n"
         f"Title: {title}\nChannel: {channel}\n\n"
         f"Transcript:\n{transcript}"
     )
@@ -120,14 +167,26 @@ async def _cached_text_summary(item: ScoredItem, prompt: str, task_label: str) -
 
 
 def _fallback_transcript_summary(transcript: str, word_limit: int = 100) -> str:
-    """Return a readable transcript-derived fallback when the LLM summary fails."""
+    """Return a readable transcript-derived fallback when the LLM summary fails.
+
+    Truncates at the last complete sentence that fits within ``word_limit``
+    words, rather than cutting mid-sentence. When no sentence boundary fits,
+    falls back to word-boundary truncation with an ellipsis marker.
+    """
     words = transcript.split()
     if not words:
         return transcript
-    excerpt = " ".join(words[:word_limit]).strip()
-    if len(words) > word_limit:
-        excerpt += " ..."
-    return excerpt
+    if len(words) <= word_limit:
+        return transcript.strip()
+    # Try sentence-boundary truncation: take the longest prefix that ends in
+    # . ! ? and still fits within word_limit.
+    truncated = " ".join(words[:word_limit]).strip()
+    last_stop = max(truncated.rfind("."), truncated.rfind("!"), truncated.rfind("?"))
+    if last_stop >= 0 and last_stop >= len(truncated) // 2:
+        # Keep the terminator.
+        return truncated[: last_stop + 1].strip()
+    # No sentence boundary in the upper half — fall back to word cut + ellipsis.
+    return truncated + " ..."
 
 
 def _build_description_summary_prompt(item: ScoredItem) -> str:

@@ -1,0 +1,29 @@
+{
+  "description": "Required tokens for sample_news_brief.vtt summary coverage scoring.",
+  "source_transcript": "sample_news_brief.vtt",
+  "required_tokens": [
+    "European Union",
+    "Meta",
+    "1.2 billion",
+    "GDPR",
+    "May 22, 2023",
+    "Irish Data Protection Commission",
+    "746 million",
+    "Amazon",
+    "Privacy Shield",
+    "2020"
+  ],
+  "allowed_proper_nouns": [
+    "European Union",
+    "EU",
+    "Meta",
+    "GDPR",
+    "Irish",
+    "Data Protection Commission",
+    "Amazon",
+    "Privacy Shield",
+    "Court of Justice",
+    "United States",
+    "US"
+  ]
+}
