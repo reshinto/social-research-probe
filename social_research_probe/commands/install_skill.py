@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 from social_research_probe.config import resolve_data_dir
@@ -114,19 +115,58 @@ def _install_cli() -> None:
 
 
 def _copy_config_example(data_dir: Path) -> None:
-    """Copy the bundled config.toml.example to data_dir/config.toml if absent.
+    """Seed data_dir/config.toml from the bundled example, or merge missing keys.
 
-    Skips the copy if a config.toml already exists so user customisations are
-    never overwritten on reinstall.
+    Fresh install: copy the example verbatim.
+    Reinstall: additively merge any keys the bundled example has that the
+    existing config lacks. Existing user values are never overwritten.
     """
     from social_research_probe.commands.config import CONFIG_FILENAME
 
     dest = data_dir / CONFIG_FILENAME
-    if dest.exists():
+    if not dest.exists():
+        data_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(_BUNDLED_CONFIG, dest)
+        print(f"Default config written to {dest}")
         return
-    data_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(_BUNDLED_CONFIG, dest)
-    print(f"Default config written to {dest}")
+    _merge_missing_config_keys(dest)
+
+
+def _merge_missing_config_keys(dest: Path) -> None:
+    """Add keys/sections from the bundled example that are missing in *dest*."""
+    from social_research_probe.commands.config import _emit_table
+
+    with dest.open("rb") as f:
+        existing = tomllib.load(f)
+    with _BUNDLED_CONFIG.open("rb") as f:
+        bundled = tomllib.load(f)
+
+    added: list[str] = []
+    _deep_merge_missing(existing, bundled, (), added)
+    if not added:
+        return
+
+    lines: list[str] = []
+    for sec, entries in existing.items():
+        _emit_table(sec, entries, lines)
+    dest.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    print(f"Added {len(added)} new config key(s) to {dest}:")
+    for key in added:
+        print(f"  + {key}")
+
+
+def _deep_merge_missing(
+    target: dict, source: dict, path: tuple[str, ...], added: list[str]
+) -> None:
+    """Copy keys from *source* into *target* when absent, recursing into tables."""
+    for key, value in source.items():
+        dotted = ".".join((*path, key))
+        if key not in target:
+            target[key] = value
+            added.append(dotted)
+            continue
+        if isinstance(value, dict) and isinstance(target[key], dict):
+            _deep_merge_missing(target[key], value, (*path, key), added)
 
 
 def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:

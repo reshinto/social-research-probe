@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import ClassVar
 
 from social_research_probe.llm.registry import register
 from social_research_probe.llm.runners.cli_json_base import AdapterError, JsonCliRunner
+from social_research_probe.utils.subprocess_runner import run as sp_run
+
+
+def _build_media_prompt(url: str, word_limit: int) -> str:
+    """Compose the direct-URL summary instruction sent to Gemini."""
+    return (
+        f"Summarize the video at this URL in approximately {word_limit} words. "
+        "Cover the main topic, key arguments or findings, target audience, and "
+        "any specific claims, tools, people, or data points referenced. Be "
+        "specific and factual. Do not start with 'This video' or 'In this "
+        f"video'.\n\nURL: {url}"
+    )
 
 
 @register
@@ -18,6 +31,7 @@ class GeminiRunner(JsonCliRunner):
     binary_name: ClassVar[str] = "gemini"
     base_argv: ClassVar[tuple[str, ...]] = ("--output-format", "json")
     schema_flag: ClassVar[str | None] = None
+    supports_media_url: ClassVar[bool] = True
 
     def _prompt_args(self, prompt: str) -> list[str]:
         """Gemini uses --prompt for non-interactive execution."""
@@ -48,3 +62,25 @@ class GeminiRunner(JsonCliRunner):
             raise AdapterError(
                 f"gemini response field is not valid JSON: {stripped[:200]!r}"
             ) from exc
+
+    async def summarize_media(
+        self, url: str, *, word_limit: int = 100, timeout_s: float = 60.0
+    ) -> str | None:
+        """Ask Gemini to summarise the video at ``url`` directly.
+
+        Returns plain prose from the envelope's ``response`` field or ``None``
+        on any failure. Does not parse as JSON — the summary is natural text.
+        """
+        if not self.health_check():
+            return None
+        prompt = _build_media_prompt(url, word_limit)
+        argv = [self._binary(), *self.base_argv, *self._extra_flags(), "--prompt", prompt]
+        try:
+            result = await asyncio.to_thread(sp_run, argv, timeout=int(timeout_s))
+            envelope = json.loads(result.stdout)
+        except (AdapterError, json.JSONDecodeError, OSError):
+            return None
+        answer = envelope.get("response", "") if isinstance(envelope, dict) else ""
+        if not isinstance(answer, str):
+            return None
+        return answer.strip() or None

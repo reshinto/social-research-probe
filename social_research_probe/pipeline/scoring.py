@@ -75,6 +75,7 @@ def _score_item(
     hints: TrustHints,
     z_view_velocity: float,
     z_engagement: float,
+    weights: dict[str, float] | None = None,
 ) -> tuple[float, ScoredItem]:
     src = classify_source(item, hints)
     trust = trust_score(
@@ -101,7 +102,7 @@ def _score_item(
         feasibility=0.5,
         novelty=max(0.0, 1.0 - age_days / 180.0),
     )
-    overall = overall_score(trust=trust, trend=trend, opportunity=opportunity)
+    overall = overall_score(trust=trust, trend=trend, opportunity=opportunity, weights=weights)
     return overall, {
         "title": item.title,
         "channel": item.author_name,

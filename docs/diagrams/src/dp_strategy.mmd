@@ -1,12 +1,13 @@
 graph TD
     A["config.toml\ncorroboration.backend = ?"] --> B{Which mode?}
 
+    B -->|"gemini_search"| G1["GeminiSearchBackend\ncorroboration/gemini_search.py"]
     B -->|"exa"| C["ExaBackend\ncorroboration/exa.py"]
     B -->|"brave"| D["BraveBackend\ncorroboration/brave.py"]
     B -->|"tavily"| E["TavilyBackend\ncorroboration/tavily.py"]
     B -->|"llm_cli"| F["LlmCliBackend\ncorroboration/llm_cli.py"]
-    B -->|"host"| G["HostBackend\nauto-selects from\nany configured key"]
+    B -->|"host"| G["host strategy\nauto-selects every\nhealthy backend"]
     B -->|"none"| H["No corroboration\nskip step entirely"]
 
-    C & D & E & F & G --> I["corroborate(claims)\ncommon interface"]
+    G1 & C & D & E & F & G --> I["check_claims(claims)\ncommon interface"]
     I --> J["Evidence attached\nto packet"]

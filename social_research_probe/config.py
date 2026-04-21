@@ -15,10 +15,13 @@ from pathlib import Path
 from social_research_probe.types import (
     AdapterConfig,
     AppConfig,
+    FeaturesConfigSection,
     FreeTextRunnerName,
     JSONObject,
+    LoggingConfigSection,
     RunnerName,
     RunnerSettings,
+    TunablesConfigSection,
 )
 
 DEFAULT_CONFIG: AppConfig = {
@@ -44,6 +47,35 @@ DEFAULT_CONFIG: AppConfig = {
         },
     },
     "scoring": {"weights": {}},
+    "features": {
+        "corroboration_enabled": True,
+        "gemini_search_enabled": True,
+        "exa_enabled": True,
+        "brave_enabled": True,
+        "tavily_enabled": True,
+        "llm_cli_corroboration_enabled": True,
+        "enrichment_enabled": True,
+        "transcript_fetch_enabled": True,
+        "media_url_summary_enabled": True,
+        "merged_summary_enabled": True,
+        "stats_enabled": True,
+        "charts_enabled": True,
+        "chart_takeaways_enabled": True,
+        "synthesis_enabled": True,
+        "html_report_enabled": True,
+        "markdown_report_enabled": True,
+        "claude_service_enabled": True,
+        "gemini_service_enabled": True,
+        "codex_service_enabled": True,
+        "local_service_enabled": True,
+    },
+    "tunables": {
+        "summary_divergence_threshold": 0.4,
+        "per_item_summary_words": 100,
+    },
+    "logging": {
+        "service_logs_enabled": False,
+    },
 }
 
 
@@ -137,6 +169,26 @@ class Config:
     def platform_defaults(self, name: str) -> AdapterConfig:
         """Return a copy of the per-platform defaults used to build adapter config."""
         return dict(self.raw["platforms"].get(name, {}))
+
+    @property
+    def features(self) -> FeaturesConfigSection:
+        """Return the features section with all on/off flags."""
+        return self.raw["features"]
+
+    @property
+    def tunables(self) -> TunablesConfigSection:
+        """Return the tunables section with numeric thresholds."""
+        return self.raw["tunables"]
+
+    @property
+    def logging(self) -> LoggingConfigSection:
+        """Return the logging section (service_logs_enabled master switch)."""
+        return self.raw["logging"]
+
+    def feature_enabled(self, name: str) -> bool:
+        """Return True iff the named feature flag is on. Unknown names → False."""
+        flag = self.features.get(name)
+        return bool(flag) if flag is not None else False
 
 
 def load_active_config() -> Config:

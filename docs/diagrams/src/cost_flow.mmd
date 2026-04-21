@@ -1,0 +1,27 @@
+graph LR
+    Q["srp research"] --> F["Fetch<br/>YouTube API"]
+    F --> S["Score<br/>(CPU)"]
+    S --> C{{"cache hit?"}}
+    C -->|yes| E1["Transcript<br/>from cache"]
+    C -->|no| T["Captions<br/>(yt-dlp)"]
+    T --> TOK{{"captions found?"}}
+    TOK -->|yes| E1
+    TOK -->|no| W["Whisper<br/>(local + ffmpeg)"]
+    W --> E1
+    E1 --> L["LLM<br/>100-word summary<br/>top-N only"]
+    L --> ST["Stats<br/>20+ models (CPU)"]
+    ST --> CH["Charts<br/>matplotlib (CPU)"]
+    CH --> CR{{"corroborate?"}}
+    CR -->|yes| SR["Search API<br/>bounded"]
+    CR -->|no| SY
+    SR --> SY["Synthesis<br/>one LLM call"]
+    SY --> R["Report"]
+
+    classDef cpu fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
+    classDef llm fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef cache fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
+    classDef decide fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
+    class F,S,ST,CH,W,T cpu;
+    class L,SR,SY llm;
+    class E1 cache;
+    class C,TOK,CR decide;

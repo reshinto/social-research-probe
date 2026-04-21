@@ -110,12 +110,14 @@ def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> 
     )
 
 
-async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
+async def _synthesize(responses: dict[str, str], original_prompt: str, cfg=None) -> str | None:
     """Produce the final answer from collected responses.
 
     If only one provider responded, returns it directly.
     Otherwise uses Claude → Gemini → Codex to synthesize all responses.
     Falls back to the best available single response if synthesis also fails.
+    Providers disabled via ``<name>_service_enabled`` are skipped unless they
+    are the configured primary runner.
     """
     if not responses:
         return None
@@ -123,7 +125,10 @@ async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | 
         return next(iter(responses.values()))
 
     synthesis_prompt = _build_synthesis_prompt(original_prompt, responses)
-    for provider in _PROVIDERS:
+    synth_providers = (
+        tuple(p for p in _PROVIDERS if _service_enabled(cfg, p)) if cfg is not None else _PROVIDERS
+    )
+    for provider in synth_providers:
         result = await _run_provider(
             provider, synthesis_prompt, task="synthesising ensemble responses"
         )
@@ -132,6 +137,21 @@ async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | 
 
     # All synthesis attempts failed — return best single response by priority.
     return responses.get("claude") or responses.get("gemini") or responses.get("codex")
+
+
+def _service_enabled(cfg, provider: str) -> bool:
+    """Return True iff provider is allowed to run as a non-primary service.
+
+    The primary runner is always allowed; secondary providers are gated by
+    their ``<name>_service_enabled`` feature flag so users can disable LLMs
+    they have installed but do not want invoked in the ensemble fan-out.
+    Gemini's web-search corroboration backend uses its own separate flag
+    (``gemini_search_enabled``) and is not affected by these toggles.
+    """
+    if cfg.llm_runner == provider:
+        return True
+    feature_enabled = getattr(cfg, "feature_enabled", lambda _name: True)
+    return bool(feature_enabled(f"{provider}_service_enabled"))
 
 
 async def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
@@ -150,10 +170,12 @@ async def multi_llm_prompt(prompt: str, task: str = "generating response") -> st
         preferred_result = await _run_provider(preferred, prompt, task)
         if preferred_result:
             return preferred_result
-        providers = (
+        candidates = (
             _PROVIDERS if preferred == "local" else tuple(p for p in _PROVIDERS if p != preferred)
         )
+        providers = tuple(p for p in candidates if _service_enabled(cfg, p))
         responses = await _collect_responses(prompt, task, providers=providers)
-        return await _synthesize(responses, prompt)
-    responses = await _collect_responses(prompt, task)
-    return await _synthesize(responses, prompt)
+        return await _synthesize(responses, prompt, cfg)
+    providers = tuple(p for p in _PROVIDERS if _service_enabled(cfg, p))
+    responses = await _collect_responses(prompt, task, providers=providers)
+    return await _synthesize(responses, prompt, cfg)

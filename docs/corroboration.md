@@ -50,6 +50,16 @@ srp config set corroboration.max_claims_per_session 30 # more total claims
 
 ## Backends
 
+### Gemini Search (`gemini_search`) ⭐ free default
+
+**What it is:** Uses the `gemini google-search` subcommand of the Gemini CLI. The CLI handles the search + response; `srp` parses the structured JSON output for snippets and citations.
+
+**Best for:** Anyone who already uses Gemini as their LLM runner — same tool, no extra key, free tier.
+
+**Configuration:** requires the `gemini` CLI installed and authenticated (browser OAuth, no API key on disk). Enabled via the `gemini_search_enabled = true` flag in `config.toml` (default).
+
+Since this backend piggybacks on the Gemini CLI's auth, there is no separate secret to store.
+
 ### Exa
 
 **What it is:** A neural search engine optimised for semantic similarity. Finds web pages that are conceptually related to the claim, not just keyword matches.
@@ -59,7 +69,7 @@ srp config set corroboration.max_claims_per_session 30 # more total claims
 **API key:** [exa.ai](https://exa.ai) — free tier available.
 
 ```bash
-srp config set-secret EXA_API_KEY
+srp config set-secret exa_api_key
 ```
 
 ### Brave Search
@@ -71,7 +81,7 @@ srp config set-secret EXA_API_KEY
 **API key:** [api.search.brave.com](https://api.search.brave.com) — free tier available.
 
 ```bash
-srp config set-secret BRAVE_API_KEY
+srp config set-secret brave_api_key
 ```
 
 ### Tavily
@@ -83,7 +93,7 @@ srp config set-secret BRAVE_API_KEY
 **API key:** [tavily.com](https://tavily.com) — free tier available.
 
 ```bash
-srp config set-secret TAVILY_API_KEY
+srp config set-secret tavily_api_key
 ```
 
 ### LLM CLI (`llm_cli`)
@@ -103,13 +113,24 @@ srp config set corroboration.backend llm_cli
 ### Mode selection
 
 ```bash
-srp config set corroboration.backend host       # auto-discover all configured backends (default)
-srp config set corroboration.backend exa        # force Exa only
-srp config set corroboration.backend brave      # force Brave only
-srp config set corroboration.backend tavily     # force Tavily only
-srp config set corroboration.backend llm_cli    # use LLM runner (no search API needed)
-srp config set corroboration.backend none       # disable corroboration entirely
+srp config set corroboration.backend host           # auto-discover all configured backends (default)
+srp config set corroboration.backend gemini_search  # free via Gemini CLI — no API key
+srp config set corroboration.backend exa            # force Exa only
+srp config set corroboration.backend brave          # force Brave only
+srp config set corroboration.backend tavily         # force Tavily only
+srp config set corroboration.backend llm_cli        # use LLM runner (no search API needed)
+srp config set corroboration.backend none           # disable corroboration entirely
 ```
+
+### Backend comparison
+
+| Backend | API key required | Free tier | Notes |
+|---|---|---|---|
+| `gemini_search` | No (browser OAuth via Gemini CLI) | Yes | Recommended free default |
+| `exa` | `exa_api_key` | Yes | Neural / semantic search |
+| `brave` | `brave_api_key` | **No** — paid only | Independent index |
+| `tavily` | `tavily_api_key` | Yes (~1000 credits/mo) | LLM-optimised snippets |
+| `llm_cli` | No (uses configured LLM runner) | Depends on runner | Training-data only, no live web |
 
 ### Auto-discovery (`host` mode)
 

@@ -69,6 +69,29 @@ def test_fetch_transcript_joins_entries(monkeypatch):
     assert result == "Hello\nworld"
 
 
+def test_fetch_transcript_uses_cache_on_second_call(monkeypatch, tmp_path):
+    """Second call for the same video_id hits the on-disk cache — no API call."""
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+
+    api_calls = [0]
+
+    class _CountingAPI:
+        def get_transcript(self, video_id, languages=None):
+            api_calls[0] += 1
+            return [{"text": "Hello"}, {"text": "world"}]
+
+    monkeypatch.setattr(yt_extract, "YouTubeTranscriptApi", _CountingAPI())
+    monkeypatch.setattr(yt_extract, "_API_AVAILABLE", True)
+
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    first = yt_extract.fetch_transcript(url)
+    second = yt_extract.fetch_transcript(url)
+
+    assert first == second == "Hello\nworld"
+    assert api_calls[0] == 1
+
+
 def test_fetch_transcript_skips_blank_entries(monkeypatch):
     """Entries with empty text are excluded from the joined result."""
     monkeypatch.setattr(

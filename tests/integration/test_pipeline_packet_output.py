@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 import sys
@@ -38,10 +37,7 @@ def test_run_research_emits_packet_envelope(tmp_path):
         env=env,
     )
     assert proc.returncode == 0, proc.stderr
-    payload = json.loads(proc.stdout)
-    assert payload["kind"] == "synthesis"
-    pkt = payload["packet"]
-    assert pkt["topic"] == "ai agents"
-    assert pkt["platform"] == "youtube"
-    assert pkt["purpose_set"] == ["trends"]
-    assert pkt["html_report_path"].startswith("file://")
+    out = proc.stdout.strip()
+    assert out.endswith(".html") or out.endswith(".md")
+    # Stdout contract is the report file path; HTML/MD content is the source of truth.
+    assert out.startswith("file://") or out.endswith(".md")

@@ -13,7 +13,6 @@ and deterministic.
 
 from __future__ import annotations
 
-import json
 import os
 import stat
 import subprocess
@@ -158,26 +157,13 @@ def test_research_packet_and_html_end_to_end(tmp_path: Path) -> None:
 
     result = _run(data_dir, env, "research", "youtube", "ai agents", "trends")
     assert result.returncode == 0, result.stderr
-    payload = json.loads(result.stdout)
-    assert payload["kind"] == "synthesis"
+    stdout_uri = result.stdout.strip()
+    assert stdout_uri.startswith("file://") and stdout_uri.endswith(".html")
 
-    packet = payload["packet"]
-    assert (
-        "source corroboration was not run; trust scores are heuristic only"
-        not in packet["warnings"]
-    )
-    assert packet["source_validation_summary"]["notes"] == "auto-corroborated via exa, tavily"
-    assert packet["html_report_path"].startswith("file://")
-    assert packet["compiled_synthesis"] == _SYNTHESIS_10
-    assert packet["opportunity_analysis"] == _SYNTHESIS_11
-
-    takeaway = packet["items_top5"][0]["one_line_takeaway"]
-    assert takeaway.startswith(_SUMMARY_PHRASE)
-    assert len(takeaway.split()) >= 200
-
-    report_path = _path_from_uri(packet["html_report_path"])
+    report_path = _path_from_uri(stdout_uri)
     assert report_path.exists()
     html = report_path.read_text(encoding="utf-8")
+    assert _SUMMARY_PHRASE in html
 
     assert _SYNTHESIS_10 in html
     assert _SYNTHESIS_11 in html

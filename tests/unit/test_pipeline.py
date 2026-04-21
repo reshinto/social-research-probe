@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC
+from typing import ClassVar
 from unittest.mock import AsyncMock
 
 import pytest
@@ -115,6 +116,81 @@ def test_score_item_returns_score_and_dict():
     assert 0.0 <= score <= 1.0
     assert "title" in d
     assert "scores" in d
+
+
+def test_score_item_custom_weights_shift_overall():
+    from datetime import datetime
+
+    from social_research_probe.platforms.base import RawItem, SignalSet, TrustHints
+
+    item = RawItem(
+        id="x",
+        url="https://example.com",
+        title="T",
+        author_id="c",
+        author_name="C",
+        published_at=datetime.now(UTC),
+        metrics={"views": 100, "likes": 1, "comments": 0},
+        text_excerpt="",
+        thumbnail=None,
+        extras={},
+    )
+    sig = SignalSet(
+        views=100,
+        likes=1,
+        comments=0,
+        upload_date=datetime.now(UTC),
+        view_velocity=1.0,
+        engagement_ratio=0.01,
+        comment_velocity=0.0,
+        cross_channel_repetition=0.0,
+        raw={},
+    )
+    hint = TrustHints(
+        account_age_days=0,
+        verified=False,
+        subscriber_count=0,
+        upload_cadence_days=0.0,
+        citation_markers=[],
+    )
+    default_score, _ = _score_item(item, sig, hint, 0.0, 0.0)
+    trust_only, _ = _score_item(
+        item, sig, hint, 0.0, 0.0, {"trust": 1.0, "trend": 0.0, "opportunity": 0.0}
+    )
+    assert default_score != trust_only
+
+
+def test_resolve_scoring_weights_purpose_overrides_config():
+    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
+    from social_research_probe.purposes.merge import MergedPurpose
+
+    class _Cfg:
+        raw: ClassVar[dict] = {
+            "scoring": {"weights": {"trust": 0.6, "trend": 0.2, "opportunity": 0.2}}
+        }
+
+    merged = MergedPurpose(
+        names=("p",),
+        method="m",
+        evidence_priorities=(),
+        scoring_overrides={"trust": 0.9},
+    )
+    w = _resolve_scoring_weights(_Cfg(), merged)
+    assert w["trust"] == 0.9
+    assert w["trend"] == 0.2
+    assert w["opportunity"] == 0.2
+
+
+def test_resolve_scoring_weights_defaults_when_empty():
+    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
+    from social_research_probe.purposes.merge import MergedPurpose
+    from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
+
+    class _Cfg:
+        raw: ClassVar[dict] = {"scoring": {"weights": {}}}
+
+    merged = MergedPurpose(names=("p",), method="m", evidence_priorities=())
+    assert _resolve_scoring_weights(_Cfg(), merged) == DEFAULT_WEIGHTS
 
 
 async def test_run_research_returns_packet(monkeypatch, tmp_path):

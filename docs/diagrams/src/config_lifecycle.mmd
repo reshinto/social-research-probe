@@ -1,0 +1,21 @@
+graph TD
+    A["srp setup / install-skill"] --> B{{"config.toml<br/>exists?"}}
+    B -->|no| C["Copy bundled<br/>config.toml.example"]
+    B -->|yes| D["Deep-merge missing<br/>keys only<br/>(no overwrite)"]
+    C --> E{{"secrets.toml<br/>exists?"}}
+    D --> E
+    E -->|no| F["Create new<br/>secrets.toml"]
+    E -->|yes| G["Prompt per key<br/>blank = skip"]
+    F --> H["umask 0o077<br/>+ chmod 0600"]
+    G --> H
+    H --> I["Prompt for<br/>llm.runner<br/>write via config set"]
+    I --> J["Done<br/>re-running is safe"]
+
+    classDef fresh fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
+    classDef existing fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
+    classDef decide fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef terminal fill:#ede7f6,stroke:#5e35b1,color:#311b92;
+    class C,F fresh;
+    class D,G existing;
+    class B,E decide;
+    class A,H,I,J terminal;

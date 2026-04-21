@@ -136,6 +136,29 @@ def test_search_calls_fetch_and_parses(monkeypatch):
     assert items[0].id == "s001"
 
 
+def test_client_is_rebuilt_per_call_to_avoid_stale_sockets(monkeypatch):
+    """Each search/enrich builds a fresh client so httplib2 keep-alive sockets
+    never go stale between calls (seen as SSL record-layer failures in prod)."""
+    import social_research_probe.platforms.youtube.fetch as fetch_mod
+
+    build_calls = [0]
+
+    def _build(key):
+        build_calls[0] += 1
+        return object()
+
+    monkeypatch.setattr(fetch_mod, "build_client", _build)
+    monkeypatch.setattr(
+        fetch_mod, "search_videos", lambda client, topic, max_items, published_after: []
+    )
+
+    adapter = _make_adapter(monkeypatch)
+    adapter.search("topic", FetchLimits(max_items=1, recency_days=0))
+    adapter.search("topic-2", FetchLimits(max_items=1, recency_days=0))
+
+    assert build_calls[0] == 2
+
+
 def test_search_no_recency_days(monkeypatch):
     """search() passes published_after=None when recency_days is None."""
     import social_research_probe.platforms.youtube.fetch as fetch_mod

@@ -33,6 +33,23 @@ class LLMRunner(ABC):
     # The registry uses this key to look up the runner by name.
     name: ClassVar[str]
 
+    # Opt-in capability flag for runners that can summarise a media URL
+    # directly (e.g. Gemini's native YouTube URL ingestion). Default False so
+    # consumers can safely call summarize_media() only on runners that flip
+    # this to True, without needing runner-specific code paths.
+    supports_media_url: ClassVar[bool] = False
+
+    async def summarize_media(
+        self, url: str, *, word_limit: int = 100, timeout_s: float = 60.0
+    ) -> str | None:
+        """Summarise the media at ``url`` directly (no transcript required).
+
+        Default returns ``None``; runners opt in by overriding and flipping
+        ``supports_media_url`` to True. Callers treat ``None`` as "signal
+        unavailable" and continue. Must never raise.
+        """
+        return None
+
     @abstractmethod
     def health_check(self) -> bool:
         """Return True if this runner is available and configured correctly.

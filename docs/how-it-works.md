@@ -132,6 +132,8 @@ A run with `enrich_top_n = 20` takes roughly 4× longer and uses 4× the LLM tok
 
 ### Transcripts (not video downloads)
 
+When captions are unavailable, the pipeline falls back to Whisper for **on-device** transcription. `yt-dlp` downloads just the audio track; Whisper transcribes it locally. **Whisper decodes audio through `ffmpeg`**, which must be on `$PATH` for the fallback to work — without it, Whisper fails and the pipeline uses the video description as the last resort. No audio is uploaded to any service; the local transcript is cached for 30 days.
+
 `srp` does **not download the video**. It tries to get the text in two ways, in order:
 
 1. **YouTube closed captions** — `yt-dlp` fetches the auto-generated or uploaded caption file (a text file, a few kilobytes). This is fast and requires no audio processing.
@@ -151,7 +153,7 @@ All 5 summaries are requested concurrently.
 
 ## Stage 4 — Analyse: statistics and charts
 
-The 15+ statistical models run on the full set of scored videos (not just the top 5). They look for patterns in the score distributions — whether results cluster into quality tiers, whether trust and trend are correlated, which features drive the overall score. The 10 chart PNGs are rendered from the same data.
+The 20+ statistical models run on the full set of scored videos (not just the top 5). They look for patterns in the score distributions — whether results cluster into quality tiers, whether trust and trend are correlated, which features drive the overall score. The 10 chart PNGs are rendered from the same data.
 
 No network calls happen in this stage.
 
@@ -244,9 +246,25 @@ No approach is perfect. Here is what can go wrong with `srp`'s method:
 
 ---
 
+## Local-compute first — what that means in practice
+
+The pipeline is deliberately structured so **the LLM does the minimum possible work**. A typical run touches an LLM only for:
+
+- One 100-word summary per top-N item (default N = 5).
+- One final synthesis pass (sections 10–11).
+- Optional: one query classification when you use the natural-language form.
+
+Everything else — fetching, scoring, deduplication, stats, chart rendering, transcripts (via captions or on-device Whisper), and caching — runs on your machine with standard Python libraries. If the LLM runner is unavailable, the report still produces stages 1–9; only sections 10–11 become placeholders.
+
+This is why adding a new platform or a new statistical model does not require any new LLM capability. The cost of one more statistic is a CPU cycle, not a token. See [Cost Optimization](cost-optimization.md) for each lever the design provides.
+
+---
+
 ## See also
 
-- [Statistics](statistics.md) — the 15+ models that run on scored results
+- [Objective](objective.md) — project mission, audience, roadmap
+- [Cost Optimization](cost-optimization.md) — every place the design avoids an LLM call
+- [Statistics](statistics.md) — the 20+ models that run on scored results
 - [Charts](charts.md) — visual outputs derived from the scoring data
 - [Corroboration](corroboration.md) — how claims are cross-checked
 - [LLM Runners](llm-runners.md) — what the LLM is used for and how to configure it

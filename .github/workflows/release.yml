@@ -17,6 +17,10 @@ jobs:
     outputs:
       version_changed: ${{ steps.filter.outputs.version }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Check changed files
         id: filter
         uses: dorny/paths-filter@v3
@@ -61,7 +65,7 @@ jobs:
           python -m build
 
       - name: Generate SHA-256 checksums
-        run: sha256sum dist/* > dist/checksums-sha256.txt
+        run: sha256sum dist/* > checksums-sha256.txt
 
       - name: Store distributions
         uses: actions/upload-artifact@v4
@@ -77,7 +81,7 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
-            dist/checksums-sha256.txt
+            checksums-sha256.txt
           generate_release_notes: true
           fail_on_unmatched_files: true
 

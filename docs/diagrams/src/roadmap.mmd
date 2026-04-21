@@ -1,0 +1,33 @@
+graph LR
+    subgraph TODAY["Supported today"]
+        direction TB
+        P1["YouTube"]
+        R1["LLM runners:<br/>claude · gemini · codex · local"]
+        B1["Corroboration:<br/>gemini_search · tavily · brave · exa · llm_cli"]
+    end
+
+    subgraph NEXT["Planned platforms"]
+        direction TB
+        P2["TikTok"]
+        P3["X / Twitter"]
+        P4["Facebook"]
+        P5["Reddit"]
+    end
+
+    subgraph LATER["Beyond social"]
+        direction TB
+        P6["RSS feeds"]
+        P7["Web search"]
+        P8["Web crawling"]
+        P9["Document research<br/>(PDF / arXiv / Drive / local)"]
+    end
+
+    TODAY --> NEXT
+    NEXT --> LATER
+
+    classDef today fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
+    classDef planned fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef later fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
+    class P1,R1,B1 today;
+    class P2,P3,P4,P5 planned;
+    class P6,P7,P8,P9 later;
