@@ -112,6 +112,34 @@ async def test_corroborate_claim_skips_failed_backend(capsys):
     assert "failing_test_backend" in captured.err
 
 
+async def test_corroborate_claim_uses_cache_on_second_call(tmp_path, monkeypatch):
+    """Second call for the same claim + backends skips the backend calls."""
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+
+    call_count = [0]
+
+    class _CountingBackend(CorroborationBackend):
+        name = "counting_test_backend"
+
+        def health_check(self) -> bool:
+            return True
+
+        async def corroborate(self, claim) -> CorroborationResult:
+            call_count[0] += 1
+            return CorroborationResult(verdict="supported", confidence=0.8, reasoning="ok")
+
+    reg_module.register(_CountingBackend)
+    claim = Claim(text="stable claim", source_text="ctx", index=0)
+
+    first = await corroborate_claim(claim, ["counting_test_backend"])
+    second = await corroborate_claim(claim, ["counting_test_backend"])
+
+    assert first == second
+    assert first["aggregate_verdict"] == "supported"
+    assert call_count[0] == 1
+
+
 def test_aggregate_verdict_empty_returns_inconclusive():
     """Line 41: empty results returns (inconclusive, 0.0)."""
     verdict, confidence = aggregate_verdict([])

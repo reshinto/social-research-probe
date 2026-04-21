@@ -1,8 +1,10 @@
-[Home](README.md) → Project Structure
+[Home](README.md) → Module Reference
 
-# Project Structure
+# Module Reference
 
 A file-by-file and folder-by-folder reference for the `social-research-probe` repository. Use this when you need to find where something lives, understand what a module owns, or decide where to add new code.
+
+For the high-level system design (layering, data flow, extension points), start at [Architecture](architecture.md) instead — this doc is a lookup table, not an explanation.
 
 ---
 
@@ -453,7 +455,7 @@ Structural assertions about the codebase itself:
 | `corroboration.md` | What claim corroboration is, available backends, configuration |
 | `llm-runners.md` | Supported LLM runners, ensemble, what breaks without a runner |
 | `commands.md` | Every flag, config key, exit code, and environment variable |
-| `statistics.md` | All 15+ statistical models: what they measure and how to interpret output |
+| `statistics.md` | All 20+ statistical models: what they measure and how to interpret output |
 | `charts.md` | Every chart type: what it shows, how to read it, file persistence |
 | `model-applicability.md` | Model-to-module mapping, minimum dataset sizes, planned additions |
 | `architecture.md` | System design, data flow, async model, design tradeoffs, known limitations |

@@ -7,23 +7,25 @@
 [![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://pypi.org/project/social-research-probe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/reshinto/social-research-probe/blob/main/LICENSE)
 
-`srp` fetches YouTube content, scores it by trust/trend/opportunity, auto-corroborates claims, runs 15+ statistical models, and renders an HTML report — all from a single CLI command.
+`srp` fetches YouTube content, scores it by trust/trend/opportunity, auto-corroborates claims, runs 20+ statistical models, and renders an HTML report — all from a single CLI command.
 
 ---
 
 ## Table of contents
 
 1. [What it does](#what-it-does)
-2. [Quickstart](#quickstart)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Configuration](#configuration)
-6. [Documentation](#documentation)
-7. [Architecture](#architecture)
-8. [Contributing](#contributing)
-9. [Security](#security)
-10. [License](#license)
-11. [Changelog](#changelog)
+2. [Why this exists](#why-this-exists)
+3. [Quickstart](#quickstart)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Configuration](#configuration)
+7. [Roadmap — what's planned](#roadmap)
+8. [Documentation](#documentation)
+9. [Architecture](#architecture)
+10. [Contributing](#contributing)
+11. [Security](#security)
+12. [License](#license)
+13. [Changelog](#changelog)
 
 ---
 
@@ -34,10 +36,23 @@
 1. **Fetch** — queries YouTube for recent content on a topic (configurable count and recency window).
 2. **Score** — ranks items by a composite trust / trend / opportunity score derived from channel credibility, view velocity, and cross-channel repetition.
 3. **Enrich** — fetches transcripts (yt-dlp captions → Whisper fallback) and generates 100-word LLM summaries for the top results.
-4. **Analyse** — runs 15+ statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, …) and renders charts as PNGs.
+4. **Analyse** — runs 20+ statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, …) and renders charts as PNGs.
 5. **Synthesise** — auto-corroborates the top results via Exa/Brave/Tavily, attaches structured LLM synthesis sections, and emits a Markdown + HTML report.
 
 It also ships as a **Claude Code skill** (`/srp`) so you can invoke research, manage topics/purposes, and receive formatted reports directly inside a Claude Code session.
+
+---
+
+## Why this exists
+
+`srp` is an **evidence-first research CLI**. It does most of the work on your own computer and only calls an LLM when no cheaper tool can do the job.
+
+- **Objective** — conduct real research with citations, the lowest possible cost per query, and no lock-in to any single model.
+- **Audience** — independent researchers, journalists, content strategists, analysts, and indie builders who need repeatable research without burning LLM credits.
+- **Philosophy** — scoring, stats, charts, transcripts (via captions or local Whisper), and caching all run on your CPU. The LLM is used only for 100-word per-item summaries and the final synthesis sections, behind a swappable runner interface. If your preferred model disappears, change one config key and keep going.
+- **Status** — **work in progress (pre-1.0)**. The pipeline, scoring model, and CLI shape are stable. The research-packet schema and additional platforms/backends are still evolving. Pin a version in production.
+
+See [docs/objective.md](docs/objective.md) for the full rationale and [docs/cost-optimization.md](docs/cost-optimization.md) for every place the design avoids an LLM call.
 
 ---
 
@@ -45,7 +60,7 @@ It also ships as a **Claude Code skill** (`/srp`) so you can invoke research, ma
 
 ```bash
 pip install social-research-probe
-srp config set-secret YOUTUBE_API_KEY
+srp config set-secret youtube_api_key
 srp research "AI safety" "latest-news"
 ```
 
@@ -78,8 +93,20 @@ pip install -e '.[dev]'
 After installing, set your YouTube API key:
 
 ```bash
-srp config set-secret YOUTUBE_API_KEY
+srp config set-secret youtube_api_key
 ```
+
+### Pick an LLM runner — Gemini CLI is the free default
+
+`srp` does not bundle any LLM. It shells out to the runner's CLI — so **you must install the matching CLI on your machine yourself** (via npm, brew, a package manager, or an Ollama install for the local runner) and authenticate it before pointing `srp` at it.
+
+`srp` can use Claude, Gemini, Codex, or a local model. **Gemini CLI is recommended as the default for cost-conscious users**: it logs in via a browser OAuth flow, needs no API key, and runs on a free tier for typical workloads. Install the [Gemini CLI](https://github.com/google-gemini/gemini-cli) and log in, then:
+
+```bash
+srp config set llm.runner gemini
+```
+
+The same `gemini` CLI also powers the free `gemini_search` corroboration backend. See [docs/llm-runners.md](docs/llm-runners.md) for the full comparison.
 
 See [docs/installation.md](docs/installation.md) for full setup including optional keys and the Claude Code skill bundle.
 
@@ -102,7 +129,7 @@ srp update-purposes --add '"emerging-research"="Track peer-reviewed preprints"'
 
 # Config
 srp config set llm.runner claude
-srp config set-secret YOUTUBE_API_KEY
+srp config set-secret youtube_api_key
 ```
 
 Full flag reference: `srp --help` / `srp <subcommand> --help`.
@@ -133,17 +160,27 @@ Key settings in `~/.social-research-probe/config.toml`:
 | Setting                          | Default | What it controls                             |
 | -------------------------------- | ------- | -------------------------------------------- |
 | `platforms.youtube.max_items`    | `20`    | How many videos to fetch per search          |
-| `platforms.youtube.recency_days` | `90`    | How far back to search (days)                |
-| `llm.runner`                     | `none`  | Which LLM to use for summaries and synthesis |
-| `corroboration.backend`          | `host`  | Which web-search backend to corroborate with |
+| `platforms.youtube.enrich_top_n` | `5`     | How many top items get transcripts + summaries (biggest cost lever) |
+| `llm.runner`                     | `none`  | Which LLM runner to use — `gemini` is the free default |
+| `corroboration.backend`          | `host`  | `host` tries every healthy backend; `none` disables corroboration |
 
-Change any setting with `srp config set <key> <value>`, e.g.:
+Change any setting with `srp config set <key> <value>`. Running `srp setup` again after an upgrade **adds missing keys without overwriting** your edits, and `secrets.toml` is never overwritten (it's chmod `0600`).
 
-```bash
-srp config set platforms.youtube.max_items 50
-srp config set platforms.youtube.recency_days 30
-srp config set llm.runner claude
-```
+See [docs/configuration.md](docs/configuration.md) for the full key list, env overrides, and ready-made recipes (cheapest / deepest / fastest / offline).
+
+---
+
+## Roadmap
+
+Today: **YouTube**, 4 LLM runners (`claude`, `gemini`, `codex`, `local`), 5 corroboration backends (`gemini_search`, `tavily`, `brave`, `exa`, `llm_cli`).
+
+Planned platforms — each implemented by adding one adapter to [social_research_probe/platforms/](social_research_probe/platforms/):
+
+- **TikTok**, **X / Twitter**, **Facebook**, **Reddit** — social adapters.
+- **RSS**, **web search**, **web crawling** — long-tail and general-web sources.
+- **Document research** — PDF, arXiv, Google Drive, and local files.
+
+None of these require new LLM capabilities. See [docs/objective.md](docs/objective.md#roadmap) for motivation and [docs/adding-a-platform.md](docs/adding-a-platform.md) for the contract.
 
 ---
 
@@ -151,20 +188,26 @@ srp config set llm.runner claude
 
 | Document                                               | What it covers                                                    |
 | ------------------------------------------------------ | ----------------------------------------------------------------- |
-| [docs/README.md](docs/README.md)                       | Documentation hub — all docs by audience                          |
-| [docs/how-it-works.md](docs/how-it-works.md)           | How fetching, scoring, and transcripts work; vs pure-LLM approach |
+| [docs/README.md](docs/README.md)                       | Documentation hub — all docs grouped by audience                  |
+| [docs/objective.md](docs/objective.md)                 | Project objective, audience, philosophy, roadmap                  |
+| [docs/how-it-works.md](docs/how-it-works.md)           | What happens during a `srp research` run, in plain English        |
+| [docs/cost-optimization.md](docs/cost-optimization.md) | Every place the design avoids an LLM call; recipes by budget      |
 | [docs/installation.md](docs/installation.md)           | Install (pip/pipx/uvx), API keys, LLM runner, verification        |
-| [docs/usage.md](docs/usage.md)                         | Run research, read output, configure video count                  |
-| [docs/corroboration.md](docs/corroboration.md)         | Claim corroboration: what it is, backends, configuration          |
-| [docs/llm-runners.md](docs/llm-runners.md)             | Supported runners, ensemble, what breaks without one              |
-| [docs/statistics.md](docs/statistics.md)               | All 15+ statistical models: what they measure, how to interpret   |
-| [docs/charts.md](docs/charts.md)                       | Every chart: what it shows, where it's saved, file persistence    |
-| [docs/commands.md](docs/commands.md)                   | Every flag, config key, exit code, environment variable           |
-| [docs/architecture.md](docs/architecture.md)           | System design, data flow, tradeoffs, known limitations            |
-| [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS)           |
-| [docs/design-patterns.md](docs/design-patterns.md)     | Patterns with why/why-not rationale                               |
+| [docs/usage.md](docs/usage.md)                         | Run research, read output, Claude Code skill workflow             |
+| [docs/configuration.md](docs/configuration.md)         | Every config key, env overrides, config/secrets lifecycle         |
+| [docs/corroboration.md](docs/corroboration.md)         | Claim corroboration: backends, free tiers, configuration          |
+| [docs/llm-runners.md](docs/llm-runners.md)             | Runner comparison, Gemini CLI browser auth, ensemble mode         |
+| [docs/statistics.md](docs/statistics.md)               | All 20+ statistical models: what they measure, how to interpret   |
+| [docs/charts.md](docs/charts.md)                       | Every chart: what it shows, where it's saved                      |
+| [docs/commands.md](docs/commands.md)                   | Every `srp` subcommand, flag, exit code, environment variable     |
+| [docs/synthesis-authoring.md](docs/synthesis-authoring.md) | Override sections 10–11 in the HTML report                    |
+| [docs/architecture.md](docs/architecture.md)           | System design, data flow, tradeoffs, extension points             |
+| [docs/module-reference.md](docs/module-reference.md)   | Every root file and folder: what it is and why it exists          |
+| [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS, …)        |
+| [docs/design-patterns.md](docs/design-patterns.md)     | Patterns with code examples and why/why-not rationale             |
+| [docs/python-language-guide.md](docs/python-language-guide.md) | All 13 Python idioms used in the codebase                  |
 | [docs/testing.md](docs/testing.md)                     | Test tiers, TDD workflow, 100% coverage gate                      |
-| [docs/security.md](docs/security.md)                   | Secret storage, network egress, hardening                         |
+| [docs/security.md](docs/security.md)                   | Secret storage, trust boundaries, hardening                       |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                     | Development workflow, TDD rules, file-size limits                 |
 | [SECURITY.md](SECURITY.md)                             | Responsible disclosure policy                                     |
 | [CHANGELOG.md](CHANGELOG.md)                           | Release history                                                   |

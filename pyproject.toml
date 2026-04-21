@@ -55,6 +55,7 @@ asyncio_mode = "auto"
 [tool.coverage.run]
 source = ["social_research_probe"]
 branch = true
+parallel = true
 omit = ["social_research_probe/cli/__main__.py"]
 
 [tool.coverage.report]

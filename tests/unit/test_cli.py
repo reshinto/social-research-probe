@@ -293,8 +293,8 @@ class TestResearchCommand:
             == 0
         )
         assert calls == [{"include_shorts": True, "fetch_transcripts": True}]
-        payload = json.loads(capsys.readouterr().out)
-        assert payload["kind"] == "synthesis"
+        out = capsys.readouterr().out.strip()
+        assert out.endswith(".html") or out.endswith(".md")
 
 
 class TestInstallSkillTargetValidation:
@@ -817,13 +817,37 @@ class TestCopyConfigExample:
         _copy_config_example(tmp_path)
         assert (tmp_path / "config.toml").exists()
 
-    def test_skips_copy_when_config_exists(self, tmp_path):
+    def test_preserves_user_values_when_config_exists(self, tmp_path):
         from social_research_probe.commands.install_skill import _copy_config_example
 
         existing = tmp_path / "config.toml"
-        existing.write_text("original", encoding="utf-8")
+        existing.write_text('[llm]\nrunner = "claude"\ntimeout_seconds = 42\n', encoding="utf-8")
         _copy_config_example(tmp_path)
-        assert existing.read_text(encoding="utf-8") == "original"
+        content = existing.read_text(encoding="utf-8")
+        assert 'runner = "claude"' in content
+        assert "timeout_seconds = 42" in content
+
+    def test_merges_missing_keys_when_config_exists(self, tmp_path):
+        import tomllib
+
+        from social_research_probe.commands.install_skill import _copy_config_example
+
+        existing = tmp_path / "config.toml"
+        existing.write_text('[llm]\nrunner = "claude"\n', encoding="utf-8")
+        _copy_config_example(tmp_path)
+        merged = tomllib.loads(existing.read_text(encoding="utf-8"))
+        assert merged["llm"]["runner"] == "claude"
+        assert "features" in merged
+        assert "platforms" in merged
+
+    def test_merge_is_idempotent(self, tmp_path):
+        from social_research_probe.commands.install_skill import _copy_config_example
+
+        _copy_config_example(tmp_path)
+        first = (tmp_path / "config.toml").read_text(encoding="utf-8")
+        _copy_config_example(tmp_path)
+        second = (tmp_path / "config.toml").read_text(encoding="utf-8")
+        assert first == second
 
     def test_creates_data_dir_when_absent(self, tmp_path):
         from social_research_probe.commands.install_skill import _copy_config_example
@@ -1033,11 +1057,8 @@ class TestRequiredSynthesis:
             ),
         )
         main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
-        payload = json.loads(capsys.readouterr().out)
-        assert payload["kind"] == "synthesis"
-        assert payload["packet"]["compiled_synthesis"] == "synth10"
-        assert payload["packet"]["opportunity_analysis"] == "synth11"
-        assert payload["packet"]["html_report_path"].startswith("file://")
+        out = capsys.readouterr().out.strip()
+        assert out.startswith("file://") and out.endswith(".html")
 
     def test_no_html_still_emits_synthesized_packet(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
@@ -1061,10 +1082,9 @@ class TestRequiredSynthesis:
                 "--no-html",
             ]
         )
-        payload = json.loads(capsys.readouterr().out)
-        assert payload["packet"]["compiled_synthesis"] == "synth10"
-        assert payload["packet"]["opportunity_analysis"] == "synth11"
-        assert "html_report_path" not in payload["packet"]
+        out = capsys.readouterr().out.strip()
+        # --no-html falls back to Markdown report
+        assert out.endswith(".md")
 
     def test_runner_none_emits_packet_without_sections_10_11(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
@@ -1083,9 +1103,8 @@ class TestRequiredSynthesis:
                 "--no-html",
             ]
         )
-        payload = json.loads(capsys.readouterr().out)
-        assert "compiled_synthesis" not in payload["packet"]
-        assert "opportunity_analysis" not in payload["packet"]
+        out = capsys.readouterr().out.strip()
+        assert out.endswith(".md")
 
 
 class TestResearchPreflightWarning:
@@ -1131,23 +1150,18 @@ class TestResearchPreflightWarning:
         result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
         assert result == 0
 
-    def test_multi_packet_html_raises_validation_error(self, monkeypatch, tmp_path):
-        """Requesting HTML for a multi-topic packet raises ValidationError."""
+    def test_multi_packet_html_falls_back_to_markdown(self, monkeypatch, tmp_path, capsys):
+        """Multi-topic packets cannot render HTML — fall back to Markdown stub."""
         multi = {**_VALID_PACKET, "multi": [_VALID_PACKET]}
-
-        class _Cfg:
-            default_structured_runner = "none"
-
-        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
             AsyncMock(return_value=copy.deepcopy(multi)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
-        from social_research_probe.errors import ValidationError
-
         result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"])
-        assert result == ValidationError.exit_code
+        assert result == 0
+        out = capsys.readouterr().out.strip()
+        assert out.endswith(".md")
 
 
 class TestAttachSynthesis:

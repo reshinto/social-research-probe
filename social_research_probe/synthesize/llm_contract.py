@@ -15,6 +15,7 @@ from typing import Final
 
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.prompts import SYNTHESIS_PROMPT
+from social_research_probe.synthesize.synthesis_context import build_synthesis_context
 
 SYNTHESIS_JSON_SCHEMA: Final[dict] = {
     "type": "object",
@@ -50,14 +51,15 @@ def build_synthesis_prompt(packet: dict) -> str:
         prompt = build_synthesis_prompt(packet)
         result = runner.run(prompt, schema=RESPONSE_SCHEMA)
     """
-    # Serialize the top-5 items as pretty-printed JSON so the LLM can parse
-    # them as structured evidence rather than a raw Python repr.
-    evidence = json.dumps(packet.get("items_top5", []), indent=2)
-    # The schema is compact JSON so it fits neatly on one prompt line.
+    context = build_synthesis_context(packet)
+    # Pass the compact synthesis context as the evidence body. It already
+    # contains items, stats highlights, chart takeaways, coverage, warnings —
+    # everything the LLM should ground its synthesis in.
+    evidence = json.dumps(context, indent=2)
     schema = json.dumps(SYNTHESIS_JSON_SCHEMA)
     return SYNTHESIS_PROMPT.format(
-        topic=packet.get("topic", ""),
-        platform=packet.get("platform", ""),
+        topic=context["topic"],
+        platform=context["platform"],
         evidence=evidence,
         schema=schema,
     )

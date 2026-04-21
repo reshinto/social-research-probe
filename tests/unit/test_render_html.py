@@ -640,10 +640,8 @@ class TestResearchHtmlInCli:
         assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
-        payload = json.loads(capsys.readouterr().out)
-        assert payload["kind"] == "synthesis"
-        assert payload["packet"]["compiled_synthesis"] == "synth10 text"
-        assert payload["packet"]["html_report_path"].startswith("file://")
+        out = capsys.readouterr().out.strip()
+        assert out.startswith("file://") and out.endswith(".html")
 
     def test_no_html_flag_suppresses_file(self, monkeypatch, tmp_path):
         from social_research_probe.cli import main

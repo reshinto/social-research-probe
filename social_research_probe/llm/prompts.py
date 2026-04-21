@@ -14,6 +14,10 @@ from __future__ import annotations
 SYNTHESIS_PROMPT = """\
 You are a research analyst. Given the following evidence packet, write a concise synthesis.
 
+Rules:
+- Ground claims in items, stats_highlights, or chart_takeaways. Acknowledge mixed or weak evidence.
+- Stats and charts cover coverage.fetched; item-level detail covers only coverage.enriched.
+
 Topic: {topic}
 Platform: {platform}
 Evidence:
@@ -33,4 +37,24 @@ Sources:
 {sources}
 
 Respond in JSON with keys: verdict (supported|refuted|inconclusive), confidence (0.0-1.0), reasoning (str).
+"""
+
+
+# Used by the enrichment step when both a transcript-based summary and a
+# runner-direct URL summary exist for the same video. Produces one reconciled
+# summary and flags any disagreement between the two inputs.
+RECONCILE_SUMMARY_PROMPT = """\
+You are merging two independent summaries of the same video into a single
+accurate summary of approximately {word_limit} words. Prefer claims that
+appear in both; flag any material disagreement briefly inside the summary.
+Do not reveal that two sources were merged. Do not start with 'This video'.
+
+Title: {title}
+Channel: {channel}
+
+Transcript-based summary:
+{transcript_summary}
+
+URL-based summary:
+{url_summary}
 """

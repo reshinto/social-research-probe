@@ -4,15 +4,27 @@ from __future__ import annotations
 
 import asyncio
 
+from social_research_probe.config import load_active_config
+from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.ensemble import multi_llm_prompt
+from social_research_probe.llm.prompts import RECONCILE_SUMMARY_PROMPT
+from social_research_probe.platforms.youtube.extract import _extract_video_id
+from social_research_probe.synthesize.divergence import jaccard_divergence
 from social_research_probe.types import ScoredItem
+from social_research_probe.utils.fast_mode import fast_mode_enabled
+from social_research_probe.utils.pipeline_cache import (
+    get_str,
+    hash_key,
+    set_str,
+    summary_cache,
+)
 from social_research_probe.utils.progress import log
 
 
-def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
-    """Build the prompt sent to the LLM ensemble for a 100-word video summary."""
+def _build_summary_prompt(title: str, channel: str, transcript: str, word_limit: int) -> str:
+    """Build the prompt sent to the LLM ensemble for a ``word_limit``-word summary."""
     return (
-        "Write a detailed summary of this YouTube video (minimum 100 words). Cover:\n"
+        f"Write a summary of this YouTube video in approximately {word_limit} words. Cover:\n"
         "- The main topic and what the video is about\n"
         "- The key arguments, findings, demonstrations, or announcements\n"
         "- Who the target audience is and what they should take away\n"
@@ -23,7 +35,91 @@ def _build_summary_prompt(title: str, channel: str, transcript: str) -> str:
     )
 
 
-def _fallback_transcript_summary(transcript: str, word_limit: int = 220) -> str:
+def _first_media_url_runner() -> LLMRunner | None:
+    """Return the first registered runner with ``supports_media_url=True`` that is healthy."""
+    from social_research_probe.llm.registry import get_runner, list_runners
+
+    for name in list_runners():
+        try:
+            runner = get_runner(name)
+        except Exception:
+            continue
+        if getattr(runner, "supports_media_url", False) and runner.health_check():
+            return runner
+    return None
+
+
+async def _url_based_summary(url: str, word_limit: int, cfg=None) -> str | None:
+    """Return a runner-direct URL summary, or None when unavailable or disabled."""
+    if fast_mode_enabled():
+        return None
+    if cfg is None:
+        cfg = load_active_config()
+    if not cfg.feature_enabled("media_url_summary_enabled"):
+        return None
+    video_id = _extract_video_id(url)
+    cache = summary_cache() if video_id else None
+    cache_key = f"url:{video_id}:{word_limit}" if video_id else None
+    if cache is not None and cache_key is not None:
+        cached = get_str(cache, cache_key)
+        if cached is not None:
+            return cached
+    runner = _first_media_url_runner()
+    if runner is None:
+        return None
+    try:
+        summary = await runner.summarize_media(url, word_limit=word_limit)
+    except Exception:
+        return None
+    if summary and cache is not None and cache_key is not None:
+        set_str(cache, cache_key, summary)
+    return summary
+
+
+async def _reconcile_summaries(
+    title: str, channel: str, transcript_summary: str, url_summary: str, word_limit: int
+) -> str | None:
+    """Merge two summaries into one via the multi-LLM ensemble."""
+    prompt = RECONCILE_SUMMARY_PROMPT.format(
+        word_limit=word_limit,
+        title=title,
+        channel=channel,
+        transcript_summary=transcript_summary,
+        url_summary=url_summary,
+    )
+    cache = summary_cache()
+    key = hash_key("merged", title, str(word_limit), transcript_summary, url_summary)
+    cached = get_str(cache, key)
+    if cached is not None:
+        return cached
+    merged = await multi_llm_prompt(prompt, task=f"reconciling summaries for {title[:60]!r}")
+    if merged:
+        set_str(cache, key, merged)
+    return merged
+
+
+async def _cached_text_summary(item: ScoredItem, prompt: str, task_label: str) -> str | None:
+    """Wrap the text-summary LLM call with on-disk memoisation.
+
+    Key includes the full prompt hash so any change to transcript, title, or
+    word limit invalidates naturally. Falls back to a direct LLM call when the
+    item has no parseable video_id (non-YouTube or malformed URL).
+    """
+    video_id = _extract_video_id(item.get("url", "")) or ""
+    if not video_id:
+        return await multi_llm_prompt(prompt, task=task_label)
+    cache = summary_cache()
+    key = hash_key("text", video_id, prompt)
+    cached = get_str(cache, key)
+    if cached is not None:
+        return cached
+    summary = await multi_llm_prompt(prompt, task=task_label)
+    if summary:
+        set_str(cache, key, summary)
+    return summary
+
+
+def _fallback_transcript_summary(transcript: str, word_limit: int = 100) -> str:
     """Return a readable transcript-derived fallback when the LLM summary fails."""
     words = transcript.split()
     if not words:
@@ -52,33 +148,28 @@ def _build_description_summary_prompt(item: ScoredItem) -> str:
     )
 
 
-async def _enrich_one(
+async def _fetch_transcript_with_fallback(
     item: ScoredItem,
     fetch_transcript,
     fetch_transcript_whisper,
     whisper_sem: asyncio.Semaphore,
-) -> None:
-    """Fetch transcript and LLM summary for a single video item.
-
-    Runs transcript fetch and LLM summary concurrently across items via
-    asyncio.gather. Whisper fallback acquires ``whisper_sem`` to cap
-    concurrent audio-download + ML-transcription jobs. Modifies item in place.
-
-    When no transcript is available, falls back to an LLM summary built
-    from the video title and description, marked as description-based.
-    """
-    title = item.get("title", "untitled")[:80]
-    log(f"[srp] transcript: fetching for {title!r}")
-
-    # Caption fetch runs in a thread; whisper fallback acquires the semaphore
-    # only if the caption fetch returns nothing.
+    cfg=None,
+) -> str:
+    """Fetch transcript with whisper fallback; return cleaned text or empty string."""
+    if cfg is None:
+        cfg = load_active_config()
+    if not cfg.feature_enabled("transcript_fetch_enabled"):
+        return ""
     text = await asyncio.to_thread(fetch_transcript, item["url"])
     if not (text and text.strip()):
         async with whisper_sem:
             text = await asyncio.to_thread(fetch_transcript_whisper, item["url"])
+    return " ".join(text.split())[:6000] if text else ""
 
-    cleaned = " ".join(text.split())[:6000] if text else ""
 
+def _text_summary_prompt(item: ScoredItem, cleaned: str, word_limit: int) -> tuple[str, str]:
+    """Build the text-based summary prompt and log label; picks transcript or description."""
+    title = item.get("title", "untitled")[:80]
     if cleaned:
         item["transcript"] = cleaned
         item["summary_source"] = "transcript"
@@ -87,19 +178,90 @@ async def _enrich_one(
             title=item.get("title", ""),
             channel=item.get("channel", ""),
             transcript=cleaned,
+            word_limit=word_limit,
         )
-        task_label = f"summarising transcript for {title[:60]!r}"
-    else:
-        item["summary_source"] = "description"
-        log(f"[srp] summary: description-based for {title[:60]!r} (transcript unavailable)")
-        prompt = _build_description_summary_prompt(item)
-        task_label = f"summarising description for {title[:60]!r}"
+        return prompt, f"summarising transcript for {title[:60]!r}"
+    item["summary_source"] = "description"
+    log(f"[srp] summary: description-based for {title[:60]!r} (transcript unavailable)")
+    return _build_description_summary_prompt(item), f"summarising description for {title[:60]!r}"
 
-    summary = await multi_llm_prompt(prompt, task=task_label)
-    if summary:
-        item["one_line_takeaway"] = summary
-    elif cleaned:
-        item["one_line_takeaway"] = _fallback_transcript_summary(cleaned)
+
+async def _merge_or_pick(
+    item: ScoredItem,
+    text_summary: str | None,
+    url_summary: str | None,
+    cleaned: str,
+    word_limit: int,
+    divergence_threshold: float,
+    cfg=None,
+) -> str | None:
+    """Reconcile text+url summaries, or return whichever single one exists."""
+    if cfg is None:
+        cfg = load_active_config()
+    merge_on = cfg.feature_enabled("merged_summary_enabled") and not fast_mode_enabled()
+    if text_summary and url_summary:
+        divergence = jaccard_divergence(text_summary, url_summary)
+        item["summary_divergence"] = divergence
+        item["url_summary"] = url_summary
+        if merge_on and divergence >= divergence_threshold:
+            merged = await _reconcile_summaries(
+                title=item.get("title", "")[:80],
+                channel=item.get("channel", ""),
+                transcript_summary=text_summary,
+                url_summary=url_summary,
+                word_limit=word_limit,
+            )
+            if merged:
+                return merged
+        return text_summary
+    if text_summary:
+        return text_summary
+    if url_summary:
+        item["url_summary"] = url_summary
+        return url_summary
+    if cleaned:
+        return _fallback_transcript_summary(cleaned, word_limit=word_limit)
+    return None
+
+
+async def _enrich_one(
+    item: ScoredItem,
+    fetch_transcript,
+    fetch_transcript_whisper,
+    whisper_sem: asyncio.Semaphore,
+    cfg=None,
+) -> None:
+    """Fetch transcript + LLM summaries concurrently, then merge into one summary.
+
+    Fan-out in parallel: (a) transcript fetch → text-based summary, (b) runner
+    direct URL summary when any runner supports it. Results reconciled into a
+    single ``item["summary"]`` of ``per_item_summary_words``. Divergence between
+    the two is recorded on the item so warnings can surface mismatches.
+    """
+    if cfg is None:
+        cfg = load_active_config()
+    if not cfg.feature_enabled("enrichment_enabled"):
+        return
+    word_limit = int(cfg.tunables.get("per_item_summary_words", 100))
+    threshold = float(cfg.tunables.get("summary_divergence_threshold", 0.4))
+    title = item.get("title", "untitled")[:80]
+    log(f"[srp] transcript: fetching for {title!r}")
+
+    cleaned_task = _fetch_transcript_with_fallback(
+        item, fetch_transcript, fetch_transcript_whisper, whisper_sem, cfg=cfg
+    )
+    url_task = _url_based_summary(item["url"], word_limit, cfg=cfg)
+    cleaned, url_summary = await asyncio.gather(cleaned_task, url_task)
+
+    prompt, task_label = _text_summary_prompt(item, cleaned, word_limit)
+    text_summary = await _cached_text_summary(item, prompt, task_label)
+
+    merged = await _merge_or_pick(
+        item, text_summary, url_summary, cleaned, word_limit, threshold, cfg=cfg
+    )
+    if merged:
+        item["one_line_takeaway"] = merged
+        item["summary"] = merged
 
 
 async def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
@@ -123,13 +285,17 @@ async def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
         fetch_transcript_whisper,
     )
 
+    # Load config once per batch instead of per-item-per-helper (was ~4 reads
+    # per item = 20 disk reads for a top-5 run). Pass down via cfg= kwarg.
+    cfg = load_active_config()
+
     async def _gather() -> None:
         # Limit concurrent whisper jobs to 2 to avoid memory exhaustion from
         # simultaneous audio-download + ML-transcription across all top-5 items.
         whisper_sem = asyncio.Semaphore(2)
         await asyncio.gather(
             *[
-                _enrich_one(item, fetch_transcript, fetch_transcript_whisper, whisper_sem)
+                _enrich_one(item, fetch_transcript, fetch_transcript_whisper, whisper_sem, cfg=cfg)
                 for item in top5
             ],
             return_exceptions=True,

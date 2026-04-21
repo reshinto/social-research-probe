@@ -43,22 +43,30 @@ For the responsible-disclosure policy see [SECURITY.md](../SECURITY.md).
 
 ## Secret Storage
 
-Secrets are stored by `srp config set-secret <name>`. The command uses a hidden prompt (`getpass`) — the value is never echoed to the terminal.
+Secrets are stored by `srp config set-secret <name>`. The command uses a hidden prompt — the value is never echoed to the terminal.
 
-Secrets are written to `~/.social-research-probe/secrets/` with permissions `0600`. They are read at runtime by `corroboration/_secret_utils.py::read_runtime_secret`.
+Secrets are written to `~/.social-research-probe/secrets.toml` with permissions `0600`. The write path is [`commands/config.py:_write_secrets_file`](../social_research_probe/commands/config.py), which:
 
-**Never commit secrets to version control.** `.env` files are in `.gitignore`. The project does not use `python-dotenv` — secrets are always loaded from the secrets directory, not from environment variables.
+1. Sets `umask 0o077` before creating the file.
+2. Explicitly `chmod 0600` after the write.
+3. Is atomic relative to concurrent writers — the file is fully rewritten each time a secret is added or unset.
+
+On every read, `_check_perms()` inspects the file's mode bits and prints a stderr warning if the file is group- or world-readable. Tighten with `chmod 0600 ~/.social-research-probe/secrets.toml` when prompted.
+
+**Never commit secrets to version control.** `.env` files are gitignored. `srp setup` and `srp install-skill` **never overwrite** an existing `secrets.toml` — blank prompts are skipped, existing values are preserved.
 
 ---
 
 ## Secret Retrieval
 
-`_secret_utils.py` provides two utilities:
+All secret reads go through [`read_secret()`](../social_research_probe/commands/config.py), which has one well-defined precedence:
 
-- `read_runtime_secret(name)` — reads a secret from the secrets directory; raises `ValidationError` if absent.
-- `HTTP_USER_AGENT` — a constant user-agent string sent with all outbound HTTP requests.
+1. **`SRP_<NAME_UPCASE>` environment variable** — always wins if set and non-empty.
+2. **`secrets.toml` entry** — used when no env variable is set.
 
-All corroboration and LLM backends call `read_runtime_secret` rather than reading `os.environ` directly. This ensures that secrets are never accidentally logged via `os.environ` dumps.
+This lets CI inject secrets via env without writing a file, and lets operators override a file value for one-off runs without editing the file.
+
+Corroboration and LLM backends never read `os.environ` directly; they go through `read_secret`, so accidental `os.environ` dumps can never expose secrets.
 
 ---
 
@@ -114,7 +122,8 @@ Packets are not transmitted anywhere. HTML reports are self-contained local file
 ## Hardening Checklist
 
 - [ ] Run `srp config check-secrets` after any credential rotation.
-- [ ] Restrict `~/.social-research-probe/secrets/` to `0600` or tighter.
+- [ ] Confirm `~/.social-research-probe/secrets.toml` is `0600` (the read path warns you on startup otherwise).
+- [ ] Prefer browser-auth runners (Gemini, Claude CLI) over storing API keys on disk where possible.
 - [ ] Review `srp show-pending` before `srp apply-pending` — proposals are LLM-generated.
 - [ ] Pin `social-research-probe` to a specific version in automated pipelines.
 - [ ] Review the GitHub Actions `release.yml` permissions before forking (it uses `contents: write` and `id-token: write`).

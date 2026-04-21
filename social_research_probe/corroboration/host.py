@@ -18,6 +18,12 @@ from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.registry import get_backend
+from social_research_probe.utils.pipeline_cache import (
+    corroboration_cache,
+    get_json,
+    hash_key,
+    set_json,
+)
 
 
 def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
@@ -68,6 +74,9 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     Backends that raise any exception are skipped with a warning printed to
     stderr so the pipeline can continue with partial data.
 
+    Results are cached on disk by ``(claim_text, sorted_backends)`` with a
+    short TTL so repeat research runs within the hour skip external API calls.
+
     Args:
         claim: A Claim dataclass instance (from validation/claims.py).
         backend_names: Ordered list of backend name strings, e.g.
@@ -77,6 +86,12 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
         Dict with claim_text, results, aggregate_verdict, aggregate_confidence.
     """
     import dataclasses
+
+    cache = corroboration_cache()
+    cache_key = hash_key("claim", claim.text, ",".join(sorted(backend_names)))
+    cached = get_json(cache, cache_key)
+    if cached is not None:
+        return cached
 
     async def _call_backend(backend_name: str) -> CorroborationResult | None:
         try:
@@ -93,9 +108,11 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     collected = [r for r in outcomes if r is not None]
     verdict, confidence = aggregate_verdict(collected)
 
-    return {
+    result = {
         "claim_text": claim.text,
         "results": [dataclasses.asdict(r) for r in collected],
         "aggregate_verdict": verdict,
         "aggregate_confidence": confidence,
     }
+    set_json(cache, cache_key, result)
+    return result

@@ -47,7 +47,7 @@ After the run, `srp` prints a structured Markdown document with 9 or 11 sections
 | 4. Platform Signals | Aggregate view velocity, credibility spread, and content-type breakdown |
 | 5. Source Validation | Channel credibility assessment for the top-5 sources |
 | 6. Evidence | Summary of corroboration results from web-search APIs |
-| 7. Statistics | Highlights from the 15+ statistical models (regression coefficients, cluster structure, etc.) |
+| 7. Statistics | Highlights from the 20+ statistical models (regression coefficients, cluster structure, etc.) |
 | 8. Charts | Paths to the rendered PNG chart files |
 | 9. Warnings | Any data quality flags (low result count, missing transcripts, etc.) |
 | 10. Compiled Synthesis | Plain-English LLM synthesis of what was found *(requires `llm.runner` configured)* |
@@ -155,9 +155,12 @@ When the argument is a full sentence, `srp` classifies it into a topic and purpo
 srp research "who is winning the LLM benchmarks race?"
 ```
 
-### Excluding YouTube Shorts
+### Research flags
+
 ```bash
-srp research "AI agents" "latest-news" --no-shorts
+srp research "AI agents" "latest-news" --no-shorts        # exclude YouTube Shorts (<90s)
+srp research "AI agents" "latest-news" --no-transcripts   # skip enrichment (fastest, least context)
+srp research "AI agents" "latest-news" --no-html          # skip HTML report (Markdown stays)
 ```
 
 ---
@@ -211,6 +214,8 @@ srp report \
   --synthesis-11 /tmp/s11.txt \
   --out ~/Desktop/report.html
 ```
+
+The templates for sections 10 and 11 live in [synthesis-authoring.md](synthesis-authoring.md).
 
 ---
 

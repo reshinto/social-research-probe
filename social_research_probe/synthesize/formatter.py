@@ -35,6 +35,7 @@ def build_packet(
     stats_summary: StatsSummary,
     chart_captions: list[str],
     warnings: list[str],
+    chart_takeaways: list[str] | None = None,
 ) -> ResearchPacket:
     """Assemble the canonical packet dict passed between pipeline and renderer."""
     return {
@@ -47,6 +48,7 @@ def build_packet(
         "evidence_summary": evidence_summary,
         "stats_summary": stats_summary,
         "chart_captions": chart_captions,
+        "chart_takeaways": list(chart_takeaways or []),
         "warnings": warnings,
     }
 
@@ -138,7 +140,28 @@ def render_full(
     )
     body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
     body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
+    footer = _render_timing_footer(packet.get("stage_timings", []))
+    if footer:
+        body += f"\n{footer}\n"
     return body
+
+
+def _render_timing_footer(timings: list) -> str:
+    """Return a one-line italic timing summary, or empty when no stages recorded."""
+    if not timings:
+        return ""
+    parts = []
+    total = 0.0
+    for entry in timings:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("stage", "?")
+        elapsed = float(entry.get("elapsed_s", 0.0))
+        total += elapsed
+        parts.append(f"{name} {elapsed:.1f}s")
+    if not parts:
+        return ""
+    return "_Timing: " + " • ".join(parts) + f" • total {total:.1f}s_"
 
 
 def render_sections_1_9(packet: ResearchPacket) -> str:

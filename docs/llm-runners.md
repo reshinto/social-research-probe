@@ -32,15 +32,42 @@ New providers can be added by subclassing `LLMRunner` and decorating the class w
 
 ---
 
+## You install the CLIs yourself
+
+`srp` does **not** bundle any LLM or call any LLM API directly. Every runner is a thin wrapper around a **separate CLI tool you install on your own machine**:
+
+- `gemini` — from [Gemini CLI releases](https://github.com/google-gemini/gemini-cli) (npm / brew / binary).
+- `claude` — from Anthropic's Claude Code CLI (`npm install -g @anthropic-ai/claude-code`).
+- `codex` — from OpenAI's Codex CLI.
+- `local` — any binary of your choice (Ollama wrapper, llamafile, etc.) pointed at by `SRP_LOCAL_LLM_BIN`.
+
+`srp` does not ship any credentials and does not authenticate anything on your behalf. You log in once through the CLI (browser OAuth for Gemini and Claude, API key for Codex, nothing for `local`), then set `llm.runner`. If the CLI is missing or unauthenticated at run time, `health_check()` fails and `srp` falls back to the next runner (or skips the LLM stage entirely, if none is healthy).
+
+---
+
 ## Supported runners
 
 | Runner | Default model | When to use | What you must configure |
 |---|---|---|---|
-| `claude` | Anthropic Claude (Sonnet by default) | Best prose quality; recommended if you have Claude CLI access | `claude` CLI installed and authenticated (`npm install -g @anthropic-ai/claude-code && claude auth`) |
-| `gemini` | `gemini-2.5-pro` | Good alternative to Claude; useful when you have a Google AI account | `gemini` CLI installed and authenticated |
-| `codex` | `gpt-4o` | OpenAI-based; good JSON-structured output | `codex` CLI installed; OpenAI API key configured in the CLI |
+| `gemini` ⭐ | `gemini-2.5-pro` | **Recommended default.** Free tier, browser-auth, no API key on disk. Also powers free `gemini_search` corroboration. | `gemini` CLI installed (`npm install -g @google/gemini-cli`) + `gemini auth login` (browser OAuth) |
+| `claude` | Anthropic Claude (Sonnet by default) | Best prose quality when you already pay for Claude. | `claude` CLI installed and authenticated (`npm install -g @anthropic-ai/claude-code && claude auth`) |
+| `codex` | `gpt-4o` | OpenAI-based; strong JSON structure | `codex` CLI installed; OpenAI API key configured in the CLI |
 | `local` | `llama3.1:8b` (configurable) | Air-gapped environments; no API fees; needs capable hardware | `SRP_LOCAL_LLM_BIN` env var pointing to the binary (e.g. an Ollama wrapper); binary must accept prompt via stdin and return JSON to stdout |
 | `none` | — | Explicitly disable all LLM features | Nothing — this is the default; the pipeline runs but skips all LLM stages |
+
+### Why Gemini CLI is the recommended default
+
+![LLM runner decision tree](diagrams/runner_choice.svg)
+
+
+Most `srp` users choose Gemini as their primary runner for four reasons:
+
+1. **Free tier covers typical research loads.** `srp` only calls the LLM for top-N per-item summaries (default 5) and one synthesis pass. Token usage is bounded, not per-item-quadratic.
+2. **Browser OAuth — no API key stored anywhere.** The Gemini CLI handles token refresh internally. `srp` never touches a Gemini key; there is no `gemini_api_key` to leak.
+3. **One install, two roles.** The same `gemini` binary powers the `gemini_search` corroboration backend ([corroboration.md](corroboration.md)), so you get both per-item summaries and free web-search corroboration with zero extra setup.
+4. **Direct media URL ingestion.** Gemini is the only runner today that implements `summarize_media()` — it can summarise a YouTube URL without `srp` downloading the transcript first. When `media_url_summary_enabled = true` (the default), this cuts wall-clock time and local CPU.
+
+If you already pay for Claude and want the prose quality, `claude` is a strong second choice. If you run offline, `local` with a capable model works but quality varies. If you prefer not to use an LLM at all, `none` is fully supported — the report just shows placeholders in sections 10–11.
 
 ---
 
