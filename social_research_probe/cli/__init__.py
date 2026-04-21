@@ -308,7 +308,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = _global_parser()
     args = parser.parse_args(argv)
     if getattr(args, "version", False):
-        print(f"srp 0.1.0  ({_srp_pkg.__file__})")
+        print(f"srp {_srp_pkg.get_version()}  ({_srp_pkg.__file__})")
         return 0
     if args.command is None:
         parser.print_help(sys.stderr)

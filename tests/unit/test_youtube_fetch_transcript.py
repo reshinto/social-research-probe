@@ -70,6 +70,11 @@ class TestFetchTranscriptWhisperCookies:
     def test_cookies_file_arg_added_when_env_set(self, monkeypatch, tmp_path):
         """SRP_YTDLP_COOKIES_FILE adds --cookies to the yt-dlp command."""
         import subprocess
+        import sys
+        import types
+
+        fake_whisper = types.SimpleNamespace(load_model=lambda name: object())
+        monkeypatch.setitem(sys.modules, "whisper", fake_whisper)
 
         cookie_file = str(tmp_path / "cookies.txt")
         monkeypatch.setenv("SRP_YTDLP_COOKIES_FILE", cookie_file)
