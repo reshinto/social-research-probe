@@ -79,11 +79,14 @@ monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", .
 ## Running Tests
 
 ```bash
-# Full suite with coverage (1400+ tests, ~30 s)
+# Full suite with coverage gate (1500+ tests, ~30 s) — THE gate
 pytest -q
 
-# Subsets
-pytest tests/unit tests/contract --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+# Same run, more verbose coverage output
+pytest tests/unit tests/contract tests/evidence \
+    --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+
+# Integration tests only (no coverage enforcement)
 pytest tests/integration --no-cov
 
 # Fast iteration on a single file
@@ -91,6 +94,15 @@ pytest tests/unit/test_scoring.py -x -q
 ```
 
 CI runs all tiers on Python 3.11, 3.12, and 3.13.
+
+> **Important:** The `--cov-fail-under=100` gate applies to **all three
+> tiers combined** (unit + contract + evidence). Running any subset in
+> isolation under-reports — for example, `pytest tests/unit tests/contract`
+> alone hits ~95% because the evidence tier is the only place that covers
+> the new `social_research_probe/evals/` package and the per-runner
+> `agentic_search` implementations. The distinction between the tiers is
+> **purpose** (value vs. line), not whether their tests count toward
+> coverage. They all do.
 
 ### Evidence suite — running the new tests in `tests/evidence/`
 
@@ -109,21 +121,27 @@ pytest tests/evidence -v --no-cov
 ```
 
 The Makefile target disables the project-wide `--cov-fail-under=100`
-gate because the evidence tier is a narrow slice — full coverage runs
-against `pytest -q` still enforce 100%.
+gate because the evidence tier is a narrow slice — running it in
+isolation covers only ~43% of lines (it deliberately doesn't exercise
+the CLI parsers, command entry points, or state-migration shims, which
+live in the unit tier). Full coverage runs against `pytest -q` still
+enforce 100%.
 
 > **Why not enforce 100% coverage on `tests/evidence/` alone?** The two
-> tiers have different jobs. `tests/unit/` + `tests/contract/` exist for
-> **line coverage** — they prove no branch blows up. `tests/evidence/`
-> exists for **value coverage** — every test has an *(input / expected /
-> why)* receipt proving the scoring formula is right, the stats match a
-> reference, the corroboration backend classifies correctly, and so on.
-> Line coverage is a side effect, not the point. Running only the
-> evidence tier covers ~43% of lines by design; the CLI parsers, command
-> entry points, and state-migration shims are covered by the unit tier.
-> If you want the full gate, run `pytest -q`. If you want fast feedback
-> on value-tier assertions while iterating on a formula or parser, use
-> `make test-evidence`.
+> tiers have different *purposes*, not different counting rules.
+> `tests/unit/` + `tests/contract/` exist for **line coverage** — they
+> prove every branch is reachable. `tests/evidence/` exists for **value
+> coverage** — every test has an *(input / expected / why)* receipt
+> proving the scoring formula is right, the stats match a reference,
+> the corroboration backend classifies correctly. Both tiers contribute
+> to the 100% gate on the combined run; neither hits 100% alone
+> (unit+contract misses the new `evals/` package and the per-runner
+> `agentic_search` methods, evidence misses the CLI shims). The
+> `make test-evidence` shortcut uses `--no-cov` because enforcing a
+> coverage number against a narrow slice is misleading, not because
+> those tests don't count. If you want fast feedback on value-tier
+> assertions while iterating, use `make test-evidence`. If you want the
+> gate, run `pytest -q`.
 
 #### LLM quality evaluators (out of CI)
 
