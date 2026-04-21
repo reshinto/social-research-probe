@@ -156,7 +156,7 @@ Useful for one-off runs without adding `srp` to any environment. The package is 
 brew install uv          # macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh   # any OS
 
-uvx social-research-probe research "AI safety" "latest-news"
+uvx --from social-research-probe srp research "AI safety" "latest-news"  # This would not have any of the api keys, not recommended, but good for a quick demo
 ```
 
 ### From source (development)
