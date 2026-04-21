@@ -43,18 +43,10 @@ reliability targets:
 
 ## Methodology
 
-```mermaid
-flowchart LR
-    Corpus[Reference corpus<br/>tests/fixtures/golden/eval/] --> Gen
-    Gen[Generator runner<br/>config.llm_runner] -->|N samples| Sample
-    Sample[SampleOutcome<br/>coverage/hallucinations/length] --> Gate
-    Sample -->|optional| Judge
-    Judge[Judge runner<br/>independent; disabled if only 1 runner] --> Gate
-    Gate[apply_gates] -->|pass/fail| Report
-    Report[.srp-eval/.../timestamp.json<br/>.srp-eval/.../timestamp.md]
-```
+![Reliability harness flow](diagrams/reliability-harness.svg)
 
-*(See `docs/diagrams/src/reliability-harness.mmd` for the Mermaid source.)*
+*(Mermaid source: [docs/diagrams/src/reliability-harness.mmd](diagrams/src/reliability-harness.mmd).
+Regenerate with `mmdc -i docs/diagrams/src/reliability-harness.mmd -o docs/diagrams/reliability-harness.svg`.)*
 
 ### Per-sample metrics (deterministic)
 

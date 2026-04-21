@@ -35,6 +35,12 @@ Nightly reliability (Phase 10) additionally enforces:
 | Coverage consistency (stdev across 5 samples) | **≤ 0.10** |
 | Judge-rubric faithfulness (per sample, 1-5) | **≥ 4** |
 
+## Pipeline at a glance
+
+![Summary quality flow](diagrams/summary-quality.svg)
+
+*(Mermaid source: [docs/diagrams/src/summary-quality.mmd](diagrams/src/summary-quality.mmd).)*
+
 ## Observed failure modes (pre-Phase 9)
 
 Sampling ~10 summaries from the live cache (`~/.social-research-probe/cache/summary/`)

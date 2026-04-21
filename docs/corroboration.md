@@ -46,6 +46,21 @@ srp config set corroboration.max_claims_per_session 30 # more total claims
 
 ![Corroboration pipeline flow](diagrams/corroboration_flow.svg)
 
+### Runner-agnostic agentic search
+
+The backend registered as `gemini_search` (legacy name, kept for config
+compatibility) now dispatches through the configured `llm_runner` — so
+whichever runner you select uses its own native search capability
+(Gemini's `--google-search`, Claude's `web_search` tool, Codex's
+`--search` flag). Every result is passed through the same source-quality
+filter that drops self-source URLs and video-hosting domains before a
+verdict is computed.
+
+![Runner-agnostic corroboration flow](diagrams/corroboration-runner-agnostic.svg)
+
+*(Mermaid source: [diagrams/src/corroboration-runner-agnostic.mmd](diagrams/src/corroboration-runner-agnostic.mmd).
+See [llm-runners.md](llm-runners.md#capability-matrix) for which runners support agentic search.)*
+
 ---
 
 ## Backends
