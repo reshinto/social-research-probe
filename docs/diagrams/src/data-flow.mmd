@@ -2,7 +2,7 @@ graph LR
     A["topics + purposes"] --> B["Platform search\nraw items"]
     B --> C["Transcript enrichment\nLLM summary per item"]
     C --> D["Scoring + z-score\nranked list"]
-    D --> E["Top-5 selection"]
+    D --> E["Top-N selection"]
     E --> F["Corroboration\nevidence snippets"]
     E --> G["Stats models\n20+ outputs"]
     E --> H["Chart rendering\nPNG files"]

@@ -17,7 +17,7 @@ import sys
 from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
-from social_research_probe.corroboration.registry import get_backend
+from social_research_probe.corroboration.registry import canonical_backend_name, get_backend
 from social_research_probe.utils.pipeline_cache import (
     corroboration_cache,
     get_json,
@@ -80,15 +80,18 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     Args:
         claim: A Claim dataclass instance (from validation/claims.py).
         backend_names: Ordered list of backend name strings, e.g.
-            ["exa", "brave", "llm_cli"].
+            ["exa", "brave", "llm_search"].
 
     Returns:
         Dict with claim_text, results, aggregate_verdict, aggregate_confidence.
     """
     import dataclasses
 
+    normalized_backends = list(
+        dict.fromkeys(canonical_backend_name(name) for name in backend_names)
+    )
     cache = corroboration_cache()
-    cache_key = hash_key("claim", claim.text, ",".join(sorted(backend_names)))
+    cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_backends)))
     cached = get_json(cache, cache_key)
     if cached is not None:
         return cached
@@ -102,7 +105,7 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
             return None
 
     outcomes = await asyncio.gather(
-        *[_call_backend(name) for name in backend_names],
+        *[_call_backend(name) for name in normalized_backends],
         return_exceptions=False,
     )
     collected = [r for r in outcomes if r is not None]

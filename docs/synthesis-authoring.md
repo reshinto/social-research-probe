@@ -4,6 +4,8 @@
 
 The HTML report includes 11 sections. Sections 1–9 are generated mechanically from the research packet. Sections 10 (Compiled Synthesis) and 11 (Opportunity Analysis) are written by an LLM runner when one is configured, or left as placeholders when `llm.runner = none`.
 
+In the Claude Code skill, the host model can still draft sections 10–11 when `llm.runner = none`; `srp report` is how you inject that text back into the HTML report.
+
 You can **override** sections 10–11 after the fact by passing plain-text files to `srp report`. This guide covers:
 
 1. When you would override (and when you would not).
@@ -16,9 +18,10 @@ You can **override** sections 10–11 after the fact by passing plain-text files
 
 - The default LLM output missed a key finding you want to emphasise.
 - You ran research with `llm.runner = none` and now want to add synthesis by hand.
+- You used the Claude Code skill to draft sections 10–11 with the host model and want those sections written into the HTML report.
 - You want to use a different runner (e.g. Claude in a separate session) to author the sections, then inject them.
 
-When **not** to override: if the default synthesis is acceptable, ship it. Re-running `srp report` only changes sections 10–11 — the charts, stats, and top-5 come from the packet.
+When **not** to override: if the default synthesis is acceptable, ship it. Re-running `srp report` only changes sections 10–11 — the charts, stats, and top-N come from the packet.
 
 ---
 

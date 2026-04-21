@@ -11,7 +11,7 @@ def _packet_with_timings(timings):
         "topic": "x",
         "platform": "youtube",
         "purpose_set": [],
-        "items_top5": [],
+        "items_top_n": [],
         "source_validation_summary": {
             "validated": 0,
             "partially": 0,
@@ -72,7 +72,18 @@ def test_progress_log_emits_when_env_enabled(monkeypatch, capsys):
 
 
 def test_progress_log_silent_when_disabled(monkeypatch, capsys):
+    """With SRP_LOGS unset and config.progress_log=False, log() emits nothing.
+
+    Explicitly stubbing load_active_config makes the test robust under
+    parallel test runners (pytest-xdist), where the default resolution
+    could otherwise pick up a real user ~/.social-research-probe/config.toml
+    that has progress_log enabled.
+    """
     monkeypatch.delenv("SRP_LOGS", raising=False)
+    monkeypatch.setattr(
+        "social_research_probe.config.load_active_config",
+        lambda: type("C", (), {"progress_log": False})(),
+    )
     progress.log("should not appear")
     captured = capsys.readouterr()
     assert captured.err == ""

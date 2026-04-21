@@ -43,9 +43,9 @@ After the run, `srp` prints a structured Markdown document with 9 or 11 sections
 |---|---|
 | 1. Topic & Purpose | The topic searched and the research intent applied |
 | 2. Platform | Which platform adapter was used |
-| 3. Top Items | The 5 highest-scoring videos — title, channel, score, and a transcript summary |
+| 3. Top Items | The 5 highest-scoring videos — title, channel, score, and a summary (runner-written when available, transcript/description fallback otherwise) |
 | 4. Platform Signals | Aggregate view velocity, credibility spread, and content-type breakdown |
-| 5. Source Validation | Channel credibility assessment for the top-5 sources |
+| 5. Source Validation | Channel credibility assessment for the top-N sources |
 | 6. Evidence | Summary of corroboration results from web-search APIs |
 | 7. Statistics | Highlights from the 20+ statistical models (regression coefficients, cluster structure, etc.) |
 | 8. Charts | Paths to the rendered PNG chart files |
@@ -84,7 +84,7 @@ Charts are saved to `~/.social-research-probe/charts/` with fixed filenames:
 ├── trust_vs_trend_scatter.png
 ├── feature_correlations_heatmap.png
 ├── overall_by_rank_residuals.png
-└── top5_summary_table.png
+└── top_n_summary_table.png
 ```
 
 **Charts are overwritten on every run.** If you need to preserve charts from a specific run, either copy them out of the directory or use the HTML report — the HTML embeds all charts at generation time and is not affected by later runs.
@@ -150,7 +150,7 @@ srp research "AI agents" "latest-news,trends"
 ```
 
 ### Natural-language query
-When the argument is a full sentence, `srp` classifies it into a topic and purpose automatically. Requires `llm.runner != none`.
+When the argument is a full sentence, the CLI classifies it into a topic and purpose automatically. Requires `llm.runner != none`. In the Claude Code skill, the host model can perform that mapping first when `llm.runner = none`, then call the explicit topic + purpose form.
 ```bash
 srp research "who is winning the LLM benchmarks race?"
 ```
@@ -191,13 +191,13 @@ srp config set platforms.youtube.enrich_top_n 10 # enrich the top 10 instead of 
 
 | Mode | When to use |
 |---|---|
-| `host` (default) | Auto-uses all backends whose API keys are configured |
+| `host` (default) | Auto-uses every healthy corroboration backend whose API key or runner capability is available |
 | `exa` / `brave` / `tavily` | Force a single backend |
-| `llm_cli` | No external search key — uses the LLM runner instead |
+| `llm_search` | Use the configured runner's native web-search capability instead of a separate search API key |
 | `none` | Disable corroboration entirely |
 
 ```bash
-srp config set corroboration.backend llm_cli   # no search API needed
+srp config set corroboration.backend llm_search # no separate search API key needed
 srp config set corroboration.backend none      # skip corroboration
 ```
 
@@ -238,7 +238,7 @@ After `srp install-skill`, the same CLI verbs are available inside Claude Code w
 
 The skill shells out to the `srp` CLI, so quoted payloads for `update-topics` and `update-purposes` work exactly the same as they do in a terminal. `show-pending` is the review step, and `apply-pending` / `discard-pending` only act on the IDs you pass or on `all`.
 
-For research runs, the skill parses the JSON packet and formats sections 1–9 as a chat message. The HTML report path is surfaced so you can open it directly from the chat.
+For research runs, the skill still uses `srp` for packet generation and report rendering, but the host LLM is allowed to handle the skill-only language steps. When `llm.runner = none`, Claude should classify natural-language requests, summarize sections 1-9 from the packet, and write sections 10-11 inline or via `srp report`. When `llm.runner` is set to `claude`, `gemini`, `codex`, or `local`, the skill should prefer the CLI-produced LLM output and avoid duplicating it with the host model. The HTML report path is surfaced so you can open it directly from the chat.
 
 ---
 

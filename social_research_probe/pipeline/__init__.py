@@ -5,11 +5,11 @@ from __future__ import annotations
 from social_research_probe.config import Config
 
 from .charts import _render_charts
-from .corroboration import _corroborate_top5
+from .corroboration import _corroborate_top_n
 from .enrichment import (
     _build_description_summary_prompt,
     _build_summary_prompt,
-    _enrich_top5_with_transcripts,
+    _enrich_top_n_with_transcripts,
     _fallback_transcript_summary,
     _fetch_best_transcript,
 )
@@ -26,9 +26,9 @@ __all__ = [
     "_build_summary_prompt",
     "_build_svs",
     "_channel_credibility",
-    "_corroborate_top5",
+    "_corroborate_top_n",
     "_enrich_query",
-    "_enrich_top5_with_transcripts",
+    "_enrich_top_n_with_transcripts",
     "_fallback_transcript_summary",
     "_fetch_best_transcript",
     "_maybe_register_fake",

@@ -9,7 +9,11 @@ graph TD
     F --> H["umask 0o077<br/>+ chmod 0600"]
     G --> H
     H --> I["Prompt for<br/>llm.runner<br/>write via config set"]
-    I --> J["Done<br/>re-running is safe"]
+    I --> J{{"runner = none?"}}
+    J -->|yes| K["CLI skips runner calls<br/>Claude Code skill may still use<br/>host LLM for skill-only language work"]
+    J -->|no| L["CLI uses configured runner<br/>Claude Code skill defers to<br/>runner-produced output"]
+    K --> M["Done<br/>re-running is safe"]
+    L --> M
 
     classDef fresh fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
     classDef existing fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
@@ -17,5 +21,5 @@ graph TD
     classDef terminal fill:#ede7f6,stroke:#5e35b1,color:#311b92;
     class C,F fresh;
     class D,G existing;
-    class B,E decide;
-    class A,H,I,J terminal;
+    class B,E,J decide;
+    class A,H,I,K,L,M terminal;

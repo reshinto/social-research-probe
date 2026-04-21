@@ -1,16 +1,23 @@
-.PHONY: help test test-evidence record-golden
+.PHONY: help test test-fast test-evidence record-golden eval-summary-quality
 
 PY ?= ./.venv/bin/python
 PYTEST ?= ./.venv/bin/pytest
+# Override with JOBS=4 if your machine has fewer cores.
+JOBS ?= auto
 
 help:
 	@echo "Targets:"
-	@echo "  test           — run the full test suite (unit + integration + contract + evidence)"
-	@echo "  test-evidence  — run only the evidence test suite under tests/evidence/"
-	@echo "  record-golden  — help for scripts/record_golden.py (real API recorder; run manually)"
+	@echo "  test           — full suite, sequential (stable; use when debugging)"
+	@echo "  test-fast      — full suite, parallel via pytest-xdist (JOBS=$(JOBS))"
+	@echo "  test-evidence  — only tests/unit/evidence/ (fast, no coverage gate)"
+	@echo "  eval-summary-quality — nightly real-LLM eval (see docs/llm-reliability-harness.md)"
+	@echo "  record-golden  — help for scripts/record_golden.py (manual API recorder)"
 
 test:
 	$(PYTEST) -q
+
+test-fast:
+	$(PYTEST) -n $(JOBS) --dist=loadfile -q
 
 test-evidence:
 	$(PYTEST) tests/unit/evidence -v --no-cov

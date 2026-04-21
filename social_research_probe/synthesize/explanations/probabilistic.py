@@ -34,15 +34,15 @@ def explain_bootstrap(metric: str, finding: str) -> str:
 
 
 def explain_naive_bayes(metric: str) -> str:
-    """Naive Bayes — shows the base rate for top-5 success and whether signals are predictive."""
+    """Naive Bayes — shows the base rate for top-N success and whether signals are predictive."""
     v = parse_numeric(metric)
-    if metric.startswith("Naive Bayes prior P(is_top_5=0)"):
+    if metric.startswith("Naive Bayes prior P(is_top_n=0)"):
         return (
             f"Base odds of NOT making the top 5 are {v:.0%} — the top tier is selective; average content will not break through without deliberate differentiation."
             if v is not None
             else ""
         )
-    if metric.startswith("Naive Bayes prior P(is_top_5=1)"):
+    if metric.startswith("Naive Bayes prior P(is_top_n=1)"):
         return (
             f"1 in {round(1 / v)} videos makes the top 5 by default — achievable but requires deliberate effort on trust, trend, and opportunity."
             if v
@@ -52,9 +52,9 @@ def explain_naive_bayes(metric: str) -> str:
         if v is None:
             return ""
         if v >= 0.9:
-            return f"Signals predict top-5 with {v:.0%} accuracy — trust, trend, and opportunity are genuine, reliable indicators. Optimising them is worth the effort."
+            return f"Signals predict top-N with {v:.0%} accuracy — trust, trend, and opportunity are genuine, reliable indicators. Optimising them is worth the effort."
         if v >= 0.75:
-            return f"Signals predict top-5 with {v:.0%} accuracy — useful but imperfect; other factors also influence outcome."
+            return f"Signals predict top-N with {v:.0%} accuracy — useful but imperfect; other factors also influence outcome."
         return f"Low accuracy ({v:.0%}) — the available signals are weak predictors; something important is not being measured."
     return ""
 

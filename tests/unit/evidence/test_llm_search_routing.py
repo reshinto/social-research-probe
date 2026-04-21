@@ -1,8 +1,8 @@
 """Evidence test — corroboration search routes through the LLM runner abstraction.
 
-Before this refactor the ``gemini_search`` backend was hard-coded to Gemini;
-other runners could not be used for agentic search even if the user had
-selected them. The invariant we test here is: **the backend dispatches via
+The ``llm_search`` backend must dispatch through the configured runner —
+every runner with agentic-search support can drive corroboration, not
+just Gemini. The invariant we test here is: **the backend dispatches via
 ``config.llm_runner``**, and if the runner does not support agentic search
 the backend reports ``health_check()`` False so the host skips it instead of
 returning false evidence.

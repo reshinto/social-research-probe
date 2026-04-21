@@ -220,14 +220,14 @@ def test_chart_takeaways_includes_outlier_when_present():
 
 
 def test_first_media_url_runner_swallows_get_runner_exception():
-    with (
-        patch("social_research_probe.llm.registry.list_runners", return_value=["bad"]),
-        patch(
-            "social_research_probe.llm.registry.get_runner",
-            side_effect=RuntimeError("boom"),
-        ),
+    class _Cfg:
+        llm_runner = "gemini"
+
+    with patch(
+        "social_research_probe.llm.registry.get_runner",
+        side_effect=RuntimeError("boom"),
     ):
-        assert enrichment._first_media_url_runner() is None
+        assert enrichment._first_media_url_runner(_Cfg()) is None
 
 
 @pytest.mark.asyncio
@@ -245,7 +245,7 @@ async def test_url_based_summary_swallows_runner_exception(monkeypatch):
     )
     monkeypatch.setattr(
         "social_research_probe.pipeline.enrichment._first_media_url_runner",
-        lambda: _Runner(),
+        lambda _cfg=None: _Runner(),
     )
     out = await enrichment._url_based_summary("https://y/1", word_limit=100)
     assert out is None
@@ -268,7 +268,7 @@ async def test_url_based_summary_returns_falsy_without_caching_when_runner_empty
     )
     monkeypatch.setattr(
         "social_research_probe.pipeline.enrichment._first_media_url_runner",
-        lambda: _Runner(),
+        lambda _cfg=None: _Runner(),
     )
     out = await enrichment._url_based_summary(
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ", word_limit=100
@@ -342,11 +342,11 @@ async def test_merge_or_pick_uses_reconcile_truthy_branch(monkeypatch):
 
 def test_divergence_warnings_emits_when_above_threshold(tmp_path):
     cfg = Config.load(tmp_path)
-    top5 = [
+    top_n = [
         {"title": "Bad video", "summary_divergence": 0.9},
         {"title": None, "summary_divergence": 0.95},
     ]
-    out = _divergence_warnings(top5, cfg)
+    out = _divergence_warnings(top_n, cfg)
     assert any("Bad video" in line for line in out)
     assert any("untitled" in line for line in out)
 
@@ -425,12 +425,12 @@ async def test_merge_or_pick_falls_through_when_reconcile_returns_falsy(monkeypa
 def test_divergence_warnings_skips_below_threshold_and_none(tmp_path):
     """Covers continue branches: divergence None and divergence ≤ threshold."""
     cfg = Config.load(tmp_path)
-    top5 = [
+    top_n = [
         {"title": "no divergence"},  # missing → continue
         {"title": "below threshold", "summary_divergence": 0.1},  # ≤ threshold → continue
         {"title": "above", "summary_divergence": 0.95},
     ]
-    out = _divergence_warnings(top5, cfg)
+    out = _divergence_warnings(top_n, cfg)
     assert len(out) == 1
     assert "above" in out[0]
 
@@ -508,21 +508,21 @@ def test_run_research_caps_top_n_and_backends_in_fast_mode(monkeypatch, tmp_path
         lambda d, cfg=None: ["exa", "brave", "tavily"],
     )
 
-    captured = {"backends": None, "top5_len": None}
+    captured = {"backends": None, "top_n_len": None}
 
-    async def _fake_corroborate(top5, backends):
+    async def _fake_corroborate(top_n, backends):
         captured["backends"] = list(backends)
-        captured["top5_len"] = len(top5)
-        return [{"aggregate_verdict": "supported"} for _ in top5]
+        captured["top_n_len"] = len(top_n)
+        return [{"aggregate_verdict": "supported"} for _ in top_n]
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.corroboration._corroborate_top5", _fake_corroborate
+        "social_research_probe.pipeline.corroboration._corroborate_top_n", _fake_corroborate
     )
     raw = 'run-research platform:youtube "ai"->latest-news'
     _asyncio.run(run_research(parse(raw), tmp_path))
 
     assert captured["backends"] == ["exa"]
-    assert captured["top5_len"] <= 3
+    assert captured["top_n_len"] <= 3
 
 
 def test_run_research_skips_non_string_verdict(monkeypatch, tmp_path):
@@ -532,8 +532,8 @@ def test_run_research_skips_non_string_verdict(monkeypatch, tmp_path):
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
 
-    async def _fake_corroborate(top5, backends):
-        return [{"aggregate_verdict": 999} for _ in top5]
+    async def _fake_corroborate(top_n, backends):
+        return [{"aggregate_verdict": 999} for _ in top_n]
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _setup_purposes(tmp_path)
@@ -542,11 +542,11 @@ def test_run_research_skips_non_string_verdict(monkeypatch, tmp_path):
         lambda d, cfg=None: ["exa"],
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline.corroboration._corroborate_top5", _fake_corroborate
+        "social_research_probe.pipeline.corroboration._corroborate_top_n", _fake_corroborate
     )
     raw = 'run-research platform:youtube "ai"->latest-news'
     packet = _asyncio.run(run_research(parse(raw), tmp_path))
-    for item in packet.get("items_top5", []):
+    for item in packet.get("items_top_n", []):
         assert "corroboration_verdict" not in item
 
 
@@ -596,7 +596,7 @@ def test_handle_research_skips_synthesis_when_flag_off(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         "social_research_probe.pipeline.run_research",
-        AsyncMock(return_value={"topic": "t", "platform": "youtube", "items_top5": []}),
+        AsyncMock(return_value={"topic": "t", "platform": "youtube", "items_top_n": []}),
     )
 
     called: list = []

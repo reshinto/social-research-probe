@@ -3,7 +3,7 @@
 The pipeline previously hard-coded ``warnings=[]``, which always rendered as
 "_(none)_" even when results had real quality concerns (low channel
 diversity, no corroboration, low absolute scores, stale content). This
-module inspects the fetched items, derived signals, and scored top-5 to
+module inspects the fetched items, derived signals, and scored top-N to
 return a list of human-readable warnings the user should consider before
 acting on the report.
 """
@@ -25,7 +25,7 @@ _SPARSE_FETCH_THRESHOLD = 3
 def detect(
     items: list[RawItem],
     signals: list[SignalSet],
-    top5: list[ScoredItem],
+    top_n: list[ScoredItem],
     now: datetime | None = None,
     corroboration_ran: bool = False,
     corroboration_skip_reason: str | None = None,
@@ -41,7 +41,7 @@ def detect(
     notes: list[str] = []
     _check_fetch_volume(items, notes)
     _check_channel_diversity(items, notes)
-    _check_top5_quality(top5, notes)
+    _check_top_n_quality(top_n, notes)
     _check_freshness(signals, reference_now, notes)
     if not corroboration_ran:
         suffix = f" ({corroboration_skip_reason})" if corroboration_skip_reason else ""
@@ -65,15 +65,15 @@ def _check_channel_diversity(items: list[RawItem], notes: list[str]) -> None:
         notes.append(f"low channel diversity: only {unique} unique channels")
 
 
-def _check_top5_quality(top5: list[ScoredItem], notes: list[str]) -> None:
-    if not top5:
+def _check_top_n_quality(top_n: list[ScoredItem], notes: list[str]) -> None:
+    if not top_n:
         return
-    if all(d.get("source_class") == "commentary" for d in top5):
-        notes.append("all top-5 items are commentary; no primary or secondary sources")
-    if all(d.get("source_class") == "unknown" for d in top5):
-        notes.append("all top-5 items have unknown source classification")
-    if all(d.get("scores", {}).get("overall", 0.0) < _LOW_SCORE_THRESHOLD for d in top5):
-        notes.append(f"all top-5 items scored below {_LOW_SCORE_THRESHOLD}")
+    if all(d.get("source_class") == "commentary" for d in top_n):
+        notes.append("all top-N items are commentary; no primary or secondary sources")
+    if all(d.get("source_class") == "unknown" for d in top_n):
+        notes.append("all top-N items have unknown source classification")
+    if all(d.get("scores", {}).get("overall", 0.0) < _LOW_SCORE_THRESHOLD for d in top_n):
+        notes.append(f"all top-N items scored below {_LOW_SCORE_THRESHOLD}")
 
 
 def _check_freshness(signals: list[SignalSet], now: datetime, notes: list[str]) -> None:

@@ -20,6 +20,16 @@ from social_research_probe.errors import ValidationError
 _REGISTRY: dict[str, type[CorroborationBackend]] = {}
 
 
+def canonical_backend_name(name: str) -> str:
+    """Return the canonical backend key for ``name``.
+
+    ``llm_cli`` is kept as a legacy alias for backward compatibility with
+    older configs and commands, but the canonical runner-backed web-search
+    backend is now ``llm_search``.
+    """
+    return "llm_search" if name == "llm_cli" else name
+
+
 def register(cls: type[CorroborationBackend]) -> type[CorroborationBackend]:
     """Class decorator that adds cls to the global registry.
 
@@ -45,7 +55,8 @@ def get_backend(name: str) -> CorroborationBackend:
 
     Args:
         name: The string key used when the backend called @register, e.g.
-            "exa", "brave", "tavily", or "llm_cli".
+            "exa", "brave", "tavily", or "llm_search". Legacy callers may
+            still pass ``"llm_cli"``, which resolves to ``"llm_search"``.
 
     Returns:
         A fresh instance of the corresponding CorroborationBackend subclass.
@@ -54,10 +65,11 @@ def get_backend(name: str) -> CorroborationBackend:
         ValidationError: if name is not in the registry. The error message
             lists the known backend names so callers can self-correct.
     """
-    if name not in _REGISTRY:
+    canonical = canonical_backend_name(name)
+    if canonical not in _REGISTRY:
         known = sorted(_REGISTRY.keys())
         raise ValidationError(f"unknown corroboration backend: {name!r} (registered: {known})")
-    return _REGISTRY[name]()
+    return _REGISTRY[canonical]()
 
 
 def list_backends() -> list[str]:

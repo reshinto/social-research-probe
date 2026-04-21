@@ -197,7 +197,9 @@ To get a YouTube Data API v3 key:
 
 ## Step 3 — Choose an LLM runner (optional but recommended)
 
-Without an LLM runner, `srp` still scores and ranks videos but skips transcript summarisation and report sections 10–11 (Compiled Synthesis and Opportunity Analysis). Results will show a placeholder:
+Without an LLM runner, `srp` still scores and ranks videos, fetches transcripts, and falls back to transcript-derived per-item summaries where possible. The runner-only features stay off: CLI sections 10–11 (Compiled Synthesis and Opportunity Analysis) show placeholders, `llm_search` corroboration is unavailable, and CLI natural-language query mode is disabled.
+
+Results will show this synthesis placeholder:
 
 ```
 _(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_
@@ -207,7 +209,7 @@ _(LLM synthesis unavailable — runner disabled or all runners failed; see termi
 
 ### Recommended: Gemini CLI (free, no API key)
 
-Gemini CLI authenticates through a browser OAuth flow and runs on Google's free tier for typical research workloads. It also powers the free `gemini_search` corroboration backend — one install, two benefits.
+Gemini CLI authenticates through a browser OAuth flow and runs on Google's free tier for typical research workloads. It also powers the free `llm_search` corroboration backend — one install, two benefits.
 
 ```bash
 # 1. Install the Gemini CLI (npm, homebrew, or manual — see upstream docs)
@@ -222,7 +224,7 @@ Gemini is the recommended default because:
 
 - **No API key stored on disk** — OAuth tokens are managed by the CLI itself.
 - **Free tier covers most research loads** — `srp` only calls the LLM for top-N summaries and a synthesis step, so token usage is bounded.
-- **One tool, two roles** — the same `gemini` binary is used by the `gemini_search` corroboration backend, so you get free web-search corroboration with zero extra setup.
+- **One tool, two roles** — the same `gemini` binary is used by the `llm_search` corroboration backend, so you get free web-search corroboration with zero extra setup.
 
 ### Other runners
 
@@ -248,7 +250,7 @@ See [llm-runners.md](llm-runners.md) for the full comparison, ensemble behaviour
 
 ## Step 4 — Add corroboration keys (optional)
 
-Corroboration cross-checks each top-5 video's claims against independent web sources. Without a key, `srp` uses `llm_cli` mode (requires `llm.runner` configured) or skips corroboration entirely.
+Corroboration cross-checks each top-N video's claims against independent web sources. Without a search API key, `srp` can still use `llm_search` through your configured LLM runner's native web-search capability; otherwise corroboration is skipped.
 
 ```bash
 srp config set-secret exa_api_key      # Exa neural search — exa.ai
@@ -319,7 +321,7 @@ srp install-skill
 Output confirms where the files were copied:
 
 ```
-[srp] skill installed → ~/.claude/skills/srp/
+Skill installed to /Users/<you>/.claude/skills/srp
 ```
 
 Restart Claude Code, then test:
@@ -327,6 +329,8 @@ Restart Claude Code, then test:
 ```
 /srp research "AI safety" "latest-news"
 ```
+
+In skill mode, Claude uses the host model for the language-only steps when `llm.runner = none`. If you explicitly set `llm.runner` to `claude`, `gemini`, `codex`, or `local`, the skill defers to that configured runner instead of duplicating the work in the host model.
 
 ---
 
@@ -336,7 +340,7 @@ Restart Claude Code, then test:
 | -------------------------------------------- | ------------------------------------------------------------- |
 | `ffmpeg not found`                           | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
 | `youtube_api_key missing`                    | Run `srp config set-secret youtube_api_key`                   |
-| Sections 10–11 show placeholder text         | Set `llm.runner` to a configured provider (Step 3)            |
+| CLI sections 10–11 show placeholder text    | Set `llm.runner` to a configured provider (Step 3)            |
 | Corroboration skipped                        | Add at least one corroboration key (Step 4)                   |
 | `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root                     |
 

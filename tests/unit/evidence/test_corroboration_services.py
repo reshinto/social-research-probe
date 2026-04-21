@@ -2,7 +2,7 @@
 
 Seven services are covered via recorded golden payloads played back through
 ``respx``: Brave / Exa / Tavily HTTP backends, the runner-agnostic LLM search
-backend, the host aggregator, claim extraction, and the top-5 pipeline.
+backend, the host aggregator, claim extraction, and the top-N pipeline.
 
 Phase 0 already verified the source-quality filters (self + video-domain
 exclusion). This phase verifies the *end-to-end* contract: given a realistic
@@ -20,7 +20,7 @@ Evidence receipt (service / golden / expected / why):
 | Host aggregator — unanimous | 2 supported + 1 supported | ``"supported"``, confidence weighted | majority-verdict + confidence-weighted | host.aggregate_verdict |
 | Host aggregator — tied | 1 supported + 1 refuted | ``"inconclusive"`` | tie-break rule | documented in host.py:29-65 |
 | Claim extraction | transcript with 1 factual sentence | 1 claim | only numeric/proper-noun sentences pass | validation/claims.py:_is_candidate |
-| Top-5 pipeline | 5 ScoredItems + stub backend | 5 results | concurrency + per-item corroboration | pipeline/corroboration.py:_corroborate_top5 |
+| Top-N pipeline | 5 ScoredItems + stub backend | 5 results | concurrency + per-item corroboration | pipeline/corroboration.py:_corroborate_top_n |
 """
 
 from __future__ import annotations
@@ -213,13 +213,13 @@ def test_claim_extraction_preserves_source_url_from_caller():
 
 
 # ---------------------------------------------------------------------------
-# Top-5 pipeline — concurrent corroboration across items
+# Top-N pipeline — concurrent corroboration across items
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_top5_pipeline_runs_one_claim_per_item(monkeypatch):
-    """Given 5 ScoredItems, the top-5 orchestrator returns exactly 5 results."""
+async def test_top_n_pipeline_runs_one_claim_per_item(monkeypatch):
+    """Given 5 ScoredItems, the top-N orchestrator returns exactly 5 results."""
     from social_research_probe.pipeline import corroboration as pipe
 
     async def _fake_host(claim, backends):
@@ -236,6 +236,6 @@ async def test_top5_pipeline_runs_one_claim_per_item(monkeypatch):
         {"title": f"Item {i}", "url": f"https://example.com/{i}", "one_line_takeaway": f"t {i}"}
         for i in range(5)
     ]
-    results = await pipe._corroborate_top5(items, ["brave"])
+    results = await pipe._corroborate_top_n(items, ["brave"])
     assert len(results) == 5
     assert all(r["aggregate_verdict"] == "supported" for r in results)

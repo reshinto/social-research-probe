@@ -1,4 +1,4 @@
-"""Concurrent corroboration of top-5 items via configured search backends."""
+"""Concurrent corroboration of top-N items via configured search backends."""
 
 from __future__ import annotations
 
@@ -31,19 +31,19 @@ async def _corroborate_one(
         return await corroborate_claim(claim, backends)
 
 
-async def _corroborate_top5(top5: list[ScoredItem], backends: list[str]) -> list[dict]:
-    """Corroborate all top-5 items concurrently, one claim per item.
+async def _corroborate_top_n(top_n: list[ScoredItem], backends: list[str]) -> list[dict]:
+    """Corroborate all top-N items concurrently, one claim per item.
 
     Uses the video title as the claim text — short, factual, and searchable.
     The AI-generated one_line_takeaway is passed as source context. Caps
     concurrent API calls to 3 to respect search-backend rate limits.
     """
-    log(f"[srp] corroboration: starting — {len(top5)} items to check via {', '.join(backends)}")
+    log(f"[srp] corroboration: starting — {len(top_n)} items to check via {', '.join(backends)}")
 
     async def _gather() -> list[dict]:
         sem = asyncio.Semaphore(3)
         results = await asyncio.gather(
-            *[_corroborate_one(item, backends, sem) for item in top5],
+            *[_corroborate_one(item, backends, sem) for item in top_n],
             return_exceptions=True,
         )
         return [r if isinstance(r, dict) else {} for r in results]

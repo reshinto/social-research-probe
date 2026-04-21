@@ -119,6 +119,7 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
     commands = [
         ("update-purposes", "--add", '"trends"="Track emergence across channels"'),
         ("config", "set", "llm.runner", "gemini"),
+        ("config", "set", "features.codex_service_enabled", "true"),
         ("config", "set", "corroboration.backend", "host"),
     ]
     for args in commands:

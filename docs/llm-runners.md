@@ -27,7 +27,7 @@ New providers can be added by subclassing `LLMRunner` and decorating the class w
 | Section 10 — Compiled Synthesis | Synthesis stage | Structured synthesis across all enriched evidence |
 | Section 11 — Opportunity Analysis | Synthesis stage | Structured opportunity analysis |
 | Natural-language query classification | CLI entry point, before research begins | `topic`, `purpose_name`, and `purpose_method` derived from the free-form query |
-| Claim extraction and corroboration | Corroboration host, top-5 videos | Per-claim verdict: `supported`, `refuted`, or `inconclusive`, plus a confidence score and reasoning |
+| Claim extraction and corroboration | Corroboration host, top-N videos | Per-claim verdict: `supported`, `refuted`, or `inconclusive`, plus a confidence score and reasoning |
 | Topic/purpose suggestion | `classify_query`, persisted to data dir | New topic and purpose names when none match the query |
 
 ---
@@ -49,7 +49,7 @@ New providers can be added by subclassing `LLMRunner` and decorating the class w
 
 | Runner | Default model | When to use | What you must configure |
 |---|---|---|---|
-| `gemini` ⭐ | `gemini-2.5-pro` | **Recommended default.** Free tier, browser-auth, no API key on disk. Also powers free `gemini_search` corroboration. | `gemini` CLI installed (`npm install -g @google/gemini-cli`) + `gemini auth login` (browser OAuth) |
+| `gemini` ⭐ | `gemini-2.5-pro` | **Recommended default.** Free tier, browser-auth, no API key on disk. Also powers free `llm_search` corroboration. | `gemini` CLI installed (`npm install -g @google/gemini-cli`) + `gemini auth login` (browser OAuth) |
 | `claude` | Anthropic Claude (Sonnet by default) | Best prose quality when you already pay for Claude. | `claude` CLI installed and authenticated (`npm install -g @anthropic-ai/claude-code && claude auth`) |
 | `codex` | `gpt-4o` | OpenAI-based; strong JSON structure | `codex` CLI installed; OpenAI API key configured in the CLI |
 | `local` | `llama3.1:8b` (configurable) | Air-gapped environments; no API fees; needs capable hardware | `SRP_LOCAL_LLM_BIN` env var pointing to the binary (e.g. an Ollama wrapper); binary must accept prompt via stdin and return JSON to stdout |
@@ -64,10 +64,10 @@ Most `srp` users choose Gemini as their primary runner for four reasons:
 
 1. **Free tier covers typical research loads.** `srp` only calls the LLM for top-N per-item summaries (default 5) and one synthesis pass. Token usage is bounded, not per-item-quadratic.
 2. **Browser OAuth — no API key stored anywhere.** The Gemini CLI handles token refresh internally. `srp` never touches a Gemini key; there is no `gemini_api_key` to leak.
-3. **One install, two roles.** The same `gemini` binary powers the `gemini_search` corroboration backend ([corroboration.md](corroboration.md)), so you get both per-item summaries and free web-search corroboration with zero extra setup.
+3. **One install, two roles.** The same `gemini` binary powers the `llm_search` corroboration backend ([corroboration.md](corroboration.md)), so you get both per-item summaries and free web-search corroboration with zero extra setup.
 4. **Direct media URL ingestion.** Gemini is the only runner today that implements `summarize_media()` — it can summarise a YouTube URL without `srp` downloading the transcript first. When `media_url_summary_enabled = true` (the default), this cuts wall-clock time and local CPU.
 
-If you already pay for Claude and want the prose quality, `claude` is a strong second choice. If you run offline, `local` with a capable model works but quality varies. If you prefer not to use an LLM at all, `none` is fully supported — the report just shows placeholders in sections 10–11.
+If you already pay for Claude and want the prose quality, `claude` is a strong second choice. If you run offline, `local` with a capable model works but quality varies. If you prefer not to use an LLM at all, `none` is fully supported: the CLI keeps sections 10–11 as placeholders and disables runner-backed search/classification, while the Claude Code skill can still use the host model for skill-only language work.
 
 ---
 
@@ -85,9 +85,7 @@ and skip gracefully when a capability is absent.
 | Direct media URL summary | `supports_media_url` | ✅ | — | — | — |
 | Agentic web search | `supports_agentic_search` | ✅ `--google-search` | ✅ `web_search` tool | ✅ `--search` flag | ❌ raises `CapabilityUnavailable` |
 
-**Consequence for the corroboration backend formerly known as
-`gemini_search`:** the registry key stays `gemini_search` for config
-backward-compatibility, but the implementation now routes through
+**Consequence for the `llm_search` corroboration backend:** the implementation routes through
 `get_runner(config.llm_runner).agentic_search(...)`. If you switch
 `llm_runner` from `gemini` to `claude` or `codex`, corroboration search
 automatically uses that runner's native web-search tool. Switching to
@@ -177,19 +175,21 @@ srp config set llm.runner local
 
 ---
 
-## What breaks without an LLM
+## What changes in CLI mode without a runner
 
 When `llm.runner = none` (the default) the pipeline still fetches, scores, and statistically analyses videos. The following are skipped or replaced with placeholder text:
 
 | Feature | What you see |
 |---|---|
-| Per-video transcript summaries | The summary field is omitted from the report |
+| Per-video transcript summaries | Runner-written summaries are replaced by transcript- or description-derived fallback text when possible |
 | Report section 10 — Compiled Synthesis | `_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_` |
 | Report section 11 — Opportunity Analysis | Same placeholder as section 10 |
-| Corroboration (when `corroboration.backend = llm_cli`) | Corroboration is skipped entirely; no claim verdicts are produced |
+| Corroboration (when `corroboration.backend = llm_search`) | Skipped when the runner is `none` or lacks agentic search; otherwise uses the runner's native web-search tool |
 | Natural-language query mode | `srp research "who is winning the LLM benchmarks race?"` exits with an error: `cannot classify query: llm.runner is disabled` |
 
 The YouTube fetch, scoring, statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, and the others), and charts are all unaffected.
+
+In the Claude Code skill, `llm.runner = none` does **not** disable the host model. The skill can still classify a free-form research request, summarise sections 1–9 inline, and draft sections 10–11 from the packet.
 
 ---
 
@@ -234,7 +234,7 @@ To confirm the binary is reachable, run a single-video research with a short top
 
 ## Natural-language query mode
 
-When `llm.runner` is set to any provider other than `none`, you can pass a free-form question to `srp research` instead of an explicit topic and purpose:
+When `llm.runner` is set to any provider other than `none`, you can pass a free-form question to the CLI `srp research` command instead of an explicit topic and purpose:
 
 ```bash
 srp research "who is winning the LLM benchmarks race?"
@@ -249,6 +249,8 @@ If `llm.runner = none`, the command exits immediately with:
 cannot classify query: llm.runner is disabled.
 Provide explicit topic+purpose or set llm.runner in srp config.
 ```
+
+This restriction is CLI-only. In the Claude Code skill, the host model can classify the free-form request first and then call the explicit `srp research <topic> <purpose>` form.
 
 ---
 

@@ -36,7 +36,7 @@ Each chart is also saved as an individual PNG file:
 ├── trust_vs_trend_scatter.png
 ├── feature_correlations_heatmap.png
 ├── overall_by_rank_residuals.png
-└── top5_summary_table.png
+└── top_n_summary_table.png
 ```
 
 Section 8 of the Markdown summary lists the full path to each PNG and a short caption.
@@ -88,7 +88,7 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **How to read it:** A steep early drop followed by a flat tail is the most common pattern — it means the top 2–3 videos are notably better than the rest. A gradual slope means quality decreases slowly and uniformly across the dataset.
 
-**What to look for:** A sharp cliff between rank 5 and rank 6 confirms that the top-5 enrichment budget is well-targeted. A flat line across all ranks suggests you may want to widen `max_items` to find more differentiated content.
+**What to look for:** A sharp cliff between rank 5 and rank 6 confirms that the top-N enrichment budget is well-targeted. A flat line across all ranks suggests you may want to widen `max_items` to find more differentiated content.
 
 ![Sample score rank decay line chart](images/overall_score_by_rank_line.png)
 
@@ -102,7 +102,7 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **How to read it:** A right-skewed histogram (most bars on the left, long tail to the right) means most videos scored low with a few high-quality outliers. A symmetric, bell-shaped histogram means results are evenly distributed around an average quality level.
 
-**What to look for:** If the histogram is bimodal (two peaks), there are two distinct quality tiers — credible sources and low-quality sources — which is useful to know when interpreting the top-5 selection.
+**What to look for:** If the histogram is bimodal (two peaks), there are two distinct quality tiers — credible sources and low-quality sources — which is useful to know when interpreting the top-N selection.
 
 ![Sample overall score histogram](images/overall_score_histogram.png)
 
@@ -130,7 +130,7 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **How to read it:** A positive slope means credible channels are also trending on this topic. A negative or flat slope means viral content is coming from less-established sources, which is common on fast-moving topics where speed matters more than track record.
 
-**What to look for:** A cluster of high-trust, high-trend points indicates authoritative sources that are gaining momentum — strong candidates for the top-5. Points with high trend but low trust are viral but unverified; treat their claims with extra scrutiny.
+**What to look for:** A cluster of high-trust, high-trend points indicates authoritative sources that are gaining momentum — strong candidates for the top-N. Points with high trend but low trust are viral but unverified; treat their claims with extra scrutiny.
 
 ![Sample trust vs trend regression scatter](images/trust_vs_trend_regression.png)
 
@@ -193,7 +193,7 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 ### Top-10 Summary Table
 
-**File:** `top5_summary_table.png`
+**File:** `top_n_summary_table.png`
 
 **What it shows:** A formatted table of the top 10 scored videos with columns for rank, channel name (truncated to 25 characters), trust score, trend score, opportunity score, and overall score.
 
@@ -201,7 +201,7 @@ Old reports are preserved indefinitely. To free disk space, delete reports manua
 
 **What to look for:** Entries where trust is high but trend is low are authoritative but not currently viral — good candidates for "under the radar" expert commentary. Entries where trend is high but trust is low are viral but unverified — proceed with critical scrutiny.
 
-![Sample top-10 summary table](images/top5_summary_table.png)
+![Sample top-10 summary table](images/top_n_summary_table.png)
 
 ---
 

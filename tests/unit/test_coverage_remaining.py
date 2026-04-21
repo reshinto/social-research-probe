@@ -31,7 +31,7 @@ _VALID_PACKET = {
     "topic": "ai",
     "platform": "youtube",
     "purpose_set": ["latest-news"],
-    "items_top5": [],
+    "items_top_n": [],
     "source_validation_summary": {
         "validated": 0,
         "partially": 0,
@@ -138,10 +138,10 @@ def test_fetch_best_transcript_swallows_primary_exception_and_tries_fallback():
     )
 
 
-async def test_enrich_top5_uses_description_when_transcript_whitespace_only(monkeypatch):
+async def test_enrich_top_n_uses_description_when_transcript_whitespace_only(monkeypatch):
     """When both transcript paths return whitespace-only text, the pipeline falls back
     to a description-based LLM summary instead of skipping entirely."""
-    from social_research_probe.pipeline import _enrich_top5_with_transcripts
+    from social_research_probe.pipeline import _enrich_top_n_with_transcripts
 
     monkeypatch.setattr(
         "social_research_probe.platforms.youtube.extract.fetch_transcript",
@@ -166,7 +166,7 @@ async def test_enrich_top5_uses_description_when_transcript_whitespace_only(monk
             "one_line_takeaway": "keep me",
         }
     ]
-    await _enrich_top5_with_transcripts(items)
+    await _enrich_top_n_with_transcripts(items)
 
     assert "transcript" not in items[0]
     assert items[0].get("summary_source") == "description"
@@ -228,10 +228,11 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
         lambda d, cfg=None: ["exa"],
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline.corroboration._corroborate_top5", AsyncMock(return_value=[])
+        "social_research_probe.pipeline.corroboration._corroborate_top_n",
+        AsyncMock(return_value=[]),
     )
     monkeypatch.setattr(
-        "social_research_probe.pipeline.enrichment._enrich_top5_with_transcripts",
+        "social_research_probe.pipeline.enrichment._enrich_top_n_with_transcripts",
         AsyncMock(return_value=None),
     )
     from tests.unit.test_pipeline import _write_purposes

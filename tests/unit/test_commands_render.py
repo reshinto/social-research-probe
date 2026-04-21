@@ -50,7 +50,7 @@ class _FakeChartResult:
 _PACKET = {
     "topic": "AI trends",
     "platform": "youtube",
-    "items_top5": [
+    "items_top_n": [
         {"title": "A", "scores": {"overall": 0.9}},
         {"title": "B", "scores": {"overall": 0.7}},
     ],

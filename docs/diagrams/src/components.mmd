@@ -6,11 +6,11 @@ graph TD
     ENRICH["pipeline/enrichment\nTranscripts + LLM summaries"]
     STATS["pipeline/stats\n20+ statistical models"]
     CHARTS["pipeline/charts\nPNG rendering"]
-    CORR["pipeline/corroboration\nTop-5 evidence"]
+    CORR["pipeline/corroboration\nTop-N evidence"]
     SVS["pipeline/svs\nSignal vectors"]
     SYNTH["synthesize/\nbuild_packet + formatter"]
     ADAPT["platforms/youtube\nYouTube Data API adapter"]
-    BACKENDS["corroboration/\ngemini_search · tavily ·\nbrave · exa · llm_cli"]
+    BACKENDS["corroboration/\nllm_search · tavily ·\nbrave · exa"]
     LLM["llm/ensemble\nclaude · gemini · codex · local"]
 
     CLI --> CMD

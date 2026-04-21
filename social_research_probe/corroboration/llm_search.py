@@ -7,11 +7,9 @@ has configured (Gemini google-search, Claude ``web_search``, Codex
 ``--search``) via the :class:`~social_research_probe.llm.base.LLMRunner`
 abstraction.
 
-**Registry key remains ``"gemini_search"``** so existing user configs
-that reference the backend name in ``config.toml`` (``[corroboration]
-backends = ["gemini_search", ...]``) keep working without migration.
-That key is historical; new setups can be documented as ``llm_search``
-once an alias is wired in ``corroboration/registry.py``.
+**Registry key is ``"llm_search"``** — the runner-agnostic name that
+matches the module. Configure via ``[corroboration] backend =
+"llm_search"`` or list it in the host-mode backend set.
 
 Flow:
     1. Resolve the active LLM runner from user config.
@@ -119,16 +117,12 @@ def _filter_citations(result: AgenticSearchResult, source_url: str | None) -> li
 class LLMSearchBackend(CorroborationBackend):
     """Runner-agnostic agentic-search corroboration backend.
 
-    The registry key ``gemini_search`` (see ``name`` below) is historical
-    — it is preserved so existing user configs keep working. The class
-    name and module path both reflect that this backend is **not**
+    The class name and module path reflect that this backend is not
     specific to any one LLM; the active runner decides which vendor
     actually performs the search.
     """
 
-    # Config-facing key — kept as "gemini_search" for backward compat with
-    # user config files. Do NOT change without a migration path.
-    name: ClassVar[str] = "gemini_search"
+    name: ClassVar[str] = "llm_search"
 
     def health_check(self) -> bool:
         """True iff the configured LLM runner can perform an agentic search.

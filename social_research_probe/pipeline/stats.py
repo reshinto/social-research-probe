@@ -31,7 +31,7 @@ def _build_stats_summary(scored_items: list[ScoredItem]) -> StatsSummary:
 
     Statistical confidence kicks in around n>=8 for moderate correlations,
     so the pipeline now passes every fetched item rather than only the
-    top-5 — that lifts ``low_confidence`` to False once a real run lands.
+    top-N — that lifts ``low_confidence`` to False once a real run lands.
     """
     if not scored_items:
         return {"models_run": [], "highlights": [], "low_confidence": True}
@@ -114,7 +114,7 @@ def _run_advanced_models(scored_items: list[ScoredItem]) -> list:
         [targets[name][i] for name in feature_names] for i in range(len(scored_items))
     ]
     results: list = []
-    results += logistic_regression.run(targets["is_top_5"], feature_cols, label="is_top_5")
+    results += logistic_regression.run(targets["is_top_n"], feature_cols, label="is_top_n")
     results += kmeans.run(feature_matrix, k=3, label="items")
     results += pca.run(feature_matrix, feature_names, n_components=2, label="features")
     results += kaplan_meier.run(
@@ -122,7 +122,7 @@ def _run_advanced_models(scored_items: list[ScoredItem]) -> list:
         targets["event_crossed_100k"],
         label="views>=100k",
     )
-    results += naive_bayes.run(targets["is_top_5"], feature_cols, label="is_top_5")
+    results += naive_bayes.run(targets["is_top_n"], feature_cols, label="is_top_n")
     results += huber_regression.run(targets["rank"], targets["overall"], label="overall")
     results += bayesian_linear.run(
         targets["overall"],

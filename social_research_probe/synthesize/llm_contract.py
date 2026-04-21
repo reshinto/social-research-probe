@@ -38,7 +38,7 @@ def build_synthesis_prompt(packet: dict) -> str:
     """Build the LLM prompt for synthesising an evidence packet.
 
     Formats SYNTHESIS_PROMPT with topic, platform, a JSON summary of the
-    top-5 items as evidence, and the structured JSON schema expected back from
+    top-N items as evidence, and the structured JSON schema expected back from
     the runner.
 
     Args:

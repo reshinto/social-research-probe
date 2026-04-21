@@ -53,7 +53,7 @@ def _minimal_packet(topic: str = "AI agents") -> dict:
             "secondary": 0,
             "commentary": 0,
         },
-        "items_top5": [],
+        "items_top_n": [],
         "signal_summary": "",
         "evidence_summary": "",
     }

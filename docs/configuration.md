@@ -27,7 +27,7 @@ timeout_seconds = 60
 
 | Key | Default | What it controls |
 |---|---|---|
-| `runner` | `none` | The primary LLM runner for enrichment summaries + synthesis. `none` keeps sections 10–11 as placeholders. |
+| `runner` | `none` | The primary LLM runner for CLI summaries, `llm_search` corroboration, and sections 10–11 synthesis. `none` disables runner subprocesses; CLI sections 10–11 stay placeholders, while the Claude Code skill may still use the host model for skill-only language work. |
 | `timeout_seconds` | `60` | Per-call wall-clock timeout for the runner subprocess. |
 
 Per-runner subsections (`[llm.claude]`, `[llm.gemini]`, `[llm.codex]`, `[llm.local]`) accept `model`, `binary`, and `extra_flags` — see [LLM Runners](llm-runners.md).
@@ -40,7 +40,7 @@ Defaults: `trust = 0.45`, `trend = 0.30`, `opportunity = 0.25`. Uncomment any su
 
 ```toml
 [corroboration]
-backend = "host"         # host | gemini_search | llm_cli | exa | brave | tavily | none
+backend = "host"         # host | llm_search | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 ```
@@ -48,7 +48,7 @@ max_claims_per_session = 15
 | Key | Default | What it controls |
 |---|---|---|
 | `backend` | `host` | `host` tries every healthy backend; `none` disables corroboration. |
-| `max_claims_per_item` | `5` | Upper bound on claims extracted per top-5 item. |
+| `max_claims_per_item` | `5` | Upper bound on claims extracted per top-N item. |
 | `max_claims_per_session` | `15` | Upper bound across the whole run. |
 
 ### `[platforms.youtube]` — YouTube adapter
@@ -80,12 +80,12 @@ Every toggle is **independent**; disabling one never breaks another. Highlights:
 | `transcript_fetch_enabled` | `true` | Skip transcripts but still summarise (from title/description). |
 | `media_url_summary_enabled` | `true` | Do not send media URLs to Gemini for direct ingestion. |
 | `merged_summary_enabled` | `true` | Skip reconciliation of transcript vs URL summaries. |
-| `stats_enabled` / `charts_enabled` | `true` | Skip stats or chart generation. |
+| `charts_enabled` | `true` | Skip chart generation. |
 | `synthesis_enabled` | `true` | Leave sections 10–11 as placeholders even if a runner is configured. |
-| `html_report_enabled` / `markdown_report_enabled` | `true` | Skip either report format. |
+| `html_report_enabled` | `true` | Skip the HTML report (Markdown is always written as the fallback). |
 | `corroboration_enabled` | `true` | Skip corroboration entirely (overrides `backend`). |
-| `<backend>_enabled` | `true` | Per-backend gate. `gemini_search_enabled` is separate from `gemini_service_enabled`. |
-| `<runner>_service_enabled` | `true` | Whether the runner is eligible for the ensemble fan-out (the primary `llm.runner` is always allowed). |
+| `<backend>_enabled` | `true` | Per-backend gate. `llm_search_enabled` is the runner-agnostic agentic-search backend and is independent of the per-runner `<runner>_service_enabled` gates. |
+| `<runner>_service_enabled` | `false` | Whether the runner is eligible for the ensemble fan-out (the primary `llm.runner` is always allowed). `srp install-skill` auto-enables the gate for the runner you select. |
 
 ### `[tunables]` — thresholds you rarely need to touch
 
@@ -180,7 +180,7 @@ This means you can safely re-run `srp setup` after upgrading `srp` — new confi
 
 | Objective | Key settings |
 |---|---|
-| **Cheapest** — free LLM + free corroboration | `llm.runner = "gemini"`, `corroboration.backend = "gemini_search"`, `platforms.youtube.enrich_top_n = 3` |
+| **Cheapest** — free LLM + free corroboration | `llm.runner = "gemini"`, `corroboration.backend = "llm_search"`, `platforms.youtube.enrich_top_n = 3` |
 | **Deepest** — everything on | `llm.runner = "claude"`, `corroboration.backend = "host"`, `max_items = 100`, `enrich_top_n = 10` |
 | **Fastest** — iterate quickly | `SRP_FAST_MODE=1`, `max_items = 10`, `enrich_top_n = 3` |
 | **Offline** — no cloud calls | `llm.runner = "local"`, `corroboration.backend = "none"`, Whisper handles transcripts |

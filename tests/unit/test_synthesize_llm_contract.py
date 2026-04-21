@@ -30,7 +30,7 @@ def _make_packet(topic="climate change", platform="youtube", items=None):
     Args:
         topic: Topic string to embed.
         platform: Platform string to embed.
-        items: List of item dicts for items_top5. Defaults to two stub items.
+        items: List of item dicts for items_top_n. Defaults to two stub items.
 
     Returns:
         A dict mimicking the output of synthesize.formatter.build_packet.
@@ -43,7 +43,7 @@ def _make_packet(topic="climate change", platform="youtube", items=None):
     return {
         "topic": topic,
         "platform": platform,
-        "items_top5": items,
+        "items_top_n": items,
     }
 
 
@@ -67,7 +67,7 @@ def test_build_synthesis_prompt_contains_platform():
 
 
 def test_build_synthesis_prompt_contains_evidence_json():
-    """The prompt must embed items_top5 as a JSON fragment.
+    """The prompt must embed items_top_n as a JSON fragment.
 
     We check that the title of a known item appears in the prompt, confirming
     the evidence serialisation ran successfully.
@@ -79,7 +79,7 @@ def test_build_synthesis_prompt_contains_evidence_json():
 
 
 def test_build_synthesis_prompt_empty_items():
-    """build_synthesis_prompt must not raise even when items_top5 is empty."""
+    """build_synthesis_prompt must not raise even when items_top_n is empty."""
     packet = _make_packet(items=[])
     prompt = build_synthesis_prompt(packet)
     # The JSON for an empty list should appear in the prompt.
@@ -96,7 +96,7 @@ def test_build_synthesis_prompt_contains_synthesis_context_fields():
     packet = {
         "topic": "ai",
         "platform": "youtube",
-        "items_top5": [
+        "items_top_n": [
             {
                 "title": "T",
                 "url": "u",

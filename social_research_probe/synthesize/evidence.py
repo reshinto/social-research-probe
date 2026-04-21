@@ -1,6 +1,6 @@
 """Evidence aggregator — narrates what the fetched items collectively show.
 
-``run_research`` hands raw items, computed signals, and the scored top-5 list
+``run_research`` hands raw items, computed signals, and the scored top-N list
 to ``summarize()`` and receives a single human-readable sentence that
 captures channel diversity, freshness, engagement, and source-class mix.
 The pipeline stores this as ``packet["evidence_summary"]`` so downstream
@@ -20,22 +20,22 @@ from social_research_probe.types import ScoredItem
 def summarize(
     items: list[RawItem],
     signals: list[SignalSet],
-    top5: list[ScoredItem],
+    top_n: list[ScoredItem],
     now: datetime | None = None,
 ) -> str:
-    """Build an evidence sentence from fetched items, signals, and scored top-5.
+    """Build an evidence sentence from fetched items, signals, and scored top-N.
 
     Args:
         items: All raw items returned by the adapter.
         signals: Parallel list of derived signals (one per item).
-        top5: The scored top-5 dicts produced by ``_score_item``.
+        top_n: The scored top-N dicts produced by ``_score_item``.
         now: Override for "now" (used by tests to make ages deterministic).
 
     Returns:
         A single-line summary such as
         "17 items from 14 channels; median upload age 4d;
          avg view velocity 8,432/day; avg engagement 0.042;
-         top-5 source mix: 5S".
+         top-N source mix: 5S".
 
     Why this exists: the raw adapter output is a firehose; consumers need a
     compact narrative that answers "what did the data actually look like?"
@@ -59,9 +59,9 @@ def summarize(
     if engagement is not None:
         parts.append(f"avg engagement {engagement:.3f}")
 
-    mix = _source_class_mix(top5)
+    mix = _source_class_mix(top_n)
     if mix:
-        parts.append(f"top-5 source mix: {mix}")
+        parts.append(f"top-N source mix: {mix}")
 
     return "; ".join(parts)
 
@@ -111,9 +111,9 @@ def _mean_engagement(signals: list[SignalSet]) -> float | None:
     return statistics.mean(values) if values else None
 
 
-def _source_class_mix(top5: list[ScoredItem]) -> str:
+def _source_class_mix(top_n: list[ScoredItem]) -> str:
     counts: dict[str, int] = {}
-    for d in top5:
+    for d in top_n:
         cls = d.get("source_class", "unknown")
         counts[cls] = counts.get(cls, 0) + 1
     if not counts:

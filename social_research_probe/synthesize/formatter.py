@@ -28,7 +28,7 @@ def build_packet(
     topic: str,
     platform: str,
     purpose_set: list[str],
-    items_top5: list[ScoredItem],
+    items_top_n: list[ScoredItem],
     source_validation_summary: SourceValidationSummary,
     platform_signals_summary: str,
     evidence_summary: str,
@@ -42,7 +42,7 @@ def build_packet(
         "topic": topic,
         "platform": platform,
         "purpose_set": purpose_set,
-        "items_top5": items_top5,
+        "items_top_n": items_top_n,
         "source_validation_summary": source_validation_summary,
         "platform_signals_summary": platform_signals_summary,
         "evidence_summary": evidence_summary,
@@ -172,7 +172,7 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
     without requiring LLM synthesis.
     """
     svs = packet["source_validation_summary"]
-    items = packet["items_top5"]
+    items = packet["items_top_n"]
     stats = packet["stats_summary"]
     warnings = packet.get("warnings", [])
     parts: list[str] = []

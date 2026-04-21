@@ -97,7 +97,7 @@ def _make_packet(**overrides):
         topic="ai agents",
         platform="youtube",
         purpose_set=["trends"],
-        items_top5=[_ITEM],
+        items_top_n=[_ITEM],
         source_validation_summary=_SVS,
         platform_signals_summary="ok",
         evidence_summary="ok",
@@ -122,7 +122,7 @@ def test_render_sections_contains_headings():
             "topic": "ai",
             "platform": "youtube",
             "purpose_set": ["trends"],
-            "items_top5": [],
+            "items_top_n": [],
             "source_validation_summary": _EMPTY_SVS,
             "platform_signals_summary": "-",
             "evidence_summary": "-",
@@ -150,7 +150,7 @@ def test_render_sections_with_items():
             "topic": "ai",
             "platform": "youtube",
             "purpose_set": ["trends"],
-            "items_top5": [_ITEM],
+            "items_top_n": [_ITEM],
             "source_validation_summary": {**_SVS, "unverified": 1},
             "platform_signals_summary": "5 items fetched",
             "evidence_summary": "live fetch",
@@ -733,22 +733,22 @@ def test_explain_kaplan_meier_unknown():
 # ---------------------------------------------------------------------------
 
 
-def test_explain_naive_bayes_prior_not_top5():
-    r = _explain_naive_bayes("Naive Bayes prior P(is_top_5=0): 0.80")
+def test_explain_naive_bayes_prior_not_top_n():
+    r = _explain_naive_bayes("Naive Bayes prior P(is_top_n=0): 0.80")
     assert "80%" in r or "Base odds" in r
 
 
-def test_explain_naive_bayes_prior_not_top5_no_value():
-    assert _explain_naive_bayes("Naive Bayes prior P(is_top_5=0): none") == ""
+def test_explain_naive_bayes_prior_not_top_n_no_value():
+    assert _explain_naive_bayes("Naive Bayes prior P(is_top_n=0): none") == ""
 
 
-def test_explain_naive_bayes_prior_top5():
-    r = _explain_naive_bayes("Naive Bayes prior P(is_top_5=1): 0.20")
+def test_explain_naive_bayes_prior_top_n():
+    r = _explain_naive_bayes("Naive Bayes prior P(is_top_n=1): 0.20")
     assert "top 5" in r or "1 in" in r
 
 
-def test_explain_naive_bayes_prior_top5_no_value():
-    assert _explain_naive_bayes("Naive Bayes prior P(is_top_5=1): none") == ""
+def test_explain_naive_bayes_prior_top_n_no_value():
+    assert _explain_naive_bayes("Naive Bayes prior P(is_top_n=1): none") == ""
 
 
 def test_explain_naive_bayes_accuracy_high():
@@ -941,7 +941,7 @@ def test_contextual_explanation_kaplan_meier():
 
 
 def test_contextual_explanation_naive_bayes():
-    r = _contextual_explanation("Naive Bayes prior P(is_top_5=1): 0.20", "")
+    r = _contextual_explanation("Naive Bayes prior P(is_top_n=1): 0.20", "")
     assert r
 
 
@@ -1027,7 +1027,7 @@ def test_render_sections_1_9_low_confidence_flag():
         "topic": "ai",
         "platform": "youtube",
         "purpose_set": ["trends"],
-        "items_top5": [],
+        "items_top_n": [],
         "source_validation_summary": _EMPTY_SVS,
         "platform_signals_summary": "-",
         "evidence_summary": "-",
@@ -1047,7 +1047,7 @@ def test_render_sections_1_9_notes_rendered():
         "topic": "ai",
         "platform": "youtube",
         "purpose_set": ["trends"],
-        "items_top5": [],
+        "items_top_n": [],
         "source_validation_summary": svs,
         "platform_signals_summary": "-",
         "evidence_summary": "-",

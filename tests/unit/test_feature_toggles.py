@@ -19,21 +19,18 @@ from social_research_probe.pipeline.orchestrator import _host_mode_backends
 
 _ALL_FEATURE_FLAGS = (
     "corroboration_enabled",
-    "gemini_search_enabled",
+    "llm_search_enabled",
     "exa_enabled",
     "brave_enabled",
     "tavily_enabled",
-    "llm_cli_corroboration_enabled",
     "enrichment_enabled",
     "transcript_fetch_enabled",
     "media_url_summary_enabled",
     "merged_summary_enabled",
-    "stats_enabled",
     "charts_enabled",
     "chart_takeaways_enabled",
     "synthesis_enabled",
     "html_report_enabled",
-    "markdown_report_enabled",
 )
 
 
@@ -47,10 +44,10 @@ def test_each_flag_can_be_disabled_individually(tmp_path, flag):
 def test_disabling_individual_corroboration_backend_keeps_others(tmp_path):
     cfg = Config.load(tmp_path)
     cfg.raw["features"]["exa_enabled"] = False
-    cfg.raw["features"]["gemini_search_enabled"] = False
+    cfg.raw["features"]["llm_search_enabled"] = False
     backends = _host_mode_backends(cfg)
     assert "exa" not in backends
-    assert "gemini_search" not in backends
+    assert "llm_search" not in backends
     assert "brave" in backends
     assert "tavily" in backends
 

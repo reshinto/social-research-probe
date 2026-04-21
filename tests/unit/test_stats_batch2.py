@@ -44,7 +44,7 @@ class TestDerivedTargets:
         t = derived_targets.build_targets(_scored(15))
         for key in [
             "rank",
-            "is_top_5",
+            "is_top_n",
             "is_top_tenth",
             "overall",
             "trust",
@@ -61,9 +61,9 @@ class TestDerivedTargets:
         ]:
             assert key in t and len(t[key]) == 15
 
-    def test_is_top_5_marks_first_five(self):
+    def test_is_top_n_marks_first_five(self):
         t = derived_targets.build_targets(_scored(10))
-        assert t["is_top_5"] == [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+        assert t["is_top_n"] == [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
 
     def test_event_threshold_when_views_high(self):
         items = _scored(10)

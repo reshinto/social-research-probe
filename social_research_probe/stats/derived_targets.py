@@ -6,7 +6,7 @@ we need to construct those targets without extra data capture.
 
 Targets exposed:
 
-- ``is_top_5``: binary — 1 if rank < 5 else 0
+- ``is_top_n``: binary — 1 if rank < 5 else 0
 - ``is_top_tenth``: binary — 1 if rank < n/10 else 0 (for larger n)
 - ``rank``: ordinal — index in the sorted list
 - ``overall``: continuous — the raw ranking score
@@ -24,7 +24,7 @@ _VIEW_EVENT_THRESHOLD = 100_000
 def build_targets(scored_items: list[dict]) -> dict[str, list]:
     """Return a dict of column-aligned target arrays for downstream models."""
     n = len(scored_items)
-    top5_cutoff = 5
+    top_n_cutoff = 5
     top_tenth_cutoff = max(2, n // 10)
     ranks = list(range(n))
     overall = [d["scores"]["overall"] for d in scored_items]
@@ -37,12 +37,12 @@ def build_targets(scored_items: list[dict]) -> dict[str, list]:
     subscribers = [d["features"]["subscriber_count"] for d in scored_items]
     views = [vel * age for vel, age in zip(view_velocity, age_days, strict=True)]
     source_class = [d.get("source_class", "unknown") for d in scored_items]
-    is_top_5 = [1 if r < top5_cutoff else 0 for r in ranks]
+    is_top_n = [1 if r < top_n_cutoff else 0 for r in ranks]
     is_top_tenth = [1 if r < top_tenth_cutoff else 0 for r in ranks]
     event_crossed = [1 if v >= _VIEW_EVENT_THRESHOLD else 0 for v in views]
     return {
         "rank": [float(r) for r in ranks],
-        "is_top_5": is_top_5,
+        "is_top_n": is_top_n,
         "is_top_tenth": is_top_tenth,
         "overall": overall,
         "trust": trust,

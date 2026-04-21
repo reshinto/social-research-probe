@@ -20,26 +20,26 @@ from social_research_probe.types import (
 
 def build_synthesis_context(packet: ResearchPacket) -> SynthesisContext:
     """Return the compact packet shape shown to the final synthesis LLM."""
-    items_top5 = list(packet.get("items_top5", []))
+    items_top_n = list(packet.get("items_top_n", []))
     return SynthesisContext(
         topic=str(packet.get("topic", "")),
         platform=str(packet.get("platform", "")),
-        coverage=_build_coverage(packet, items_top5),
-        items=[_build_item(i, item) for i, item in enumerate(items_top5)],
+        coverage=_build_coverage(packet, items_top_n),
+        items=[_build_item(i, item) for i, item in enumerate(items_top_n)],
         stats_highlights=list(packet.get("stats_summary", {}).get("highlights", []) or []),
         chart_takeaways=list(packet.get("chart_takeaways", []) or []),
         warnings=list(packet.get("warnings", []) or []),
     )
 
 
-def _build_coverage(packet: ResearchPacket, items_top5: list[ScoredItem]) -> Coverage:
+def _build_coverage(packet: ResearchPacket, items_top_n: list[ScoredItem]) -> Coverage:
     """Coverage block — fetched vs. deeply enriched counts and platform list."""
     platforms = [p for p in [str(packet.get("platform", ""))] if p]
     stats = packet.get("stats_summary", {})
     fetched_hint = _fetched_from_highlights(list(stats.get("highlights", []) or []))
     return Coverage(
-        fetched=fetched_hint if fetched_hint is not None else len(items_top5),
-        enriched=len(items_top5),
+        fetched=fetched_hint if fetched_hint is not None else len(items_top_n),
+        enriched=len(items_top_n),
         platforms=platforms,
     )
 

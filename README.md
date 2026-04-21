@@ -64,7 +64,7 @@ srp config set-secret youtube_api_key
 srp research "AI safety" "latest-news"
 ```
 
-Or in natural-language mode (requires `llm.runner` configured):
+Or in natural-language mode from the CLI (requires `llm.runner` configured):
 
 ```bash
 srp research "what are researchers saying about model collapse?"
@@ -106,7 +106,7 @@ srp config set-secret youtube_api_key
 srp config set llm.runner gemini
 ```
 
-The `gemini_search` corroboration backend is now runner-agnostic: it dispatches via your configured `llm_runner`, so Claude's `web_search` tool and Codex's `--search` flag work the same way as Gemini's grounded search. See [docs/llm-runners.md](docs/llm-runners.md) for the capability matrix and [docs/corroboration.md](docs/corroboration.md) for the full flow.
+The `llm_search` corroboration backend is now runner-agnostic: it dispatches via your configured `llm_runner`, so Claude's `web_search` tool and Codex's `--search` flag work the same way as Gemini's grounded search. See [docs/llm-runners.md](docs/llm-runners.md) for the capability matrix and [docs/corroboration.md](docs/corroboration.md) for the full flow.
 
 See [docs/installation.md](docs/installation.md) for full setup including optional keys and the Claude Code skill bundle.
 
@@ -147,7 +147,7 @@ srp install-skill
 /srp apply-pending --topics all --purposes all
 ```
 
-The Claude Code skill shells out to the same `srp` CLI, so the flags and quoted edit syntax are identical. For example: `/srp update-topics --add '"climate tech"'`.
+The Claude Code skill shells out to the same `srp` CLI, so the flags and quoted edit syntax are identical. For example: `/srp update-topics --add '"climate tech"'`. When `llm.runner = none`, the skill can still use the host model for natural-language request mapping and inline narrative sections; when a concrete runner is configured, the skill defers to the CLI-produced LLM output.
 
 See [docs/usage.md](docs/usage.md) for a complete guide including Claude Code workflows, corroboration modes, report generation, and the pending-proposal review flow.
 
@@ -172,7 +172,7 @@ See [docs/configuration.md](docs/configuration.md) for the full key list, env ov
 
 ## Roadmap
 
-Today: **YouTube**, 4 LLM runners (`claude`, `gemini`, `codex`, `local`), 5 corroboration backends (`gemini_search`, `tavily`, `brave`, `exa`, `llm_cli`).
+Today: **YouTube**, 4 LLM runners (`claude`, `gemini`, `codex`, `local`), 4 corroboration backends (`llm_search`, `tavily`, `brave`, `exa`).
 
 Planned platforms — each implemented by adding one adapter to [social_research_probe/platforms/](social_research_probe/platforms/):
 
@@ -199,6 +199,7 @@ None of these require new LLM capabilities. See [docs/objective.md](docs/objecti
 | [docs/llm-runners.md](docs/llm-runners.md)             | Runner comparison, auth, ensemble mode, runner-agnostic agentic search |
 | [docs/data-directory.md](docs/data-directory.md)       | Canonical reference for every artefact under `~/.social-research-probe/` |
 | [docs/llm-reliability-harness.md](docs/llm-reliability-harness.md) | Multi-sample judge-LLM reliability harness with variance gates |
+| [docs/runtime-dependencies.md](docs/runtime-dependencies.md) | Every third-party library `srp` imports at runtime — where/why |
 | [docs/summary-quality-report.md](docs/summary-quality-report.md) | Diagnosis + Phase 9 redesign of the transcript summarizer       |
 | [docs/statistics.md](docs/statistics.md)               | All 20+ statistical models: what they measure, how to interpret   |
 | [docs/charts.md](docs/charts.md)                       | Every chart: what it shows, where it's saved                      |

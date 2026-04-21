@@ -1,4 +1,4 @@
-"""Transcript fetching and LLM-based enrichment for top-5 items."""
+"""Transcript fetching and LLM-based enrichment for top-N items."""
 
 from __future__ import annotations
 
@@ -81,18 +81,25 @@ def _build_summary_prompt(title: str, channel: str, transcript: str, word_limit:
     )
 
 
-def _first_media_url_runner() -> LLMRunner | None:
-    """Return the first registered runner with ``supports_media_url=True`` that is healthy."""
-    from social_research_probe.llm.registry import get_runner, list_runners
+def _first_media_url_runner(cfg=None) -> LLMRunner | None:
+    """Return the configured media-capable runner when it is enabled and healthy."""
+    from social_research_probe.llm.registry import get_runner
 
-    for name in list_runners():
-        try:
-            runner = get_runner(name)
-        except Exception:
-            continue
-        if getattr(runner, "supports_media_url", False) and runner.health_check():
-            return runner
-    return None
+    if cfg is None:
+        cfg = load_active_config()
+    runner_name = getattr(cfg, "llm_runner", "none")
+    if runner_name in {"none", "auto"}:
+        return None
+    try:
+        runner = get_runner(runner_name)
+    except Exception:
+        return None
+    if not getattr(runner, "supports_media_url", False):
+        return None
+    try:
+        return runner if runner.health_check() else None
+    except Exception:
+        return None
 
 
 async def _url_based_summary(url: str, word_limit: int, cfg=None) -> str | None:
@@ -110,7 +117,7 @@ async def _url_based_summary(url: str, word_limit: int, cfg=None) -> str | None:
         cached = get_str(cache, cache_key)
         if cached is not None:
             return cached
-    runner = _first_media_url_runner()
+    runner = _first_media_url_runner(cfg)
     if runner is None:
         return None
     try:
@@ -322,8 +329,8 @@ async def _enrich_one(
         item["summary"] = merged
 
 
-async def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
-    """Fetch transcripts and AI summaries for top-5 items concurrently.
+async def _enrich_top_n_with_transcripts(top_n: list[ScoredItem]) -> None:
+    """Fetch transcripts and AI summaries for top-N items concurrently.
 
     Transcript sources tried in order per item:
     1. YouTube captions via yt-dlp (``fetch_transcript``).
@@ -344,17 +351,17 @@ async def _enrich_top5_with_transcripts(top5: list[ScoredItem]) -> None:
     )
 
     # Load config once per batch instead of per-item-per-helper (was ~4 reads
-    # per item = 20 disk reads for a top-5 run). Pass down via cfg= kwarg.
+    # per item = 20 disk reads for a top-N run). Pass down via cfg= kwarg.
     cfg = load_active_config()
 
     async def _gather() -> None:
         # Limit concurrent whisper jobs to 2 to avoid memory exhaustion from
-        # simultaneous audio-download + ML-transcription across all top-5 items.
+        # simultaneous audio-download + ML-transcription across all top-N items.
         whisper_sem = asyncio.Semaphore(2)
         await asyncio.gather(
             *[
                 _enrich_one(item, fetch_transcript, fetch_transcript_whisper, whisper_sem, cfg=cfg)
-                for item in top5
+                for item in top_n
             ],
             return_exceptions=True,
         )

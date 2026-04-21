@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Whisper transcript fallback when YouTube captions unavailable
 - Natural-language query mode: `srp research "what's trending in AI safety?"` auto-classifies topic/purpose
 - HTML report output with embedded charts and TTS-ready section headings
-- Auto-corroboration of top-5 items via Exa, Brave, or Tavily on every research run
+- Auto-corroboration of top-N items via Exa, Brave, or Tavily on every research run
 - `VERSION` file as single source of truth for package version (hatchling dynamic versioning)
 - Release workflow: `VERSION` push to main → GitHub release → PyPI publish via OIDC
 - Python 3.13 added to CI test matrix
@@ -38,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nested `asyncio.run()` inside `asyncio.to_thread()` when adapter called `run_coro()`
 - Late-binding closure bug in pipeline `asyncio.to_thread` lambda
 - `strict=True` added to `zip()` in LLM ensemble response collection
-
 
 [Unreleased]: https://github.com/user/social-research-probe/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/user/social-research-probe/releases/tag/v0.0.1

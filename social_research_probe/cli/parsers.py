@@ -69,7 +69,7 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     rs.add_argument(
         "--no-transcripts",
         action="store_true",
-        help="Skip transcript fetching for top-5 items (faster, less context)",
+        help="Skip transcript fetching for top-N items (faster, less context)",
     )
     rs.add_argument(
         "--no-html",
@@ -78,7 +78,7 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     )
     cc = sub.add_parser("corroborate-claims", help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
-    cc.add_argument("--backends", default="llm_cli", help="Comma-separated backend names")
+    cc.add_argument("--backends", default="llm_search", help="Comma-separated backend names")
     cc.add_argument("--output", default=None, help="Output file path (default: stdout)")
     rend = sub.add_parser("render", help="Render charts and stats for a research packet")
     rend.add_argument("--packet", required=True, help="Path to packet JSON file")

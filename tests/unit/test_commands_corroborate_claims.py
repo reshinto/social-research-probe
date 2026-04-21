@@ -61,7 +61,7 @@ def test_run_success_stdout(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(cc_cmd, "corroborate_claim", fake_corroborate)
 
     input_path = _write_claims(tmp_path, _CLAIMS_DATA)
-    rc = cc_cmd.run(str(input_path), backends=["exa", "llm_cli"])
+    rc = cc_cmd.run(str(input_path), backends=["exa", "llm_search"])
 
     assert rc == 0
     captured = capsys.readouterr()
@@ -70,7 +70,7 @@ def test_run_success_stdout(monkeypatch, tmp_path, capsys):
     assert len(out["results"]) == 2
     assert out["results"][0] == _FAKE_VERDICT
     # Verify each claim was dispatched with the right backends.
-    assert all(b == ["exa", "llm_cli"] for _, b in calls)
+    assert all(b == ["exa", "llm_search"] for _, b in calls)
 
 
 def test_run_with_output_file(monkeypatch, tmp_path):
@@ -80,7 +80,7 @@ def test_run_with_output_file(monkeypatch, tmp_path):
     input_path = _write_claims(tmp_path, _CLAIMS_DATA)
     output_path = tmp_path / "out.json"
 
-    rc = cc_cmd.run(str(input_path), backends=["llm_cli"], output_path=str(output_path))
+    rc = cc_cmd.run(str(input_path), backends=["llm_search"], output_path=str(output_path))
 
     assert rc == 0
     assert output_path.exists()
@@ -94,11 +94,11 @@ def test_run_invalid_json_raises_validation_error(tmp_path):
     bad_file = tmp_path / "bad.json"
     bad_file.write_text("not json at all {{{")
     with pytest.raises(ValidationError, match="cannot read claims file"):
-        cc_cmd.run(str(bad_file), backends=["llm_cli"])
+        cc_cmd.run(str(bad_file), backends=["llm_search"])
 
 
 def test_run_missing_file_raises_validation_error(tmp_path):
     """run() raises ValidationError when the input file does not exist."""
     missing = tmp_path / "does_not_exist.json"
     with pytest.raises(ValidationError, match="cannot read claims file"):
-        cc_cmd.run(str(missing), backends=["llm_cli"])
+        cc_cmd.run(str(missing), backends=["llm_search"])
