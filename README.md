@@ -16,16 +16,15 @@
 1. [What it does](#what-it-does)
 2. [Why this exists](#why-this-exists)
 3. [Quickstart](#quickstart)
-4. [Installation](#installation)
-5. [Usage](#usage)
-6. [Configuration](#configuration)
-7. [Roadmap — what's planned](#roadmap)
-8. [Documentation](#documentation)
-9. [Architecture](#architecture)
-10. [Contributing](#contributing)
-11. [Security](#security)
-12. [License](#license)
-13. [Changelog](#changelog)
+4. [Usage](#usage)
+5. [Configuration](#configuration)
+6. [Roadmap — what's planned](#roadmap)
+7. [Documentation](#documentation)
+8. [Architecture](#architecture)
+9. [Contributing](#contributing)
+10. [Security](#security)
+11. [License](#license)
+12. [Changelog](#changelog)
 
 ---
 
@@ -59,41 +58,8 @@ See [docs/objective.md](docs/objective.md) for the full rationale and [docs/cost
 ## Quickstart
 
 ```bash
-pip install social-research-probe
-srp config set-secret youtube_api_key
-srp research "AI safety" "latest-news"
-```
-
-Or in natural-language mode from the CLI (requires `llm.runner` configured):
-
-```bash
+uvx --from social-research-probe srp install-skill
 srp research "what are researchers saying about model collapse?"
-```
-
----
-
-## Installation
-
-```bash
-# pip
-pip install social-research-probe
-
-# pipx (isolated environment, recommended for CLI tools)
-pipx install social-research-probe
-
-# uvx (run without installing)
-uvx social-research-probe research "AI safety" "latest-news"
-
-# From source (development)
-git clone https://github.com/reshinto/social-research-probe
-cd social-research-probe
-pip install -e '.[dev]'
-```
-
-After installing, set your YouTube API key:
-
-```bash
-srp config set-secret youtube_api_key
 ```
 
 ### Pick an LLM runner — Gemini CLI is the free default
