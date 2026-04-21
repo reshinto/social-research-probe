@@ -4,14 +4,14 @@ graph TD
     ORCH["pipeline/orchestrator\nrun_research()"]
     SCORE["pipeline/scoring\nScore + z-score"]
     ENRICH["pipeline/enrichment\nTranscripts + LLM summaries"]
-    STATS["pipeline/stats\n15+ statistical models"]
+    STATS["pipeline/stats\n20+ statistical models"]
     CHARTS["pipeline/charts\nPNG rendering"]
     CORR["pipeline/corroboration\nTop-5 evidence"]
     SVS["pipeline/svs\nSignal vectors"]
     SYNTH["synthesize/\nbuild_packet + formatter"]
     ADAPT["platforms/youtube\nYouTube Data API adapter"]
-    BACKENDS["corroboration/\nExa · Brave · Tavily"]
-    LLM["llm/ensemble\nClaude · Gemini · Codex"]
+    BACKENDS["corroboration/\ngemini_search · tavily ·\nbrave · exa · llm_cli"]
+    LLM["llm/ensemble\nclaude · gemini · codex · local"]
 
     CLI --> CMD
     CMD --> ORCH
