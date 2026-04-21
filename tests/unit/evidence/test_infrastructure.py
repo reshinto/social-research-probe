@@ -35,7 +35,7 @@ from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearch
 @pytest.fixture
 def _smoke_fixture_file():
     """Create ``_smoke.json`` under golden root for the duration of a test."""
-    root = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+    root = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden"
     path = root / "_smoke.json"
     path.write_text(json.dumps({"k": 1}), encoding="utf-8")
     try:
@@ -55,7 +55,7 @@ def test_golden_raises_on_missing_file(golden):
 
 def test_golden_loads_text_files_verbatim(golden):
     """``.txt`` / ``.md`` / ``.vtt`` return the raw string."""
-    root = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+    root = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden"
     text_path = root / "_smoke.txt"
     text_path.write_text("hello world", encoding="utf-8")
     try:
@@ -66,7 +66,7 @@ def test_golden_loads_text_files_verbatim(golden):
 
 def test_golden_loads_unknown_extensions_as_bytes(golden):
     """Unknown suffixes come back as raw bytes, untouched."""
-    root = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+    root = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden"
     bin_path = root / "_smoke.bin"
     bin_path.write_bytes(b"\x00\x01\x02")
     try:

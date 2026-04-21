@@ -18,10 +18,18 @@ The `# pragma: no cover` inline comment is banned. Use `exclude_lines` in `pypro
 
 ```
 tests/
-├── unit/        # pure functions, no I/O
-├── integration/ # orchestrator + fake adapters, no network
-└── contract/    # cross-cutting invariants (version consistency, doc navigation)
+├── unit/
+│   └── evidence/     # value-tier: input/expected/why receipts for every service
+├── integration/      # orchestrator + fake adapters, no network
+└── contract/         # cross-cutting invariants (version consistency, doc nav)
 ```
+
+The `unit/evidence/` subdirectory holds tests whose primary value is
+**value verification** — each test docstring carries an
+*(input / expected output / why)* receipt with a formula citation,
+published-dataset reference, or recorded API payload. These run as part
+of the normal unit suite (no special invocation needed), but also have a
+shortcut: `make test-evidence`.
 
 ### Unit tests
 
@@ -76,14 +84,44 @@ monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", .
 
 ---
 
+## Makefile targets
+
+The repo ships a small `Makefile` for common developer workflows. Run
+`make help` to list targets:
+
+| Target | What it does | Underlying command |
+|---|---|---|
+| `make test` | Full test suite with the 100% coverage gate | `pytest -q` |
+| `make test-evidence` | Only the value-tier evidence tests (fast, no coverage gate) | `pytest tests/unit/evidence -v --no-cov` |
+| `make eval-summary-quality` | Real-LLM nightly: runs the active runner over the reference transcripts, reports coverage / hallucinations / length compliance (exits non-zero below thresholds) | `python scripts/eval_summary_quality.py` |
+| `make record-golden` | Prints the recorder CLI help — run it manually with `--service` / `--url` / `--auth-env` / `--auth-header` / `--out` to refresh a golden fixture with a real API response | `python scripts/record_golden.py --help` |
+| `make help` | Lists every target above | — |
+
+Override `PY` or `PYTEST` if your virtualenv lives somewhere other than
+`./.venv/`:
+
+```bash
+PY=python3 PYTEST=pytest make test
+```
+
+`make test-evidence` and `make eval-summary-quality` are **not** CI
+gates. CI runs `pytest -q` (the full suite) on every push; the eval
+target runs nightly or on demand and writes timestamped reports under
+`.srp-eval/<service>/`. See
+[llm-reliability-harness.md](llm-reliability-harness.md) for the eval
+methodology and gates.
+
+---
+
 ## Running Tests
 
 ```bash
 # Full suite with coverage gate (1500+ tests, ~30 s) — THE gate
 pytest -q
 
-# Same run, more verbose coverage output
-pytest tests/unit tests/contract tests/evidence \
+# Same run via the traditional subset invocation (hits 100% because
+# tests/unit/evidence/ lives under tests/unit/)
+pytest tests/unit tests/contract \
     --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
 
 # Integration tests only (no coverage enforcement)
@@ -95,18 +133,9 @@ pytest tests/unit/test_scoring.py -x -q
 
 CI runs all tiers on Python 3.11, 3.12, and 3.13.
 
-> **Important:** The `--cov-fail-under=100` gate applies to **all three
-> tiers combined** (unit + contract + evidence). Running any subset in
-> isolation under-reports — for example, `pytest tests/unit tests/contract`
-> alone hits ~95% because the evidence tier is the only place that covers
-> the new `social_research_probe/evals/` package and the per-runner
-> `agentic_search` implementations. The distinction between the tiers is
-> **purpose** (value vs. line), not whether their tests count toward
-> coverage. They all do.
+### Evidence suite — running the new tests in `tests/unit/evidence/`
 
-### Evidence suite — running the new tests in `tests/evidence/`
-
-`tests/evidence/` is an additive tier that proves each service produces
+`tests/unit/evidence/` is an additive tier that proves each service produces
 the **correct numeric / structural output** for documented inputs (not just
 "did not crash"). Every test docstring includes a receipt table of
 *input / expected output / why* so a reviewer can trace every assertion
@@ -117,31 +146,27 @@ example.
 # Run only the evidence tier (fast, no network)
 make test-evidence
 # …equivalent to:
-pytest tests/evidence -v --no-cov
+pytest tests/unit/evidence -v --no-cov
 ```
 
 The Makefile target disables the project-wide `--cov-fail-under=100`
-gate because the evidence tier is a narrow slice — running it in
-isolation covers only ~43% of lines (it deliberately doesn't exercise
-the CLI parsers, command entry points, or state-migration shims, which
-live in the unit tier). Full coverage runs against `pytest -q` still
-enforce 100%.
+gate because the evidence slice alone covers only ~43% of lines (it
+deliberately doesn't exercise CLI parsers, command entry points, or
+state-migration shims — those live in the rest of the unit tier). The
+full 100% gate runs against `pytest -q` or `pytest tests/unit tests/contract`.
 
-> **Why not enforce 100% coverage on `tests/evidence/` alone?** The two
-> tiers have different *purposes*, not different counting rules.
-> `tests/unit/` + `tests/contract/` exist for **line coverage** — they
-> prove every branch is reachable. `tests/evidence/` exists for **value
-> coverage** — every test has an *(input / expected / why)* receipt
-> proving the scoring formula is right, the stats match a reference,
-> the corroboration backend classifies correctly. Both tiers contribute
-> to the 100% gate on the combined run; neither hits 100% alone
-> (unit+contract misses the new `evals/` package and the per-runner
-> `agentic_search` methods, evidence misses the CLI shims). The
-> `make test-evidence` shortcut uses `--no-cov` because enforcing a
-> coverage number against a narrow slice is misleading, not because
-> those tests don't count. If you want fast feedback on value-tier
-> assertions while iterating, use `make test-evidence`. If you want the
-> gate, run `pytest -q`.
+> **Why `make test-evidence` disables `--cov-fail-under=100`.** The
+> evidence slice is a narrow subset focused on *value* (formula /
+> dataset / golden payload). Enforcing a coverage number against a
+> narrow slice is misleading, not useful. The full run still hits 100%.
+> If you want the gate, run `pytest -q`. If you want fast feedback on
+> value-tier assertions while iterating, use `make test-evidence`.
+
+See [`tests/unit/evidence/MUTATION_REPORT.md`](../tests/unit/evidence/MUTATION_REPORT.md)
+for the register of documented drift drills (deliberate one-line
+mutations paired with the evidence test each one should fail), plus the
+recommended `mutmut` command for the nightly mutation run against the
+scoring and stats packages.
 
 #### LLM quality evaluators (out of CI)
 

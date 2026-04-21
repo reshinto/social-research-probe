@@ -13,7 +13,7 @@ test:
 	$(PYTEST) -q
 
 test-evidence:
-	$(PYTEST) tests/evidence -v --no-cov
+	$(PYTEST) tests/unit/evidence -v --no-cov
 
 record-golden:
 	$(PY) scripts/record_golden.py --help

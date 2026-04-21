@@ -35,7 +35,7 @@ import pytest
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.types import AgenticSearchResult
 
-GOLDEN_ROOT = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
+GOLDEN_ROOT = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden"
 
 
 def _load_golden(path: str) -> object:

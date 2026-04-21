@@ -105,7 +105,7 @@ async def test_tavily_mixed_response_preserves_all_urls(monkeypatch, golden):
 async def test_llm_search_backend_classifies_supported_and_preserves_citations(monkeypatch, golden):
     """Runner routing was already covered in test_llm_search_routing.py.
     Here we prove the *integration* against the golden citation payload."""
-    from social_research_probe.corroboration.gemini_search import GeminiSearchBackend
+    from social_research_probe.corroboration.llm_search import LLMSearchBackend
     from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 
     payload = golden("corroboration/llm_search_citations.json")
@@ -128,15 +128,15 @@ async def test_llm_search_backend_classifies_supported_and_preserves_citations(m
             return canned
 
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.load_active_config",
+        "social_research_probe.corroboration.llm_search.load_active_config",
         lambda: type("C", (), {"llm_runner": "gemini"})(),
     )
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.get_runner",
+        "social_research_probe.corroboration.llm_search.get_runner",
         lambda name: _StubRunner(),
     )
 
-    result = await GeminiSearchBackend().corroborate(_claim())
+    result = await LLMSearchBackend().corroborate(_claim())
     assert result.verdict == "supported"
     assert result.sources == [c["url"] for c in payload["citations"]]
 

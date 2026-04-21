@@ -11,7 +11,7 @@ timestamped JSON + Markdown under `.srp-eval/<service>/`.
 
 ## Purpose
 
-Deterministic evidence tests (the `tests/evidence/` suite) catch formula
+Deterministic evidence tests (the `tests/unit/evidence/` suite) catch formula
 drift, schema changes, routing bugs, and other scaffolding regressions.
 They cannot catch semantic regressions: summaries losing coherence,
 drifting into filler, or hallucinating new proper nouns. Those issues
@@ -172,7 +172,7 @@ All gates pass.
   not in the critical path of a research session. Use deterministic
   evidence tests + pipeline sanity checks for production safety.
 - **Not a replacement for the evidence suite.** Deterministic tests in
-  `tests/evidence/` are still the primary safety net; the harness adds
+  `tests/unit/evidence/` are still the primary safety net; the harness adds
   a semantic dimension on top.
 - **Not a cross-runner quality comparison tool.** The judge runs within
   one run; for A/B between providers, use it N times with different

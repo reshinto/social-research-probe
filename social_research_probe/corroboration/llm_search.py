@@ -1,11 +1,17 @@
-"""LLM-backed search corroboration backend (runner-agnostic).
+"""LLM-backed agentic-search corroboration backend (runner-agnostic).
 
-Legacy module name ``gemini_search`` is preserved so existing user configs
-that reference the backend key ``gemini_search`` keep working without
-migration. The implementation no longer hard-codes Gemini: it dispatches
-through the :class:`~social_research_probe.llm.base.LLMRunner` abstraction so
-whichever runner the user has configured (Gemini google-search, Claude
-``web_search``, Codex ``--search``) performs the agentic search.
+The class is :class:`LLMSearchBackend` and this module lives at
+``corroboration.llm_search`` because the implementation is **not
+Gemini-specific** — it dispatches through whichever LLM runner the user
+has configured (Gemini google-search, Claude ``web_search``, Codex
+``--search``) via the :class:`~social_research_probe.llm.base.LLMRunner`
+abstraction.
+
+**Registry key remains ``"gemini_search"``** so existing user configs
+that reference the backend name in ``config.toml`` (``[corroboration]
+backends = ["gemini_search", ...]``) keep working without migration.
+That key is historical; new setups can be documented as ``llm_search``
+once an alias is wired in ``corroboration/registry.py``.
 
 Flow:
     1. Resolve the active LLM runner from user config.
@@ -110,14 +116,18 @@ def _filter_citations(result: AgenticSearchResult, source_url: str | None) -> li
 
 
 @register
-class GeminiSearchBackend(CorroborationBackend):
+class LLMSearchBackend(CorroborationBackend):
     """Runner-agnostic agentic-search corroboration backend.
 
-    Registry key ``gemini_search`` is preserved for config compatibility —
-    the class name is historical; the implementation routes through whatever
-    LLM runner the user has selected in config.
+    The registry key ``gemini_search`` (see ``name`` below) is historical
+    — it is preserved so existing user configs keep working. The class
+    name and module path both reflect that this backend is **not**
+    specific to any one LLM; the active runner decides which vendor
+    actually performs the search.
     """
 
+    # Config-facing key — kept as "gemini_search" for backward compat with
+    # user config files. Do NOT change without a migration path.
     name: ClassVar[str] = "gemini_search"
 
     def health_check(self) -> bool:

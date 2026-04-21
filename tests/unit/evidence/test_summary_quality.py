@@ -41,7 +41,7 @@ from social_research_probe.pipeline.enrichment import (
     _fallback_transcript_summary,
 )
 
-FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "golden" / "transcripts"
+FIXTURES = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden" / "transcripts"
 
 
 def _load_spec(name: str) -> dict:

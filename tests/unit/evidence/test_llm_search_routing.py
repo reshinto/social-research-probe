@@ -23,8 +23,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from social_research_probe.corroboration.gemini_search import (
-    GeminiSearchBackend,
+from social_research_probe.corroboration.llm_search import (
+    LLMSearchBackend,
     _classify_verdict,
 )
 from social_research_probe.errors import AdapterError
@@ -78,7 +78,7 @@ class _StubRunner:
 def _install_runner(monkeypatch, runner_name: str, runner: _StubRunner | None) -> None:
     """Redirect the backend's config and registry lookups to the stubs."""
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.load_active_config",
+        "social_research_probe.corroboration.llm_search.load_active_config",
         lambda: _StubConfig(runner_name),
     )
 
@@ -89,7 +89,7 @@ def _install_runner(monkeypatch, runner_name: str, runner: _StubRunner | None) -
         return runner
 
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.get_runner",
+        "social_research_probe.corroboration.llm_search.get_runner",
         _get_runner,
     )
 
@@ -117,7 +117,7 @@ async def test_active_runner_gemini_drives_agentic_search(monkeypatch):
     runner = _StubRunner(name="gemini", supports=True, healthy=True, result=canned)
     _install_runner(monkeypatch, "gemini", runner)
 
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is True
     result = await backend.corroborate(_claim(source_url="https://example.com/post"))
     assert result.verdict == "supported"
@@ -137,7 +137,7 @@ async def test_active_runner_claude_drives_agentic_search(monkeypatch):
     runner = _StubRunner(name="claude", supports=True, healthy=True, result=canned)
     _install_runner(monkeypatch, "claude", runner)
 
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is True
     result = await backend.corroborate(_claim())
     assert result.verdict == "refuted"
@@ -150,7 +150,7 @@ async def test_local_runner_does_not_support_agentic_search(monkeypatch):
     runner = _StubRunner(name="local", supports=False, healthy=True)
     _install_runner(monkeypatch, "local", runner)
 
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is False
     result = await backend.corroborate(_claim())
     assert result.verdict == "inconclusive"
@@ -162,7 +162,7 @@ async def test_local_runner_does_not_support_agentic_search(monkeypatch):
 async def test_runner_none_config_skips_cleanly(monkeypatch):
     """config.llm_runner='none' resolves to no runner; backend stays safe."""
     _install_runner(monkeypatch, "none", None)
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is False
     result = await backend.corroborate(_claim())
     assert result.verdict == "inconclusive"
@@ -195,7 +195,7 @@ async def test_runner_health_check_raising_is_treated_as_unhealthy(monkeypatch):
 
     runner = _Raising(name="gemini", supports=True, healthy=True)
     _install_runner(monkeypatch, "gemini", runner)
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is False
 
 
@@ -203,7 +203,7 @@ async def test_runner_health_check_raising_is_treated_as_unhealthy(monkeypatch):
 async def test_backend_unknown_runner_name_skips_cleanly(monkeypatch):
     """When get_runner raises KeyError (bad config), backend treats as skip."""
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.load_active_config",
+        "social_research_probe.corroboration.llm_search.load_active_config",
         lambda: _StubConfig("nonexistent"),
     )
 
@@ -211,10 +211,10 @@ async def test_backend_unknown_runner_name_skips_cleanly(monkeypatch):
         raise KeyError(name)
 
     monkeypatch.setattr(
-        "social_research_probe.corroboration.gemini_search.get_runner",
+        "social_research_probe.corroboration.llm_search.get_runner",
         _raise_key_error,
     )
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     assert backend.health_check() is False
     result = await backend.corroborate(_claim())
     assert result.verdict == "inconclusive"
@@ -230,7 +230,7 @@ async def test_backend_adapter_error_from_runner_produces_inconclusive(monkeypat
 
     runner = _Failing(name="gemini", supports=True, healthy=True)
     _install_runner(monkeypatch, "gemini", runner)
-    backend = GeminiSearchBackend()
+    backend = LLMSearchBackend()
     result = await backend.corroborate(_claim())
     assert result.verdict == "inconclusive"
     assert "agentic_search failed" in result.reasoning

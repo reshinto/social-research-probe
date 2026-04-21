@@ -358,7 +358,7 @@ def test_timestamp_now_returns_sortable_utc_string():
 def test_eval_corpus_manifest_points_at_real_fixtures():
     manifest = json.loads(
         (
-            Path(__file__).resolve().parent.parent
+            Path(__file__).resolve().parent.parent.parent
             / "fixtures"
             / "golden"
             / "eval"
@@ -366,7 +366,7 @@ def test_eval_corpus_manifest_points_at_real_fixtures():
             / "manifest.json"
         ).read_text(encoding="utf-8")
     )
-    repo_root = Path(__file__).resolve().parent.parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
     for item in manifest["items"]:
         for key in ("transcript", "reference", "keyphrases"):
             assert (repo_root / item[key]).exists(), f"missing {item[key]}"

@@ -152,7 +152,7 @@ reliability report for live data.
 
 Two complementary guards:
 
-- **Deterministic CI** — [tests/evidence/test_summary_quality.py](../tests/evidence/test_summary_quality.py)
+- **Deterministic CI** — [tests/unit/evidence/test_summary_quality.py](../tests/unit/evidence/test_summary_quality.py)
   verifies prompt structure, truncation behaviour, and coverage/hallucination
   scoring logic using canned runner responses. Runs on every commit.
 - **Nightly real-LLM eval** — `make eval-summary-quality` runs the
