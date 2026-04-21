@@ -1,0 +1,17 @@
+{
+  "answer": "The claim is supported by multiple peer-reviewed sources. GPT-4 was indeed released in March 2023 by OpenAI.",
+  "citations": [
+    {
+      "url": "https://openai.com/index/gpt-4/",
+      "title": "GPT-4 - OpenAI"
+    },
+    {
+      "url": "https://arxiv.org/abs/2303.08774",
+      "title": "GPT-4 Technical Report"
+    },
+    {
+      "url": "https://www.nature.com/articles/d41586-023-00816-5",
+      "title": "Nature: GPT-4 release"
+    }
+  ]
+}
