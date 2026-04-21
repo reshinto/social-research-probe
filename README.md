@@ -106,7 +106,7 @@ srp config set-secret youtube_api_key
 srp config set llm.runner gemini
 ```
 
-The same `gemini` CLI also powers the free `gemini_search` corroboration backend. See [docs/llm-runners.md](docs/llm-runners.md) for the full comparison.
+The `gemini_search` corroboration backend is now runner-agnostic: it dispatches via your configured `llm_runner`, so Claude's `web_search` tool and Codex's `--search` flag work the same way as Gemini's grounded search. See [docs/llm-runners.md](docs/llm-runners.md) for the capability matrix and [docs/corroboration.md](docs/corroboration.md) for the full flow.
 
 See [docs/installation.md](docs/installation.md) for full setup including optional keys and the Claude Code skill bundle.
 
@@ -196,7 +196,10 @@ None of these require new LLM capabilities. See [docs/objective.md](docs/objecti
 | [docs/usage.md](docs/usage.md)                         | Run research, read output, Claude Code skill workflow             |
 | [docs/configuration.md](docs/configuration.md)         | Every config key, env overrides, config/secrets lifecycle         |
 | [docs/corroboration.md](docs/corroboration.md)         | Claim corroboration: backends, free tiers, configuration          |
-| [docs/llm-runners.md](docs/llm-runners.md)             | Runner comparison, Gemini CLI browser auth, ensemble mode         |
+| [docs/llm-runners.md](docs/llm-runners.md)             | Runner comparison, auth, ensemble mode, runner-agnostic agentic search |
+| [docs/data-directory.md](docs/data-directory.md)       | Canonical reference for every artefact under `~/.social-research-probe/` |
+| [docs/llm-reliability-harness.md](docs/llm-reliability-harness.md) | Multi-sample judge-LLM reliability harness with variance gates |
+| [docs/summary-quality-report.md](docs/summary-quality-report.md) | Diagnosis + Phase 9 redesign of the transcript summarizer       |
 | [docs/statistics.md](docs/statistics.md)               | All 20+ statistical models: what they measure, how to interpret   |
 | [docs/charts.md](docs/charts.md)                       | Every chart: what it shows, where it's saved                      |
 | [docs/commands.md](docs/commands.md)                   | Every `srp` subcommand, flag, exit code, environment variable     |

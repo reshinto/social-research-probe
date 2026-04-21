@@ -1,0 +1,7 @@
+flowchart LR
+    Transcript["Transcript<br/>(fetch_transcript or whisper fallback)"] --> Prompt["Prompt<br/>(Phase 9 redesign: word cap,<br/>anti-hallucination, filler blocklist,<br/>exemplar, sentence-boundary rule)"]
+    Prompt --> Ensemble["Ensemble fan-out<br/>Claude / Gemini / Codex"]
+    Ensemble --> Pick["Coverage-wins merge<br/>(highest keyphrase coverage)"]
+    Pick --> Cache[("~/.social-research-probe/cache/summary/")]
+    Cache --> Harness["Nightly reliability harness<br/>(multi-sample + judge)"]
+    Harness -.->|report| Report[".srp-eval/summary/&lt;ts&gt;.md"]

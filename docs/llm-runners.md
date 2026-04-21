@@ -71,6 +71,33 @@ If you already pay for Claude and want the prose quality, `claude` is a strong s
 
 ---
 
+## Capability matrix
+
+`srp` follows a **no-single-LLM-per-service** rule: every LLM-backed service
+dispatches through the runner abstraction rather than hard-coding a provider.
+Runners advertise capabilities via ClassVar flags; services check those flags
+and skip gracefully when a capability is absent.
+
+| Capability | Class flag | Gemini | Claude | Codex | Local |
+|---|---|---|---|---|---|
+| Structured JSON prompt (`run`) | *(implicit)* | ✅ | ✅ | ✅ | ✅ |
+| Plain-text prompt | *(implicit)* | ✅ | ✅ | ✅ | ✅ |
+| Direct media URL summary | `supports_media_url` | ✅ | — | — | — |
+| Agentic web search | `supports_agentic_search` | ✅ `--google-search` | ✅ `web_search` tool | ✅ `--search` flag | ❌ raises `CapabilityUnavailable` |
+
+**Consequence for the corroboration backend formerly known as
+`gemini_search`:** the registry key stays `gemini_search` for config
+backward-compatibility, but the implementation now routes through
+`get_runner(config.llm_runner).agentic_search(...)`. If you switch
+`llm_runner` from `gemini` to `claude` or `codex`, corroboration search
+automatically uses that runner's native web-search tool. Switching to
+`local` makes the backend report `health_check() = False` and the host
+skips it cleanly. See [docs/corroboration.md](corroboration.md) for the
+full flow and [docs/diagrams/src/corroboration-runner-agnostic.mmd](diagrams/src/corroboration-runner-agnostic.mmd)
+for the diagram.
+
+---
+
 ## How the ensemble works
 
 ### Single-provider mode

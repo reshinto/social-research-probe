@@ -1,6 +1,7 @@
 # Copy to ~/.social-research-probe/config.toml (or pass --data-dir).
 # Secrets live in a separate ~/.social-research-probe/secrets.toml (chmod 0600).
 # The [llm].runner setting is the default runner for config-aware LLM features.
+# See docs/data-directory.md for every file srp writes under ~/.social-research-probe/.
 
 [llm]
 runner = "none"           # claude | gemini | codex | local | none

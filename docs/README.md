@@ -24,7 +24,10 @@
 | Document | What it covers |
 |---|---|
 | [Configuration](configuration.md) | Every config key, env overrides, config/secrets lifecycle |
-| [LLM Runners](llm-runners.md) | Runner comparison, Gemini CLI browser auth, ensemble mode |
+| [LLM Runners](llm-runners.md) | Runner comparison, Gemini CLI browser auth, ensemble mode, runner-agnostic agentic search |
+| [Data & Storage](data-directory.md) | Canonical reference for every artefact under `~/.social-research-probe/` |
+| [LLM Reliability Harness](llm-reliability-harness.md) | Multi-sample judge-LLM eval harness with variance gates |
+| [Summary Quality Report](summary-quality-report.md) | Diagnosis + Phase 9 redesign of the transcript summarizer |
 | [Command Reference](commands.md) | Every `srp` subcommand, flag, exit code, environment variable |
 | [Statistics](statistics.md) | All 20+ statistical models: what they measure and how to interpret |
 | [Charts](charts.md) | Every chart: what it shows, how to read it, what to look for |

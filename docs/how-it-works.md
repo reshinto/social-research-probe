@@ -260,10 +260,64 @@ This is why adding a new platform or a new statistical model does not require an
 
 ---
 
+## Where data lives
+
+Every artefact `srp` writes lives under `~/.social-research-probe/`
+(or whatever you set `SRP_DATA_DIR` to):
+
+| Path | What |
+| --- | --- |
+| `config.toml` | resolved runtime configuration |
+| `secrets.toml` | API keys for backends |
+| `topics.json` / `purposes.json` | saved research queries and profiles |
+| `cache/` | hashed payload cache (fetch, transcript, summary, corroboration) |
+| `charts/` | generated chart PNGs per run |
+| `reports/` | generated HTML reports per run |
+
+See [docs/data-directory.md](data-directory.md) for the full reference —
+when each file is written, where it's read, who writes it, and whether
+it's safe to delete.
+
+## Corroboration is runner-agnostic
+
+The `gemini_search` corroboration backend name is legacy — it now routes
+through `get_runner(config.llm_runner).agentic_search(...)`, so
+**whichever LLM runner you configure** does the web search using its
+native capability:
+
+- Gemini → `--google-search` grounded search
+- Claude → `web_search` tool
+- Codex → `--search` flag
+- Local → not supported (backend reports unhealthy and is skipped)
+
+Runners also filter their results through the source-quality filter that
+drops the claim's own URL and any video-hosting domains before computing
+a verdict, because search snippets can't actually verify videos. See
+[docs/corroboration.md](corroboration.md) and
+[docs/diagrams/src/corroboration-runner-agnostic.mmd](diagrams/src/corroboration-runner-agnostic.mmd).
+
+## Summary quality has a nightly reliability gate
+
+Transcript summaries feed corroboration, scoring, and the HTML report,
+so their quality matters. `srp` protects it two ways:
+
+1. **Redesigned prompt** — explicit anti-hallucination clause, filler
+   blocklist, one-shot exemplar, and sentence-boundary truncation
+   ([pipeline/enrichment.py](../social_research_probe/pipeline/enrichment.py)
+   `_build_summary_prompt`).
+2. **Nightly reliability harness** — multi-sample runs with an
+   independent judge runner enforce both a mean-coverage floor and a
+   consistency ceiling on variance. See
+   [docs/llm-reliability-harness.md](llm-reliability-harness.md) and
+   [docs/summary-quality-report.md](summary-quality-report.md).
+
 ## See also
 
 - [Objective](objective.md) — project mission, audience, roadmap
 - [Cost Optimization](cost-optimization.md) — every place the design avoids an LLM call
+- [Data & Storage](data-directory.md) — every file under `~/.social-research-probe/`
+- [LLM Reliability Harness](llm-reliability-harness.md) — multi-sample judge-LLM quality gate
+- [Summary Quality Report](summary-quality-report.md) — diagnosis + prompt redesign
 - [Statistics](statistics.md) — the 20+ models that run on scored results
 - [Charts](charts.md) — visual outputs derived from the scoring data
 - [Corroboration](corroboration.md) — how claims are cross-checked
