@@ -1,29 +1,17 @@
 # srp Command Reference
 
-Invoke from Claude Code:
-
-```text
-/srp <intent>
-```
+Invoke from Claude Code as `/srp <intent>`.
 
 ## Command Map
 
-| User asks about | Commands covered | Reference |
+| User asks about | Commands | Reference |
 |---|---|---|
 | topics | show-topics, update-topics | [topics.md](topics.md) |
 | purposes | show-purposes, update-purposes | [purposes.md](purposes.md) |
 | pending suggestions | show-pending, apply-pending, discard-pending | [pending.md](pending.md) |
-| generating suggestions | suggest-topics, suggest-purposes | [suggest.md](suggest.md) |
-| running research | research | [research.md](research.md) |
+| generating suggestions | suggest-topics, suggest-purposes, stage-suggestions | [suggest.md](suggest.md) |
+| running research | research, report | [research.md](research.md) |
+| config & secrets | config show/set/path/set-secret/unset-secret/check-secrets | [config.md](config.md) |
+| advanced / setup | setup, install-skill, corroborate-claims, render | [advanced.md](advanced.md) |
 
-## Deep Reference
-
-Full flag listing, environment variables, and exit-code table: `docs/commands.md` in the project repository.
-
-## Exit Codes
-
-- `0` success (may include warnings)
-- `2` validation / parse error
-- `3` duplicate conflict (retry with `--force`)
-- `4` adapter / subprocess failure
-- `5` schema migration failure
+Exit codes: `0` ok · `2` validation · `3` duplicate (retry `--force`) · `4` adapter/subprocess · `5` migration.

@@ -1,0 +1,19 @@
+graph TD
+    Q["Pick an LLM runner"] --> A{{"Want free tier<br/>and no API key?"}}
+    A -->|yes| G["gemini ⭐<br/>browser OAuth<br/>also powers<br/>gemini_search"]
+    A -->|no| B{{"Already pay<br/>for Claude?"}}
+    B -->|yes| C["claude<br/>best prose<br/>quality"]
+    B -->|no| D{{"Want OpenAI<br/>JSON output?"}}
+    D -->|yes| E["codex<br/>requires key"]
+    D -->|no| F{{"Need to run<br/>offline?"}}
+    F -->|yes| H["local<br/>SRP_LOCAL_LLM_BIN<br/>e.g. ollama"]
+    F -->|no| I["none<br/>skip LLM<br/>sections 10-11<br/>show placeholders"]
+
+    classDef recommended fill:#e8f5e9,stroke:#43a047,color:#1b5e20,stroke-width:3px;
+    classDef paid fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef local fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
+    classDef decide fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
+    class G recommended;
+    class C,E paid;
+    class H,I local;
+    class A,B,D,F decide;

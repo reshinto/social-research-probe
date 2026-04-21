@@ -2,7 +2,7 @@
 
 [Home](README.md) → Statistical Models
 
-`srp` runs up to 15+ statistical models on every research run. This page explains what each model measures, when it fires, and how to interpret the output in your report.
+`srp` runs up to 20+ statistical models on every research run. This page explains what each model measures, when it fires, and how to interpret the output in your report.
 
 ---
 

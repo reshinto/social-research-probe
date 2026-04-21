@@ -9,7 +9,7 @@ This guide walks you through installing `srp`, storing your API keys, choosing a
 ## Requirements
 
 - **Python 3.11+**
-- **ffmpeg** on `$PATH` — only needed for the Whisper transcript fallback when a video has no captions (most do)
+- **ffmpeg** on `$PATH` — required only for the Whisper transcript fallback. When a video has no captions (roughly 5–10% of the time), [`platforms/youtube/whisper_transcript.py`](../social_research_probe/platforms/youtube/whisper_transcript.py) uses `yt-dlp` to download the audio track and hands it to OpenAI Whisper for on-device transcription. **Whisper decodes audio through `ffmpeg`** — if `ffmpeg` is not installed, Whisper fails and the pipeline falls back to the video description. Install with `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux). No cloud service is contacted for this step; audio and transcript stay on your machine.
 
 ---
 
@@ -182,7 +182,7 @@ srp config set-secret YOUTUBE_API_KEY
 You will see a prompt with hidden input (the key is not echoed to the terminal):
 
 ```
-YOUTUBE_API_KEY:
+youtube_api_key:
 ```
 
 Type or paste your key and press Enter. The key is stored in `~/.social-research-probe/secrets.toml` with permissions `0600` — readable only by your user account.
@@ -203,26 +203,46 @@ Without an LLM runner, `srp` still scores and ranks videos but skips transcript 
 _(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_
 ```
 
-To enable LLM features, set `llm.runner` to a provider you have access to:
+> **`srp` does not bundle any LLM.** Every runner shells out to a separate CLI tool. You must install and authenticate the runner's CLI on your own machine (via npm, brew, curl, a package manager, or an Ollama install for `local`) **before** setting `llm.runner`. If the CLI is missing, `srp` raises a clear health-check error and falls back to other configured runners.
+
+### Recommended: Gemini CLI (free, no API key)
+
+Gemini CLI authenticates through a browser OAuth flow and runs on Google's free tier for typical research workloads. It also powers the free `gemini_search` corroboration backend — one install, two benefits.
 
 ```bash
-srp config set llm.runner claude    # Anthropic Claude (requires claude CLI)
-srp config set llm.runner gemini    # Google Gemini (requires gemini CLI)
-srp config set llm.runner codex     # OpenAI Codex (requires codex CLI)
-srp config set llm.runner local     # Local model via Ollama
+# 1. Install the Gemini CLI (npm, homebrew, or manual — see upstream docs)
+npm install -g @google/gemini-cli
+# 2. Log in through the browser (opens a tab, no key to copy)
+gemini auth login
+# 3. Point srp at it
+srp config set llm.runner gemini
+```
+
+Gemini is the recommended default because:
+
+- **No API key stored on disk** — OAuth tokens are managed by the CLI itself.
+- **Free tier covers most research loads** — `srp` only calls the LLM for top-N summaries and a synthesis step, so token usage is bounded.
+- **One tool, two roles** — the same `gemini` binary is used by the `gemini_search` corroboration backend, so you get free web-search corroboration with zero extra setup.
+
+### Other runners
+
+```bash
+srp config set llm.runner claude    # Anthropic Claude (requires claude CLI, paid)
+srp config set llm.runner codex     # OpenAI Codex (requires codex CLI, paid)
+srp config set llm.runner local     # Local model via SRP_LOCAL_LLM_BIN (e.g. ollama)
 srp config set llm.runner none      # Disable LLM entirely (default)
 ```
 
-Each runner calls the respective CLI binary as a subprocess, so the relevant CLI tool must be installed and authenticated separately. For example, for Claude:
+Each runner calls the respective CLI binary as a subprocess, so the relevant CLI tool must be installed and authenticated separately:
 
 ```bash
-# Install and authenticate the Anthropic Claude CLI first
+# Claude example
 npm install -g @anthropic-ai/claude-code
 claude auth
-
-# Then tell srp to use it
 srp config set llm.runner claude
 ```
+
+See [llm-runners.md](llm-runners.md) for the full comparison, ensemble behaviour, and troubleshooting.
 
 ---
 
@@ -231,9 +251,9 @@ srp config set llm.runner claude
 Corroboration cross-checks each top-5 video's claims against independent web sources. Without a key, `srp` uses `llm_cli` mode (requires `llm.runner` configured) or skips corroboration entirely.
 
 ```bash
-srp config set-secret EXA_API_KEY      # Exa neural search — exa.ai
-srp config set-secret BRAVE_API_KEY    # Brave Search API — api.search.brave.com
-srp config set-secret TAVILY_API_KEY   # Tavily — tavily.com
+srp config set-secret exa_api_key      # Exa neural search — exa.ai
+srp config set-secret brave_api_key    # Brave Search API — api.search.brave.com
+srp config set-secret tavily_api_key   # Tavily — tavily.com
 ```
 
 Each prompts for the value with hidden input, the same as the YouTube key. You only need one; `srp` auto-discovers all available backends when `corroboration.backend = host` (the default).
@@ -315,10 +335,22 @@ Restart Claude Code, then test:
 | Problem                                      | Fix                                                           |
 | -------------------------------------------- | ------------------------------------------------------------- |
 | `ffmpeg not found`                           | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
-| `YOUTUBE_API_KEY missing`                    | Run `srp config set-secret YOUTUBE_API_KEY`                   |
+| `youtube_api_key missing`                    | Run `srp config set-secret youtube_api_key`                   |
 | Sections 10–11 show placeholder text         | Set `llm.runner` to a configured provider (Step 3)            |
 | Corroboration skipped                        | Add at least one corroboration key (Step 4)                   |
 | `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root                     |
+
+---
+
+## Re-running setup safely
+
+`srp setup` and `srp install-skill` are **idempotent**:
+
+- Existing `config.toml` values are **never overwritten** — the wizard adds missing keys/sections from the bundled template and prints what it added.
+- Existing `secrets.toml` is **never overwritten by setup** — the wizard shows a masked preview and prompts; pressing Enter skips the key.
+- `secrets.toml` is always written with `0600` permissions; `srp` warns on every read if the file is world- or group-readable.
+
+See [configuration.md](configuration.md#what-happens-when-configtoml-already-exists) for the full lifecycle.
 
 ---
 
@@ -334,4 +366,6 @@ rm -rf ~/.social-research-probe        # removes config, secrets, reports, and c
 ## See also
 
 - [Usage Guide](usage.md) — run your first research and understand the output
+- [Configuration](configuration.md) — every config key and its default
+- [LLM Runners](llm-runners.md) — runner comparison and why Gemini CLI is the free default
 - [Security](security.md) — how secrets are stored and read at runtime

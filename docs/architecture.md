@@ -36,7 +36,7 @@
 | `platforms/` | `pipeline/orchestrator` | Platform adapter interface + YouTube implementation. Extensible to other platforms. |
 | `corroboration/` | `pipeline/corroboration` | Exa, Brave, and Tavily backends; `host` auto-discovery; `llm_cli` fallback. |
 | `llm/` | `pipeline/enrichment`, `commands/config` | Multi-LLM ensemble (Claude, Gemini, Codex) with first-success fallback. |
-| `stats/` | `pipeline/stats` | 15+ statistical models: regression, Bayesian, bootstrap, clustering, survival. |
+| `stats/` | `pipeline/stats` | 20+ statistical models: regression, Bayesian, bootstrap, clustering, survival. |
 | `viz/` | `pipeline/charts` | Headless PNG chart rendering via matplotlib. |
 | `synthesize/` | `pipeline/orchestrator` | Evidence summaries, warning detection, packet builder, Markdown + HTML formatter. |
 | `scoring/` | `pipeline/orchestrator` | Composite trust / trend / opportunity score; z-score normalisation. |
@@ -85,7 +85,7 @@ Scores are z-score normalised across the fetched pool so results are comparable 
 
 ### Stage 4 — Analyse
 
-**What:** Runs 15+ statistical models over all scored items (not just top-5):
+**What:** Runs 20+ statistical models over all scored items (not just top-5):
 
 - Regression: OLS, Bayesian linear, Lasso/Ridge
 - Unsupervised: k-means, PCA, DBSCAN
@@ -183,7 +183,7 @@ All configured LLM runners are called concurrently; the first successful result 
 
 ### Statistical overkill
 
-Running 15+ statistical models on a pool of 20–50 YouTube videos is more than most use cases require.
+Running 20+ statistical models on a pool of 20–50 YouTube videos is more than most use cases require.
 
 **Tradeoff:** Adds 0.5–2 s to each run (pure Python, no network). The excess results are ignored by the synthesis layer unless the stated purpose calls for them. Removing models that never fire is a future cleanup task tracked in `docs/model-applicability.md`.
 
@@ -201,29 +201,40 @@ Running 15+ statistical models on a pool of 20–50 YouTube videos is more than 
 
 ## Extension Points
 
+Today's registered surface:
+
+| Registry | File | Registered entries |
+|---|---|---|
+| Platforms | [`platforms/registry.py`](../social_research_probe/platforms/registry.py) | `youtube` |
+| LLM runners | [`llm/registry.py`](../social_research_probe/llm/registry.py) | `claude`, `gemini`, `codex`, `local` |
+| Corroboration backends | [`corroboration/registry.py`](../social_research_probe/corroboration/registry.py) | `gemini_search`, `tavily`, `brave`, `exa`, `llm_cli` |
+
+None of these runners or backends are bundled — they are thin CLI wrappers. Operators install the matching CLI on their own machine and authenticate it themselves.
+
 ### Add a platform adapter
 
-1. Implement `PlatformAdapter` from `platforms/base.py` (`search`, `enrich`, `health_check`).
-2. Register it in `platforms/registry.py`.
+1. Implement `PlatformAdapter` from `platforms/base.py` (`search`, `enrich`, `health_check`, `to_signals`, `trust_hints`, `url_normalize`, `fetch_text_for_claim_extraction`).
+2. Register it in `platforms/registry.py` with `@register`.
 3. Add a fake for tests; register via `SRP_TEST_USE_FAKE_<NAME>=1`.
 
 ### Add a corroboration backend
 
-1. Implement `CorroborationBackend` from `corroboration/base.py` (`corroborate`, `health_check`).
-2. Register it in `corroboration/registry.py`.
+1. Implement `CorroborationBackend` from `corroboration/base.py` (`check_claim`, `check_claims`, `health_check`).
+2. Register it in `corroboration/registry.py` with `@register`.
 3. The backend is auto-discovered when `corroboration.backend = host` and `health_check()` passes.
 
 ### Add a stats model
 
 1. Add a function in the relevant `stats/` module.
 2. Register it in `_stats_models_for` in `pipeline/stats.py`.
-3. Update `docs/model-applicability.md`.
+3. Update [model-applicability.md](model-applicability.md) and [statistics.md](statistics.md).
 
 ### Add an LLM runner
 
-1. Implement `LLMRunner` from `llm/base.py`.
-2. Register it in `llm/registry.py`.
+1. Implement `LLMRunner` from `llm/base.py` (`health_check`, `run`; optionally `summarize_media` when the CLI supports direct URL ingestion).
+2. Register it in `llm/registry.py` with `@register`.
 3. Add a unit test asserting the runner prompt contract.
+4. Document the CLI that operators must install themselves (like the existing four runners).
 
 ---
 

@@ -26,6 +26,35 @@ The simplest alternative would be to pass the platform name as a string and `if 
 
 Adapters add one layer of indirection. If you never add a second platform, the interface is overhead that buys nothing. It was included here because the data model (YouTube video metadata) is not generic and the effort to abstract it would have been wasted if the project stays YouTube-only. The bet is that the overhead is small enough to justify the extensibility.
 
+### In code
+
+```python
+# social_research_probe/platforms/base.py
+from abc import ABC, abstractmethod
+
+class PlatformAdapter(ABC):
+    name: str
+    default_limits: FetchLimits
+
+    @abstractmethod
+    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...
+    @abstractmethod
+    async def enrich(self, items: list[RawItem]) -> list[RawItem]: ...
+    @abstractmethod
+    def health_check(self) -> bool: ...
+
+# social_research_probe/platforms/youtube/adapter.py
+@register
+class YouTubeAdapter(PlatformAdapter):
+    name = "youtube"
+    default_limits = FetchLimits(max_items=20, recency_days=90)
+
+    def search(self, topic, limits):
+        ...   # hits YouTube Data API v3, returns list[RawItem]
+```
+
+See [Python Language Guide — Protocols](python-language-guide.md#2-protocols) for why we use an ABC instead of a `Protocol` here.
+
 ![Adapter pattern diagram](diagrams/dp_adapter.svg)
 
 ---
@@ -49,6 +78,31 @@ For a single platform with no config, a direct import is simpler: `from .youtube
 ### The tradeoff
 
 Registries hide which implementations are available — you can't see them by reading a single file. The registry files themselves (`registry.py`) are the single source of truth and are kept small to mitigate this.
+
+### In code
+
+```python
+# social_research_probe/llm/registry.py
+_REGISTRY: dict[str, type[LLMRunner]] = {}
+
+def register(cls: type[LLMRunner]) -> type[LLMRunner]:
+    _REGISTRY[cls.name] = cls
+    return cls
+
+def get_runner(name: str) -> LLMRunner:
+    try:
+        return _REGISTRY[name]()
+    except KeyError as exc:
+        raise ValidationError(f"unknown runner: {name}") from exc
+
+# social_research_probe/llm/runners/gemini.py
+@register
+class GeminiRunner(LLMRunner):
+    name = "gemini"
+    ...
+```
+
+The same pattern is used by [`platforms/registry.py`](../social_research_probe/platforms/registry.py), [`corroboration/registry.py`](../social_research_probe/corroboration/registry.py), and [`purposes/registry.py`](../social_research_probe/purposes/registry.py).
 
 ![Registry pattern diagram](diagrams/dp_registry.svg)
 
@@ -77,6 +131,23 @@ You could hard-code Exa as the only corroboration backend and remove the selecti
 
 Strategy selection adds a runtime dispatch step and makes it harder to trace "what actually runs" from reading the code alone. The config file is now part of understanding the execution path, which is an operational cost.
 
+### In code
+
+```python
+# social_research_probe/pipeline/orchestrator.py — simplified
+def _available_backends(config: Config) -> list[CorroborationBackend]:
+    choice = config.corroboration_backend
+    if choice == "none":
+        return []
+    if choice == "host":
+        # Try every registered backend; keep the healthy ones.
+        return [b for b in (get_backend(n) for n in list_backends()) if b.health_check()]
+    backend = get_backend(choice)
+    return [backend] if backend.health_check() else []
+```
+
+The orchestrator never names a specific backend — it asks for "the configured strategy" and works with whatever comes back. Adding a new backend means only editing the registry, not the orchestrator.
+
 ![Strategy pattern diagram](diagrams/dp_strategy.svg)
 
 ---
@@ -100,6 +171,25 @@ A dynamic pipeline would let you register stages in any order, skip stages via c
 ### The tradeoff
 
 The fixed sequence is inflexible. If a future use case needs to run corroboration before enrichment (to filter low-credibility items before spending LLM budget), the orchestrator would need refactoring. For now, the simplicity of "read top-to-bottom and you understand the whole pipeline" is the right tradeoff.
+
+### In code
+
+```python
+# social_research_probe/pipeline/orchestrator.py — stage chain
+async def run_research(cmd: ParsedRunResearch, config: Config) -> ResearchPacket:
+    adapter = get_adapter(cmd.platform, config)
+    raw     = adapter.search(cmd.topic, adapter.default_limits)
+    items   = await adapter.enrich(raw)
+    scored  = sorted((_score_item(i, config) for i in items), reverse=True)
+    top_n   = scored[: config.enrich_top_n]
+    summaries = await _enrich_top5_with_transcripts(top_n, config)
+    evidence  = await _corroborate_top5(top_n, _available_backends(config))
+    stats     = _build_stats_summary(scored)
+    charts    = _render_charts(scored, stats)
+    return build_packet(cmd, scored, summaries, evidence, stats, charts)
+```
+
+Read top-to-bottom and you have the whole tool.
 
 ![Pipeline pattern diagram](diagrams/dp_pipeline.svg)
 
@@ -125,6 +215,31 @@ Without this separation, the orchestrator's function signature would be `run_res
 
 You now have two representations of the same data — `Namespace` and `ParsedRunResearch` — and conversion code between them. This is a small but real maintenance cost: when you add a CLI flag you must also update the command object and the parsing function.
 
+### In code
+
+```python
+# social_research_probe/commands/parse.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class ParsedRunResearch:
+    platform: str
+    topic: str
+    purposes: tuple[str, ...]
+    no_shorts: bool = False
+    no_transcripts: bool = False
+    no_html: bool = False
+
+def parse_run_research(ns: argparse.Namespace) -> ParsedRunResearch:
+    platform, topic, purposes = _split_positional(ns.args)
+    return ParsedRunResearch(
+        platform=platform, topic=topic, purposes=purposes,
+        no_shorts=ns.no_shorts, no_transcripts=ns.no_transcripts, no_html=ns.no_html,
+    )
+```
+
+See [Python Language Guide — Dataclasses vs TypedDicts](python-language-guide.md#11-dataclasses-vs-typeddicts) for when to pick each.
+
 ---
 
 ## Builder
@@ -146,6 +261,30 @@ A plain dict literal works fine at first. The problem surfaces when you need to 
 ### The tradeoff
 
 The builder function is the biggest function in `synthesize/`. As the packet format grows, the builder grows with it. Watch for it approaching the 50-line limit (defined in project rules) — at that point it should be decomposed into sub-builders per section.
+
+### In code
+
+```python
+# social_research_probe/synthesize/formatter.py — sketch
+def build_packet(
+    cmd: ParsedRunResearch,
+    scored: list[ScoredItem],
+    summaries: dict[str, str],
+    evidence: dict[str, list[Evidence]],
+    stats: StatsSummary,
+    charts: ChartPaths,
+) -> ResearchPacket:
+    packet: ResearchPacket = {
+        "query": {"platform": cmd.platform, "topic": cmd.topic},
+        "items_top5": _attach(scored[:5], summaries, evidence),
+        "stats": stats,
+        "chart_captions": charts,
+        "warnings": [],
+    }
+    return packet
+```
+
+Every stage hands raw data to the builder; no stage writes packet keys directly.
 
 ---
 
@@ -175,6 +314,23 @@ Mocks test that the code *calls* the right method with the right arguments. Fake
 
 The env-based seam is invisible in the code — there is no import statement to follow. A reader unfamiliar with the pattern may not realise the fake is registered. The `_maybe_register_fake` function makes this explicit; the comment in `conftest.py` explains the convention to new contributors.
 
+### In code
+
+```python
+# social_research_probe/pipeline/orchestrator.py
+def _maybe_register_fake() -> None:
+    if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") == "1":
+        from tests.fixtures.fake_youtube import FakeYouTubeAdapter
+        _platforms_registry.register(FakeYouTubeAdapter)
+
+async def run_research(cmd, config):
+    _maybe_register_fake()
+    adapter = get_adapter(cmd.platform, config)
+    ...
+```
+
+The production call site is unchanged; only the registry entry differs. Tests set `SRP_TEST_USE_FAKE_YOUTUBE=1` and exercise the real orchestrator end-to-end against a fake that implements the same protocol.
+
 ![Fake-via-environment test seam diagram](diagrams/dp_fake_seam.svg)
 
 ---
@@ -199,6 +355,23 @@ Fail-fast is the right choice when partial results are worse than no result — 
 
 Soft failures can hide configuration problems. An operator who has not set up corroboration keys may not notice the warning buried in section 9. The check-secrets command exists specifically to surface this before a run; the installation guide (see [Installation](installation.md)) walks through verifying your setup.
 
+### In code
+
+```python
+# social_research_probe/pipeline/orchestrator.py — corroboration step
+async def _corroborate_top5(items, backends, warnings):
+    for backend in backends:
+        try:
+            return await backend.check_claims(items)
+        except Exception as exc:
+            warnings.append(f"corroboration backend '{backend.name}' failed: {exc}")
+            continue
+    warnings.append("corroboration skipped — no healthy backend")
+    return {}
+```
+
+The pipeline continues with an empty result rather than aborting. The failure appears in section 9 of the report so it is never silently lost.
+
 ---
 
 ## Separation of Concerns
@@ -220,6 +393,23 @@ A flat structure (`cli.py` doing everything) is simpler for small scripts. `srp`
 ### The tradeoff
 
 More files to navigate. A new contributor needs to understand the layer model before they can add a feature. The [Architecture doc](architecture.md) exists to explain this model upfront.
+
+### In code
+
+```python
+# Import direction (enforced by convention + ./.venv/bin/ruff rules):
+#   cli/       → commands/, config, errors           (reads user input)
+#   commands/  → config, errors, types               (typed value objects)
+#   pipeline/  → platforms/, llm/, corroboration/,   (pure orchestration)
+#                stats/, viz/, synthesize/
+#   synthesize/→ types                               (no side effects)
+#
+# What is NOT allowed:
+#   pipeline/  →  cli/       # pipeline must not print
+#   platforms/ →  pipeline/  # adapters must not drive the pipeline
+```
+
+`ruff`'s import-ordering rules plus the small number of layers make violations easy to spot in review.
 
 ---
 

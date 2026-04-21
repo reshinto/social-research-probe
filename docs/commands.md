@@ -145,6 +145,16 @@ Flags:
 - `--count N`
 - `--output text|json|markdown`
 
+### `srp stage-suggestions`
+
+Accept enhanced suggestions from stdin and add them to the pending queue. Used to round-trip `suggest-topics --output json` output back into pending after enriching it.
+
+```bash
+srp suggest-topics --output json \
+  | <your-enrichment-step> \
+  | srp stage-suggestions --from-stdin
+```
+
 ---
 
 ## Pending Proposal Workflow
@@ -230,8 +240,8 @@ All settings and their defaults:
 Prompt for a secret value (hidden input) and store it on disk. Never echoes the value.
 
 ```bash
-srp config set-secret YOUTUBE_API_KEY
-srp config set-secret EXA_API_KEY
+srp config set-secret youtube_api_key
+srp config set-secret exa_api_key
 ```
 
 ### `srp config check-secrets`
@@ -243,18 +253,61 @@ srp config check-secrets --corroboration exa
 
 Prints `missing` and `present` keys. Exit code 0 even if keys are missing (to allow scripting).
 
+### `srp config path`
+
+Prints the resolved path to `config.toml`. Useful in scripts.
+
+### `srp config unset-secret <name>`
+
+Removes one secret from `secrets.toml`. No error if the key is already absent.
+
 ---
 
-## Skill Installation
+## Setup & Skill Installation
+
+### `srp setup`
+
+Interactive first-run wizard. Safe to re-run:
+
+- Copies `config.toml.example` → `~/.social-research-probe/config.toml` on first run.
+- On re-run, **additively merges** new keys/sections from the bundled template into your existing file. Existing values are never overwritten.
+- Prompts for API keys and writes them to `secrets.toml` with mode `0600`. Skips any key you leave blank; never overwrites an existing secret you do not replace.
+- Prompts for a default LLM runner and writes it via `config set llm.runner <name>`.
 
 ### `srp install-skill`
 
-Copy the Claude Code skill bundle to `~/.claude/skills/srp/`.
+Copy the Claude Code skill bundle to `~/.claude/skills/srp/` and install the `srp` CLI via `uv tool` or `pipx`:
 
 ```bash
 srp install-skill
 srp install-skill --target ~/.claude/skills/srp
 ```
+
+Also triggers the same config/secret flow as `setup` — re-running is safe.
+
+---
+
+## Post-hoc Tools
+
+### `srp corroborate-claims`
+
+Run claim corroboration standalone against a JSON file of claims. Useful for reprocessing an existing packet without re-running the fetch/score stages.
+
+```bash
+srp corroborate-claims --input claims.json --backends gemini_search,tavily --output out.json
+```
+
+### `srp render`
+
+Re-render charts and stats for a previously saved packet JSON without re-running the pipeline.
+
+```bash
+srp render --packet ~/.social-research-probe/reports/<name>.json --output-dir ./charts
+```
+
+### `srp report` (post-hoc synthesis)
+
+See the top of this page for `srp report` fields. The command **bypasses the LLM runner** — the packet stays as-is; only sections 10–11 are replaced with your files. See [synthesis-authoring.md](synthesis-authoring.md) for the author templates.
 
 ---
 
@@ -274,13 +327,17 @@ srp install-skill --target ~/.claude/skills/srp
 
 | Variable | Description |
 |---|---|
-| `SRP_DATA_DIR` | Override the data directory |
+| `SRP_DATA_DIR` | Override the data directory (default: `~/.social-research-probe`) |
+| `SRP_LOGS` | Set to `1` to enable stderr service logs for fetch/enrich/corroborate stages |
+| `SRP_DISABLE_CACHE` | Set to `1` to bypass all `utils/pipeline_cache.py` caching |
+| `SRP_FAST_MODE` | Set to `1` for clamped top-N + narrower backend set (iteration/debugging) |
+| `SRP_LOCAL_LLM_BIN` | Binary path for `llm.runner = "local"` |
 | `SRP_TEST_USE_FAKE_YOUTUBE` | Set to `1` to activate the fake YouTube adapter (tests only) |
 | `SRP_TEST_USE_FAKE_CORROBORATION` | Set to `1` to activate fake corroboration backends (tests only) |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 key |
-| `EXA_API_KEY` | Exa search API key |
-| `BRAVE_API_KEY` | Brave Search API key |
-| `TAVILY_API_KEY` | Tavily Search API key |
+| `SRP_YOUTUBE_API_KEY` | Overrides `secrets.toml` value for `youtube_api_key` |
+| `SRP_EXA_API_KEY` / `SRP_BRAVE_API_KEY` / `SRP_TAVILY_API_KEY` | Same env-override pattern for corroboration keys |
+
+The env-override pattern is uniform: `SRP_<NAME_UPCASE>` takes precedence over any matching value in `secrets.toml`.
 
 ---
 

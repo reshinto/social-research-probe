@@ -34,7 +34,7 @@ extra_flags = []
 # opportunity = 0.2
 
 [corroboration]
-backend = "host"          # host | llm_cli | exa | brave | tavily | none
+backend = "host"          # host | gemini_search | llm_cli | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 
