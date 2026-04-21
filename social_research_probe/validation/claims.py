@@ -36,11 +36,16 @@ class Claim:
             Useful for attribution and context when displaying results to users.
         index: 0-based position of this claim among all claims extracted from
             the same call to :func:`extract_claims`.
+        source_url: The URL the claim was extracted from (e.g. the originating
+            YouTube video). Corroboration backends use it to exclude the claim's
+            own source host from the evidence pool. ``None`` when provenance is
+            unavailable.
     """
 
     text: str
     source_text: str
     index: int
+    source_url: str | None = None
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -113,7 +118,11 @@ def _is_candidate(sentence: str) -> bool:
     return _has_number(sentence) or _has_proper_noun(sentence)
 
 
-def extract_claims(text: str, source_text: str | None = None) -> list[Claim]:
+def extract_claims(
+    text: str,
+    source_text: str | None = None,
+    source_url: str | None = None,
+) -> list[Claim]:
     """Extract factual claim candidates from the given text.
 
     Splits ``text`` into sentences, filters to those that are at least 5 words
@@ -146,6 +155,13 @@ def extract_claims(text: str, source_text: str | None = None) -> list[Claim]:
 
     claims: list[Claim] = []
     for i, sentence in enumerate(s for s in sentences if _is_candidate(s)):
-        claims.append(Claim(text=sentence, source_text=resolved_source, index=i))
+        claims.append(
+            Claim(
+                text=sentence,
+                source_text=resolved_source,
+                index=i,
+                source_url=source_url,
+            )
+        )
 
     return claims

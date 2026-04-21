@@ -25,6 +25,7 @@ async def _corroborate_one(
         text=item.get("title", ""),
         source_text=item.get("one_line_takeaway") or item.get("title", ""),
         index=0,
+        source_url=item.get("url") or None,
     )
     async with sem:
         return await corroborate_claim(claim, backends)

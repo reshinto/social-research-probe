@@ -16,6 +16,7 @@ from typing import ClassVar
 
 import httpx
 
+from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
@@ -108,7 +109,15 @@ class BraveBackend(CorroborationBackend):
             A CorroborationResult with verdict='supported' when at least one
             source URL is found, or 'inconclusive' when none are found.
         """
-        sources = [r.get("url", "") for r in raw_results if r.get("url")]
+        filtered, self_excluded, video_excluded = filter_results(
+            raw_results, getattr(claim, "source_url", None)
+        )
+        if self_excluded or video_excluded:
+            log(
+                f"[brave] filtered {self_excluded} self-source + "
+                f"{video_excluded} video-domain result(s) from {len(raw_results)}"
+            )
+        sources = [r.get("url", "") for r in filtered if r.get("url")]
         found = len(sources) > 0
         return CorroborationResult(
             verdict="supported" if found else "inconclusive",
