@@ -20,35 +20,23 @@ The quickest way to get set up is to run `srp setup` after installing. It walks 
 Here is exactly what appears on your terminal from a fresh machine:
 
 ```text
-$ pipx install social-research-probe
-  installed package social-research-probe 0.2.0
-  These apps are now globally available
-    - srp
-done! ✨
-
-$ srp setup
-Welcome to social-research-probe setup.
-This wizard writes a default config and prompts for each API key in turn.
-Press Enter at any prompt to skip that step — you can re-run `srp setup`
-or `srp config set-secret <name>` later.
+uvx --from social-research-probe srp install-skill
+Installed 1 executable: srp
+srp CLI installed via uv tool
 
 API key setup — press Enter to skip any key:
   Register: https://console.cloud.google.com/apis/library/youtube.googleapis.com
   YouTube Data API v3 key (required for YouTube search):
-  > AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXX   ← paste your key, press Enter
-    saved.
+  >
   Register: https://brave.com/search/api/
   Brave Search API key (corroboration — paid, no free tier):
-  >                                           ← just press Enter to skip
+  >
   Register: https://dashboard.exa.ai/
   Exa search API key (corroboration — free tier available):
-  > abcd1234-ef56-7890-abcd-ef1234567890  ← paste Exa key
-    saved.
+  >
   Register: https://app.tavily.com/
   Tavily search API key (corroboration — free tier: 1000 credits/month):
-  >                                           ← skip Tavily
-
-Default config written to /Users/you/.social-research-probe/config.toml
+  >
 
 Default LLM runner — choose which AI backend srp should use:
   1. claude    Claude CLI (claude) — requires Anthropic account
@@ -59,8 +47,7 @@ Default LLM runner — choose which AI backend srp should use:
            Register: https://github.com/openai/codex
   4. local     Local model via SRP_LOCAL_LLM_BIN env var
   5. none      No LLM — skip all AI features
-  Enter number (or press Enter to skip): 1         ← you type 1 and press Enter
-  runner set to 'claude'.
+  Enter number (or press Enter to skip):
 
 Setup complete. Try: srp research "AI safety" "latest-news"
 ```
@@ -129,13 +116,7 @@ The sections below drill into each of those commands if you prefer the manual pa
 
 Choose the method that suits your workflow:
 
-### pip
-
-```bash
-pip install social-research-probe
-```
-
-### pipx (recommended for CLI tools)
+### pipx
 
 Installs `srp` into its own isolated virtual environment. It will never conflict with your project dependencies and survives Python upgrades.
 
@@ -145,9 +126,10 @@ brew install pipx        # macOS
 pip install pipx         # any OS
 
 pipx install social-research-probe
+srp install-skill
 ```
 
-### uvx (run without a permanent install)
+### uvx
 
 Useful for one-off runs without adding `srp` to any environment. The package is downloaded fresh each time, so use `pip` or `pipx` if you run `srp` regularly.
 
@@ -156,7 +138,12 @@ Useful for one-off runs without adding `srp` to any environment. The package is 
 brew install uv          # macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh   # any OS
 
-uvx --from social-research-probe srp research "AI safety" "latest-news"  # This would not have any of the api keys, not recommended, but good for a quick demo
+uvx --from social-research-probe srp install-skill
+```
+or
+```bash
+uv tool install social-research-probe
+srp install-skill
 ```
 
 ### From source (development)
@@ -164,7 +151,7 @@ uvx --from social-research-probe srp research "AI safety" "latest-news"  # This 
 ```bash
 git clone https://github.com/reshinto/social-research-probe
 cd social-research-probe
-pip install -e '.[dev]'
+./install.sh
 ```
 
 ---
@@ -360,8 +347,27 @@ See [configuration.md](configuration.md#what-happens-when-configtoml-already-exi
 
 ## Uninstall
 
+### pipx
+
 ```bash
-pip uninstall social-research-probe    # or: pipx uninstall social-research-probe
+pipx uninstall social-research-probe
+
+rm -rf ~/.social-research-probe        # removes config, secrets, reports, and charts
+```
+
+### uvx (uninstall via uv)
+
+```bash
+uv tool uninstall social-research-probe
+
+rm -rf ~/.social-research-probe        # removes config, secrets, reports, and charts
+```
+
+### From source (development)
+
+```bash
+./uninstall.sh
+
 rm -rf ~/.social-research-probe        # removes config, secrets, reports, and charts
 ```
 
