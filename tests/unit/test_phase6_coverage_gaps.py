@@ -248,6 +248,31 @@ async def test_url_based_summary_swallows_runner_exception(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_url_based_summary_returns_falsy_without_caching_when_runner_empty(monkeypatch):
+    """Runner returns None: reach line 74 with falsy summary so the cache-write branch is skipped."""
+
+    class _Cfg:
+        def feature_enabled(self, name):
+            return True
+
+    class _Runner:
+        async def summarize_media(self, url, *, word_limit):
+            return None
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.enrichment.load_active_config", lambda: _Cfg()
+    )
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.enrichment._first_media_url_runner",
+        lambda: _Runner(),
+    )
+    out = await enrichment._url_based_summary(
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ", word_limit=100
+    )
+    assert out is None
+
+
+@pytest.mark.asyncio
 async def test_reconcile_summaries_passes_through_to_multi_llm(monkeypatch):
     captured = {}
 

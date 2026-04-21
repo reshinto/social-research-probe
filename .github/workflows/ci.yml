@@ -23,12 +23,10 @@ jobs:
         run: ruff check social_research_probe/ tests/
       - name: Format check
         run: ruff format --check social_research_probe/ tests/
-      - name: Integration tests (subprocess coverage)
+      - name: Tests (with subprocess coverage)
         env:
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
           PYTHONPATH: ${{ github.workspace }}
-        run: pytest tests/integration --cov=social_research_probe --cov-fail-under=0
-      - name: Unit and contract tests (append coverage)
-        run: pytest tests/unit tests/contract --cov=social_research_probe --cov-append --cov-fail-under=0
-      - name: Combined coverage report (fail under 100%)
+        run: pytest tests/integration tests/unit tests/contract --cov=social_research_probe --cov-fail-under=0
+      - name: Coverage report (fail under 100%)
         run: coverage report --show-missing --fail-under=100
