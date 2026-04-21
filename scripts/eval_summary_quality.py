@@ -61,9 +61,7 @@ def coverage_score(summary: str, keyphrases: list[str]) -> float:
 _PROPER_NOUN_RE = re.compile(r"\b[A-Z][A-Za-z0-9]{2,}\b")
 
 
-def hallucinated_proper_nouns(
-    summary: str, transcript: str, allowed: list[str]
-) -> list[str]:
+def hallucinated_proper_nouns(summary: str, transcript: str, allowed: list[str]) -> list[str]:
     """Proper nouns in ``summary`` that do not appear in the transcript + allowed list.
 
     A proper noun is any capitalized word ≥ 3 chars. Sentence-initial words
@@ -95,7 +93,9 @@ async def _summarize_with_active_runner(transcript: str, word_limit: int) -> str
         raise SystemExit("config.llm_runner is 'none' — cannot run real-LLM eval")
     runner = get_runner(cfg.llm_runner)
     prompt = _build_summary_prompt(
-        title="Corpus transcript", channel="test", transcript=transcript,
+        title="Corpus transcript",
+        channel="test",
+        transcript=transcript,
         word_limit=word_limit,
     )
     # The structured JSON path would need a schema; use run() and treat its
@@ -126,9 +126,7 @@ def main() -> int:
     any_length_violation = False
 
     for item in corpus:
-        summary = asyncio.run(
-            _summarize_with_active_runner(item["transcript"], args.word_limit)
-        )
+        summary = asyncio.run(_summarize_with_active_runner(item["transcript"], args.word_limit))
         kp_spec = item["keyphrases"]
         cov = coverage_score(summary, kp_spec.get("required_tokens", []))
         hallucinations = hallucinated_proper_nouns(

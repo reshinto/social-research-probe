@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-
 VIDEO_HOST_DOMAINS: frozenset[str] = frozenset(
     {
         "youtube.com",

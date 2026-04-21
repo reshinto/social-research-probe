@@ -13,7 +13,6 @@ from social_research_probe.llm.runners.cli_json_base import JsonCliRunner
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.utils.subprocess_runner import run as sp_run
 
-
 _URL_RE = re.compile(r"https?://[^\s)\]]+")
 
 
@@ -46,9 +45,7 @@ def _parse_claude_search_body(
         answer = str(payload.get("answer", ""))
         raw_citations = payload.get("citations", [])
         citations = [
-            AgenticSearchCitation(
-                url=str(c.get("url", "")), title=str(c.get("title", ""))
-            )
+            AgenticSearchCitation(url=str(c.get("url", "")), title=str(c.get("title", "")))
             for c in raw_citations
             if isinstance(c, dict) and c.get("url")
         ]

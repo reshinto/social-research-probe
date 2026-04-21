@@ -24,17 +24,16 @@ from __future__ import annotations
 import json
 import os
 import random
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 import numpy as np
 import pytest
 
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.types import AgenticSearchResult
-
 
 GOLDEN_ROOT = Path(__file__).resolve().parent.parent / "fixtures" / "golden"
 
@@ -75,7 +74,7 @@ def _frozen_clock(iso_date: str) -> Iterator[datetime]:
 
     class _FrozenDateTime(_dt.datetime):
         @classmethod
-        def now(cls, tz=None):  # noqa: D401 — shadow stdlib signature
+        def now(cls, tz=None):
             return pinned if tz is None else pinned.replace(tzinfo=tz)
 
         @classmethod

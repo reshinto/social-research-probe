@@ -42,7 +42,7 @@ Evidence receipt (analyzer / input / expected / why):
 
 from __future__ import annotations
 
-import math
+import itertools
 import random
 import statistics
 
@@ -70,7 +70,6 @@ from social_research_probe.stats import (
     selector,
     spread,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -303,8 +302,7 @@ def test_logistic_regression_overlapping_gaussian_classes_reaches_high_accuracy(
     rng = random.Random(0)
     y = [0] * 30 + [1] * 30
     features = {
-        "x": [rng.gauss(-1.0, 1.0) for _ in range(30)]
-        + [rng.gauss(1.0, 1.0) for _ in range(30)],
+        "x": [rng.gauss(-1.0, 1.0) for _ in range(30)] + [rng.gauss(1.0, 1.0) for _ in range(30)],
     }
     out = logistic_regression.run(y, features)
     acc = _by_name(out, "logistic_accuracy").value
@@ -351,7 +349,7 @@ def test_kaplan_meier_survival_curve_decays_monotonically():
     curve = kaplan_meier.fit(times, events)
     survivals = [s for _, s in curve]
     # Monotonically non-increasing.
-    assert all(s1 >= s2 for s1, s2 in zip(survivals, survivals[1:], strict=False))
+    assert all(s1 >= s2 for s1, s2 in itertools.pairwise(survivals))
     # With 4 events, final survival should be 0.
     assert survivals[-1] == pytest.approx(0.0, abs=1e-9)
 
@@ -375,7 +373,14 @@ def test_pca_on_one_dimensional_manifold_concentrates_variance():
 
 
 def test_kmeans_two_well_separated_clusters_sizes_sum_to_n():
-    features = [[0.0, 0.0], [0.1, 0.0], [0.0, 0.1]] + [[10.0, 10.0], [10.1, 10.0], [10.0, 10.1]]
+    features = [
+        [0.0, 0.0],
+        [0.1, 0.0],
+        [0.0, 0.1],
+        [10.0, 10.0],
+        [10.1, 10.0],
+        [10.0, 10.1],
+    ]
     out = kmeans.run(features, k=2, seed=0)
     size_0 = _by_name(out, "kmeans_k2_cluster_0_size").value
     size_1 = _by_name(out, "kmeans_k2_cluster_1_size").value

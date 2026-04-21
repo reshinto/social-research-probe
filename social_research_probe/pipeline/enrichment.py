@@ -20,7 +20,6 @@ from social_research_probe.utils.pipeline_cache import (
 )
 from social_research_probe.utils.progress import log
 
-
 _FILLER_BLOCKLIST = (
     "this video",
     "in this video",

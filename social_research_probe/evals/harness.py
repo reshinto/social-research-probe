@@ -94,16 +94,12 @@ def apply_gates(
     """Evaluate every gate and return (gate_results, all_passed)."""
     cov_values = [s.coverage for s in samples]
     cov_stats = aggregate(cov_values)
-    max_hallucinations = (
-        max((len(s.hallucinations) for s in samples), default=0)
-    )
+    max_hallucinations = max((len(s.hallucinations) for s in samples), default=0)
     length_compliance_fraction = (
         sum(1 for s in samples if s.length_ok) / len(samples) if samples else 0.0
     )
     judged = [s.judge for s in samples if s.judge is not None]
-    min_faithfulness = (
-        min(j.faithfulness for j in judged) if judged else None
-    )
+    min_faithfulness = min(j.faithfulness for j in judged) if judged else None
 
     results: list[Gate] = []
 

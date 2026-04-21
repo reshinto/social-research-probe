@@ -16,6 +16,8 @@ reliability harness covers that.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from social_research_probe.pipeline.enrichment import (
@@ -24,7 +26,6 @@ from social_research_probe.pipeline.enrichment import (
     _fallback_transcript_summary,
     _merge_or_pick,
 )
-
 
 # ---------------------------------------------------------------------------
 # Prompt builders — deterministic string contracts
@@ -87,7 +88,7 @@ def test_fallback_transcript_summary_handles_empty_input():
 
 
 class _StubConfig:
-    tunables: dict = {}
+    tunables: ClassVar[dict] = {}
 
     def feature_enabled(self, flag: str) -> bool:
         return True

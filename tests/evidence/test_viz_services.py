@@ -27,12 +27,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
-import pytest
 
 matplotlib.use("Agg")  # no display required
 
 from social_research_probe.viz import (
     ascii as ascii_viz,
+)
+from social_research_probe.viz import (
     bar,
     heatmap,
     histogram,

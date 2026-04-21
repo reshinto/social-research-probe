@@ -27,7 +27,6 @@ from social_research_probe.platforms.youtube.trust_hints import (
     citation_markers,
 )
 
-
 # ---------------------------------------------------------------------------
 # to_signals — deterministic math from known metrics
 # ---------------------------------------------------------------------------
@@ -148,9 +147,7 @@ def test_account_age_days_for_six_year_old_account():
     from unittest.mock import patch
 
     pinned = datetime(2026, 4, 21, tzinfo=UTC)
-    with patch(
-        "social_research_probe.platforms.youtube.trust_hints.datetime"
-    ) as mock_dt:
+    with patch("social_research_probe.platforms.youtube.trust_hints.datetime") as mock_dt:
         mock_dt.now.return_value = pinned
         mock_dt.fromisoformat.side_effect = datetime.fromisoformat
         age = account_age_days("2020-04-21T00:00:00Z")

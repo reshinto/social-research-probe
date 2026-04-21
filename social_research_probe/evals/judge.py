@@ -12,7 +12,6 @@ import json
 import re
 from dataclasses import dataclass
 
-
 RUBRIC_AXES: tuple[str, ...] = ("faithfulness", "completeness", "clarity", "conciseness")
 
 
@@ -48,9 +47,7 @@ def build_judge_prompt(summary: str, reference: str) -> str:
 def parse_judge_reply(raw: str) -> JudgeScores | None:
     """Parse the judge LLM's JSON response. Returns None on malformed output."""
     # Strip markdown fence if present.
-    stripped = re.sub(
-        r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.DOTALL
-    )
+    stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.DOTALL)
     try:
         payload = json.loads(stripped)
     except json.JSONDecodeError:

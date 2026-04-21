@@ -100,9 +100,7 @@ def test_canned_runner_queues_are_independent(canned_runner):
 
 @pytest.mark.anyio
 async def test_canned_runner_serves_and_exhausts(canned_runner):
-    canned = AgenticSearchResult(
-        answer="ok", citations=[], runner_name="canned"
-    )
+    canned = AgenticSearchResult(answer="ok", citations=[], runner_name="canned")
     runner = canned_runner(
         run_responses=[{"k": 1}],
         media_responses=["s"],

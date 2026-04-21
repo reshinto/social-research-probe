@@ -209,7 +209,7 @@ None of these require new LLM capabilities. See [docs/objective.md](docs/objecti
 | [docs/adding-a-platform.md](docs/adding-a-platform.md) | How to add a new platform adapter (TikTok, Reddit, RSS, …)        |
 | [docs/design-patterns.md](docs/design-patterns.md)     | Patterns with code examples and why/why-not rationale             |
 | [docs/python-language-guide.md](docs/python-language-guide.md) | All 13 Python idioms used in the codebase                  |
-| [docs/testing.md](docs/testing.md)                     | Test tiers, TDD workflow, 100% coverage gate                      |
+| [docs/testing.md](docs/testing.md)                     | Test tiers, `make test-evidence`, eval scripts, TDD workflow, 100% coverage gate |
 | [docs/security.md](docs/security.md)                   | Secret storage, trust boundaries, hardening                       |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                     | Development workflow, TDD rules, file-size limits                 |
 | [SECURITY.md](SECURITY.md)                             | Responsible disclosure policy                                     |

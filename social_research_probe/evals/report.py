@@ -58,9 +58,7 @@ def write_markdown(report_dict: dict, path: Path) -> Path:
         lines.append("|---|---|---|---|")
         for g in gates:
             marker = "✅" if g["passed"] else "❌"
-            lines.append(
-                f"| {g['name']} | {g['threshold']} | {g['observed']} | {marker} |"
-            )
+            lines.append(f"| {g['name']} | {g['threshold']} | {g['observed']} | {marker} |")
     lines.append("")
     lines.append("## Per-sample outcomes")
     lines.append("")

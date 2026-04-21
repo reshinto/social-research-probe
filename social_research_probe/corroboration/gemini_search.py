@@ -26,7 +26,7 @@ from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.errors import AdapterError
-from social_research_probe.llm.base import CapabilityUnavailable, LLMRunner
+from social_research_probe.llm.base import CapabilityUnavailableError, LLMRunner
 from social_research_probe.llm.registry import get_runner
 from social_research_probe.llm.types import AgenticSearchResult
 from social_research_probe.utils.progress import log
@@ -92,17 +92,13 @@ def _resolve_active_runner() -> LLMRunner | None:
         return None
 
 
-def _filter_citations(
-    result: AgenticSearchResult, source_url: str | None
-) -> list[str]:
+def _filter_citations(result: AgenticSearchResult, source_url: str | None) -> list[str]:
     """Apply the source-quality filter to the runner's citations.
 
     Delegates to :func:`filter_results` so the same self-source and
     video-domain rules used by Brave/Exa/Tavily apply here too.
     """
-    as_dicts = [
-        {"url": c.url, "title": c.title} for c in result.citations if c.url
-    ]
+    as_dicts = [{"url": c.url, "title": c.title} for c in result.citations if c.url]
     kept, self_excluded, video_excluded = filter_results(as_dicts, source_url)
     if self_excluded or video_excluded:
         log(
@@ -155,7 +151,7 @@ class GeminiSearchBackend(CorroborationBackend):
             )
         try:
             result = await runner.agentic_search(claim.text)
-        except (CapabilityUnavailable, AdapterError) as exc:
+        except (CapabilityUnavailableError, AdapterError) as exc:
             return CorroborationResult(
                 verdict="inconclusive",
                 confidence=0.0,

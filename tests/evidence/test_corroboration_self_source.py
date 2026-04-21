@@ -78,9 +78,7 @@ async def test_tavily_excludes_video_hosts_when_source_is_text(monkeypatch):
         respx.post("https://api.tavily.com/search").mock(
             return_value=httpx.Response(200, json=payload),
         )
-        result = await TavilyBackend().corroborate(
-            _claim("test claim", "https://example.com/post")
-        )
+        result = await TavilyBackend().corroborate(_claim("test claim", "https://example.com/post"))
     assert result.sources == ["https://www.nature.com/articles/s41586-024-00000-0"]
     assert result.verdict == "supported"
 

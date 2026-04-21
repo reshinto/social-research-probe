@@ -81,9 +81,7 @@ class CodexRunner(JsonCliRunner):
                 prompt,
             ]
             try:
-                result = await asyncio.to_thread(
-                    sp_run, argv, input=None, timeout=int(timeout_s)
-                )
+                result = await asyncio.to_thread(sp_run, argv, input=None, timeout=int(timeout_s))
                 text = (
                     output_path.read_text(encoding="utf-8")
                     if output_path.exists()
@@ -94,16 +92,10 @@ class CodexRunner(JsonCliRunner):
                 raise AdapterError(f"codex agentic_search failed: {exc}") from exc
 
         answer = str(payload.get("answer", "")) if isinstance(payload, dict) else ""
-        raw_citations = (
-            payload.get("citations", []) if isinstance(payload, dict) else []
-        )
+        raw_citations = payload.get("citations", []) if isinstance(payload, dict) else []
         citations = [
-            AgenticSearchCitation(
-                url=str(c.get("url", "")), title=str(c.get("title", ""))
-            )
+            AgenticSearchCitation(url=str(c.get("url", "")), title=str(c.get("title", "")))
             for c in raw_citations
             if isinstance(c, dict) and c.get("url")
         ][:max_results]
-        return AgenticSearchResult(
-            answer=answer, citations=citations, runner_name=self.name
-        )
+        return AgenticSearchResult(answer=answer, citations=citations, runner_name=self.name)

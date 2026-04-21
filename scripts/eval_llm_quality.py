@@ -18,22 +18,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_manifest(service_id: str) -> dict:
-    path = (
-        REPO_ROOT
-        / "tests"
-        / "fixtures"
-        / "golden"
-        / "eval"
-        / service_id
-        / "manifest.json"
-    )
+    path = REPO_ROOT / "tests" / "fixtures" / "golden" / "eval" / service_id / "manifest.json"
     if not path.exists():
         raise SystemExit(f"no manifest at {path}")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -72,10 +63,16 @@ def _grade_with_judge(runner_name: str, prompt: str):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--service", required=True, help="service id under golden/eval/")
     parser.add_argument("--runs", type=int, default=5)
-    parser.add_argument("--judge-runner", default=None, help="runner name for the grader; must differ from generator")
+    parser.add_argument(
+        "--judge-runner",
+        default=None,
+        help="runner name for the grader; must differ from generator",
+    )
     parser.add_argument("--word-limit", type=int, default=100)
     args = parser.parse_args()
 
@@ -97,18 +94,14 @@ def main() -> int:
     if generator_runner == "none":
         raise SystemExit("config.llm_runner is 'none' — cannot run eval")
     if args.judge_runner == generator_runner:
-        raise SystemExit(
-            f"judge runner must differ from generator runner {generator_runner!r}"
-        )
+        raise SystemExit(f"judge runner must differ from generator runner {generator_runner!r}")
 
     manifest = _load_manifest(args.service)
     all_samples = []
     for corpus_item in manifest["items"]:
         transcript = (REPO_ROOT / corpus_item["transcript"]).read_text(encoding="utf-8")
         reference = (REPO_ROOT / corpus_item["reference"]).read_text(encoding="utf-8")
-        kp_spec = json.loads(
-            (REPO_ROOT / corpus_item["keyphrases"]).read_text(encoding="utf-8")
-        )
+        kp_spec = json.loads((REPO_ROOT / corpus_item["keyphrases"]).read_text(encoding="utf-8"))
         for i in range(args.runs):
             summary = _summarize_with_runner(
                 generator_runner,

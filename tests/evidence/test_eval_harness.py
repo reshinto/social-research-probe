@@ -12,7 +12,7 @@ The reliability harness's **methodology**:
    - coverage (fraction of required keyphrases present)
    - hallucinated proper nouns (names not in source/allowed)
    - length compliance (word count within ±tolerance of target)
-3. Ask an independent judge runner for a 1–5 rubric per axis
+3. Ask an independent judge runner for a 1-5 rubric per axis
    (faithfulness, completeness, clarity, conciseness). Judge ≠ generator
    is **required**; when only one runner is configured, judge is skipped
    and only deterministic metrics run — reported clearly in output.
@@ -71,7 +71,6 @@ from social_research_probe.evals.report import (
     write_json,
     write_markdown,
 )
-
 
 # ---------------------------------------------------------------------------
 # metrics — pure math building blocks
@@ -168,7 +167,12 @@ def test_parse_judge_reply_strips_markdown_fences():
 def test_parse_judge_reply_returns_none_for_malformed_text():
     assert parse_judge_reply("not json at all") is None
     assert parse_judge_reply('{"faithfulness": "five"}') is None
-    assert parse_judge_reply('{"faithfulness": 99, "completeness": 1, "clarity": 1, "conciseness": 1, "justification": ""}') is None
+    assert (
+        parse_judge_reply(
+            '{"faithfulness": 99, "completeness": 1, "clarity": 1, "conciseness": 1, "justification": ""}'
+        )
+        is None
+    )
 
 
 def test_parse_judge_reply_returns_none_for_json_list():

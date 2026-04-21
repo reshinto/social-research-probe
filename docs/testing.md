@@ -79,17 +79,83 @@ monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", .
 ## Running Tests
 
 ```bash
-# Full suite with coverage
-pytest tests/unit tests/contract --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
+# Full suite with coverage (1400+ tests, ~30 s)
+pytest -q
 
-# Integration tests (no coverage enforcement)
+# Subsets
+pytest tests/unit tests/contract --cov=social_research_probe --cov-report=term-missing --cov-fail-under=100
 pytest tests/integration --no-cov
 
 # Fast iteration on a single file
 pytest tests/unit/test_scoring.py -x -q
 ```
 
-CI runs all three tiers on Python 3.11, 3.12, and 3.13.
+CI runs all tiers on Python 3.11, 3.12, and 3.13.
+
+### Evidence suite — running the new tests in `tests/evidence/`
+
+`tests/evidence/` is an additive tier that proves each service produces
+the **correct numeric / structural output** for documented inputs (not just
+"did not crash"). Every test docstring includes a receipt table of
+*input / expected output / why* so a reviewer can trace every assertion
+back to a formula, stdlib reference, golden payload, or hand-worked
+example.
+
+```bash
+# Run only the evidence tier (fast, no network)
+make test-evidence
+# …equivalent to:
+pytest tests/evidence -v --no-cov
+```
+
+The Makefile target disables the project-wide `--cov-fail-under=100`
+gate because the evidence tier is a narrow slice — full coverage runs
+against `pytest -q` still enforce 100%.
+
+#### LLM quality evaluators (out of CI)
+
+Two scripts exercise real LLM runners against the reference corpus
+under `tests/fixtures/golden/transcripts/`. They are **not** part of
+the deterministic evidence suite — they require API keys and network
+access, so run them locally or in a nightly cron rather than in CI.
+
+```bash
+# Phase 9 narrow summary-quality eval (single run per corpus item)
+make eval-summary-quality
+# …equivalent to:
+python scripts/eval_summary_quality.py --word-limit 100
+
+# Phase 10 reliability harness (N samples, optional judge runner)
+python scripts/eval_llm_quality.py --service summary --runs 5 \
+    --judge-runner claude
+```
+
+`eval_llm_quality.py` enforces that `--judge-runner` differs from
+`config.llm_runner` (no self-grading) and writes timestamped
+JSON + Markdown reports under `.srp-eval/<service>/`. See
+[docs/llm-reliability-harness.md](llm-reliability-harness.md) for the
+full methodology, gates, and worked examples.
+
+#### Recording goldens with real APIs (optional)
+
+Phase 4/5 corroboration + YouTube goldens ship as hand-crafted
+schema-faithful payloads. If you have API keys and want higher-fidelity
+replays, re-record them:
+
+```bash
+# Example — re-record the Brave "supported" fixture
+python scripts/record_golden.py \
+    --service brave \
+    --url "https://api.search.brave.com/res/v1/web/search?q=GPT-4+release+date" \
+    --auth-env SRP_BRAVE_API_KEY \
+    --auth-header X-Subscription-Token \
+    --out brave_supported.json
+```
+
+The recorder redacts `Authorization` / `X-Api-Key` / `X-Subscription-Token`
+headers plus email/credit-card-shaped strings before writing the JSON.
+See [docs/data-directory.md](data-directory.md) for where data lives
+at runtime.
 
 ---
 

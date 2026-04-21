@@ -26,7 +26,6 @@ from social_research_probe.synthesize.divergence import jaccard_divergence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.explain import explain
 
-
 # ---------------------------------------------------------------------------
 # jaccard_divergence
 # ---------------------------------------------------------------------------
@@ -39,7 +38,7 @@ from social_research_probe.synthesize.explain import explain
         ("a b c", "a b c", 0.0),
         ("a b c", "x y z", 1.0),
         ("", "", 0.0),
-        ("alpha beta", "alpha gamma", 1 - 1 / 3),  # |∩|=1, |∪|=3
+        ("alpha beta", "alpha gamma", 1 - 1 / 3),  # intersection=1, union=3
     ],
 )
 def test_jaccard_divergence_matches_formula(a, b, expected):
@@ -57,9 +56,7 @@ def test_explain_strong_positive_correlation_qualifies_strength():
     is present, not the exact word 'positive' (the module's phrasing is
     'the two metrics move together' for positive r)."""
     text = explain(
-        StatResult(
-            name="pearson_r", value=0.95, caption="Pearson r between x and y: 0.95"
-        )
+        StatResult(name="pearson_r", value=0.95, caption="Pearson r between x and y: 0.95")
     ).lower()
     assert "strong" in text
     # Positive r yields a "move together" reading; negative yields "move opposite".
@@ -68,9 +65,7 @@ def test_explain_strong_positive_correlation_qualifies_strength():
 
 def test_explain_perfect_r_squared_mentions_perfect_or_excellent():
     text = explain(
-        StatResult(
-            name="r_squared", value=1.0, caption="R² for views vs time: 1.00"
-        )
+        StatResult(name="r_squared", value=1.0, caption="R² for views vs time: 1.00")
     ).lower()
     # The reading table maps R² >= 0.9 to a qualifier like "excellent" or "strong".
     assert any(word in text for word in ("excellent", "strong", "nearly perfect"))

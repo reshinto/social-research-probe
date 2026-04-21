@@ -18,9 +18,6 @@ Two services: ``render_html`` (in-memory assembly) and ``write_html_report``
 from __future__ import annotations
 
 from html.parser import HTMLParser
-from pathlib import Path
-
-import pytest
 
 from social_research_probe.render.html import render_html, write_html_report
 

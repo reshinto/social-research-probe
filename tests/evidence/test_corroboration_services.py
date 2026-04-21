@@ -47,9 +47,7 @@ def _claim(text: str = "test claim", source_url: str | None = None) -> Claim:
 
 
 @pytest.mark.anyio
-async def test_brave_supported_response_produces_supported_verdict(
-    monkeypatch, golden
-):
+async def test_brave_supported_response_produces_supported_verdict(monkeypatch, golden):
     """Golden: Brave returns 3 non-video URLs for a real claim → supported."""
     monkeypatch.setenv("SRP_BRAVE_API_KEY", "test-key")
     payload = golden("corroboration/brave_supported.json")
@@ -68,9 +66,7 @@ async def test_brave_supported_response_produces_supported_verdict(
 
 
 @pytest.mark.anyio
-async def test_exa_contradicted_response_still_returns_urls_as_supported(
-    monkeypatch, golden
-):
+async def test_exa_contradicted_response_still_returns_urls_as_supported(monkeypatch, golden):
     """Backend classifies by URL count only — the LLM search verdict
     classifier (Phase 0.b) is what distinguishes contradicted from
     supported. This test proves the parser hands the right URLs upstream."""
@@ -106,9 +102,7 @@ async def test_tavily_mixed_response_preserves_all_urls(monkeypatch, golden):
 
 
 @pytest.mark.anyio
-async def test_llm_search_backend_classifies_supported_and_preserves_citations(
-    monkeypatch, golden
-):
+async def test_llm_search_backend_classifies_supported_and_preserves_citations(monkeypatch, golden):
     """Runner routing was already covered in test_llm_search_routing.py.
     Here we prove the *integration* against the golden citation payload."""
     from social_research_probe.corroboration.gemini_search import GeminiSearchBackend
@@ -117,7 +111,9 @@ async def test_llm_search_backend_classifies_supported_and_preserves_citations(
     payload = golden("corroboration/llm_search_citations.json")
     canned = AgenticSearchResult(
         answer=payload["answer"],
-        citations=[AgenticSearchCitation(url=c["url"], title=c["title"]) for c in payload["citations"]],
+        citations=[
+            AgenticSearchCitation(url=c["url"], title=c["title"]) for c in payload["citations"]
+        ],
         runner_name="gemini",
     )
 
@@ -234,9 +230,7 @@ async def test_top5_pipeline_runs_one_claim_per_item(monkeypatch):
             "aggregate_confidence": 0.75,
         }
 
-    monkeypatch.setattr(
-        "social_research_probe.corroboration.host.corroborate_claim", _fake_host
-    )
+    monkeypatch.setattr("social_research_probe.corroboration.host.corroborate_claim", _fake_host)
 
     items = [
         {"title": f"Item {i}", "url": f"https://example.com/{i}", "one_line_takeaway": f"t {i}"}

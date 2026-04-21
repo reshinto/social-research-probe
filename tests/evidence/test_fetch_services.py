@@ -17,12 +17,12 @@ Evidence receipt:
 
 from __future__ import annotations
 
+from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
 
 from social_research_probe.platforms.youtube import extract
-
 
 # ---------------------------------------------------------------------------
 # Video ID extraction
@@ -63,9 +63,7 @@ def adapter(monkeypatch, tmp_path):
 
 def test_url_normalize_strips_tracking_params(adapter):
     """Adapter.url_normalize keeps only the v= query, dropping t= / list=."""
-    canonical = adapter.url_normalize(
-        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30&list=PLabc"
-    )
+    canonical = adapter.url_normalize("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30&list=PLabc")
     # The canonicalized form should still contain the video id.
     assert "v=dQw4w9WgXcQ" in canonical
     # Tracking params are gone.
@@ -81,7 +79,7 @@ def test_url_normalize_strips_tracking_params(adapter):
 class _StubTranscriptApi:
     """Fake YouTubeTranscriptApi that returns canned entries."""
 
-    entries: list[dict] = []
+    entries: ClassVar[list[dict]] = []
 
     @classmethod
     def get_transcript(cls, video_id, languages=None):
@@ -104,15 +102,9 @@ def test_fetch_transcript_stitches_entries_into_text(
     """Stitched transcript equals ' '.join(entry['text'] for entry in entries)."""
     monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
-    stub = type(_StubTranscriptApi)(
-        "Stub", (_StubTranscriptApi,), {"entries": entries}
-    )
-    with patch(
-        "social_research_probe.platforms.youtube.extract.YouTubeTranscriptApi", stub
-    ):
-        result = extract.fetch_transcript(
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        )
+    stub = type(_StubTranscriptApi)("Stub", (_StubTranscriptApi,), {"entries": entries})
+    with patch("social_research_probe.platforms.youtube.extract.YouTubeTranscriptApi", stub):
+        result = extract.fetch_transcript("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     # Assert text content (ignore minor whitespace normalization).
     assert result is not None
     assert all(word in result for word in expected_joined.split())

@@ -28,7 +28,7 @@ from social_research_probe.corroboration.gemini_search import (
     _classify_verdict,
 )
 from social_research_probe.errors import AdapterError
-from social_research_probe.llm.base import CapabilityUnavailable
+from social_research_probe.llm.base import CapabilityUnavailableError
 from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.codex import CodexRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
@@ -71,7 +71,7 @@ class _StubRunner:
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
         if self._result is None:
-            raise CapabilityUnavailable("stubbed runner has no canned result")
+            raise CapabilityUnavailableError("stubbed runner has no canned result")
         return self._result
 
 
@@ -82,7 +82,7 @@ def _install_runner(monkeypatch, runner_name: str, runner: _StubRunner | None) -
         lambda: _StubConfig(runner_name),
     )
 
-    def _get_runner(name: str):  # noqa: ANN202 — test stub
+    def _get_runner(name: str):
         assert name == runner_name, f"backend asked for {name!r} not {runner_name!r}"
         if runner is None:
             raise KeyError(name)
@@ -238,9 +238,9 @@ async def test_backend_adapter_error_from_runner_produces_inconclusive(monkeypat
 
 @pytest.mark.anyio
 async def test_default_agentic_search_raises_capability_unavailable():
-    """Runners that don't override must raise CapabilityUnavailable on call."""
+    """Runners that don't override must raise CapabilityUnavailableError on call."""
     runner = LocalRunner()
-    with pytest.raises(CapabilityUnavailable):
+    with pytest.raises(CapabilityUnavailableError):
         await runner.agentic_search("any query")
 
 
@@ -260,9 +260,7 @@ async def test_gemini_runner_agentic_search_returns_structured_result(monkeypatc
             ],
         }
 
-    monkeypatch.setattr(
-        "social_research_probe.llm.gemini_cli.gemini_search", _fake_gemini_search
-    )
+    monkeypatch.setattr("social_research_probe.llm.gemini_cli.gemini_search", _fake_gemini_search)
     runner = GeminiRunner()
     result = await runner.agentic_search("test claim", max_results=5)
     assert result.runner_name == "gemini"
@@ -286,12 +284,10 @@ async def test_claude_runner_agentic_search_parses_structured_json(monkeypatch):
         }
     )
 
-    def _fake_sp_run(argv, *, timeout, input=None):  # noqa: A002
+    def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=envelope, stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.llm.runners.claude.sp_run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.llm.runners.claude.sp_run", _fake_sp_run)
     runner = ClaudeRunner()
     result = await runner.agentic_search("test claim", max_results=5)
     assert result.runner_name == "claude"
@@ -308,9 +304,7 @@ async def test_claude_runner_agentic_search_falls_back_to_url_extraction(monkeyp
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=envelope, stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.llm.runners.claude.sp_run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.llm.runners.claude.sp_run", _fake_sp_run)
     runner = ClaudeRunner()
     result = await runner.agentic_search("test", max_results=5)
     assert {c.url for c in result.citations} == {
@@ -324,9 +318,7 @@ async def test_claude_runner_agentic_search_wraps_subprocess_error(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         raise AdapterError("subprocess exploded")
 
-    monkeypatch.setattr(
-        "social_research_probe.llm.runners.claude.sp_run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.llm.runners.claude.sp_run", _fake_sp_run)
     runner = ClaudeRunner()
     with pytest.raises(AdapterError, match="claude agentic_search failed"):
         await runner.agentic_search("test")
@@ -339,9 +331,7 @@ async def test_claude_runner_agentic_search_non_string_result(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=json.dumps({"result": 123}), stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.llm.runners.claude.sp_run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.llm.runners.claude.sp_run", _fake_sp_run)
     runner = ClaudeRunner()
     result = await runner.agentic_search("test")
     assert result.answer == ""
@@ -365,9 +355,7 @@ async def test_codex_runner_agentic_search_parses_last_message_file(monkeypatch)
         Path(out_path).write_text(json.dumps(payload), encoding="utf-8")
         return SimpleNamespace(stdout="", stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     runner = CodexRunner()
     result = await runner.agentic_search("test", max_results=5)
     assert result.runner_name == "codex"
@@ -380,9 +368,7 @@ async def test_codex_runner_agentic_search_wraps_json_error(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout="not json", stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     runner = CodexRunner()
     with pytest.raises(AdapterError, match="codex agentic_search failed"):
         await runner.agentic_search("test")
@@ -395,9 +381,7 @@ async def test_codex_runner_agentic_search_non_dict_payload(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=json.dumps([1, 2, 3]), stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     runner = CodexRunner()
     result = await runner.agentic_search("test")
     assert result.answer == ""

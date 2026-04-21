@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 import statistics
 
-
 _PROPER_NOUN_RE = re.compile(r"\b[A-Z][A-Za-z0-9]{2,}\b")
 
 
@@ -22,9 +21,7 @@ def coverage(summary: str, required_tokens: list[str]) -> float:
     return hits / len(required_tokens)
 
 
-def hallucinated_names(
-    summary: str, source_text: str, allowed: list[str]
-) -> list[str]:
+def hallucinated_names(summary: str, source_text: str, allowed: list[str]) -> list[str]:
     """Return sorted proper nouns present in summary but not in source/allowed.
 
     Case-insensitive comparison. ``source_text`` is typically the transcript
@@ -34,11 +31,7 @@ def hallucinated_names(
     source_lower = source_text.lower()
     candidates = set(_PROPER_NOUN_RE.findall(summary))
     return sorted(
-        {
-            w
-            for w in candidates
-            if w.lower() not in allowed_lower and w.lower() not in source_lower
-        }
+        {w for w in candidates if w.lower() not in allowed_lower and w.lower() not in source_lower}
     )
 
 
@@ -65,6 +58,6 @@ def aggregate(values: list[float]) -> dict[str, float]:
         "stdev": statistics.stdev(values),
         "min": ordered[0],
         "max": ordered[-1],
-        "p5": ordered[max(0, int(round(0.05 * (n - 1))))],
-        "p95": ordered[min(n - 1, int(round(0.95 * (n - 1))))],
+        "p5": ordered[max(0, round(0.05 * (n - 1)))],
+        "p95": ordered[min(n - 1, round(0.95 * (n - 1)))],
     }

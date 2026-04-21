@@ -28,7 +28,6 @@ from social_research_probe.errors import AdapterError
 from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
 
-
 # ---------------------------------------------------------------------------
 # health_check — binary probing
 # ---------------------------------------------------------------------------
@@ -61,9 +60,7 @@ def test_claude_run_parses_json_envelope(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=envelope, stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     result = ClaudeRunner().run("prompt")
     assert result == {"result": "hello", "extra": "ignored"}
 
@@ -72,9 +69,7 @@ def test_claude_run_raises_adapter_error_on_malformed_json(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout="not json at all", stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     with pytest.raises(AdapterError):
         ClaudeRunner().run("prompt")
 
@@ -88,9 +83,7 @@ def test_gemini_run_unwraps_response_envelope_and_parses_inner_json(monkeypatch)
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout=envelope, stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     result = GeminiRunner().run("prompt")
     assert result == inner
 
@@ -99,9 +92,7 @@ def test_gemini_run_raises_when_outer_envelope_is_not_json(monkeypatch):
     def _fake_sp_run(argv, *, timeout, input=None):
         return SimpleNamespace(stdout="bare text", stderr="", returncode=0)
 
-    monkeypatch.setattr(
-        "social_research_probe.utils.subprocess_runner.run", _fake_sp_run
-    )
+    monkeypatch.setattr("social_research_probe.utils.subprocess_runner.run", _fake_sp_run)
     with pytest.raises(AdapterError, match="non-JSON envelope"):
         GeminiRunner().run("prompt")
 
@@ -120,7 +111,7 @@ class _StubConfig:
     gemini_as_service = False
     codex_as_service = False
 
-    def feature_enabled(self, name: str) -> bool:  # noqa: D401
+    def feature_enabled(self, name: str) -> bool:
         return True
 
 

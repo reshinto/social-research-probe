@@ -185,9 +185,7 @@ def test_opportunity_all_ones():
 
 
 def test_opportunity_mid_inputs_match_weighted_formula():
-    inputs = dict(
-        market_gap=0.7, monetization_proxy=0.5, feasibility=0.9, novelty=0.3
-    )
+    inputs = dict(market_gap=0.7, monetization_proxy=0.5, feasibility=0.9, novelty=0.3)
     expected = (
         0.40 * inputs["market_gap"]
         + 0.30 * inputs["monetization_proxy"]
@@ -205,22 +203,18 @@ def test_opportunity_mid_inputs_match_weighted_formula():
 
 def test_overall_default_weights_sum_to_one_for_unit_inputs():
     """(1, 1, 1) with default weights returns exactly 1.0."""
-    assert overall_score(
-        trust=1.0, trend=1.0, opportunity=1.0
-    ) == pytest.approx(1.0, **_APPROX)
+    assert overall_score(trust=1.0, trend=1.0, opportunity=1.0) == pytest.approx(1.0, **_APPROX)
 
 
 def test_overall_zero_inputs_return_zero():
-    assert overall_score(
-        trust=0.0, trend=0.0, opportunity=0.0
-    ) == pytest.approx(0.0, **_APPROX)
+    assert overall_score(trust=0.0, trend=0.0, opportunity=0.0) == pytest.approx(0.0, **_APPROX)
 
 
 def test_overall_applies_default_weights_per_axis():
     """(1, 0, 0) returns the default trust weight exactly."""
-    assert overall_score(
-        trust=1.0, trend=0.0, opportunity=0.0
-    ) == pytest.approx(DEFAULT_WEIGHTS["trust"], **_APPROX)
+    assert overall_score(trust=1.0, trend=0.0, opportunity=0.0) == pytest.approx(
+        DEFAULT_WEIGHTS["trust"], **_APPROX
+    )
 
 
 def test_overall_custom_weights_override_defaults_only_for_given_keys():

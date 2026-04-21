@@ -30,7 +30,6 @@ from pathlib import Path
 
 import httpx
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN_ROOT = REPO_ROOT / "tests" / "fixtures" / "golden"
 
@@ -68,9 +67,7 @@ def _build_headers(auth_env: str | None, auth_header: str | None) -> dict[str, s
     if auth_env and auth_header:
         value = os.environ.get(auth_env)
         if not value:
-            raise SystemExit(
-                f"env var {auth_env!r} not set — export it before recording"
-            )
+            raise SystemExit(f"env var {auth_env!r} not set — export it before recording")
         headers[auth_header] = value
     return headers
 

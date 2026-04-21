@@ -17,7 +17,7 @@ from typing import ClassVar
 from social_research_probe.llm.types import AgenticSearchResult
 
 
-class CapabilityUnavailable(RuntimeError):
+class CapabilityUnavailableError(RuntimeError):
     """Raised when a caller invokes a capability the active runner doesn't support.
 
     Example: calling ``agentic_search`` on a runner whose
@@ -53,7 +53,7 @@ class LLMRunner(ABC):
     # search using their native tool (Gemini google-search, Claude web_search,
     # Codex --search). Default False — runners that do not support it must
     # leave this untouched so callers can dispatch based on the flag rather
-    # than catching CapabilityUnavailable.
+    # than catching CapabilityUnavailableError.
     supports_agentic_search: ClassVar[bool] = False
 
     async def summarize_media(
@@ -80,7 +80,7 @@ class LLMRunner(ABC):
         their vendor-native capability: Gemini's google-search grounding,
         Claude's ``web_search`` tool, Codex's ``--search`` flag. Runners that
         don't support it must leave ``supports_agentic_search`` False; calling
-        this method on them raises :class:`CapabilityUnavailable` so mis-routed
+        this method on them raises :class:`CapabilityUnavailableError` so mis-routed
         callers fail loudly instead of silently returning no evidence.
 
         Args:
@@ -94,13 +94,12 @@ class LLMRunner(ABC):
             runner's own name.
 
         Raises:
-            CapabilityUnavailable: If the runner does not support agentic
+            CapabilityUnavailableError: If the runner does not support agentic
                 search.
             AdapterError: If the vendor call fails at runtime.
         """
-        raise CapabilityUnavailable(
-            f"runner {getattr(self, 'name', type(self).__name__)!r} does not "
-            f"support agentic_search"
+        raise CapabilityUnavailableError(
+            f"runner {getattr(self, 'name', type(self).__name__)!r} does not support agentic_search"
         )
 
     @abstractmethod
