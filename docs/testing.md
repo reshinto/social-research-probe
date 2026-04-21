@@ -112,6 +112,19 @@ The Makefile target disables the project-wide `--cov-fail-under=100`
 gate because the evidence tier is a narrow slice — full coverage runs
 against `pytest -q` still enforce 100%.
 
+> **Why not enforce 100% coverage on `tests/evidence/` alone?** The two
+> tiers have different jobs. `tests/unit/` + `tests/contract/` exist for
+> **line coverage** — they prove no branch blows up. `tests/evidence/`
+> exists for **value coverage** — every test has an *(input / expected /
+> why)* receipt proving the scoring formula is right, the stats match a
+> reference, the corroboration backend classifies correctly, and so on.
+> Line coverage is a side effect, not the point. Running only the
+> evidence tier covers ~43% of lines by design; the CLI parsers, command
+> entry points, and state-migration shims are covered by the unit tier.
+> If you want the full gate, run `pytest -q`. If you want fast feedback
+> on value-tier assertions while iterating on a formula or parser, use
+> `make test-evidence`.
+
 #### LLM quality evaluators (out of CI)
 
 Two scripts exercise real LLM runners against the reference corpus
