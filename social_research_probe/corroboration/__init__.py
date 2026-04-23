@@ -10,10 +10,10 @@ import importlib
 import os
 
 for _module in (
-    "social_research_probe.corroboration.brave",
-    "social_research_probe.corroboration.exa",
+    "social_research_probe.technologies.corroborates.brave",
+    "social_research_probe.technologies.corroborates.exa",
     "social_research_probe.corroboration.llm_search",
-    "social_research_probe.corroboration.tavily",
+    "social_research_probe.technologies.corroborates.tavily",
 ):
     importlib.import_module(_module)
 

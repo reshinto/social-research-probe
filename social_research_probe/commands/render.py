@@ -16,8 +16,8 @@ import json
 import sys
 
 from social_research_probe.packet import unwrap_packet
-from social_research_probe.stats.selector import select_and_run
-from social_research_probe.viz.selector import select_and_render
+from social_research_probe.technologies.charts.selector import select_and_render
+from social_research_probe.technologies.statistics.selector import select_and_run
 
 
 def run(packet_path: str, output_dir: str | None = None) -> int:

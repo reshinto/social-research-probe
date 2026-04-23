@@ -11,7 +11,6 @@ from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from social_research_probe.render._sections import (
     _bulletise,
     _chart_block,

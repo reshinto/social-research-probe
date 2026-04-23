@@ -13,9 +13,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
+from social_research_probe.render.html import serve_report_command
 
 from social_research_probe.cli import _emit, _id_selector, main
-from social_research_probe.render.html import serve_report_command
 
 _VALID_PACKET = {
     "topic": "ai",

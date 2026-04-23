@@ -24,7 +24,7 @@ from pathlib import Path
 
 from social_research_probe.config import load_active_config
 from social_research_probe.corroboration.host import corroborate_claim
-from social_research_probe.validation.claims import Claim
+from social_research_probe.technologies.validation.claim_extractor import Claim
 
 
 def run(

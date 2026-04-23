@@ -57,7 +57,7 @@ def run(
     opportunity_analysis = _read_text_file(opportunity_analysis_path)
     final_summary = _read_text_file(final_summary_path)
 
-    from social_research_probe.render.html import (
+    from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         _fetch_voicebox_profiles,
         _prepare_voiceover_audios,
         _select_voicebox_profile,

@@ -1,0 +1,1 @@
+"""Corroboration backend technology adapters."""

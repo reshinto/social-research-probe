@@ -8,17 +8,9 @@ from typing import ClassVar
 from unittest.mock import AsyncMock
 
 import pytest
-
-from social_research_probe.commands.parse import parse
-from social_research_probe.errors import ValidationError
 from social_research_probe.pipeline.charts import _render_charts
 from social_research_probe.pipeline.corroboration import _corroborate_top_n
 from social_research_probe.pipeline.enrichment import _enrich_top_n_with_transcripts
-from social_research_probe.pipeline.orchestrator import (
-    _available_backends,
-    _maybe_register_fake,
-    run_research,
-)
 from social_research_probe.pipeline.scoring import (
     _channel_credibility,
     _enrich_query,
@@ -27,6 +19,14 @@ from social_research_probe.pipeline.scoring import (
 )
 from social_research_probe.pipeline.stats import _build_stats_summary, _stats_models_for
 from social_research_probe.pipeline.svs import _build_svs
+
+from social_research_probe.commands.parse import parse
+from social_research_probe.errors import ValidationError
+from social_research_probe.pipeline.orchestrator import (
+    _available_backends,
+    _maybe_register_fake,
+    run_research,
+)
 
 
 def _write_purposes(tmp_path, purposes: dict):

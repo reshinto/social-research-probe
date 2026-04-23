@@ -1,0 +1,1 @@
+"""Transcript fetch technology adapters."""

@@ -70,7 +70,7 @@ class YouTubeAdapter(PlatformAdapter):
         socket could go stale in the gap between calls and surface as an SSL
         record-layer failure. Rebuilding is cheap enough and fully robust.
         """
-        from social_research_probe.platforms.youtube import fetch
+        from social_research_probe.technologies.media_fetch import youtube_api as fetch
 
         return fetch.build_client(self._api_key())
 
@@ -108,7 +108,7 @@ class YouTubeAdapter(PlatformAdapter):
         """Search YouTube videos for a topic and normalise the result set."""
         from datetime import datetime, timedelta
 
-        from social_research_probe.platforms.youtube import fetch
+        from social_research_probe.technologies.media_fetch import youtube_api as fetch
 
         client = self._client()
         published_after = None
@@ -164,7 +164,7 @@ class YouTubeAdapter(PlatformAdapter):
         """
         if not items:
             return items
-        from social_research_probe.platforms.youtube import fetch
+        from social_research_probe.technologies.media_fetch import youtube_api as fetch
 
         client = self._client()
         video_ids = [it.id for it in items]

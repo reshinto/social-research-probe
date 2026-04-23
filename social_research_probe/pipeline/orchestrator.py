@@ -9,14 +9,13 @@ from pathlib import Path
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.config import Config
 from social_research_probe.errors import ValidationError
+from social_research_probe.platform import YouTubePipeline, run_all_platforms
+from social_research_probe.platform.state import PipelineState
 from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import MergedPurpose, merge_purposes
 from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
-from social_research_probe.synthesize.evidence import summarize as summarize_evidence
-from social_research_probe.synthesize.evidence import summarize_signals
-from social_research_probe.synthesize.formatter import build_packet
 from social_research_probe.types import AdapterConfig, MultiResearchPacket, ResearchPacket
 from social_research_probe.utils.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
@@ -24,10 +23,8 @@ from social_research_probe.utils.fast_mode import (
     fast_mode_enabled,
 )
 from social_research_probe.utils.progress import log
-from social_research_probe.utils.service_log import service_log
 
 from .scoring import _enrich_query
-from .stages import StageExecutionContext, execute_research_stages
 
 
 def _resolve_scoring_weights(cfg: Config, merged: MergedPurpose) -> dict[str, float]:
@@ -52,20 +49,6 @@ def _maybe_register_fake() -> None:
         import importlib
 
         importlib.import_module("tests.fixtures.fake_youtube")
-
-
-def _divergence_warnings(top_n: list, cfg: Config) -> list[str]:
-    """Return warning strings for top-N items whose summary divergence exceeds threshold."""
-    threshold = float(getattr(cfg, "tunables", {}).get("summary_divergence_threshold", 0.4))
-    out: list[str] = []
-    for item in top_n:
-        divergence = item.get("summary_divergence")
-        if divergence is None:
-            continue
-        if divergence > threshold:
-            title = (item.get("title") or "untitled")[:80]
-            out.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
-    return out
 
 
 def _auto_mode_backends(cfg: Config) -> tuple[str, ...]:
@@ -192,48 +175,30 @@ async def run_research(
                 int(platform_config.get("enrich_top_n", 5)),
                 FAST_MODE_TOP_N,
             )
-        ctx = StageExecutionContext(
+        state = PipelineState(
+            platform_type=cmd.platform if cmd.platform != "all" else "youtube",
             cfg=cfg,
             cmd=cmd,
             data_dir=data_dir,
-            adapter=adapter,
-            platform_config=platform_config,
-            limits=limits,
-            topic=topic,
-            purpose_names=list(merged.names),
-            search_topic=search_topic,
-            scoring_weights=scoring_weights,
-            timings=timings,
-            outputs={},
-            corroboration_backends=backends,
+            cache=None,
+            inputs={
+                "adapter": adapter,
+                "platform_config": platform_config,
+                "limits": limits,
+                "topic": topic,
+                "purpose_names": list(merged.names),
+                "search_topic": search_topic,
+                "scoring_weights": scoring_weights,
+                "timings": timings,
+                "corroboration_backends": backends,
+            },
         )
-        outputs = await execute_research_stages(ctx)
-        fetch_output = outputs.get("fetch", {})
-        score_output = outputs.get("score", {})
-        corroborate_output = outputs.get("corroborate", {})
-        analyze_output = outputs.get("analyze", {})
-        top_n = corroborate_output.get("top_n", score_output.get("top_n", []))
-        warnings = list(analyze_output.get("warnings", []))
-        warnings.extend(_divergence_warnings(top_n, cfg))
-        async with service_log("packet", packet=timings, cfg_logs_enabled=False):
-            packet = build_packet(
-                topic=topic,
-                platform=cmd.platform,
-                purpose_set=list(merged.names),
-                items_top_n=top_n,
-                source_validation_summary=analyze_output.get("source_validation_summary", {}),
-                platform_signals_summary=summarize_signals(fetch_output.get("signals", [])),
-                evidence_summary=summarize_evidence(
-                    fetch_output.get("items", []),
-                    fetch_output.get("signals", []),
-                    top_n,
-                ),
-                stats_summary=analyze_output.get("stats_summary", {}),
-                chart_captions=analyze_output.get("chart_captions", []),
-                chart_takeaways=analyze_output.get("chart_takeaways", []),
-                warnings=warnings,
-            )
-        packet["stage_timings"] = list(timings["stage_timings"])
+        if cmd.platform == "all":
+            state = await run_all_platforms(state)
+        else:
+            state = await YouTubePipeline().run(state)
+        packet = state.outputs.get("packet", {})
+        packet["stage_timings"] = list(timings.get("stage_timings", []))
         packets.append(packet)
 
     combined = packets[0] if len(packets) == 1 else {"multi": packets}

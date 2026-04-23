@@ -23,10 +23,10 @@ import json
 from types import SimpleNamespace
 
 import pytest
-
-from social_research_probe.errors import AdapterError
 from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
+
+from social_research_probe.errors import AdapterError
 
 # ---------------------------------------------------------------------------
 # health_check — binary probing

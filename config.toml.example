@@ -48,43 +48,43 @@ cache_ttl_channel_hours = 24
 
 [stages]
 # Highest priority. If a stage is false, everything inside that stage is skipped.
-fetch = true
-score = true
-enrich = true
-corroborate = true
-analyze = true
-synthesis = true
-report = true
+# Stage names map directly to the YouTubePipeline stage execution order.
+fetch = true              # Fetch and enrich YouTube search results.
+score = true              # Score and rank items by trust/trend/opportunity.
+enrich = true             # Enrich top-N items with transcripts and LLM summaries.
+corroborate = true        # Corroborate claims via configured search backends.
+analyze = true            # Run statistics, charts, and synthesis on results.
 
-[services.fetch]
-# Services executed during the 'fetch' stage
-platform_api = true        # Queries external APIs (e.g. YouTube) to find raw items and engagement metrics.
+[services.youtube.sourcing]
+youtube = true            # YouTube Data API v3 search and metadata fetch.
 
-[services.score]
-# Services executed during the 'score' stage
-scoring = true             # Computes trend, trust, and opportunity scores for retrieved items.
+[services.youtube.scoring]
+score = true              # Trust/trend/opportunity scoring via overall_score().
+
+[services.youtube.enriching]
+transcript = true         # Transcript fetch: YouTube captions API, then yt-dlp + Whisper fallback.
+summary = true            # LLM summary generation for each enriched item.
+
+[services.youtube.corroborating]
+corroborate = true        # Multi-backend web search to fact-check extracted claims.
+
+[services.youtube.analyzing]
+statistics = true         # Statistical analysis on engagement and scores.
+charts = true             # Chart generation from statistical results.
+
+[services.youtube.synthesizing]
+synthesis = true          # Final LLM research synthesis from all stage outputs.
+
+[services.youtube.reporting]
+html = true               # HTML report generation.
+audio = true              # Audio narration via Voicebox (or macOS TTS fallback).
+
+# Legacy service gates used internally — do not remove.
+[services.corroborate]
+corroboration = true      # Enables corroboration backend health checks.
 
 [services.enrich]
-# Services executed during the 'enrich' stage
-transcripts = true         # Downloads transcripts/captions from videos (if available).
-llm = true                 # General AI/LLM text generation and extraction for enrichment.
-media_url_summary = true   # runner.summarize_media() (e.g. Gemini CLI extracting directly from video URL).
-merged_summary = true      # Reconciles transcript-based and URL-based views into one combined summary.
-
-[services.corroborate]
-# Services executed during the 'corroborate' stage
-corroboration = true       # Performs multi-backend web searches to fact-check extracted claims.
-
-[services.analyze]
-# Services executed during the 'analyze' stage
-statistics = true          # Runs statistical analysis on engagement velocities and scores.
-charts = true              # Renders visual charts (PNG/ASCII) based on pipeline metrics.
-chart_takeaways = true     # Deterministic chart interpretations to give text-based takeaways.
-
-[services.report]
-# Services executed during the 'report' stage
-html_report = true         # Generates a final HTML report summarizing the research.
-audio_report = true        # Pre-renders Voicebox summary audio before HTML is written.
+llm = true                # Enables LLM-based enrichment runner resolution.
 
 [technologies]
 # Lowest priority. Disable one provider/technology without disabling its peers.
@@ -92,19 +92,20 @@ audio_report = true        # Pre-renders Voicebox summary audio before HTML is w
 youtube_api = true
 youtube_transcript_api = true
 whisper = true
+yt_dlp = true             # yt-dlp audio download for Whisper fallback transcription.
 voicebox = true
-llm_search = true          # Runner-agnostic agentic-search corroboration backend.
+llm_search = true         # Runner-agnostic agentic-search corroboration backend.
 exa = true
 brave = true
 tavily = true
-claude = false             # Requires Anthropic account setup.
-gemini = false             # Requires Google account setup.
-codex = false              # Requires OpenAI account setup.
+claude = false             # Requires Anthropic account setup (claude CLI).
+gemini = false             # Requires Google account setup (gemini CLI).
+codex = false              # Requires OpenAI account setup (codex CLI).
 local = false              # Requires a local LLM setup.
 
 [tunables]
 summary_divergence_threshold = 0.4   # transcript/URL summary divergence that triggers a warning
-per_item_summary_words = 100         # target word count for merged per-item summary
+per_item_summary_words = 100         # target word count for per-item LLM summary
 
 [debug]
 technology_logs_enabled = true       # stderr start/end pairs around concrete technology calls

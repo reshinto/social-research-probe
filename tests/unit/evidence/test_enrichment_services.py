@@ -19,7 +19,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 import pytest
-
 from social_research_probe.pipeline.enrichment import (
     _build_description_summary_prompt,
     _build_summary_prompt,

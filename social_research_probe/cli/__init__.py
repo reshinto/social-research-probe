@@ -359,11 +359,11 @@ def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) 
     Returns:
         File path or command to access the report.
     """
-    from social_research_probe.render.html import (
+    from social_research_probe.synthesize.formatter import render_full
+    from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         serve_report_command,
         write_html_report,
     )
-    from social_research_probe.synthesize.formatter import render_full
 
     html_on = (
         allow_html
