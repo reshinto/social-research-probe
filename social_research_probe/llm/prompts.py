@@ -15,8 +15,14 @@ SYNTHESIS_PROMPT = """\
 You are a research analyst. Given the following evidence packet, write a concise synthesis.
 
 Rules:
-- Ground claims in items, stats_highlights, or chart_takeaways. Acknowledge mixed or weak evidence.
+- Ground claims in items, source_validation_summary, platform_signals_summary,
+  evidence_summary, stats_highlights, or chart_takeaways. Acknowledge mixed or weak evidence.
 - Stats and charts cover coverage.fetched; item-level detail covers only coverage.enriched.
+- Return three distinct fields:
+  - compiled_synthesis: the bottom-line synthesis of what the evidence says.
+  - opportunity_analysis: the practical opportunity or strategic implication.
+  - report_summary: one integrated executive summary that weaves together the
+    key statistics, chart signals, compiled synthesis, and opportunity analysis.
 
 Topic: {topic}
 Platform: {platform}

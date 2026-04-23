@@ -32,9 +32,9 @@ Every stage of the pipeline prefers the cheaper path:
 | Stats (20+ models) | your CPU (scipy + Python stdlib) | 0 |
 | Charts (10 types) | your CPU (matplotlib) | 0 |
 | Corroboration | web-search API (Gemini / Tavily / Brave / Exa) | bounded |
-| Synthesis (sections 10–11) | LLM on one summary prompt | bounded |
+| Report synthesis | LLM on one summary prompt | bounded |
 
-Translation: an average run spends **tens of kilobytes** of LLM context, not megabytes. If the runner is unavailable, the report still renders — sections 10–11 are the only fields that become placeholders, while per-item summaries fall back to transcript or description excerpts.
+Translation: an average run spends **tens of kilobytes** of LLM context, not megabytes. If the runner is unavailable, the report still renders — Compiled Synthesis, Opportunity Analysis, and Final Summary are the only fields that become placeholders, while per-item summaries fall back to transcript or description excerpts.
 
 Because the LLM is behind a swappable runner interface (`llm/registry.py`), the project is not tied to any one model provider. If your preferred LLM becomes expensive, slow, or discontinued, you change `llm.runner` in `config.toml` and keep going.
 

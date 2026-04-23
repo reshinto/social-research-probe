@@ -191,7 +191,7 @@ srp config set platforms.youtube.enrich_top_n 10 # enrich the top 10 instead of 
 
 | Mode | When to use |
 |---|---|
-| `host` (default) | Auto-uses every healthy corroboration backend whose API key or runner capability is available |
+| `auto` (default) | Auto-uses every healthy corroboration backend whose API key or runner capability is available |
 | `exa` / `brave` / `tavily` | Force a single backend |
 | `llm_search` | Use the configured runner's native web-search capability instead of a separate search API key |
 | `none` | Disable corroboration entirely |
@@ -210,12 +210,13 @@ To attach new synthesis sections to an existing packet without re-running resear
 ```bash
 srp report \
   --packet ~/.social-research-probe/packets/my-packet.json \
-  --synthesis-10 /tmp/s10.txt \
-  --synthesis-11 /tmp/s11.txt \
+  --compiled-synthesis /tmp/compiled-synthesis.txt \
+  --opportunity-analysis /tmp/opportunity-analysis.txt \
+  --final-summary /tmp/final-summary.txt \
   --out ~/Desktop/report.html
 ```
 
-The templates for sections 10 and 11 live in [synthesis-authoring.md](synthesis-authoring.md).
+The author templates for Compiled Synthesis, Opportunity Analysis, and Final Summary live in [synthesis-authoring.md](synthesis-authoring.md).
 
 ---
 
@@ -238,7 +239,7 @@ After `srp install-skill`, the same CLI verbs are available inside Claude Code w
 
 The skill shells out to the `srp` CLI, so quoted payloads for `update-topics` and `update-purposes` work exactly the same as they do in a terminal. `show-pending` is the review step, and `apply-pending` / `discard-pending` only act on the IDs you pass or on `all`.
 
-For research runs, the skill still uses `srp` for packet generation and report rendering, but the host LLM is allowed to handle the skill-only language steps. When `llm.runner = none`, Claude should classify natural-language requests, summarize sections 1-9 from the packet, and write sections 10-11 inline or via `srp report`. When `llm.runner` is set to `claude`, `gemini`, `codex`, or `local`, the skill should prefer the CLI-produced LLM output and avoid duplicating it with the host model. The HTML report path is surfaced so you can open it directly from the chat.
+For research runs, the skill still uses `srp` for packet generation and report rendering, but the host LLM is allowed to handle the skill-only language steps. When `llm.runner = none`, Claude should classify natural-language requests, summarize sections 1-9 from the packet, and write Compiled Synthesis, Opportunity Analysis, and Final Summary inline or via `srp report`. When `llm.runner` is set to `claude`, `gemini`, `codex`, or `local`, the skill should prefer the CLI-produced LLM output and avoid duplicating it with the host model. The HTML report path is surfaced so you can open it directly from the chat.
 
 ---
 

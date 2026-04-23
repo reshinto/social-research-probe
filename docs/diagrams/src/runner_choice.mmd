@@ -7,7 +7,7 @@ graph TD
     D -->|yes| E["codex<br/>requires key"]
     D -->|no| F{{"Need to run<br/>offline?"}}
     F -->|yes| H["local<br/>SRP_LOCAL_LLM_BIN<br/>e.g. ollama"]
-    F -->|no| I["none<br/>CLI skips runner calls<br/>sections 10-11 stay placeholders<br/>CLI NL-query disabled<br/>Claude Code skill may use host LLM"]
+    F -->|no| I["none<br/>CLI skips runner calls<br/>Compiled Synthesis and Opportunity Analysis stay placeholders<br/>CLI NL-query disabled<br/>Claude Code skill may use host LLM"]
 
     classDef recommended fill:#e8f5e9,stroke:#43a047,color:#1b5e20,stroke-width:3px;
     classDef paid fill:#fff3e0,stroke:#fb8c00,color:#e65100;

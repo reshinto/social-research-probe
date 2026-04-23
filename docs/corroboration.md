@@ -72,8 +72,6 @@ See [llm-runners.md](llm-runners.md#capability-matrix) for which runners support
 
 **Configuration:** the matching runner CLI must be installed and authenticated, and that runner must support agentic search. The backend is gated by `llm_search_enabled = true` in `config.toml` (default). See [llm-runners.md](llm-runners.md#capability-matrix) for support by runner.
 
-Older configs that still say `llm_cli` are treated as a legacy alias for `llm_search`.
-
 ### Exa
 
 **What it is:** A neural search engine optimised for semantic similarity. Finds web pages that are conceptually related to the claim, not just keyword matches.
@@ -117,7 +115,7 @@ srp config set-secret tavily_api_key
 ### Mode selection
 
 ```bash
-srp config set corroboration.backend host           # auto-discover all configured backends (default)
+srp config set corroboration.backend auto           # auto-discover all configured backends (default)
 srp config set corroboration.backend llm_search     # route through the configured LLM runner — no search API key
 srp config set corroboration.backend exa            # force Exa only
 srp config set corroboration.backend brave          # force Brave only
@@ -134,9 +132,9 @@ srp config set corroboration.backend none           # disable corroboration enti
 | `brave` | `brave_api_key` | **No** — paid only | Independent index |
 | `tavily` | `tavily_api_key` | Yes (~1000 credits/mo) | LLM-optimised snippets |
 
-### Auto-discovery (`host` mode)
+### Auto-discovery (`auto` mode)
 
-When `backend = host`, the pipeline calls `health_check()` on each backend at the start of the run. Any backend whose API key is configured and whose health check passes is used. This means you can add keys over time and they are automatically picked up without changing the config.
+When `backend = auto`, the pipeline calls `health_check()` on each backend at the start of the run. Any backend whose API key is configured and whose health check passes is used. This means you can add keys over time and they are automatically picked up without changing the config.
 
 ### Checking which backends are available
 

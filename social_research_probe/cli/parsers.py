@@ -89,18 +89,33 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     rep = sub.add_parser("report", help="Re-render an HTML report from a saved packet file")
     rep.add_argument("--packet", required=True, help="Path to packet JSON file")
     rep.add_argument(
-        "--synthesis-10",
+        "--compiled-synthesis",
         default=None,
-        dest="synthesis_10",
-        help="File with compiled synthesis text",
+        dest="compiled_synthesis_path",
+        help="File with Compiled Synthesis text",
     )
     rep.add_argument(
-        "--synthesis-11",
+        "--opportunity-analysis",
         default=None,
-        dest="synthesis_11",
-        help="File with opportunity analysis text",
+        dest="opportunity_analysis_path",
+        help="File with Opportunity Analysis text",
+    )
+    rep.add_argument(
+        "--final-summary",
+        default=None,
+        dest="final_summary_path",
+        help="File with Final Summary text",
     )
     rep.add_argument("--out", default=None, help="Output HTML path (default: stdout)")
+    serve = sub.add_parser("serve-report", help="Serve one HTML report with a local Voicebox proxy")
+    serve.add_argument("--report", required=True, help="Path to an existing HTML report")
+    serve.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    serve.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    serve.add_argument(
+        "--voicebox-base",
+        default=None,
+        help="Voicebox API base URL (default: SRP_VOICEBOX_API_BASE or http://127.0.0.1:17493)",
+    )
 
 
 def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:

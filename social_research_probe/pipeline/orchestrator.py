@@ -17,7 +17,6 @@ from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
 from social_research_probe.synthesize.evidence import summarize as summarize_evidence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.formatter import build_packet
-from social_research_probe.synthesize.warnings import detect as detect_warnings
 from social_research_probe.types import AdapterConfig, MultiResearchPacket, ResearchPacket
 from social_research_probe.utils.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
@@ -27,12 +26,8 @@ from social_research_probe.utils.fast_mode import (
 from social_research_probe.utils.progress import log
 from social_research_probe.utils.service_log import service_log
 
-from . import corroboration as _corr_mod
-from . import enrichment as _enrich_mod
-from .charts import _chart_takeaways, _render_charts
-from .scoring import _enrich_query, _score_item, _zscore
-from .stats import _build_stats_summary
-from .svs import _build_svs
+from .scoring import _enrich_query
+from .stages import StageExecutionContext, execute_research_stages
 
 
 def _resolve_scoring_weights(cfg: Config, merged: MergedPurpose) -> dict[str, float]:
@@ -73,28 +68,42 @@ def _divergence_warnings(top_n: list, cfg: Config) -> list[str]:
     return out
 
 
-def _host_mode_backends(cfg: Config, feature_enabled=None) -> tuple[str, ...]:
-    """Return the ordered tuple of backend names to try in host-auto mode.
+def _auto_mode_backends(cfg: Config) -> tuple[str, ...]:
+    """Return the ordered tuple of backend names to try in auto mode.
 
-    Each backend has its own feature flag; a flag set to False removes that
-    backend from the candidate list without affecting the others. ``feature_enabled``
-    may be passed in (e.g. when ``cfg`` is a test stub without the method);
-    defaults to ``cfg.feature_enabled``.
+    Each backend has its own technology gate; a disabled backend is removed
+    from the candidate list without affecting the others.
     """
-    fn = feature_enabled or getattr(cfg, "feature_enabled", lambda _name: True)
-    flag_by_backend = (
-        ("exa", "exa_enabled"),
-        ("brave", "brave_enabled"),
-        ("tavily", "tavily_enabled"),
-        ("llm_search", "llm_search_enabled"),
+    return tuple(
+        name for name in ("exa", "brave", "tavily", "llm_search") if _technology_enabled(cfg, name)
     )
-    return tuple(name for name, flag in flag_by_backend if fn(flag))
+
+
+def _stage_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
+    fn = getattr(cfg, "stage_enabled", None)
+    if callable(fn):
+        return bool(fn(name))
+    return default
+
+
+def _service_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
+    fn = getattr(cfg, "service_enabled", None)
+    if callable(fn):
+        return bool(fn(name))
+    return default
+
+
+def _technology_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
+    fn = getattr(cfg, "technology_enabled", None)
+    if callable(fn):
+        return bool(fn(name))
+    return default
 
 
 def _available_backends(data_dir: Path, cfg=None) -> list[str]:
     """Return corroboration backends allowed by config and available at runtime.
 
-    ``backend = host`` auto-discovers the configured search backends whose
+    ``backend = auto`` auto-discovers the configured search backends whose
     credentials or runner capabilities are usable. A specific backend value
     uses only that backend. ``backend = none`` disables corroboration entirely.
     """
@@ -103,17 +112,26 @@ def _available_backends(data_dir: Path, cfg=None) -> list[str]:
     if cfg is None:
         cfg = Config.load(data_dir)
     configured = cfg.corroboration_backend
-    feature_enabled = getattr(cfg, "feature_enabled", lambda _name: True)
-    if configured == "none" or not feature_enabled("corroboration_enabled"):
+    if not _stage_enabled(cfg, "corroborate"):
+        log("[srp] corroboration: disabled by stages.corroborate = false.")
+        return []
+    if not _service_enabled(cfg, "corroboration"):
+        log("[srp] corroboration: disabled by services.corroboration = false.")
+        return []
+    if configured == "none":
         log(
-            "[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend host'."
+            "[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend auto'."
         )
         return []
-    host_candidates = _host_mode_backends(cfg, feature_enabled)
-    candidates = host_candidates if configured == "host" else (configured,)
+    auto_candidates = _auto_mode_backends(cfg)
+    candidates = auto_candidates if configured == "auto" else (configured,)
 
     available: list[str] = []
     for name in candidates:
+        if not _technology_enabled(cfg, name):
+            continue
+        if name == "llm_search" and not _service_enabled(cfg, "llm"):
+            continue
         try:
             if get_backend(name).health_check():
                 available.append(name)
@@ -138,7 +156,6 @@ async def run_research(
     os.environ["SRP_DATA_DIR"] = str(data_dir)
     purposes = purpose_registry.load(data_dir)["purposes"]
     cfg = Config.load(data_dir)
-    feature_enabled = getattr(cfg, "feature_enabled", lambda _name: True)
     platform_config: AdapterConfig = {
         **cfg.platform_defaults(cmd.platform),
         "data_dir": data_dir,
@@ -149,7 +166,13 @@ async def run_research(
         recency_days=platform_config.get("recency_days", FetchLimits.recency_days),
     )
     adapter = get_adapter(cmd.platform, platform_config)
-    if not await asyncio.to_thread(adapter.health_check):
+    fetch_technology = f"{cmd.platform}_api"
+    if (
+        _stage_enabled(cfg, "fetch")
+        and _service_enabled(cfg, "platform_api")
+        and _technology_enabled(cfg, fetch_technology)
+        and not await asyncio.to_thread(adapter.health_check)
+    ):
         raise ValidationError(f"adapter {cmd.platform} failed health check")
 
     packets: list[ResearchPacket] = []
@@ -161,84 +184,53 @@ async def run_research(
         scoring_weights = _resolve_scoring_weights(cfg, merged)
         search_topic = _enrich_query(topic, merged.method)
         timings: dict = {"stage_timings": []}
-        cfg_logs = bool(getattr(cfg, "logging", {}).get("service_logs_enabled", False))
-        async with service_log("fetch", packet=timings, cfg_logs_enabled=cfg_logs):
-            raw_items = await asyncio.to_thread(
-                lambda st=search_topic, lm=limits: adapter.search(st, lm)
-            )
-            items = await adapter.enrich(raw_items)
-            signals = adapter.to_signals(items)
-        async with service_log("score", packet=timings, cfg_logs_enabled=cfg_logs):
-            hints = [adapter.trust_hints(it) for it in items]
-            z_vels = _zscore([s.view_velocity or 0.0 for s in signals])
-            z_engs = _zscore([s.engagement_ratio or 0.0 for s in signals])
-            scored = [
-                _score_item(item, signal, hint, z_vel, z_eng, scoring_weights)
-                for item, signal, hint, z_vel, z_eng in zip(
-                    items, signals, hints, z_vels, z_engs, strict=True
-                )
-            ]
-            scored.sort(key=lambda x: x[0], reverse=True)
-            all_scored = [d for _, d in scored]
-        enrich_top_n = int(platform_config.get("enrich_top_n", 5))
-        if fast_mode_enabled():
-            enrich_top_n = min(enrich_top_n, FAST_MODE_TOP_N)
-        top_n = all_scored[:enrich_top_n]
-        if (
-            platform_config.get("fetch_transcripts", True)
-            and cmd.platform == "youtube"
-            and feature_enabled("enrichment_enabled")
-        ):
-            async with service_log("enrich", packet=timings, cfg_logs_enabled=cfg_logs):
-                await _enrich_mod._enrich_top_n_with_transcripts(top_n)
         backends = _available_backends(data_dir, cfg=cfg)
         if fast_mode_enabled():
             backends = backends[:FAST_MODE_MAX_BACKENDS]
-        async with service_log("corroborate", packet=timings, cfg_logs_enabled=cfg_logs):
-            corroboration_results = (
-                await _corr_mod._corroborate_top_n(top_n, backends) if backends else []
+        if fast_mode_enabled():
+            platform_config["enrich_top_n"] = min(
+                int(platform_config.get("enrich_top_n", 5)),
+                FAST_MODE_TOP_N,
             )
-        for item, result in zip(top_n, corroboration_results, strict=False):
-            verdict = result.get("aggregate_verdict")
-            if isinstance(verdict, str):
-                item["corroboration_verdict"] = verdict
-        svs = _build_svs(top_n, corroboration_results, backends)
-        stats_summary = _build_stats_summary(all_scored)
-        async with service_log("charts", packet=timings, cfg_logs_enabled=cfg_logs):
-            chart_captions = (
-                _render_charts(all_scored, data_dir) if feature_enabled("charts_enabled") else []
-            )
-            chart_takeaways = (
-                _chart_takeaways(all_scored) if feature_enabled("chart_takeaways_enabled") else []
-            )
-        cfg_corr = cfg.corroboration_backend
-        skip_reason: str | None = None
-        if not backends:
-            skip_reason = (
-                "disabled in config"
-                if cfg_corr == "none"
-                else "no API credentials usable — run 'srp config check-secrets'"
-            )
-        warnings = detect_warnings(
-            items,
-            signals,
-            top_n,
-            corroboration_ran=bool(backends and top_n),
-            corroboration_skip_reason=skip_reason,
+        ctx = StageExecutionContext(
+            cfg=cfg,
+            cmd=cmd,
+            data_dir=data_dir,
+            adapter=adapter,
+            platform_config=platform_config,
+            limits=limits,
+            topic=topic,
+            purpose_names=list(merged.names),
+            search_topic=search_topic,
+            scoring_weights=scoring_weights,
+            timings=timings,
+            outputs={},
+            corroboration_backends=backends,
         )
+        outputs = await execute_research_stages(ctx)
+        fetch_output = outputs.get("fetch", {})
+        score_output = outputs.get("score", {})
+        corroborate_output = outputs.get("corroborate", {})
+        analyze_output = outputs.get("analyze", {})
+        top_n = corroborate_output.get("top_n", score_output.get("top_n", []))
+        warnings = list(analyze_output.get("warnings", []))
         warnings.extend(_divergence_warnings(top_n, cfg))
-        async with service_log("synthesize", packet=timings, cfg_logs_enabled=cfg_logs):
+        async with service_log("packet", packet=timings, cfg_logs_enabled=False):
             packet = build_packet(
                 topic=topic,
                 platform=cmd.platform,
                 purpose_set=list(merged.names),
                 items_top_n=top_n,
-                source_validation_summary=svs,
-                platform_signals_summary=summarize_signals(signals),
-                evidence_summary=summarize_evidence(items, signals, top_n),
-                stats_summary=stats_summary,
-                chart_captions=chart_captions,
-                chart_takeaways=chart_takeaways,
+                source_validation_summary=analyze_output.get("source_validation_summary", {}),
+                platform_signals_summary=summarize_signals(fetch_output.get("signals", [])),
+                evidence_summary=summarize_evidence(
+                    fetch_output.get("items", []),
+                    fetch_output.get("signals", []),
+                    top_n,
+                ),
+                stats_summary=analyze_output.get("stats_summary", {}),
+                chart_captions=analyze_output.get("chart_captions", []),
+                chart_takeaways=analyze_output.get("chart_takeaways", []),
                 warnings=warnings,
             )
         packet["stage_timings"] = list(timings["stage_timings"])

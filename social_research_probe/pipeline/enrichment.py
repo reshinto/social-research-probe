@@ -32,6 +32,16 @@ _FILLER_BLOCKLIST = (
 )
 
 
+def _gate(
+    cfg, *, stage: str | None = None, service: str | None = None, technology: str | None = None
+) -> bool:
+    """Return the effective stage/service/technology gate with safe fallbacks."""
+    allows = getattr(cfg, "allows", None)
+    if callable(allows):
+        return bool(allows(stage=stage, service=service, technology=technology))
+    return True
+
+
 def _build_summary_prompt(title: str, channel: str, transcript: str, word_limit: int) -> str:
     """Build the prompt sent to the LLM ensemble for a ``word_limit``-word summary.
 
@@ -87,8 +97,12 @@ def _first_media_url_runner(cfg=None) -> LLMRunner | None:
 
     if cfg is None:
         cfg = load_active_config()
+    if not _gate(cfg, stage="enrich", service="llm"):
+        return None
     runner_name = getattr(cfg, "llm_runner", "none")
     if runner_name in {"none", "auto"}:
+        return None
+    if not _gate(cfg, technology=runner_name):
         return None
     try:
         runner = get_runner(runner_name)
@@ -108,7 +122,7 @@ async def _url_based_summary(url: str, word_limit: int, cfg=None) -> str | None:
         return None
     if cfg is None:
         cfg = load_active_config()
-    if not cfg.feature_enabled("media_url_summary_enabled"):
+    if not _gate(cfg, stage="enrich", service="media_url_summary"):
         return None
     video_id = _extract_video_id(url)
     cache = summary_cache() if video_id else None
@@ -223,10 +237,12 @@ async def _fetch_transcript_with_fallback(
     """Fetch transcript with whisper fallback; return cleaned text or empty string."""
     if cfg is None:
         cfg = load_active_config()
-    if not cfg.feature_enabled("transcript_fetch_enabled"):
+    if not _gate(cfg, stage="enrich", service="transcripts"):
         return ""
-    text = await asyncio.to_thread(fetch_transcript, item["url"])
-    if not (text and text.strip()):
+    text = ""
+    if _gate(cfg, technology="youtube_transcript_api"):
+        text = await asyncio.to_thread(fetch_transcript, item["url"])
+    if not (text and text.strip()) and _gate(cfg, technology="whisper"):
         async with whisper_sem:
             text = await asyncio.to_thread(fetch_transcript_whisper, item["url"])
     return " ".join(text.split())[:6000] if text else ""
@@ -263,7 +279,11 @@ async def _merge_or_pick(
     """Reconcile text+url summaries, or return whichever single one exists."""
     if cfg is None:
         cfg = load_active_config()
-    merge_on = cfg.feature_enabled("merged_summary_enabled") and not fast_mode_enabled()
+    merge_on = (
+        _gate(cfg, stage="enrich", service="merged_summary")
+        and _gate(cfg, stage="enrich", service="llm")
+        and not fast_mode_enabled()
+    )
     if text_summary and url_summary:
         divergence = jaccard_divergence(text_summary, url_summary)
         item["summary_divergence"] = divergence
@@ -305,7 +325,7 @@ async def _enrich_one(
     """
     if cfg is None:
         cfg = load_active_config()
-    if not cfg.feature_enabled("enrichment_enabled"):
+    if not _gate(cfg, stage="enrich"):
         return
     word_limit = int(cfg.tunables.get("per_item_summary_words", 100))
     threshold = float(cfg.tunables.get("summary_divergence_threshold", 0.4))
@@ -329,7 +349,7 @@ async def _enrich_one(
         item["summary"] = merged
 
 
-async def _enrich_top_n_with_transcripts(top_n: list[ScoredItem]) -> None:
+async def _enrich_top_n_with_transcripts(top_n: list[ScoredItem], *, cfg=None) -> None:
     """Fetch transcripts and AI summaries for top-N items concurrently.
 
     Transcript sources tried in order per item:
@@ -352,7 +372,7 @@ async def _enrich_top_n_with_transcripts(top_n: list[ScoredItem]) -> None:
 
     # Load config once per batch instead of per-item-per-helper (was ~4 reads
     # per item = 20 disk reads for a top-N run). Pass down via cfg= kwarg.
-    cfg = load_active_config()
+    cfg = cfg or load_active_config()
 
     async def _gather() -> None:
         # Limit concurrent whisper jobs to 2 to avoid memory exhaustion from
@@ -367,21 +387,3 @@ async def _enrich_top_n_with_transcripts(top_n: list[ScoredItem]) -> None:
         )
 
     await _gather()
-
-
-def _fetch_best_transcript(url: str, primary_fn, fallback_fn) -> str | None:
-    """Try primary transcript fetch; fall back to whisper if it returns nothing.
-
-    Both callables accept a URL and return ``str | None``.
-    All exceptions are swallowed so failures never crash the pipeline.
-    """
-    try:
-        text = primary_fn(url)
-    except Exception:
-        text = None
-    if text and text.strip():
-        return text
-    try:
-        return fallback_fn(url)
-    except Exception:
-        return None

@@ -5,7 +5,7 @@ graph TD
     B -->|"exa"| C["ExaBackend\ncorroboration/exa.py"]
     B -->|"brave"| D["BraveBackend\ncorroboration/brave.py"]
     B -->|"tavily"| E["TavilyBackend\ncorroboration/tavily.py"]
-    B -->|"host"| G["host strategy\nauto-selects every\nhealthy backend"]
+    B -->|"auto"| G["auto strategy\nauto-selects every\nhealthy backend"]
     B -->|"none"| H["No corroboration\nskip step entirely"]
 
     G1 & C & D & E & G --> I["check_claims(claims)\ncommon interface"]

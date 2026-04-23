@@ -224,7 +224,7 @@ def section_9_warnings(packet: ResearchPacket) -> str:
 
 
 def section_10_synthesis(text: str | None) -> str:
-    """Section 10: Compiled synthesis (LLM-generated or placeholder)."""
+    """Compiled Synthesis section (LLM-generated or placeholder)."""
     if not text:
         return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
@@ -233,9 +233,18 @@ def section_10_synthesis(text: str | None) -> str:
 
 
 def section_11_opportunity(text: str | None) -> str:
-    """Section 11: Opportunity analysis (LLM-generated or placeholder)."""
+    """Opportunity Analysis section (LLM-generated or placeholder)."""
     if not text:
         return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
+    from social_research_probe.render.markdown_to_html import md_to_html
+
+    return md_to_html(text)
+
+
+def section_12_summary(text: str | None) -> str:
+    """Final Summary section (LLM-generated or placeholder)."""
+    if not text:
+        return "<p><em>(LLM summary unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.render.markdown_to_html import md_to_html
 
     return md_to_html(text)

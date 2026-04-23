@@ -6,7 +6,7 @@ Everything `srp` reads at runtime lives in two files under the data directory (d
 
 | File | Contents | Permissions |
 |---|---|---|
-| `config.toml` | Non-secret settings: which runner to use, how many items to fetch, which backends are allowed, feature toggles | user-readable |
+| `config.toml` | Non-secret settings: which runner to use, how many items to fetch, and which stages, services, technologies, and debug switches are enabled | user-readable |
 | `secrets.toml` | API keys and anything sensitive | `0600` (user-only) |
 
 Override the data directory with `--data-dir <path>` or the `SRP_DATA_DIR` environment variable.
@@ -15,7 +15,7 @@ Override the data directory with `--data-dir <path>` or the `SRP_DATA_DIR` envir
 
 ## config.toml — every key
 
-This is an annotated view of [`config.toml.example`](../social_research_probe/config.toml.example). Every key is optional; missing keys fall back to the defaults shown.
+This is an annotated view of [`config.toml.example`](../config.toml.example). Every key is optional; missing keys fall back to the defaults shown.
 
 ### `[llm]` — LLM runner defaults
 
@@ -27,7 +27,7 @@ timeout_seconds = 60
 
 | Key | Default | What it controls |
 |---|---|---|
-| `runner` | `none` | The primary LLM runner for CLI summaries, `llm_search` corroboration, and sections 10–11 synthesis. `none` disables runner subprocesses; CLI sections 10–11 stay placeholders, while the Claude Code skill may still use the host model for skill-only language work. |
+| `runner` | `none` | The primary LLM runner for CLI summaries, `llm_search` corroboration, and report synthesis. `none` disables runner subprocesses; Compiled Synthesis, Opportunity Analysis, and Final Summary stay placeholders, while the Claude Code skill may still use the host model for skill-only language work. |
 | `timeout_seconds` | `60` | Per-call wall-clock timeout for the runner subprocess. |
 
 Per-runner subsections (`[llm.claude]`, `[llm.gemini]`, `[llm.codex]`, `[llm.local]`) accept `model`, `binary`, and `extra_flags` — see [LLM Runners](llm-runners.md).
@@ -40,14 +40,14 @@ Defaults: `trust = 0.45`, `trend = 0.30`, `opportunity = 0.25`. Uncomment any su
 
 ```toml
 [corroboration]
-backend = "host"         # host | llm_search | exa | brave | tavily | none
+backend = "auto"         # auto | llm_search | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 ```
 
 | Key | Default | What it controls |
 |---|---|---|
-| `backend` | `host` | `host` tries every healthy backend; `none` disables corroboration. |
+| `backend` | `auto` | `auto` tries every healthy backend; `none` disables corroboration. |
 | `max_claims_per_item` | `5` | Upper bound on claims extracted per top-N item. |
 | `max_claims_per_session` | `15` | Upper bound across the whole run. |
 
@@ -70,22 +70,49 @@ cache_ttl_channel_hours = 24
 | `cache_ttl_search_hours` | `6` | Freshness window for cached search results. |
 | `cache_ttl_channel_hours` | `24` | Freshness window for cached channel metadata. |
 
-### `[features]` — toggles for optional stages
+### `[stages]` — highest-priority pipeline gates
 
-Every toggle is **independent**; disabling one never breaks another. Highlights:
+When a stage is `false`, everything in that stage is skipped.
 
 | Key | Default | Effect when `false` |
 |---|---|---|
-| `enrichment_enabled` | `true` | Skip transcripts + summaries entirely. |
-| `transcript_fetch_enabled` | `true` | Skip transcripts but still summarise (from title/description). |
-| `media_url_summary_enabled` | `true` | Do not send media URLs to Gemini for direct ingestion. |
-| `merged_summary_enabled` | `true` | Skip reconciliation of transcript vs URL summaries. |
-| `charts_enabled` | `true` | Skip chart generation. |
-| `synthesis_enabled` | `true` | Leave sections 10–11 as placeholders even if a runner is configured. |
-| `html_report_enabled` | `true` | Skip the HTML report (Markdown is always written as the fallback). |
-| `corroboration_enabled` | `true` | Skip corroboration entirely (overrides `backend`). |
-| `<backend>_enabled` | `true` | Per-backend gate. `llm_search_enabled` is the runner-agnostic agentic-search backend and is independent of the per-runner `<runner>_service_enabled` gates. |
-| `<runner>_service_enabled` | `false` | Whether the runner is eligible for the ensemble fan-out (the primary `llm.runner` is always allowed). `srp install-skill` auto-enables the gate for the runner you select. |
+| `fetch` | `true` | Skip platform data retrieval entirely. |
+| `score` | `true` | Skip ranking and score calculation. |
+| `enrich` | `true` | Skip transcripts and enrichment summaries. |
+| `corroborate` | `true` | Skip claim corroboration. |
+| `analyze` | `true` | Skip statistics, charts, and chart takeaways. |
+| `synthesis` | `true` | Skip Compiled Synthesis, Opportunity Analysis, and Final Summary generation. |
+| `report` | `true` | Skip report-writing services entirely. |
+
+### `[services.<stage>]` — service gates inside each stage
+
+Service gates run after stage gates. They let the pipeline continue through a
+stage while selectively disabling one capability inside it.
+
+| Key | Default | Effect when `false` |
+|---|---|---|
+| `services.fetch.platform_api` | `true` | Do not call the platform API during fetch. |
+| `services.score.scoring` | `true` | Skip scoring calculations. |
+| `services.enrich.transcripts` | `true` | Skip transcript retrieval. |
+| `services.enrich.llm` | `true` | Skip LLM-backed enrichment work. |
+| `services.enrich.media_url_summary` | `true` | Skip direct media-URL summarisation. |
+| `services.enrich.merged_summary` | `true` | Skip transcript/URL summary reconciliation. |
+| `services.corroborate.corroboration` | `true` | Skip corroboration calls inside the corroborate stage. |
+| `services.analyze.statistics` | `true` | Skip statistical analysis. |
+| `services.analyze.charts` | `true` | Skip chart generation. |
+| `services.analyze.chart_takeaways` | `true` | Skip deterministic chart takeaways. |
+| `services.report.html_report` | `true` | Skip HTML report generation. |
+| `services.report.audio_report` | `true` | Skip pre-rendered report audio generation. |
+
+### `[technologies]` — implementation/provider gates
+
+Technology gates run after stage and service gates. They disable one concrete
+provider without disabling peer providers in the same service category.
+
+### `[debug]`
+
+`technology_logs_enabled` controls the before/after stderr logs around concrete
+technology calls. `SRP_LOGS=1` still overrides it at runtime.
 
 ### `[tunables]` — thresholds you rarely need to touch
 
@@ -93,13 +120,6 @@ Every toggle is **independent**; disabling one never breaks another. Highlights:
 [tunables]
 summary_divergence_threshold = 0.4
 per_item_summary_words = 100
-```
-
-### `[logging]`
-
-```toml
-[logging]
-service_logs_enabled = false   # overridden at runtime by SRP_LOGS=1
 ```
 
 ### Full key list
@@ -181,7 +201,7 @@ This means you can safely re-run `srp setup` after upgrading `srp` — new confi
 | Objective | Key settings |
 |---|---|
 | **Cheapest** — free LLM + free corroboration | `llm.runner = "gemini"`, `corroboration.backend = "llm_search"`, `platforms.youtube.enrich_top_n = 3` |
-| **Deepest** — everything on | `llm.runner = "claude"`, `corroboration.backend = "host"`, `max_items = 100`, `enrich_top_n = 10` |
+| **Deepest** — everything on | `llm.runner = "claude"`, `corroboration.backend = "auto"`, `max_items = 100`, `enrich_top_n = 10` |
 | **Fastest** — iterate quickly | `SRP_FAST_MODE=1`, `max_items = 10`, `enrich_top_n = 3` |
 | **Offline** — no cloud calls | `llm.runner = "local"`, `corroboration.backend = "none"`, Whisper handles transcripts |
 

@@ -146,9 +146,22 @@ def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
 
     return report_cmd.run(
         args.packet,
-        synthesis_10_path=args.synthesis_10,
-        synthesis_11_path=args.synthesis_11,
+        compiled_synthesis_path=args.compiled_synthesis_path,
+        opportunity_analysis_path=args.opportunity_analysis_path,
+        final_summary_path=args.final_summary_path,
         out_path=args.out,
+        data_dir=data_dir,
+    )
+
+
+def _handle_serve_report(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.commands import serve_report as serve_report_cmd
+
+    return serve_report_cmd.run(
+        args.report,
+        host=args.host,
+        port=args.port,
+        voicebox_base=args.voicebox_base,
     )
 
 

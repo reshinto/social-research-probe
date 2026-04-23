@@ -17,7 +17,7 @@ import sys
 from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
-from social_research_probe.corroboration.registry import canonical_backend_name, get_backend
+from social_research_probe.corroboration.registry import get_backend
 from social_research_probe.utils.pipeline_cache import (
     corroboration_cache,
     get_json,
@@ -87,9 +87,7 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     """
     import dataclasses
 
-    normalized_backends = list(
-        dict.fromkeys(canonical_backend_name(name) for name in backend_names)
-    )
+    normalized_backends = list(dict.fromkeys(backend_names))
     cache = corroboration_cache()
     cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_backends)))
     cached = get_json(cache, cache_key)

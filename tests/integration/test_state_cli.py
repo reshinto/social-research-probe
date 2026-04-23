@@ -24,7 +24,7 @@ def _run(data_dir: Path, *args: str, stdin: str | None = None) -> subprocess.Com
 
 def test_show_topics_empty(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     result = _run(data_dir, "show-topics")
     assert result.returncode == 0
     assert "(no topics)" in result.stdout or result.stdout.strip() == ""
@@ -32,7 +32,7 @@ def test_show_topics_empty(tmp_path: Path):
 
 def test_add_then_show(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     add = _run(data_dir, "update-topics", "--add", '"ai agents"|"robotics"')
     assert add.returncode == 0, add.stderr
     show = _run(data_dir, "show-topics", "--output", "json")
@@ -43,7 +43,7 @@ def test_add_then_show(tmp_path: Path):
 
 def test_duplicate_add_exits_3(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     _run(data_dir, "update-topics", "--add", '"ai agents"')
     result = _run(data_dir, "update-topics", "--add", '"ai agents"')
     assert result.returncode == 3
@@ -52,7 +52,7 @@ def test_duplicate_add_exits_3(tmp_path: Path):
 
 def test_config_check_secrets_json(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     result = _run(
         data_dir,
         "config",
@@ -71,7 +71,7 @@ def test_config_check_secrets_json(tmp_path: Path):
 
 def test_config_set_secret_from_stdin(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     result = _run(
         data_dir,
         "config",
@@ -98,7 +98,7 @@ def test_config_set_secret_from_stdin(tmp_path: Path):
 
 def test_suggest_and_apply(tmp_path: Path):
     data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     suggest = _run(data_dir, "suggest-topics", "--count", "2", "--output", "json")
     assert suggest.returncode == 0
     show_pending = _run(data_dir, "show-pending", "--output", "json")

@@ -9,11 +9,13 @@ from __future__ import annotations
 import copy
 import io
 import json
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 
 from social_research_probe.cli import _emit, _id_selector, main
+from social_research_probe.render.html import serve_report_command
 
 _VALID_PACKET = {
     "topic": "ai",
@@ -295,6 +297,39 @@ class TestResearchCommand:
         assert calls == [{"include_shorts": True, "fetch_transcripts": True}]
         out = capsys.readouterr().out.strip()
         assert out.endswith(".html") or out.endswith(".md")
+
+
+class TestServeReportCommand:
+    def test_serve_report_dispatch(self, monkeypatch, tmp_path):
+        report = tmp_path / "report.html"
+        report.write_text("<html></html>", encoding="utf-8")
+        calls = []
+
+        monkeypatch.setattr(
+            "social_research_probe.commands.serve_report.run",
+            lambda report_path, host, port, voicebox_base: (
+                calls.append((report_path, host, port, voicebox_base)) or 0
+            ),
+        )
+
+        result = main(
+            [
+                "--data-dir",
+                str(tmp_path),
+                "serve-report",
+                "--report",
+                str(report),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "9001",
+                "--voicebox-base",
+                "http://127.0.0.1:17493",
+            ]
+        )
+
+        assert result == 0
+        assert calls == [(str(report), "127.0.0.1", 9001, "http://127.0.0.1:17493")]
 
 
 class TestInstallSkillTargetValidation:
@@ -811,6 +846,12 @@ class TestPromptForSecrets:
 class TestCopyConfigExample:
     """Unit tests for install_skill._copy_config_example."""
 
+    def test_bundled_config_uses_repo_root_template(self):
+        from social_research_probe.commands.install_skill import _BUNDLED_CONFIG
+
+        assert Path("config.toml.example").resolve() == _BUNDLED_CONFIG
+        assert _BUNDLED_CONFIG.exists()
+
     def test_copies_example_when_config_absent(self, tmp_path):
         from social_research_probe.commands.install_skill import _copy_config_example
 
@@ -837,7 +878,9 @@ class TestCopyConfigExample:
         _copy_config_example(tmp_path)
         merged = tomllib.loads(existing.read_text(encoding="utf-8"))
         assert merged["llm"]["runner"] == "claude"
-        assert "features" in merged
+        assert "stages" in merged
+        assert "services" in merged
+        assert "technologies" in merged
         assert "platforms" in merged
 
     def test_merge_is_idempotent(self, tmp_path):
@@ -871,7 +914,7 @@ class TestPromptForRunner:
         _prompt_for_runner(tmp_path, _input=lambda p="": "1")  # 1 = claude
         assert written == {
             "llm.runner": "claude",
-            "features.claude_service_enabled": "true",
+            "technologies.claude": "true",
         }
 
     def test_none_choice_writes_none(self, tmp_path, monkeypatch):
@@ -933,11 +976,35 @@ class TestPromptForRunner:
 class TestRequiredSynthesis:
     """Unit tests for cli._run_required_synthesis and envelope output."""
 
+    def test_returns_none_when_synthesis_stage_disabled(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+            def stage_enabled(self, name: str) -> bool:
+                return name != "synthesis"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        assert _run_required_synthesis({}) is None
+
     def test_returns_none_when_runner_is_none(self, monkeypatch):
         from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "none"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        assert _run_required_synthesis({}) is None
+
+    def test_returns_none_when_llm_service_disabled(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
+
+        class _Cfg:
+            default_structured_runner = "claude"
+
+            def service_enabled(self, name: str) -> bool:
+                return name != "llm"
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         assert _run_required_synthesis({}) is None
@@ -956,16 +1023,25 @@ class TestRequiredSynthesis:
 
             def run(self, prompt, *, schema=None):
                 captured["schema"] = schema
-                return {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+                return {
+                    "compiled_synthesis": "compiled synthesis text",
+                    "opportunity_analysis": "opportunity analysis text",
+                    "report_summary": "final summary text",
+                }
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
         result = _run_required_synthesis(_VALID_PACKET)
-        assert result == {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+        assert result == {
+            "compiled_synthesis": "compiled synthesis text",
+            "opportunity_analysis": "opportunity analysis text",
+            "report_summary": "final summary text",
+        }
         assert captured["schema"]["type"] == "object"
         assert set(captured["schema"]["required"]) == {
             "compiled_synthesis",
             "opportunity_analysis",
+            "report_summary",
         }
 
     def test_returns_none_when_all_runners_fail(self, monkeypatch):
@@ -995,6 +1071,22 @@ class TestRequiredSynthesis:
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _Runner())
         assert _run_required_synthesis(_VALID_PACKET) is None
 
+    def test_skips_runners_disabled_by_technology_config(self, monkeypatch):
+        from social_research_probe.cli import _run_required_synthesis
+
+        class _Cfg:
+            default_structured_runner = "gemini"
+
+            def technology_enabled(self, name: str) -> bool:
+                return False
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
+        monkeypatch.setattr(
+            "social_research_probe.cli.get_runner",
+            lambda name: (_ for _ in ()).throw(AssertionError("runner lookup should be skipped")),
+        )
+        assert _run_required_synthesis(_VALID_PACKET) is None
+
     def test_falls_back_when_preferred_structured_runner_fails(self, monkeypatch):
         from social_research_probe.cli import _run_required_synthesis
 
@@ -1019,7 +1111,11 @@ class TestRequiredSynthesis:
 
             def run(self, prompt, *, schema=None):
                 calls.append("codex.run")
-                return {"compiled_synthesis": "s10 text", "opportunity_analysis": "s11 text"}
+                return {
+                    "compiled_synthesis": "compiled synthesis text",
+                    "opportunity_analysis": "opportunity analysis text",
+                    "report_summary": "final summary text",
+                }
 
         def fake_get_runner(name: str):
             if name == "gemini":
@@ -1037,8 +1133,9 @@ class TestRequiredSynthesis:
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", fake_get_runner)
         assert _run_required_synthesis(_VALID_PACKET) == {
-            "compiled_synthesis": "s10 text",
-            "opportunity_analysis": "s11 text",
+            "compiled_synthesis": "compiled synthesis text",
+            "opportunity_analysis": "opportunity analysis text",
+            "report_summary": "final summary text",
         }
         assert calls == [
             "gemini.health",
@@ -1056,12 +1153,18 @@ class TestRequiredSynthesis:
         monkeypatch.setattr(
             "social_research_probe.cli._attach_synthesis",
             lambda pkt: pkt.update(
-                {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"}
+                {
+                    "compiled_synthesis": "synth10",
+                    "opportunity_analysis": "synth11",
+                    "report_summary": "synth12",
+                }
             ),
         )
         main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
         out = capsys.readouterr().out.strip()
-        assert out.startswith("file://") and out.endswith(".html")
+        reports = list((tmp_path / "reports").glob("*.html"))
+        assert len(reports) == 1
+        assert out == serve_report_command(reports[0])
 
     def test_no_html_still_emits_synthesized_packet(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
@@ -1071,7 +1174,11 @@ class TestRequiredSynthesis:
         monkeypatch.setattr(
             "social_research_probe.cli._attach_synthesis",
             lambda pkt: pkt.update(
-                {"compiled_synthesis": "synth10", "opportunity_analysis": "synth11"}
+                {
+                    "compiled_synthesis": "synth10",
+                    "opportunity_analysis": "synth11",
+                    "report_summary": "synth12",
+                }
             ),
         )
         main(
@@ -1089,7 +1196,7 @@ class TestRequiredSynthesis:
         # --no-html falls back to Markdown report
         assert out.endswith(".md")
 
-    def test_runner_none_emits_packet_without_sections_10_11(self, monkeypatch, tmp_path, capsys):
+    def test_runner_none_emits_packet_without_sections_10_12(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
@@ -1125,6 +1232,22 @@ class TestResearchPreflightWarning:
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _UnhealthyRunner())
+        monkeypatch.setattr(
+            "social_research_probe.pipeline.run_research",
+            AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
+        )
+        monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
+        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        assert result == 0
+
+    def test_llm_service_disabled_skips_runner_preflight(self, monkeypatch, tmp_path):
+        class _Cfg:
+            default_structured_runner = "claude"
+
+            def service_enabled(self, name: str) -> bool:
+                return name != "llm"
+
+        monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
@@ -1174,12 +1297,17 @@ class TestAttachSynthesis:
         """_attach_synthesis iterates children when packet has a 'multi' list."""
         from social_research_probe.cli import _attach_synthesis
 
-        synth = {"compiled_synthesis": "s10", "opportunity_analysis": "s11"}
+        synth = {
+            "compiled_synthesis": "compiled synthesis",
+            "opportunity_analysis": "opportunity analysis",
+            "report_summary": "final summary",
+        }
         monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: synth)
         packet = {"multi": [{"topic": "a"}, {"topic": "b"}]}
         _attach_synthesis(packet)
         for child in packet["multi"]:
-            assert child["compiled_synthesis"] == "s10"
+            assert child["compiled_synthesis"] == "compiled synthesis"
+            assert child["report_summary"] == "final summary"
 
     def test_attach_synthesis_multi_child_synthesis_none_skips_update(self, monkeypatch):
         """_attach_synthesis skips update for children when synthesis returns None."""
@@ -1194,11 +1322,16 @@ class TestAttachSynthesis:
         """_attach_synthesis merges synthesis into the packet when synthesis is returned."""
         from social_research_probe.cli import _attach_synthesis
 
-        synth = {"compiled_synthesis": "s10", "opportunity_analysis": "s11"}
+        synth = {
+            "compiled_synthesis": "compiled synthesis",
+            "opportunity_analysis": "opportunity analysis",
+            "report_summary": "final summary",
+        }
         monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: synth)
         packet = {"topic": "ai"}
         _attach_synthesis(packet)
-        assert packet["compiled_synthesis"] == "s10"
+        assert packet["compiled_synthesis"] == "compiled synthesis"
+        assert packet["report_summary"] == "final summary"
 
     def test_attach_synthesis_single_packet_synthesis_none_no_update(self, monkeypatch):
         """_attach_synthesis leaves the packet unchanged when synthesis returns None."""

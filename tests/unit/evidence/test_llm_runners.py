@@ -107,11 +107,11 @@ class _StubConfig:
 
     llm_runner = "claude"
     preferred_free_text_runner = "claude"
-    claude_as_service = True
-    gemini_as_service = False
-    codex_as_service = False
 
-    def feature_enabled(self, name: str) -> bool:
+    def service_enabled(self, name: str) -> bool:
+        return True
+
+    def technology_enabled(self, name: str) -> bool:
         return True
 
 

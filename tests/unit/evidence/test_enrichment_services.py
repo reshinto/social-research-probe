@@ -90,7 +90,7 @@ def test_fallback_transcript_summary_handles_empty_input():
 class _StubConfig:
     tunables: ClassVar[dict] = {}
 
-    def feature_enabled(self, flag: str) -> bool:
+    def allows(self, **kwargs) -> bool:
         return True
 
 

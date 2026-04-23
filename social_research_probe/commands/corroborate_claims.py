@@ -22,6 +22,7 @@ import json
 import sys
 from pathlib import Path
 
+from social_research_probe.config import load_active_config
 from social_research_probe.corroboration.host import corroborate_claim
 from social_research_probe.validation.claims import Claim
 
@@ -52,6 +53,18 @@ def run(
             valid JSON.
     """
     from social_research_probe.errors import ValidationError
+
+    cfg = load_active_config()
+    if hasattr(cfg, "stage_enabled") and not cfg.stage_enabled("corroborate"):
+        raise ValidationError(
+            "cannot corroborate claims: stages.corroborate is false. "
+            "Enable the corroborate stage to use corroboration backends."
+        )
+    if hasattr(cfg, "service_enabled") and not cfg.service_enabled("corroboration"):
+        raise ValidationError(
+            "cannot corroborate claims: services.corroboration is false. "
+            "Enable the corroboration service to use corroboration backends."
+        )
 
     try:
         with open(input_path) as f:

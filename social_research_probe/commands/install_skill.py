@@ -17,7 +17,7 @@ from social_research_probe.config import resolve_data_dir
 from social_research_probe.errors import ValidationError
 
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
-_BUNDLED_CONFIG = Path(__file__).parent.parent / "config.toml.example"
+_BUNDLED_CONFIG = Path(__file__).resolve().parents[2] / "config.toml.example"
 
 # (secret_name, description, signup_url) — url shown so user can register before entering key.
 _KEY_PROMPTS: list[tuple[str, str, str]] = [
@@ -134,7 +134,8 @@ def _copy_config_example(data_dir: Path) -> None:
 
 def _merge_missing_config_keys(dest: Path) -> None:
     """Add keys/sections from the bundled example that are missing in *dest*."""
-    from social_research_probe.commands.config import _emit_table
+    from social_research_probe.commands.config import _emit_table, _order_like_template
+    from social_research_probe.config import DEFAULT_CONFIG
 
     with dest.open("rb") as f:
         existing = tomllib.load(f)
@@ -146,8 +147,9 @@ def _merge_missing_config_keys(dest: Path) -> None:
     if not added:
         return
 
+    ordered = _order_like_template(existing, DEFAULT_CONFIG)
     lines: list[str] = []
-    for sec, entries in existing.items():
+    for sec, entries in ordered.items():
         _emit_table(sec, entries, lines)
     dest.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     print(f"Added {len(added)} new config key(s) to {dest}:")
@@ -201,8 +203,8 @@ def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
     write_config_value(data_dir, "llm.runner", chosen)
     print(f"  runner set to '{chosen}'.")
     if chosen != "none":
-        write_config_value(data_dir, f"features.{chosen}_service_enabled", "true")
-        print(f"  features.{chosen}_service_enabled set to true.")
+        write_config_value(data_dir, f"technologies.{chosen}", "true")
+        print(f"  technologies.{chosen} set to true.")
 
 
 def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:

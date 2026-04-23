@@ -6,7 +6,7 @@ value regressions, not just shape regressions.
 
 ## What this suite is protecting
 
-The legacy `tests/unit/` suite enforces 100% **line** coverage but many
+The existing `tests/unit/` suite enforces 100% **line** coverage but many
 assertions check only "did not crash" or "right type". The evidence suite
 adds per-service **value** assertions derived from formulas, classical
 datasets, and recorded API payloads. Branch coverage alone cannot detect

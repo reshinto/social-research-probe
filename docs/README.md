@@ -33,7 +33,7 @@
 | [Statistics](statistics.md)                           | All 20+ statistical models: what they measure and how to interpret                        |
 | [Charts](charts.md)                                   | Every chart: what it shows, how to read it, what to look for                              |
 | [Statistical Model Reference](model-applicability.md) | Model-to-module mapping, minimum dataset sizes                                            |
-| [Synthesis Authoring](synthesis-authoring.md)         | Override sections 10–11 in the HTML report with custom text                               |
+| [Synthesis Authoring](synthesis-authoring.md)         | Override Compiled Synthesis, Opportunity Analysis, and Final Summary in the HTML report   |
 
 ---
 

@@ -26,6 +26,7 @@ import pytest
 from social_research_probe.corroboration.llm_search import (
     LLMSearchBackend,
     _classify_verdict,
+    _resolve_active_runner,
 )
 from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import CapabilityUnavailableError
@@ -40,8 +41,22 @@ from social_research_probe.validation.claims import Claim
 class _StubConfig:
     """Minimal active-config stub used by the backend's runner resolver."""
 
-    def __init__(self, runner_name: str) -> None:
+    def __init__(
+        self,
+        runner_name: str,
+        *,
+        llm_enabled: bool = True,
+        technologies: dict[str, bool] | None = None,
+    ) -> None:
         self.llm_runner = runner_name
+        self._llm_enabled = llm_enabled
+        self._technologies = technologies or {}
+
+    def service_enabled(self, name: str) -> bool:
+        return self._llm_enabled if name == "llm" else True
+
+    def technology_enabled(self, name: str) -> bool:
+        return self._technologies.get(name, True)
 
 
 class _StubRunner:
@@ -167,6 +182,43 @@ async def test_runner_none_config_skips_cleanly(monkeypatch):
     result = await backend.corroborate(_claim())
     assert result.verdict == "inconclusive"
     assert result.sources == []
+
+
+@pytest.mark.anyio
+async def test_llm_service_disabled_skips_llm_search(monkeypatch):
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_search.load_active_config",
+        lambda: _StubConfig("gemini", llm_enabled=False),
+    )
+    backend = LLMSearchBackend()
+    assert backend.health_check() is False
+    result = await backend.corroborate(_claim())
+    assert result.verdict == "inconclusive"
+    assert result.sources == []
+
+
+def test_resolve_active_runner_returns_none_when_llm_search_technology_disabled(monkeypatch):
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_search.load_active_config",
+        lambda: _StubConfig("gemini", technologies={"llm_search": False}),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_search.get_runner",
+        lambda name: (_ for _ in ()).throw(AssertionError("runner lookup should be skipped")),
+    )
+    assert _resolve_active_runner() is None
+
+
+def test_resolve_active_runner_returns_none_when_runner_technology_disabled(monkeypatch):
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_search.load_active_config",
+        lambda: _StubConfig("gemini", technologies={"gemini": False}),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.corroboration.llm_search.get_runner",
+        lambda name: (_ for _ in ()).throw(AssertionError("runner lookup should be skipped")),
+    )
+    assert _resolve_active_runner() is None
 
 
 @pytest.mark.parametrize(

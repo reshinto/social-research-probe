@@ -2,4 +2,4 @@
 - Install skill: `srp install-skill [--target <dir>]` — copies skill files to `~/.claude/skills/srp`.
 - Corroborate claims (standalone): `srp corroborate-claims --input <claims.json> --backends <name[,name...]> [--output <path>]`. Backends: `llm_search`, `tavily`, `brave`, `exa`.
 - Render charts for a saved packet: `srp render --packet <packet.json> [--output-dir <dir>]`.
-- Re-render report: `srp report --packet <packet.json> [--synthesis-10 <file>] [--synthesis-11 <file>] [--out <html>]`. Bypasses the LLM runner.
+- Re-render report: `srp report --packet <packet.json> [--compiled-synthesis <file>] [--opportunity-analysis <file>] [--final-summary <file>] [--out <html>]`. Bypasses the LLM runner.

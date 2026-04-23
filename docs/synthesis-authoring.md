@@ -1,12 +1,12 @@
-# Synthesis Authoring — Sections 10 & 11
+# Synthesis Authoring
 
 [Home](README.md) → Synthesis Authoring
 
-The HTML report includes 11 sections. Sections 1–9 are generated mechanically from the research packet. Sections 10 (Compiled Synthesis) and 11 (Opportunity Analysis) are written by an LLM runner when one is configured, or left as placeholders when `llm.runner = none`.
+The HTML report includes deterministic packet sections plus three synthesis sections: Compiled Synthesis, Opportunity Analysis, and Final Summary. Those synthesis sections are written by an LLM runner when one is configured, or left as placeholders when `llm.runner = none`.
 
-In the Claude Code skill, the host model can still draft sections 10–11 when `llm.runner = none`; `srp report` is how you inject that text back into the HTML report.
+In the Claude Code skill, the host model can still draft those synthesis sections when `llm.runner = none`; `srp report` is how you inject that text back into the HTML report.
 
-You can **override** sections 10–11 after the fact by passing plain-text files to `srp report`. This guide covers:
+You can **override** those synthesis sections after the fact by passing plain-text files to `srp report`. This guide covers:
 
 1. When you would override (and when you would not).
 2. How to invoke `srp report` with custom synthesis.
@@ -18,25 +18,27 @@ You can **override** sections 10–11 after the fact by passing plain-text files
 
 - The default LLM output missed a key finding you want to emphasise.
 - You ran research with `llm.runner = none` and now want to add synthesis by hand.
-- You used the Claude Code skill to draft sections 10–11 with the host model and want those sections written into the HTML report.
-- You want to use a different runner (e.g. Claude in a separate session) to author the sections, then inject them.
+- You used the Claude Code skill to draft the synthesis sections with the host model and want that text written into the HTML report.
+- You want to use a different runner (e.g. Claude in a separate session) to author the synthesis sections, then inject them.
 
-When **not** to override: if the default synthesis is acceptable, ship it. Re-running `srp report` only changes sections 10–11 — the charts, stats, and top-N come from the packet.
+When **not** to override: if the default synthesis is acceptable, ship it. Re-running `srp report` only changes Compiled Synthesis, Opportunity Analysis, and Final Summary — the charts, stats, and top-N come from the packet.
 
 ---
 
 ## How to invoke
 
 ```bash
-# 1. Write the two sections to plain-text files
-printf "%s\n" "- **What was searched:** …" > /tmp/s10.txt
-printf "%s\n" "- **Best content gap:** …"    > /tmp/s11.txt
+# 1. Write the synthesis sections to plain-text files
+printf "%s\n" "- **What was searched:** …" > /tmp/compiled-synthesis.txt
+printf "%s\n" "- **Best content gap:** …" > /tmp/opportunity-analysis.txt
+printf "%s\n" "- **Executive summary:** …" > /tmp/final-summary.txt
 
 # 2. Re-render the report, pointing at the original packet JSON
 srp report \
   --packet ~/.social-research-probe/reports/<packet>.json \
-  --synthesis-10 /tmp/s10.txt \
-  --synthesis-11 /tmp/s11.txt \
+  --compiled-synthesis /tmp/compiled-synthesis.txt \
+  --opportunity-analysis /tmp/opportunity-analysis.txt \
+  --final-summary /tmp/final-summary.txt \
   --out ~/.social-research-probe/reports/<packet>.html
 ```
 
@@ -44,7 +46,7 @@ srp report \
 
 ---
 
-## Section 10 — Compiled Synthesis template
+## Compiled Synthesis template
 
 Write in plain English. No statistics jargon. Bullet points only. Target audience: someone who has never seen a stats report.
 
@@ -56,7 +58,7 @@ Write in plain English. No statistics jargon. Bullet points only. Target audienc
 
 ---
 
-## Section 11 — Opportunity Analysis template
+## Opportunity Analysis template
 
 Write in plain English. Actionable bullets only. Each bullet should answer "what should someone DO with this information?"
 
@@ -72,4 +74,4 @@ Write in plain English. Actionable bullets only. Each bullet should answer "what
 
 - [Usage](usage.md) — end-to-end `srp research` workflow
 - [Charts](charts.md) — what each chart in the report shows
-- [LLM Runners](llm-runners.md) — enable a runner to get sections 10–11 generated automatically
+- [LLM Runners](llm-runners.md) — enable a runner to get the synthesis sections generated automatically

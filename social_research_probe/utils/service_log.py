@@ -12,7 +12,7 @@ import os
 import sys
 import time
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from typing import Literal, TypedDict
 
 _TRUTHY = {"1", "true", "yes", "on"}
@@ -56,6 +56,41 @@ async def service_log(
     On exception: records ``status="error"`` with the exception string, emits
     a failure line, then re-raises so callers can decide how to handle it.
     """
+    enabled = logs_enabled(cfg_logs_enabled)
+    timings = packet.setdefault("stage_timings", [])
+    if enabled:
+        _emit(f"▶ {name} started")
+    start = time.perf_counter()
+    try:
+        yield
+    except Exception as exc:
+        elapsed = time.perf_counter() - start
+        timings.append(
+            StageTiming(
+                stage=name,
+                elapsed_s=elapsed,
+                status="error",
+                error=str(exc),
+            )
+        )
+        if enabled:
+            _emit(f"✗ {name} failed in {elapsed:.2f}s: {exc}")
+        raise
+    else:
+        elapsed = time.perf_counter() - start
+        timings.append(StageTiming(stage=name, elapsed_s=elapsed, status="ok", error=""))
+        if enabled:
+            _emit(f"✓ {name} done in {elapsed:.2f}s")
+
+
+@contextmanager
+def service_log_sync(
+    name: str,
+    *,
+    packet: dict,
+    cfg_logs_enabled: bool = False,
+):
+    """Bracket a sync service call with start/end events + timing capture."""
     enabled = logs_enabled(cfg_logs_enabled)
     timings = packet.setdefault("stage_timings", [])
     if enabled:

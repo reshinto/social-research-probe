@@ -23,7 +23,7 @@ A typical run (top-N of 50 items, corroboration enabled, runner configured):
 | Stats (20+ models) | [`stats/`](../social_research_probe/stats/) — scipy + stdlib | 0 | medium |
 | Charts (10 types) | [`viz/`](../social_research_probe/viz/) — matplotlib | 0 | low |
 | Corroboration | search-API call per top item | 0 on `none`, bounded on host | low |
-| Synthesis (sections 10–11) | LLM runner, single call | ~2–5 KB | negligible |
+| Report synthesis | LLM runner, single call | ~2–5 KB | negligible |
 
 Translation: LLM usage is **bounded by top-N items** (default 5), not by the 50+ items you searched.
 
@@ -116,7 +116,7 @@ Runs under the free Gemini tier for most workloads; Whisper stays on your machin
 runner = "claude"
 
 [corroboration]
-backend = "host"           # multi-source: tavily + brave + exa + llm_search
+backend = "auto"           # multi-source: tavily + brave + exa + llm_search
 
 [platforms.youtube]
 max_items = 100
@@ -150,7 +150,7 @@ runner = "local"           # SRP_LOCAL_LLM_BIN points at your binary
 backend = "none"           # skip corroboration entirely
 ```
 
-CLI sections 10–11 use placeholders; transcript/description fallback summaries still work. In the Claude Code skill, the host model can still draft sections 10–11 separately.
+Compiled Synthesis, Opportunity Analysis, and Final Summary use placeholders; transcript/description fallback summaries still work. In the Claude Code skill, the host model can still draft those report sections separately.
 
 ---
 

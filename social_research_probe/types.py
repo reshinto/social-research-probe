@@ -72,31 +72,74 @@ class ScoringConfigSection(TypedDict):
     weights: dict[str, float]
 
 
-class FeaturesConfigSection(TypedDict):
-    """Per-feature on/off flags. All default True.
+class StagesConfigSection(TypedDict):
+    """Top-level stage on/off switches. Highest-priority execution gates."""
 
-    Flags are independent: disabling one never causes another to fail. A
-    feature whose upstream dependency is disabled silently no-ops. The final
-    report is never gated by these flags.
-    """
+    fetch: bool
+    score: bool
+    enrich: bool
+    corroborate: bool
+    analyze: bool
+    synthesis: bool
+    report: bool
 
-    corroboration_enabled: bool
-    llm_search_enabled: bool
-    exa_enabled: bool
-    brave_enabled: bool
-    tavily_enabled: bool
-    enrichment_enabled: bool
-    transcript_fetch_enabled: bool
-    media_url_summary_enabled: bool
-    merged_summary_enabled: bool
-    charts_enabled: bool
-    chart_takeaways_enabled: bool
-    synthesis_enabled: bool
-    html_report_enabled: bool
-    claude_service_enabled: bool
-    gemini_service_enabled: bool
-    codex_service_enabled: bool
-    local_service_enabled: bool
+
+class FetchServices(TypedDict, total=False):
+    platform_api: bool
+
+
+class ScoreServices(TypedDict, total=False):
+    scoring: bool
+
+
+class EnrichServices(TypedDict, total=False):
+    transcripts: bool
+    llm: bool
+    media_url_summary: bool
+    merged_summary: bool
+
+
+class CorroborateServices(TypedDict, total=False):
+    corroboration: bool
+
+
+class AnalyzeServices(TypedDict, total=False):
+    statistics: bool
+    charts: bool
+    chart_takeaways: bool
+
+
+class ReportServices(TypedDict, total=False):
+    html_report: bool
+    audio_report: bool
+
+
+class ServicesConfigSection(TypedDict, total=False):
+    """Service-level gates applied after stage gates."""
+
+    fetch: FetchServices
+    score: ScoreServices
+    enrich: EnrichServices
+    corroborate: CorroborateServices
+    analyze: AnalyzeServices
+    report: ReportServices
+
+
+class TechnologiesConfigSection(TypedDict):
+    """Technology/provider gates applied after stage and service gates."""
+
+    youtube_api: bool
+    youtube_transcript_api: bool
+    whisper: bool
+    voicebox: bool
+    claude: bool
+    gemini: bool
+    codex: bool
+    local: bool
+    llm_search: bool
+    exa: bool
+    brave: bool
+    tavily: bool
 
 
 class TunablesConfigSection(TypedDict):
@@ -106,10 +149,16 @@ class TunablesConfigSection(TypedDict):
     per_item_summary_words: int
 
 
-class LoggingConfigSection(TypedDict):
-    """Service-log master switch. Default False; env SRP_LOGS overrides."""
+class DebugConfigSection(TypedDict):
+    """Technology-call logging switches. Default False; env SRP_LOGS overrides."""
 
-    service_logs_enabled: bool
+    technology_logs_enabled: bool
+
+
+class VoiceboxConfigSection(TypedDict):
+    """Voicebox renderer defaults stored in config.toml."""
+
+    default_profile_name: str
 
 
 class AppConfig(TypedDict):
@@ -119,9 +168,12 @@ class AppConfig(TypedDict):
     corroboration: CorroborationConfigSection
     platforms: PlatformsConfigSection
     scoring: ScoringConfigSection
-    features: FeaturesConfigSection
+    stages: StagesConfigSection
+    services: ServicesConfigSection
+    technologies: TechnologiesConfigSection
     tunables: TunablesConfigSection
-    logging: LoggingConfigSection
+    debug: DebugConfigSection
+    voicebox: VoiceboxConfigSection
 
 
 class AdapterConfig(TypedDict, total=False):
@@ -299,6 +351,9 @@ class SynthesisContext(TypedDict):
     platform: str
     coverage: Coverage
     items: list[SynthesisItem]
+    source_validation_summary: SourceValidationSummary
+    platform_signals_summary: str
+    evidence_summary: str
     stats_highlights: list[str]
     chart_takeaways: list[str]
     warnings: list[str]
@@ -321,6 +376,7 @@ class ResearchPacket(TypedDict, total=False):
     stage_timings: list[dict]
     compiled_synthesis: str
     opportunity_analysis: str
+    report_summary: str
     html_report_path: str
 
 

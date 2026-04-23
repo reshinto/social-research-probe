@@ -86,7 +86,7 @@ def test_builtin_backends_are_registered_on_package_import():
     assert {"brave", "exa", "llm_search", "tavily"} <= set(names)
 
 
-def test_get_backend_accepts_legacy_llm_cli_alias():
-    """Older callers may still request llm_cli, but it resolves to llm_search."""
-    backend = reg_module.get_backend("llm_cli")
-    assert backend.name == "llm_search"
+def test_get_backend_rejects_unknown_backend_name():
+    """Only registered backend names are accepted by the registry."""
+    with pytest.raises(ValidationError, match="unknown corroboration backend"):
+        reg_module.get_backend("__retired_backend__")

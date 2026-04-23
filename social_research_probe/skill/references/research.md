@@ -8,10 +8,10 @@
    - `srp research <platform> <topic> <purpose1>,<purpose2>` — multiple purposes.
    - `srp research [<platform>] "<natural-language query>"` — CLI-side classification; use only when `llm.runner != none`.
 4. Flags: `--no-shorts` excludes Shorts (<90s), `--no-transcripts` skips enrichment, `--no-html` skips HTML.
-5. The CLI prints `[srp] HTML report: file:///…` to stderr. Surface that path to the user immediately.
+5. The CLI prints a ready-to-run `srp serve-report --report …` command. Surface that command to the user immediately.
 6. Emit a brief Markdown summary of sections 1-9 inline. Do not re-emit the full report.
    - Section 3 — per top-N item: write a 1-2 sentence host-LLM summary from `packet.items_top_n[i].transcript`; fall back to `one_line_takeaway`.
-7. For sections 10-11:
+7. For Compiled Synthesis, Opportunity Analysis, and Final Summary:
    - If `llm.runner != none` and the packet/report already contains synthesis, surface that output and do not duplicate it with the host LLM.
-   - If `llm.runner = none`, use the host LLM to write sections 10-11 inline from the packet.
-   - If the user wants the rendered HTML updated with host-written sections 10-11, create text files from that host-written synthesis and run `srp report --packet <json> --synthesis-10 <file> --synthesis-11 <file> --out <html>`. Author templates: `docs/synthesis-authoring.md` in the repo.
+   - If `llm.runner = none`, use the host LLM to write Compiled Synthesis, Opportunity Analysis, and Final Summary inline from the packet.
+   - If the user wants the rendered HTML updated with host-written synthesis, create text files from that host-written content and run `srp report --packet <json> --compiled-synthesis <file> --opportunity-analysis <file> --final-summary <file> --out <html>`. Author templates: `docs/synthesis-authoring.md` in the repo.

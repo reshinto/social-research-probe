@@ -38,6 +38,4 @@ def test_run_research_emits_packet_envelope(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     out = proc.stdout.strip()
-    assert out.endswith(".html") or out.endswith(".md")
-    # Stdout contract is the report file path; HTML/MD content is the source of truth.
-    assert out.startswith("file://") or out.endswith(".md")
+    assert out.startswith("srp serve-report --report ") or out.endswith(".md")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import patch
 
 import pytest
@@ -19,8 +20,8 @@ def _enable_summary_cache(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_url_based_summary_returns_none_when_flag_off(monkeypatch):
     class _Cfg:
-        def feature_enabled(self, name):
-            return name != "media_url_summary_enabled"
+        def allows(self, *, stage=None, service=None, technology=None):
+            return service != "media_url_summary"
 
     with patch("social_research_probe.pipeline.enrichment.load_active_config", return_value=_Cfg()):
         out = await enrichment._url_based_summary("https://y/1", word_limit=100)
@@ -30,7 +31,7 @@ async def test_url_based_summary_returns_none_when_flag_off(monkeypatch):
 @pytest.mark.asyncio
 async def test_url_based_summary_returns_none_when_no_capable_runner(monkeypatch):
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     with (
@@ -74,8 +75,8 @@ async def test_merge_or_pick_falls_back_to_transcript_excerpt():
 @pytest.mark.asyncio
 async def test_merge_or_pick_records_divergence_when_both_present():
     class _Cfg:
-        def feature_enabled(self, name):
-            return False  # disable merging so we can inspect divergence directly
+        def allows(self, *, stage=None, service=None, technology=None):
+            return service not in {"merged_summary", "llm"}
 
     item: dict = {"title": "vid"}
     text = "alpha beta gamma delta"
@@ -90,7 +91,7 @@ async def test_merge_or_pick_records_divergence_when_both_present():
 @pytest.mark.asyncio
 async def test_merge_or_pick_invokes_reconcile_when_enabled():
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     async def _fake_reconcile(*_a, **_k):
@@ -134,7 +135,7 @@ async def test_merge_or_pick_does_not_reconcile_in_fast_mode(monkeypatch):
     monkeypatch.setenv("SRP_FAST_MODE", "1")
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     async def _fake_reconcile(*_a, **_k):
@@ -158,7 +159,7 @@ async def test_merge_or_pick_skips_reconcile_when_divergence_below_threshold():
     """Reconciliation is expensive; skip it when the two summaries already agree."""
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     reconcile_calls: list = []
@@ -187,7 +188,7 @@ async def test_url_based_summary_uses_cache_on_second_call(_enable_summary_cache
     """Second call on same video_id reuses the cached URL summary — no runner call."""
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     class _Runner:
@@ -402,12 +403,36 @@ def test_first_media_url_runner_returns_none_when_llm_runner_disabled():
     get_runner.assert_not_called()
 
 
+def test_first_media_url_runner_returns_none_when_llm_service_gate_disabled():
+    class _Cfg:
+        llm_runner = "gemini"
+
+        def allows(self, *, stage=None, service=None, technology=None):
+            return service != "llm"
+
+    with patch("social_research_probe.llm.registry.get_runner") as get_runner:
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+    get_runner.assert_not_called()
+
+
+def test_first_media_url_runner_returns_none_when_runner_technology_disabled():
+    class _Cfg:
+        llm_runner = "gemini"
+
+        def allows(self, *, stage=None, service=None, technology=None):
+            return technology != "gemini"
+
+    with patch("social_research_probe.llm.registry.get_runner") as get_runner:
+        assert enrichment._first_media_url_runner(_Cfg()) is None
+    get_runner.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_url_based_summary_does_not_use_other_runner_when_llm_runner_disabled(monkeypatch):
     class _Cfg:
         llm_runner = "none"
 
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     async def _unexpected_summary(url, word_limit):
@@ -428,3 +453,32 @@ async def test_url_based_summary_does_not_use_other_runner_when_llm_runner_disab
 
     assert out is None
     get_runner.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fetch_transcript_with_fallback_skips_transcript_api_when_technology_disabled():
+    class _Cfg:
+        def allows(self, *, stage=None, service=None, technology=None):
+            if service == "transcripts":
+                return True
+            if technology == "youtube_transcript_api":
+                return False
+            if technology == "whisper":
+                return True
+            return True
+
+    def _fetch_transcript(url):
+        raise AssertionError("caption fetch should be skipped")
+
+    def _fetch_transcript_whisper(url):
+        return "whisper transcript"
+
+    text = await enrichment._fetch_transcript_with_fallback(
+        {"url": "https://example.com/v/1"},
+        _fetch_transcript,
+        _fetch_transcript_whisper,
+        asyncio.Semaphore(1),
+        cfg=_Cfg(),
+    )
+
+    assert text == "whisper transcript"

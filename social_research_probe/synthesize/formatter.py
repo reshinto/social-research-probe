@@ -1,14 +1,18 @@
 """Packet formatting and Markdown rendering for srp research output.
 
-Transforms a raw research packet (produced by the pipeline) into human-readable
-Markdown sections 1-11. Also builds the canonical research packet dict.
+Transforms a raw research packet (produced by the pipeline) into a
+human-readable Markdown report. Also builds the canonical research packet dict.
 
-Sections 1-9 are derived deterministically from packet data.
-Sections 10-11 (Compiled Synthesis, Opportunity Analysis) are read from the
-packet when available; otherwise a placeholder is shown.
+The deterministic report body comes from packet data. Compiled Synthesis,
+Opportunity Analysis, and Final Summary come from the packet when available;
+Final Summary falls back to a deterministic summary built from existing packet
+data when synthesis is disabled.
 """
 
 from __future__ import annotations
+
+import re
+from functools import lru_cache
 
 from social_research_probe.types import (
     ResearchPacket,
@@ -20,7 +24,18 @@ from social_research_probe.types import (
 from .explanations import contextual_explanation as _contextual_explanation
 from .explanations import infer_model as _infer_model
 
-__all__ = ["build_packet", "render_full", "render_sections_1_9"]
+__all__ = [
+    "build_fallback_report_summary",
+    "build_packet",
+    "render_full",
+    "render_sections_1_9",
+    "resolve_report_summary",
+]
+
+_UNAVAILABLE_SUMMARY_MARKERS = (
+    "LLM synthesis unavailable",
+    "LLM summary unavailable",
+)
 
 
 def build_packet(
@@ -124,22 +139,23 @@ _bulletise = _to_bullets
 def render_full(
     packet: ResearchPacket,
 ) -> str:
-    """Render all 11 sections as Markdown.
-
-    Sections 1-9 are derived from the packet. Sections 10-11 are read from
-    the packet itself; if omitted they indicate that synthesis was not stored.
-    """
+    """Render the full Markdown report from packet data and synthesis text."""
     body = render_sections_1_9(packet)
-    s10 = (
+    compiled_synthesis_text = (
         packet.get("compiled_synthesis")
         or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
     )
-    s11 = (
+    opportunity_analysis_text = (
         packet.get("opportunity_analysis")
         or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
     )
-    body += f"\n## 10. Compiled Synthesis\n\n{s10}\n"
-    body += f"\n## 11. Opportunity Analysis\n\n{s11}\n"
+    final_summary_text = (
+        resolve_report_summary(packet)
+        or "_(LLM summary unavailable — runner disabled or all runners failed; see terminal logs)_"
+    )
+    body += f"\n## 10. Compiled Synthesis\n\n{compiled_synthesis_text}\n"
+    body += f"\n## 11. Opportunity Analysis\n\n{opportunity_analysis_text}\n"
+    body += f"\n## 12. Final Summary\n\n{final_summary_text}\n"
     footer = _render_timing_footer(packet.get("stage_timings", []))
     if footer:
         body += f"\n{footer}\n"
@@ -209,3 +225,139 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
         "## 9. Warnings\n\n" + ("\n".join(f"- {w}" for w in warnings) if warnings else "_(none)_")
     )
     return "\n\n".join(parts) + "\n"
+
+
+def resolve_report_summary(packet: ResearchPacket) -> str | None:
+    """Return the best available section-12 summary for *packet*."""
+    report_summary = _usable_summary_text(packet.get("report_summary"))
+    if report_summary:
+        return report_summary
+    return build_fallback_report_summary(packet)
+
+
+def build_fallback_report_summary(packet: ResearchPacket) -> str | None:
+    """Build a non-LLM final summary from existing packet data."""
+    sentences: list[str] = []
+    topic = str(packet.get("topic", "") or "").strip()
+    platform = str(packet.get("platform", "") or "").strip()
+    if topic and platform:
+        sentences.append(f"This report covers {topic} on {platform}.")
+    elif topic:
+        sentences.append(f"This report covers {topic}.")
+
+    source_validation = packet.get("source_validation_summary", {})
+    if isinstance(source_validation, dict):
+        validated = int(source_validation.get("validated", 0) or 0)
+        partially = int(source_validation.get("partially", 0) or 0)
+        unverified = int(source_validation.get("unverified", 0) or 0)
+        low_trust = int(source_validation.get("low_trust", 0) or 0)
+        if any((validated, partially, unverified, low_trust)):
+            sentences.append(
+                "Source validation: "
+                f"{validated} validated, {partially} partial, "
+                f"{unverified} unverified, and {low_trust} low-trust sources."
+            )
+
+    compiled = _plain_sentences(packet.get("compiled_synthesis"), limit=1)
+    if compiled:
+        sentences.append("Compiled synthesis: " + " ".join(compiled))
+
+    opportunity = _plain_sentences(packet.get("opportunity_analysis"), limit=1)
+    if opportunity:
+        sentences.append("Opportunity analysis: " + " ".join(opportunity))
+
+    stats_summary = packet.get("stats_summary", {})
+    highlights = _plain_list_sentences(list(stats_summary.get("highlights", []) or []), limit=2)
+    if highlights:
+        sentences.append("Statistics highlights: " + " ".join(highlights))
+    elif stats_summary.get("low_confidence"):
+        sentences.append("Statistics are low confidence because the sample is small.")
+
+    chart_takeaways = _plain_list_sentences(list(packet.get("chart_takeaways", []) or []), limit=2)
+    if chart_takeaways:
+        sentences.append("Chart signals: " + " ".join(chart_takeaways))
+
+    signal_summary = _summary_sentences(packet.get("platform_signals_summary", ""), limit=2)
+    if signal_summary:
+        sentences.append("Platform signals: " + " ".join(signal_summary))
+
+    evidence_summary = _summary_sentences(packet.get("evidence_summary", ""), limit=2)
+    if evidence_summary:
+        sentences.append("Evidence summary: " + " ".join(evidence_summary))
+
+    warnings = _plain_list_sentences(list(packet.get("warnings", []) or []), limit=1)
+    if warnings:
+        sentences.append("Cautions: " + " ".join(warnings))
+
+    if not sentences:
+        return None
+    return " ".join(sentences)
+
+
+def _usable_summary_text(value: object) -> str:
+    """Return a clean stored summary value, filtering known placeholders."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if any(marker in text for marker in _UNAVAILABLE_SUMMARY_MARKERS):
+        return ""
+    return text
+
+
+@lru_cache(maxsize=128)
+def _markdown_to_plain_text(text: str) -> str:
+    """Collapse markdown-ish text into plain prose."""
+    cleaned = text.replace("\r\n", "\n")
+    cleaned = re.sub(r"```.+?```", " ", cleaned, flags=re.S)
+    cleaned = re.sub(r"`([^`]+)`", r"\1", cleaned)
+    cleaned = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", cleaned)
+    cleaned = re.sub(r"^\s{0,3}#{1,6}\s+", "", cleaned, flags=re.M)
+    cleaned = re.sub(r"^\s*[-*+]\s+", "", cleaned, flags=re.M)
+    cleaned = re.sub(r"^\s*\d+\.\s+", "", cleaned, flags=re.M)
+    cleaned = re.sub(r"[*_~]+", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def _plain_sentences(value: object, *, limit: int) -> list[str]:
+    """Return up to *limit* cleaned sentences from markdown-ish text."""
+    raw = _usable_summary_text(value)
+    if not raw:
+        return []
+    cleaned = _markdown_to_plain_text(raw)
+    if not cleaned:
+        return []
+    parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+    if not parts:
+        parts = [cleaned]
+    return [_ensure_sentence(part) for part in parts[:limit]]
+
+
+def _plain_list_sentences(values: list[object], *, limit: int) -> list[str]:
+    """Return up to *limit* cleaned sentences from a list of text fragments."""
+    sentences: list[str] = []
+    for value in values:
+        for sentence in _plain_sentences(value, limit=1):
+            sentences.append(sentence)
+            if len(sentences) >= limit:
+                return sentences
+    return sentences
+
+
+def _summary_sentences(text: str | None, *, limit: int) -> list[str]:
+    """Return up to *limit* sentences from a semicolon-separated packet summary."""
+    raw = _usable_summary_text(text)
+    if not raw:
+        return []
+    parts = [part.strip() for part in raw.split(";") if part.strip()]
+    return [_ensure_sentence(_markdown_to_plain_text(part)) for part in parts[:limit]]
+
+
+def _ensure_sentence(text: str) -> str:
+    """Ensure summary text ends with sentence punctuation."""
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    if cleaned[-1] not in ".!?":
+        return cleaned + "."
+    return cleaned

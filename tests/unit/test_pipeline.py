@@ -10,19 +10,23 @@ from unittest.mock import AsyncMock
 import pytest
 
 from social_research_probe.commands.parse import parse
-from social_research_probe.pipeline import (
+from social_research_probe.errors import ValidationError
+from social_research_probe.pipeline.charts import _render_charts
+from social_research_probe.pipeline.corroboration import _corroborate_top_n
+from social_research_probe.pipeline.enrichment import _enrich_top_n_with_transcripts
+from social_research_probe.pipeline.orchestrator import (
     _available_backends,
-    _build_stats_summary,
-    _build_svs,
-    _channel_credibility,
-    _corroborate_top_n,
-    _enrich_query,
     _maybe_register_fake,
-    _render_charts,
-    _score_item,
-    _zscore,
     run_research,
 )
+from social_research_probe.pipeline.scoring import (
+    _channel_credibility,
+    _enrich_query,
+    _score_item,
+    _zscore,
+)
+from social_research_probe.pipeline.stats import _build_stats_summary, _stats_models_for
+from social_research_probe.pipeline.svs import _build_svs
 
 
 def _write_purposes(tmp_path, purposes: dict):
@@ -212,6 +216,28 @@ async def test_run_research_returns_packet(monkeypatch, tmp_path):
     assert isinstance(packet["items_top_n"], list)
 
 
+async def test_run_research_degrades_when_fetch_stage_disabled(monkeypatch, tmp_path):
+    monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
+    _write_purposes(
+        tmp_path,
+        {
+            "latest-news": {
+                "method": "Track latest channels for breaking news",
+                "evidence_priorities": [],
+            }
+        },
+    )
+    (tmp_path / "config.toml").write_text(
+        "[stages]\nfetch = false\n",
+        encoding="utf-8",
+    )
+    raw = 'run-research platform:youtube "AI"->latest-news'
+    packet = await run_research(parse(raw), tmp_path)
+    assert packet["topic"] == "AI"
+    assert packet["items_top_n"] == []
+    assert packet["chart_captions"] == []
+
+
 async def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -260,7 +286,6 @@ async def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
             }
         },
     )
-    from social_research_probe.errors import ValidationError
 
     raw = 'run-research platform:youtube "AI"->nonexistent_purpose'
     cmd = parse(raw)
@@ -279,7 +304,6 @@ async def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
             }
         },
     )
-    from social_research_probe.errors import ValidationError
 
     raw = 'run-research platform:nonexistent "AI"->latest-news'
     cmd = parse(raw)
@@ -385,7 +409,6 @@ async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     )
     # Patch get_adapter to return an adapter whose health_check returns False
     import social_research_probe.pipeline.orchestrator as orchestrator_mod
-    from social_research_probe.errors import ValidationError
 
     class FailingAdapter:
         def health_check(self):
@@ -411,15 +434,11 @@ def test_render_charts_single_item_still_renders(tmp_path):
 
 
 def test_stats_models_for_zero_returns_empty():
-    from social_research_probe.pipeline import _stats_models_for
-
     assert _stats_models_for(0) == []
 
 
 class TestEnrichTopNWithTranscripts:
     async def test_stores_transcript_and_summary_when_available(self, monkeypatch):
-        from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
             lambda url: "first  line\nsecond  line " * 200,
@@ -435,8 +454,6 @@ class TestEnrichTopNWithTranscripts:
         assert items[0]["one_line_takeaway"] == "Multi-LLM generated summary."
 
     async def test_falls_back_to_transcript_excerpt_when_llm_unavailable(self, monkeypatch):
-        from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
             lambda url: "some transcript content",
@@ -453,8 +470,6 @@ class TestEnrichTopNWithTranscripts:
         assert items[0]["one_line_takeaway"] == "some transcript content"
 
     async def test_no_transcript_key_when_fetch_returns_none(self, monkeypatch):
-        from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
             lambda url: None,
@@ -469,8 +484,6 @@ class TestEnrichTopNWithTranscripts:
         assert items[0]["one_line_takeaway"] == "keep me"
 
     async def test_silently_recovers_from_extractor_exception(self, monkeypatch):
-        from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
         def boom(url):
             raise RuntimeError("network gone")
 
@@ -488,8 +501,6 @@ class TestEnrichTopNWithTranscripts:
         assert items[0]["one_line_takeaway"] == "still here"
 
     async def test_uses_whisper_when_caption_fetch_returns_none(self, monkeypatch):
-        from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
         monkeypatch.setattr(
             "social_research_probe.platforms.youtube.extract.fetch_transcript",
             lambda url: None,
@@ -509,8 +520,6 @@ class TestEnrichTopNWithTranscripts:
 
 
 async def test_enrich_top_n_skips_when_transcript_is_whitespace_only(monkeypatch):
-    from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
     monkeypatch.setattr(
         "social_research_probe.platforms.youtube.extract.fetch_transcript",
         lambda url: "   \n   ",
@@ -606,7 +615,6 @@ def test_available_backends_returns_empty_when_all_unhealthy(monkeypatch, tmp_pa
 def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
     """ValidationError from get_backend is silently skipped."""
     import social_research_probe.corroboration.registry as reg
-    from social_research_probe.errors import ValidationError
 
     monkeypatch.setattr(
         reg, "get_backend", lambda _name: (_ for _ in ()).throw(ValidationError("bad"))
@@ -615,7 +623,7 @@ def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
 
 
 def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path):
-    """A specific configured backend bypasses host auto-discovery."""
+    """A specific configured backend bypasses auto discovery."""
     import social_research_probe.corroboration.registry as reg
 
     class _Cfg:
@@ -640,6 +648,77 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
 
     monkeypatch.setattr(
         "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
+    assert _available_backends(tmp_path) == []
+
+
+def test_available_backends_returns_empty_when_stage_disables_corroboration(monkeypatch, tmp_path):
+    class _Cfg:
+        corroboration_backend = "auto"
+
+        def stage_enabled(self, name: str) -> bool:
+            return name != "corroborate"
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
+    assert _available_backends(tmp_path) == []
+
+
+def test_available_backends_returns_empty_when_service_disables_corroboration(
+    monkeypatch, tmp_path
+):
+    class _Cfg:
+        corroboration_backend = "auto"
+
+        def service_enabled(self, name: str) -> bool:
+            return name != "corroboration"
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
+    assert _available_backends(tmp_path) == []
+
+
+def test_available_backends_skips_backend_when_technology_is_disabled(monkeypatch, tmp_path):
+    import social_research_probe.corroboration.registry as reg
+
+    class _Cfg:
+        corroboration_backend = "exa"
+
+        def technology_enabled(self, name: str) -> bool:
+            return name != "exa"
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
+    monkeypatch.setattr(
+        reg,
+        "get_backend",
+        lambda name: (_ for _ in ()).throw(AssertionError("backend lookup should be skipped")),
+    )
+    assert _available_backends(tmp_path) == []
+
+
+def test_available_backends_skips_llm_search_when_llm_service_is_disabled(monkeypatch, tmp_path):
+    import social_research_probe.corroboration.registry as reg
+
+    class _Cfg:
+        corroboration_backend = "llm_search"
+
+        def technology_enabled(self, name: str) -> bool:
+            return True
+
+        def service_enabled(self, name: str) -> bool:
+            return name != "llm"
+
+    monkeypatch.setattr(
+        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+    )
+    monkeypatch.setattr(
+        reg,
+        "get_backend",
+        lambda name: (_ for _ in ()).throw(AssertionError("llm_search should be skipped")),
     )
     assert _available_backends(tmp_path) == []
 

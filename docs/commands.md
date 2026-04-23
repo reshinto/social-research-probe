@@ -36,7 +36,7 @@ Then run the same commands inside Claude Code by prefixing them with `/srp`:
 /srp apply-pending --topics all --purposes all
 ```
 
-The skill shells out to the CLI for all commands, so flags, quoting, and exit codes are identical. The host LLM remains available for skill-only language work when `llm.runner = none` such as mapping a free-form request to topic + purpose, summarizing the packet inline, and drafting sections 10-11. If `llm.runner` is set to a concrete provider, prefer the CLI-produced LLM output instead of duplicating it in the host.
+The skill shells out to the CLI for all commands, so flags, quoting, and exit codes are identical. The host LLM remains available for skill-only language work when `llm.runner = none` such as mapping a free-form request to topic + purpose, summarizing the packet inline, and drafting Compiled Synthesis or Opportunity Analysis. If `llm.runner` is set to a concrete provider, prefer the CLI-produced LLM output instead of duplicating it in the host.
 
 ---
 
@@ -71,14 +71,15 @@ Outputs a `ResearchPacket` (single topic) or `MultiResearchPacket` (multiple top
 Generate or regenerate an HTML report from an existing packet.
 
 ```bash
-srp report --packet <path> [--synthesis-10 <file>] [--synthesis-11 <file>] [--out <html-path>]
+srp report --packet <path> [--compiled-synthesis <file>] [--opportunity-analysis <file>] [--final-summary <file>] [--out <html-path>]
 ```
 
 | Flag | Description |
 |---|---|
 | `--packet PATH` | Path to the JSON packet file (required) |
-| `--synthesis-10 PATH` | File containing section 10 (Compiled Synthesis) |
-| `--synthesis-11 PATH` | File containing section 11 (Opportunity Analysis) |
+| `--compiled-synthesis PATH` | File containing Compiled Synthesis |
+| `--opportunity-analysis PATH` | File containing Opportunity Analysis |
+| `--final-summary PATH` | File containing Final Summary |
 | `--out PATH` | Output HTML path (default: auto-generated in data directory) |
 
 ---
@@ -205,7 +206,7 @@ Print all current settings.
 
 ```bash
 srp config set llm.runner claude
-srp config set corroboration.backend host
+srp config set corroboration.backend auto
 srp config set platforms.youtube.max_items 50     # how many videos to fetch (default: 20)
 srp config set platforms.youtube.recency_days 30  # how far back to search in days (default: 90)
 srp config set platforms.youtube.enrich_top_n 10  # how many top videos get transcripts + summaries (default: 5)
@@ -222,7 +223,7 @@ All settings and their defaults:
 | `platforms.youtube.enrich_top_n` | `5` | How many top-scored videos receive transcript fetch, LLM summary, and corroboration |
 | `platforms.youtube.cache_ttl_search_hours` | `6` | How long to cache search results |
 | `platforms.youtube.cache_ttl_channel_hours` | `24` | How long to cache channel metadata |
-| `corroboration.backend` | `host` | `host`, `llm_search`, `exa`, `brave`, `tavily`, or `none` |
+| `corroboration.backend` | `auto` | `auto`, `llm_search`, `exa`, `brave`, `tavily`, or `none` |
 | `corroboration.max_claims_per_item` | `5` | Maximum claims checked per enriched item |
 | `corroboration.max_claims_per_session` | `15` | Total claim budget per research run |
 
@@ -307,7 +308,7 @@ srp render --packet ~/.social-research-probe/reports/<name>.json --output-dir ./
 
 ### `srp report` (post-hoc synthesis)
 
-See the top of this page for `srp report` fields. The command **bypasses the LLM runner** — the packet stays as-is; only sections 10–11 are replaced with your files. See [synthesis-authoring.md](synthesis-authoring.md) for the author templates.
+See the top of this page for `srp report` fields. The command **bypasses the LLM runner** — the packet stays as-is; only Compiled Synthesis, Opportunity Analysis, and Final Summary are replaced with your files. See [synthesis-authoring.md](synthesis-authoring.md) for the author templates.
 
 ---
 

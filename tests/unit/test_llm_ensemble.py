@@ -176,6 +176,28 @@ async def test_multi_llm_prompt_disabled_when_runner_is_none(monkeypatch):
     assert calls == []
 
 
+async def test_multi_llm_prompt_disabled_when_llm_service_off(monkeypatch):
+    from social_research_probe.llm import ensemble as llm_mod
+
+    calls = []
+
+    class _FakeConfig:
+        llm_runner = "claude"
+        preferred_free_text_runner = "claude"
+
+        def service_enabled(self, name):
+            return name != "llm"
+
+    async def fake_run(name, p, task=""):
+        calls.append(name)
+        return "x"
+
+    monkeypatch.setattr(llm_mod, "load_active_config", lambda: _FakeConfig())
+    monkeypatch.setattr(llm_mod, "_run_provider", fake_run)
+    assert await multi_llm_prompt("anything") is None
+    assert calls == []
+
+
 async def test_multi_llm_prompt_returns_none_when_all_fail(monkeypatch):
     from social_research_probe.llm import ensemble as llm_mod
 
@@ -273,7 +295,7 @@ async def test_multi_llm_prompt_uses_local_runner(monkeypatch):
 
 
 async def test_service_flags_skip_disabled_providers_in_fanout(monkeypatch):
-    """Providers with <name>_service_enabled=False are excluded from the ensemble."""
+    """Providers with technologies.<name>=false are excluded from the ensemble."""
     from social_research_probe.llm import ensemble as llm_mod
 
     calls: list[str] = []
@@ -282,9 +304,11 @@ async def test_service_flags_skip_disabled_providers_in_fanout(monkeypatch):
         llm_runner = "claude"
         preferred_free_text_runner = None
 
-        def feature_enabled(self, name):
-            # gemini disabled as a service; codex enabled
-            return name != "gemini_service_enabled"
+        def service_enabled(self, name):
+            return True
+
+        def technology_enabled(self, name):
+            return name != "gemini"
 
     async def fake_run(name, prompt, task=""):
         calls.append(name)
@@ -297,16 +321,19 @@ async def test_service_flags_skip_disabled_providers_in_fanout(monkeypatch):
     assert "gemini" not in calls
 
 
-async def test_primary_runner_always_allowed_even_when_service_flag_off(monkeypatch):
-    """If llm_runner matches a provider, its service flag is ignored."""
+async def test_primary_runner_always_allowed_when_preferred_runner_is_set(monkeypatch):
+    """If preferred_free_text_runner is set, that runner is used directly."""
     from social_research_probe.llm import ensemble as llm_mod
 
     class _FakeConfig:
         llm_runner = "claude"
         preferred_free_text_runner = "claude"
 
-        def feature_enabled(self, name):
-            return False  # all service flags off
+        def service_enabled(self, name):
+            return True
+
+        def technology_enabled(self, name):
+            return False
 
     calls: list[str] = []
 
@@ -320,11 +347,23 @@ async def test_primary_runner_always_allowed_even_when_service_flag_off(monkeypa
     assert calls == ["claude"]
 
 
-async def test_service_enabled_falls_back_when_cfg_lacks_feature_enabled():
-    """Stub Configs without feature_enabled default to allowing every service."""
+async def test_service_enabled_defaults_true_when_cfg_lacks_technology_gate():
+    """Stub Configs without technology_enabled default to allowing every service."""
     from social_research_probe.llm.ensemble import _service_enabled
 
     class _Stub:
         llm_runner = "none"
 
     assert _service_enabled(_Stub(), "claude") is True
+
+
+async def test_service_enabled_returns_false_when_llm_service_off():
+    from social_research_probe.llm.ensemble import _service_enabled
+
+    class _Stub:
+        llm_runner = "claude"
+
+        def service_enabled(self, name):
+            return name != "llm"
+
+    assert _service_enabled(_Stub(), "claude") is False

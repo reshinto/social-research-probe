@@ -43,6 +43,11 @@ class ClassifiedQuery:
 
 def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuery:
     """Classify a free-form query into (topic, purpose) and persist new entries."""
+    if hasattr(cfg, "service_enabled") and not cfg.service_enabled("llm"):
+        raise ValidationError(
+            "cannot classify query: services.llm is false. "
+            "Provide explicit topic+purpose or enable the LLM service."
+        )
     if cfg.default_structured_runner == "none":
         raise ValidationError(
             "cannot classify query: llm.runner is disabled. "

@@ -1,5 +1,6 @@
-"""TTS backend adapters for pre-rendering audio alongside HTML reports.
+"""TTS helpers used by the HTML report audio pipeline.
 
-v1 ships: browser (default, zero-dep Web Speech API), none (disabled), http.
-Future adapters (piper, coqui, openai) land behind optional imports.
+The embedded report UI now talks directly to a local Voicebox server for
+interactive playback. The helpers in this package remain available for
+server-side HTTP synthesis flows such as pre-rendering audio files.
 """

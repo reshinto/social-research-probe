@@ -27,6 +27,13 @@ TTL_TRANSCRIPT = 7 * 24 * 3600
 TTL_WHISPER = 30 * 24 * 3600
 TTL_SUMMARY = 7 * 24 * 3600
 TTL_CORROBORATION = 6 * 3600
+_STAGE_TTLS = {
+    "fetch": 6 * 3600,
+    "score": 24 * 3600,
+    "enrich": 24 * 3600,
+    "corroborate": 6 * 3600,
+    "analyze": 24 * 3600,
+}
 
 
 def cache_disabled() -> bool:
@@ -60,6 +67,12 @@ def summary_cache() -> FilesystemCache:
 
 def corroboration_cache() -> FilesystemCache:
     return _make_cache("corroboration", TTL_CORROBORATION)
+
+
+def stage_cache(stage_name: str) -> FilesystemCache:
+    """Return the cache namespace for one pipeline stage output."""
+    ttl = _STAGE_TTLS.get(stage_name, 24 * 3600)
+    return _make_cache(f"stages/{stage_name}", ttl)
 
 
 def hash_key(*parts: str) -> str:

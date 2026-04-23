@@ -60,9 +60,11 @@ from social_research_probe.synthesize.explanations._common import parse_numeric 
 from social_research_probe.synthesize.formatter import (
     _highlights_table,
     _items_table,
+    build_fallback_report_summary,
     build_packet,
     render_full,
     render_sections_1_9,
+    resolve_report_summary,
 )
 from social_research_probe.synthesize.formatter import (
     _to_bullets as _bulletise,
@@ -1010,6 +1012,9 @@ def test_render_full_without_synthesis():
     assert "## 10." in out
     assert "LLM synthesis unavailable" in out
     assert "## 11." in out
+    assert "## 12." in out
+    assert "This report covers ai agents on youtube." in out
+    assert "LLM summary unavailable" not in out
 
 
 def test_render_full_with_synthesis():
@@ -1020,6 +1025,50 @@ def test_render_full_with_synthesis():
     assert "My synthesis." in out
     assert "My opp." in out
     assert "LLM synthesis unavailable" not in out
+
+
+def test_resolve_report_summary_prefers_stored_summary():
+    pkt = build_packet(**_make_packet())
+    pkt["report_summary"] = "Stored final summary."
+    assert resolve_report_summary(pkt) == "Stored final summary."
+
+
+def test_resolve_report_summary_falls_back_to_packet_data():
+    pkt = build_packet(
+        **_make_packet(
+            chart_takeaways=["Histogram spread is narrow."],
+            warnings=["small sample"],
+        )
+    )
+    pkt["compiled_synthesis"] = "**Demand is accelerating.**"
+    pkt["opportunity_analysis"] = "Focus on workflow tutorials."
+    summary = resolve_report_summary(pkt)
+    assert summary is not None
+    assert "This report covers ai agents on youtube." in summary
+    assert (
+        "Source validation: 1 validated, 0 partial, 0 unverified, and 0 low-trust sources."
+        in summary
+    )
+    assert "Compiled synthesis: Demand is accelerating." in summary
+    assert "Opportunity analysis: Focus on workflow tutorials." in summary
+    assert "Chart signals: Histogram spread is narrow." in summary
+    assert "Cautions: small sample." in summary
+
+
+def test_build_fallback_report_summary_handles_topic_only_and_low_confidence():
+    summary = build_fallback_report_summary(
+        {
+            "topic": "ai agents",
+            "stats_summary": {"models_run": [], "highlights": [], "low_confidence": True},
+        }
+    )
+    assert summary == (
+        "This report covers ai agents. Statistics are low confidence because the sample is small."
+    )
+
+
+def test_build_fallback_report_summary_returns_none_for_empty_packet():
+    assert build_fallback_report_summary({}) is None
 
 
 def test_render_sections_1_9_low_confidence_flag():
@@ -1052,8 +1101,70 @@ def test_render_sections_1_9_notes_rendered():
         "platform_signals_summary": "-",
         "evidence_summary": "-",
         "stats_summary": {"models_run": [], "highlights": [], "low_confidence": False},
-        "chart_captions": [],
         "warnings": [],
     }
     out = render_sections_1_9(pkt)
     assert "some notes here" in out
+
+
+class TestFormatterCoverageGaps:
+    def test_render_full_with_stage_timings(self):
+        pkt = build_packet(**_make_packet())
+        pkt["stage_timings"] = [{"stage": "test", "elapsed_s": 1.5}]
+        out = render_full(pkt)
+        assert "_Timing: test 1.5s • total 1.5s_" in out
+
+    def test_render_timing_footer_invalid_items(self):
+        from social_research_probe.synthesize.formatter import _render_timing_footer
+
+        timings = ["not a dict", {"not_stage": "x"}, {"stage": "valid", "elapsed_s": "1.2"}]
+        out = _render_timing_footer(timings)
+        assert "? 0.0s" in out
+        assert "valid 1.2s" in out
+        assert "total 1.2s" in out
+
+    def test_render_timing_footer_only_invalid_items(self):
+        from social_research_probe.synthesize.formatter import _render_timing_footer
+
+        assert _render_timing_footer(["not a dict"]) == ""
+
+    def test_build_fallback_report_summary_invalid_source_validation(self):
+        pkt = build_packet(**_make_packet())
+        pkt["source_validation_summary"] = "not a dict"  # type: ignore
+        summary = build_fallback_report_summary(pkt)
+        assert "Source validation" not in (summary or "")
+
+    def test_build_fallback_report_summary_with_highlights(self):
+        pkt = build_packet(**_make_packet())
+        pkt["stats_summary"] = {"highlights": ["A highlight"], "low_confidence": False}
+        summary = build_fallback_report_summary(pkt)
+        assert "Statistics highlights: A highlight" in (summary or "")
+
+    def test_usable_summary_text_unavailable(self):
+        from social_research_probe.synthesize.formatter import _usable_summary_text
+
+        assert _usable_summary_text("LLM synthesis unavailable here") == ""
+        assert _usable_summary_text("LLM summary unavailable too") == ""
+
+    def test_plain_sentences_cleaned_empty(self):
+        from social_research_probe.synthesize.formatter import _plain_sentences
+
+        assert _plain_sentences("```\ncode\n```", limit=1) == []
+
+    def test_plain_sentences_empty_parts_fallback(self, monkeypatch):
+        import re
+
+        from social_research_probe.synthesize.formatter import _plain_sentences
+
+        def fake_split(*args, **kwargs):
+            return ["   ", ""]
+
+        monkeypatch.setattr(re, "split", fake_split)
+        res = _plain_sentences("test", limit=1)
+        assert res == ["test."]
+
+    def test_ensure_sentence_empty(self):
+        from social_research_probe.synthesize.formatter import _ensure_sentence
+
+        assert _ensure_sentence("   ") == ""
+        assert _ensure_sentence(None) == ""

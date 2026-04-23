@@ -36,7 +36,7 @@ Both CLI mode and Claude Code skill mode converge on the same `srp` CLI entrypoi
 | `commands/` | `cli/` | Typed value objects (e.g. `ParsedRunResearch`) built from raw argparse namespaces. |
 | `pipeline/` | `cli/` | Orchestrates the five-stage research loop. |
 | `platforms/` | `pipeline/orchestrator` | Platform adapter interface + YouTube implementation. Extensible to other platforms. |
-| `corroboration/` | `pipeline/corroboration` | Exa, Brave, Tavily, and runner-backed `llm_search`; `host` auto-discovery. |
+| `corroboration/` | `pipeline/corroboration` | Exa, Brave, Tavily, and runner-backed `llm_search`; `auto` auto-discovery. |
 | `llm/` | `pipeline/enrichment`, `commands/config` | Multi-LLM ensemble (Claude, Gemini, Codex) with first-success fallback. |
 | `stats/` | `pipeline/stats` | 20+ statistical models: regression, Bayesian, bootstrap, clustering, survival. |
 | `viz/` | `pipeline/charts` | Headless PNG chart rendering via matplotlib. |
@@ -173,7 +173,7 @@ Only the top-N items receive transcripts and LLM summaries.
 
 ### Synchronous platform adapters wrapped in `asyncio.to_thread`
 
-The YouTube adapter uses the sync Google API client library. Wrapping it in `asyncio.to_thread` is a temporary compatibility shim.
+The YouTube adapter uses the sync Google API client library. Wrapping it in `asyncio.to_thread` is a temporary bridge until a native async adapter exists.
 
 **Tradeoff:** Thread overhead on every YouTube API call. A native async adapter using `httpx` would eliminate this, but requires reimplementing the Google API authentication flow. This is on the roadmap but not yet done.
 
@@ -196,7 +196,7 @@ Running 20+ statistical models on a pool of 20–50 YouTube videos is more than 
 - **YouTube only.** No Twitter/X, Reddit, podcast, or blog adapter exists yet.
 - **Top-N enrichment is global, not per-purpose.** `platforms.youtube.enrich_top_n` is configurable, but every run shares the same enrichment budget.
 - **No deduplication across runs.** Running the same topic twice generates two separate packets; there is no cross-run comparison or trending view.
-- **Runner-backed summaries require a configured runner.** Without one (`llm.runner = none`), enrichment still fetches transcripts and falls back to transcript-derived summaries where possible, but sections 10–11 of the CLI report show placeholders.
+- **Runner-backed summaries require a configured runner.** Without one (`llm.runner = none`), enrichment still fetches transcripts and falls back to transcript-derived summaries where possible, but Compiled Synthesis, Opportunity Analysis, and Final Summary show placeholders.
 - **Corroboration is best-effort.** If no API keys are configured and `llm.runner = none`, corroboration is silently skipped.
 
 ---
@@ -223,7 +223,7 @@ None of these runners or backends are bundled — they are thin CLI wrappers. Op
 
 1. Implement `CorroborationBackend` from `corroboration/base.py` (`check_claim`, `check_claims`, `health_check`).
 2. Register it in `corroboration/registry.py` with `@register`.
-3. The backend is auto-discovered when `corroboration.backend = host` and `health_check()` passes.
+3. The backend is auto-discovered when `corroboration.backend = auto` and `health_check()` passes.
 
 ### Add a stats model
 

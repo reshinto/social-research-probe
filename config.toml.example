@@ -35,7 +35,7 @@ extra_flags = []
 # opportunity = 0.2
 
 [corroboration]
-backend = "host"          # host | llm_search | exa | brave | tavily | none
+backend = "auto"          # auto | llm_search | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 
@@ -46,37 +46,69 @@ enrich_top_n = 5          # number of top-scored videos that get transcripts + L
 cache_ttl_search_hours = 6
 cache_ttl_channel_hours = 24
 
-[features]
-# Each toggle is independent: disabling one never breaks another. The final
-# report is exempt and always emits (HTML when possible, Markdown fallback).
-corroboration_enabled = true
-llm_search_enabled = true            # runner-agnostic agentic-search corroboration backend
-exa_enabled = true
-brave_enabled = true
-tavily_enabled = true
-enrichment_enabled = true
-transcript_fetch_enabled = true
-media_url_summary_enabled = true     # runner.summarize_media() (Gemini CLI only today)
-merged_summary_enabled = true        # reconcile transcript + URL views into one 100-word summary
-charts_enabled = true
-chart_takeaways_enabled = true       # deterministic 1-line chart interpretations
-synthesis_enabled = true
-html_report_enabled = true
+[stages]
+# Highest priority. If a stage is false, everything inside that stage is skipped.
+fetch = true
+score = true
+enrich = true
+corroborate = true
+analyze = true
+synthesis = true
+report = true
 
-# Per-LLM service gates. The primary runner (llm.runner above) is always
-# allowed; these flags only affect whether each LLM is invoked as a secondary
-# service (e.g. the ensemble fan-out used when the primary runner fails or
-# when runner = "none" and multi-provider synthesis is desired). Disable any
-# LLM you have installed but do not want srp to call from the ensemble.
-claude_service_enabled = false
-gemini_service_enabled = false
-codex_service_enabled = false
-local_service_enabled = false
+[services.fetch]
+# Services executed during the 'fetch' stage
+platform_api = true        # Queries external APIs (e.g. YouTube) to find raw items and engagement metrics.
+
+[services.score]
+# Services executed during the 'score' stage
+scoring = true             # Computes trend, trust, and opportunity scores for retrieved items.
+
+[services.enrich]
+# Services executed during the 'enrich' stage
+transcripts = true         # Downloads transcripts/captions from videos (if available).
+llm = true                 # General AI/LLM text generation and extraction for enrichment.
+media_url_summary = true   # runner.summarize_media() (e.g. Gemini CLI extracting directly from video URL).
+merged_summary = true      # Reconciles transcript-based and URL-based views into one combined summary.
+
+[services.corroborate]
+# Services executed during the 'corroborate' stage
+corroboration = true       # Performs multi-backend web searches to fact-check extracted claims.
+
+[services.analyze]
+# Services executed during the 'analyze' stage
+statistics = true          # Runs statistical analysis on engagement velocities and scores.
+charts = true              # Renders visual charts (PNG/ASCII) based on pipeline metrics.
+chart_takeaways = true     # Deterministic chart interpretations to give text-based takeaways.
+
+[services.report]
+# Services executed during the 'report' stage
+html_report = true         # Generates a final HTML report summarizing the research.
+audio_report = true        # Pre-renders Voicebox summary audio before HTML is written.
+
+[technologies]
+# Lowest priority. Disable one provider/technology without disabling its peers.
+# These represent actual implementations or external services.
+youtube_api = true
+youtube_transcript_api = true
+whisper = true
+voicebox = true
+llm_search = true          # Runner-agnostic agentic-search corroboration backend.
+exa = true
+brave = true
+tavily = true
+claude = false             # Requires Anthropic account setup.
+gemini = false             # Requires Google account setup.
+codex = false              # Requires OpenAI account setup.
+local = false              # Requires a local LLM setup.
 
 [tunables]
 summary_divergence_threshold = 0.4   # transcript/URL summary divergence that triggers a warning
 per_item_summary_words = 100         # target word count for merged per-item summary
 
-[logging]
-service_logs_enabled = true          # stderr start/end pairs for fetch/enrich/corroborate stages
+[debug]
+technology_logs_enabled = true       # stderr start/end pairs around concrete technology calls
                                      # (override at runtime with SRP_LOGS=1)
+
+[voicebox]
+default_profile_name = "Jarvis"      # preferred Voicebox profile name for generated HTML reports

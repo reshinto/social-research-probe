@@ -15,7 +15,7 @@ Migrator = Callable[[JSONObject], JSONObject]
 
 
 def _tag_version_1(data: JSONObject) -> JSONObject:
-    """v0 -> v1: stamp schema_version=1 on bare legacy files."""
+    """v0 -> v1: stamp schema_version=1 on bare pre-versioned files."""
     out = dict(data)
     out["schema_version"] = 1
     return out

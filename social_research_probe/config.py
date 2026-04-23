@@ -15,13 +15,16 @@ from pathlib import Path
 from social_research_probe.types import (
     AdapterConfig,
     AppConfig,
-    FeaturesConfigSection,
+    DebugConfigSection,
     FreeTextRunnerName,
     JSONObject,
-    LoggingConfigSection,
     RunnerName,
     RunnerSettings,
+    ServicesConfigSection,
+    StagesConfigSection,
+    TechnologiesConfigSection,
     TunablesConfigSection,
+    VoiceboxConfigSection,
 )
 
 DEFAULT_CONFIG: AppConfig = {
@@ -34,7 +37,7 @@ DEFAULT_CONFIG: AppConfig = {
         "local": {"binary": "ollama", "model": "llama3.1:8b", "extra_flags": []},
     },
     "corroboration": {
-        "backend": "host",
+        "backend": "auto",
         "max_claims_per_item": 5,
         "max_claims_per_session": 15,
     },
@@ -48,31 +51,51 @@ DEFAULT_CONFIG: AppConfig = {
         },
     },
     "scoring": {"weights": {}},
-    "features": {
-        "corroboration_enabled": True,
-        "llm_search_enabled": True,
-        "exa_enabled": True,
-        "brave_enabled": True,
-        "tavily_enabled": True,
-        "enrichment_enabled": True,
-        "transcript_fetch_enabled": True,
-        "media_url_summary_enabled": True,
-        "merged_summary_enabled": True,
-        "charts_enabled": True,
-        "chart_takeaways_enabled": True,
-        "synthesis_enabled": True,
-        "html_report_enabled": True,
-        "claude_service_enabled": False,
-        "gemini_service_enabled": False,
-        "codex_service_enabled": False,
-        "local_service_enabled": False,
+    "stages": {
+        "fetch": True,
+        "score": True,
+        "enrich": True,
+        "corroborate": True,
+        "analyze": True,
+        "synthesis": True,
+        "report": True,
+    },
+    "services": {
+        "fetch": {"platform_api": True},
+        "score": {"scoring": True},
+        "enrich": {
+            "transcripts": True,
+            "llm": True,
+            "media_url_summary": True,
+            "merged_summary": True,
+        },
+        "corroborate": {"corroboration": True},
+        "analyze": {"statistics": True, "charts": True, "chart_takeaways": True},
+        "report": {"html_report": True, "audio_report": True},
+    },
+    "technologies": {
+        "youtube_api": True,
+        "youtube_transcript_api": True,
+        "whisper": True,
+        "voicebox": True,
+        "claude": False,
+        "gemini": False,
+        "codex": False,
+        "local": False,
+        "llm_search": True,
+        "exa": True,
+        "brave": True,
+        "tavily": True,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,
         "per_item_summary_words": 100,
     },
-    "logging": {
-        "service_logs_enabled": False,
+    "debug": {
+        "technology_logs_enabled": False,
+    },
+    "voicebox": {
+        "default_profile_name": "Jarvis",
     },
 }
 
@@ -130,13 +153,8 @@ class Config:
 
     @property
     def corroboration_backend(self) -> str:
-        """Return the configured corroboration backend name.
-
-        Older configs may still say ``llm_cli``; normalize that legacy value to
-        the canonical runner-backed search backend name, ``llm_search``.
-        """
-        backend = self.raw["corroboration"]["backend"]
-        return "llm_search" if backend == "llm_cli" else backend
+        """Return the configured corroboration backend name."""
+        return self.raw["corroboration"]["backend"]
 
     def llm_settings(self, name: RunnerName) -> RunnerSettings:
         """Return the nested settings block for one runner.
@@ -149,34 +167,42 @@ class Config:
 
     @property
     def preferred_free_text_runner(self) -> FreeTextRunnerName | None:
-        """Return the configured free-text runner, or None when LLM is disabled.
-
-        Returns the runner name for any concrete provider (claude, gemini, codex,
-        local). Returns None only when runner is ``none``, so callers can treat
-        None as "disabled" rather than "fall back to ensemble".
-        """
-        if self.llm_runner in {"claude", "gemini", "codex", "local"}:
+        """Return the configured free-text runner, or None when LLM is disabled."""
+        if not self.service_enabled("llm"):
+            return None
+        if self.llm_runner in {"claude", "gemini", "codex", "local"} and self.technology_enabled(
+            self.llm_runner
+        ):
             return self.llm_runner
         return None
 
     @property
     def default_structured_runner(self) -> RunnerName:
-        """Return the configured runner for structured JSON tasks.
-
-        Returns the raw configured value including ``none``. Callers must gate
-        on health_check() before invoking, so ``none`` propagates correctly as
-        "disabled" instead of silently falling back to another provider.
-        """
-        return self.llm_runner
+        """Return the configured runner for structured JSON tasks."""
+        if self.llm_runner == "none":
+            return "none"
+        if not self.service_enabled("llm"):
+            return "none"
+        return self.llm_runner if self.technology_enabled(self.llm_runner) else "none"
 
     def platform_defaults(self, name: str) -> AdapterConfig:
         """Return a copy of the per-platform defaults used to build adapter config."""
         return dict(self.raw["platforms"].get(name, {}))
 
     @property
-    def features(self) -> FeaturesConfigSection:
-        """Return the features section with all on/off flags."""
-        return self.raw["features"]
+    def stages(self) -> StagesConfigSection:
+        """Return the stage-level gates."""
+        return self.raw["stages"]
+
+    @property
+    def services(self) -> ServicesConfigSection:
+        """Return the service-level gates."""
+        return self.raw["services"]
+
+    @property
+    def technologies(self) -> TechnologiesConfigSection:
+        """Return the technology/provider gates."""
+        return self.raw["technologies"]
 
     @property
     def tunables(self) -> TunablesConfigSection:
@@ -184,14 +210,50 @@ class Config:
         return self.raw["tunables"]
 
     @property
-    def logging(self) -> LoggingConfigSection:
-        """Return the logging section (service_logs_enabled master switch)."""
-        return self.raw["logging"]
+    def debug(self) -> DebugConfigSection:
+        """Return the debug/logging switches."""
+        return self.raw["debug"]
 
-    def feature_enabled(self, name: str) -> bool:
-        """Return True iff the named feature flag is on. Unknown names → False."""
-        flag = self.features.get(name)
+    @property
+    def voicebox(self) -> VoiceboxConfigSection:
+        """Return the Voicebox renderer defaults."""
+        return self.raw["voicebox"]
+
+    def stage_enabled(self, name: str) -> bool:
+        """Return True iff the named stage is enabled."""
+        flag = self.stages.get(name)
         return bool(flag) if flag is not None else False
+
+    def service_enabled(self, name: str) -> bool:
+        """Return True iff the named service gate is enabled."""
+        for category in self.services.values():
+            if isinstance(category, dict) and name in category:
+                return bool(category[name])
+        return False
+
+    def technology_enabled(self, name: str) -> bool:
+        """Return True iff the named technology/provider is enabled."""
+        flag = self.technologies.get(name)
+        return bool(flag) if flag is not None else False
+
+    def debug_enabled(self, name: str) -> bool:
+        """Return True iff the named debug gate is enabled."""
+        flag = self.debug.get(name)
+        return bool(flag) if flag is not None else False
+
+    def allows(
+        self,
+        *,
+        stage: str | None = None,
+        service: str | None = None,
+        technology: str | None = None,
+    ) -> bool:
+        """Return True when the stage/service/technology chain permits execution."""
+        if stage is not None and not self.stage_enabled(stage):
+            return False
+        if service is not None and not self.service_enabled(service):
+            return False
+        return technology is None or self.technology_enabled(technology)
 
 
 def load_active_config() -> Config:

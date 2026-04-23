@@ -156,7 +156,7 @@ class TikTokAdapter(PlatformAdapter):
 
 ### Step 4 — Add a config section
 
-Edit [`config.toml.example`](../config.toml.example) (and the copy in `social_research_probe/config.toml.example`):
+Edit the canonical [`config.toml.example`](../config.toml.example):
 
 ```toml
 [platforms.tiktok]

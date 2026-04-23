@@ -1,9 +1,9 @@
 """Multi-LLM ensemble and config-aware free-text LLM routing.
 
 When config selects Claude, Gemini, or Codex as the default runner, this module
-uses that provider directly for free-text prompts. Otherwise it falls back to
-the legacy ensemble mode: query Claude, Gemini, and Codex in parallel, then
-synthesize the responses with the highest-priority available provider.
+uses that provider directly for free-text prompts. Otherwise it fans out across
+Claude, Gemini, and Codex in parallel, then synthesizes the responses with the
+highest-priority available provider.
 
 Counterpart to ``llm/runners/``, which handles structured JSON-schema LLM
 calls (used by corroboration). This module handles free-text prompts used
@@ -29,6 +29,14 @@ _TIMEOUT = 60
 
 # Ordered priority: Claude first for synthesis fallback.
 _PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
+
+
+def _llm_enabled(cfg) -> bool:
+    """Return True when the LLM service gate is enabled."""
+    service_enabled = getattr(cfg, "service_enabled", None)
+    if callable(service_enabled):
+        return bool(service_enabled("llm"))
+    return True
 
 
 async def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
@@ -143,16 +151,17 @@ def _service_enabled(cfg, provider: str) -> bool:
     """Return True iff provider is allowed to run as a non-primary service.
 
     The primary runner is always allowed; secondary providers are gated by
-    their ``<name>_service_enabled`` feature flag so users can disable LLMs
-    they have installed but do not want invoked in the ensemble fan-out.
-    The runner-agnostic agentic-search corroboration backend uses its own
-    separate flag (``llm_search_enabled``) and is not affected by these
-    toggles.
+    their technology flags so users can disable one provider without
+    disabling the rest of the LLM service.
     """
+    if not _llm_enabled(cfg):
+        return False
+    technology_enabled = getattr(cfg, "technology_enabled", None)
+    if callable(technology_enabled):
+        return bool(technology_enabled(provider))
     if cfg.llm_runner == provider:
         return True
-    feature_enabled = getattr(cfg, "feature_enabled", lambda _name: True)
-    return bool(feature_enabled(f"{provider}_service_enabled"))
+    return True
 
 
 async def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
@@ -164,6 +173,8 @@ async def multi_llm_prompt(prompt: str, task: str = "generating response") -> st
     returns None for an unrecognised runner value.
     """
     cfg = load_active_config()
+    if not _llm_enabled(cfg):
+        return None
     if cfg.llm_runner == "none":
         return None
     preferred = cfg.preferred_free_text_runner

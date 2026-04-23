@@ -24,8 +24,8 @@ New providers can be added by subclassing `LLMRunner` and decorating the class w
 | Pipeline stage | Where it happens | What the LLM produces |
 |---|---|---|
 | Transcript summarisation | Enrich stage, top-ranked videos | 100-word prose summary of the transcript |
-| Section 10 — Compiled Synthesis | Synthesis stage | Structured synthesis across all enriched evidence |
-| Section 11 — Opportunity Analysis | Synthesis stage | Structured opportunity analysis |
+| Compiled Synthesis | Synthesis stage | Structured synthesis across all enriched evidence |
+| Opportunity Analysis | Synthesis stage | Structured opportunity analysis |
 | Natural-language query classification | CLI entry point, before research begins | `topic`, `purpose_name`, and `purpose_method` derived from the free-form query |
 | Claim extraction and corroboration | Corroboration host, top-N videos | Per-claim verdict: `supported`, `refuted`, or `inconclusive`, plus a confidence score and reasoning |
 | Topic/purpose suggestion | `classify_query`, persisted to data dir | New topic and purpose names when none match the query |
@@ -67,7 +67,7 @@ Most `srp` users choose Gemini as their primary runner for four reasons:
 3. **One install, two roles.** The same `gemini` binary powers the `llm_search` corroboration backend ([corroboration.md](corroboration.md)), so you get both per-item summaries and free web-search corroboration with zero extra setup.
 4. **Direct media URL ingestion.** Gemini is the only runner today that implements `summarize_media()` — it can summarise a YouTube URL without `srp` downloading the transcript first. When `media_url_summary_enabled = true` (the default), this cuts wall-clock time and local CPU.
 
-If you already pay for Claude and want the prose quality, `claude` is a strong second choice. If you run offline, `local` with a capable model works but quality varies. If you prefer not to use an LLM at all, `none` is fully supported: the CLI keeps sections 10–11 as placeholders and disables runner-backed search/classification, while the Claude Code skill can still use the host model for skill-only language work.
+If you already pay for Claude and want the prose quality, `claude` is a strong second choice. If you run offline, `local` with a capable model works but quality varies. If you prefer not to use an LLM at all, `none` is fully supported: the CLI keeps Compiled Synthesis, Opportunity Analysis, and Final Summary as placeholders and disables runner-backed search/classification, while the Claude Code skill can still use the host model for skill-only language work.
 
 ---
 
@@ -182,14 +182,14 @@ When `llm.runner = none` (the default) the pipeline still fetches, scores, and s
 | Feature | What you see |
 |---|---|
 | Per-video transcript summaries | Runner-written summaries are replaced by transcript- or description-derived fallback text when possible |
-| Report section 10 — Compiled Synthesis | `_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_` |
-| Report section 11 — Opportunity Analysis | Same placeholder as section 10 |
+| Compiled Synthesis | `_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_` |
+| Opportunity Analysis | Same placeholder as Compiled Synthesis |
 | Corroboration (when `corroboration.backend = llm_search`) | Skipped when the runner is `none` or lacks agentic search; otherwise uses the runner's native web-search tool |
 | Natural-language query mode | `srp research "who is winning the LLM benchmarks race?"` exits with an error: `cannot classify query: llm.runner is disabled` |
 
 The YouTube fetch, scoring, statistical models (regression, Bayesian linear, bootstrap, k-means, PCA, Kaplan–Meier, and the others), and charts are all unaffected.
 
-In the Claude Code skill, `llm.runner = none` does **not** disable the host model. The skill can still classify a free-form research request, summarise sections 1–9 inline, and draft sections 10–11 from the packet.
+In the Claude Code skill, `llm.runner = none` does **not** disable the host model. The skill can still classify a free-form research request, summarise the deterministic report content inline, and draft Compiled Synthesis, Opportunity Analysis, and Final Summary from the packet.
 
 ---
 

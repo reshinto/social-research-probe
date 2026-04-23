@@ -147,6 +147,7 @@ def _make_cfg(runner_name: str = "claude") -> MagicMock:
     """Build a minimal Config stub with the given default_structured_runner."""
     cfg = MagicMock()
     cfg.default_structured_runner = runner_name
+    cfg.service_enabled.side_effect = lambda name: True
     return cfg
 
 
@@ -174,6 +175,13 @@ def test_classify_query_raises_when_runner_disabled(tmp_data_dir: Path) -> None:
     """classify_query raises ValidationError when runner is 'none'."""
     cfg = _make_cfg("none")
     with pytest.raises(ValidationError, match=r"llm\.runner is disabled"):
+        classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+
+
+def test_classify_query_raises_when_llm_service_disabled(tmp_data_dir: Path) -> None:
+    cfg = _make_cfg("claude")
+    cfg.service_enabled.side_effect = lambda name: name != "llm"
+    with pytest.raises(ValidationError, match=r"services\.llm is false"):
         classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
 
 

@@ -70,7 +70,7 @@ $ srp config show
     "timeout_seconds": 60
   },
   "corroboration": {
-    "backend": "host",
+    "backend": "auto",
     "max_claims_per_item": 5,
     "max_claims_per_session": 15
   },
@@ -184,7 +184,7 @@ To get a YouTube Data API v3 key:
 
 ## Step 3 — Choose an LLM runner (optional but recommended)
 
-Without an LLM runner, `srp` still scores and ranks videos, fetches transcripts, and falls back to transcript-derived per-item summaries where possible. The runner-only features stay off: CLI sections 10–11 (Compiled Synthesis and Opportunity Analysis) show placeholders, `llm_search` corroboration is unavailable, and CLI natural-language query mode is disabled.
+Without an LLM runner, `srp` still scores and ranks videos, fetches transcripts, and falls back to transcript-derived per-item summaries where possible. The runner-only features stay off: Compiled Synthesis, Opportunity Analysis, and Final Summary show placeholders, `llm_search` corroboration is unavailable, and CLI natural-language query mode is disabled.
 
 Results will show this synthesis placeholder:
 
@@ -245,7 +245,7 @@ srp config set-secret brave_api_key    # Brave Search API — api.search.brave.c
 srp config set-secret tavily_api_key   # Tavily — tavily.com
 ```
 
-Each prompts for the value with hidden input, the same as the YouTube key. You only need one; `srp` auto-discovers all available backends when `corroboration.backend = host` (the default).
+Each prompts for the value with hidden input, the same as the YouTube key. You only need one; `srp` auto-discovers all available backends when `corroboration.backend = auto` (the default).
 
 ---
 
@@ -265,7 +265,7 @@ You will see all current settings printed as a JSON object, for example:
     ...
   },
   "corroboration": {
-    "backend": "host",
+    "backend": "auto",
     ...
   },
   "platforms": {
@@ -327,7 +327,7 @@ In skill mode, Claude uses the host model for the language-only steps when `llm.
 | -------------------------------------------- | ------------------------------------------------------------- |
 | `ffmpeg not found`                           | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
 | `youtube_api_key missing`                    | Run `srp config set-secret youtube_api_key`                   |
-| CLI sections 10–11 show placeholder text    | Set `llm.runner` to a configured provider (Step 3)            |
+| Compiled Synthesis / Opportunity Analysis / Final Summary show placeholder text | Set `llm.runner` to a configured provider (Step 3) |
 | Corroboration skipped                        | Add at least one corroboration key (Step 4)                   |
 | `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root                     |
 

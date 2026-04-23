@@ -5,8 +5,8 @@
 This page lists every third-party library `srp` imports at runtime, where
 it's used in the codebase, and why it's there. Canonical source of truth
 is [`pyproject.toml`](../pyproject.toml) under `[project].dependencies`
-(mirrored by [`requirements.txt`](../requirements.txt) for legacy
-pip-install flows).
+(mirrored by [`requirements.txt`](../requirements.txt) for direct
+`pip install -r requirements.txt` workflows).
 
 > **Dev-only tools** (`pytest`, `pytest-cov`, `pytest-asyncio`,
 > `pytest-xdist`, `hypothesis`, `ruff`, `respx`, `vulture`) are declared

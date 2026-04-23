@@ -9,7 +9,8 @@ abstraction.
 
 **Registry key is ``"llm_search"``** — the runner-agnostic name that
 matches the module. Configure via ``[corroboration] backend =
-"llm_search"`` or list it in the host-mode backend set.
+"llm_search"`` or let ``backend = "auto"`` include it during backend
+discovery.
 
 Flow:
     1. Resolve the active LLM runner from user config.
@@ -87,8 +88,15 @@ def _resolve_active_runner() -> LLMRunner | None:
     ``"none"`` or when the configured runner cannot be instantiated (e.g.
     binary missing). Callers treat ``None`` as "skip this backend".
     """
-    runner_name = load_active_config().llm_runner
+    cfg = load_active_config()
+    if hasattr(cfg, "service_enabled") and not cfg.service_enabled("llm"):
+        return None
+    if hasattr(cfg, "technology_enabled") and not cfg.technology_enabled("llm_search"):
+        return None
+    runner_name = cfg.llm_runner
     if runner_name in {"none", "auto"}:
+        return None
+    if hasattr(cfg, "technology_enabled") and not cfg.technology_enabled(runner_name):
         return None
     try:
         return get_runner(runner_name)

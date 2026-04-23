@@ -10,7 +10,11 @@ import pytest
 from social_research_probe.cli import main
 from social_research_probe.errors import SynthesisError
 from social_research_probe.llm.ensemble import _run_provider
-from social_research_probe.pipeline import _fetch_best_transcript
+from social_research_probe.pipeline.enrichment import (
+    _enrich_top_n_with_transcripts,
+    _fallback_transcript_summary,
+)
+from social_research_probe.pipeline.orchestrator import run_research
 from social_research_probe.synthesize.explanations import (
     explain_bayesian as _explain_bayesian,
 )
@@ -114,35 +118,9 @@ async def test_run_provider_uses_expected_command(monkeypatch, provider, expecte
     assert kwargs["stderr"] == asyncio.subprocess.DEVNULL
 
 
-def test_fetch_best_transcript_returns_none_when_fallback_raises():
-    def fallback(_url: str) -> str | None:
-        raise RuntimeError("boom")
-
-    assert _fetch_best_transcript("https://example.com", lambda _url: None, fallback) is None
-
-
-def test_fetch_best_transcript_returns_primary_text_when_available():
-    assert (
-        _fetch_best_transcript("https://x", lambda _url: "hello world", lambda _url: None)
-        == "hello world"
-    )
-
-
-def test_fetch_best_transcript_swallows_primary_exception_and_tries_fallback():
-    def primary(_url: str) -> str | None:
-        raise OSError("network down")
-
-    assert (
-        _fetch_best_transcript("https://x", primary, lambda _url: "fallback text")
-        == "fallback text"
-    )
-
-
 async def test_enrich_top_n_uses_description_when_transcript_whitespace_only(monkeypatch):
     """When both transcript paths return whitespace-only text, the pipeline falls back
     to a description-based LLM summary instead of skipping entirely."""
-    from social_research_probe.pipeline import _enrich_top_n_with_transcripts
-
     monkeypatch.setattr(
         "social_research_probe.platforms.youtube.extract.fetch_transcript",
         lambda _url: None,
@@ -195,8 +173,6 @@ def test_explain_bayesian_unknown_numeric_metric_returns_empty():
 
 def test_fallback_transcript_summary_empty_string_returns_empty():
     """_fallback_transcript_summary returns the original string when there are no words."""
-    from social_research_probe.pipeline import _fallback_transcript_summary
-
     assert _fallback_transcript_summary("") == ""
 
 
@@ -205,7 +181,6 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
     is 'no API credentials usable' (the else-branch of the cfg_corr == 'none' check)."""
 
     from social_research_probe.commands.parse import parse
-    from social_research_probe.pipeline import run_research
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
 

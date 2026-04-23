@@ -28,8 +28,16 @@ SYNTHESIS_JSON_SCHEMA: Final[dict] = {
             "type": "string",
             "description": "Concise opportunity analysis, at most 150 words.",
         },
+        "report_summary": {
+            "type": "string",
+            "description": (
+                "Integrated final summary of the report, combining the key "
+                "statistics, chart signals, synthesis, and opportunity "
+                "analysis, at most 180 words."
+            ),
+        },
     },
-    "required": ["compiled_synthesis", "opportunity_analysis"],
+    "required": ["compiled_synthesis", "opportunity_analysis", "report_summary"],
     "additionalProperties": False,
 }
 
@@ -76,14 +84,14 @@ def parse_synthesis_response(raw: dict) -> dict:
         raw: The dict returned by LLMRunner.run().
 
     Returns:
-        Dict with exactly two keys: 'compiled_synthesis' and
-        'opportunity_analysis', both strings.
+        Dict with exactly three keys: 'compiled_synthesis',
+        'opportunity_analysis', and 'report_summary', all strings.
 
     Raises:
         ValidationError: If either required key is missing or not a string.
     """
     out = {}
-    for key in ("compiled_synthesis", "opportunity_analysis"):
+    for key in ("compiled_synthesis", "opportunity_analysis", "report_summary"):
         val = raw.get(key)
         if not isinstance(val, str):
             raise ValidationError(f"LLM response missing or non-string key: {key!r}")

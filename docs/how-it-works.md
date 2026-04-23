@@ -121,7 +121,7 @@ The highest-scoring videos get more information fetched. This is the only stage 
 srp config set platforms.youtube.enrich_top_n 10   # enrich the top 10 instead of 5 (default)
 ```
 
-Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top_n = all_scored[:enrich_top_n]` reads this config value. The packet field is still named `items_top_n` for backwards compatibility, but the actual count is whatever `enrich_top_n` is set to.
+Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top_n = all_scored[:enrich_top_n]` reads this config value. The packet field is named `items_top_n`, and its size tracks whatever `enrich_top_n` is set to.
 
 **Why this setting matters:** raising `enrich_top_n` is the biggest way to make a run longer and more expensive. Each enriched item triggers:
 - One caption download (fast) or one Whisper audio transcription (slow, CPU-intensive)
@@ -211,7 +211,7 @@ A common alternative is to skip the API entirely and ask a large language model:
 
 - **Summarising text it has directly received** — the transcript is handed to the LLM verbatim; it cannot invent content that is not there.
 - **Classifying a query** — turning "who is winning the LLM benchmarks race?" into a topic + purpose is a short classification task, not open-ended generation.
-- **Writing synthesis prose** — Section 10 and 11 synthesise data the pipeline has already collected and verified; the LLM does not generate facts from memory.
+- **Writing synthesis prose** — Compiled Synthesis and Opportunity Analysis synthesise data the pipeline has already collected and verified; the LLM does not generate facts from memory.
 
 All facts that appear in the report come from the YouTube API (view counts, subscriber counts, publish dates) or from corroboration web searches — not from the LLM's training data.
 
@@ -251,10 +251,10 @@ No approach is perfect. Here is what can go wrong with `srp`'s method:
 The pipeline is deliberately structured so **the LLM does the minimum possible work**. A typical run with a configured runner touches an LLM only for:
 
 - One 100-word summary per top-N item (default N = 5).
-- One final synthesis pass (sections 10–11).
+- One final synthesis pass for Compiled Synthesis, Opportunity Analysis, and Final Summary.
 - Optional: one query classification when you use the natural-language form.
 
-Everything else — fetching, scoring, deduplication, stats, chart rendering, transcripts (via captions or on-device Whisper), and caching — runs on your machine with standard Python libraries. If the LLM runner is unavailable, per-item summaries fall back to transcript/description text and only sections 10–11 become placeholders.
+Everything else — fetching, scoring, deduplication, stats, chart rendering, transcripts (via captions or on-device Whisper), and caching — runs on your machine with standard Python libraries. If the LLM runner is unavailable, per-item summaries fall back to transcript/description text and only Compiled Synthesis, Opportunity Analysis, and Final Summary become placeholders.
 
 This is why adding a new platform or a new statistical model does not require any new LLM capability. The cost of one more statistic is a CPU cycle, not a token. See [Cost Optimization](cost-optimization.md) for each lever the design provides.
 

@@ -14,7 +14,7 @@ from unittest.mock import patch
 import pytest
 
 import social_research_probe.llm.gemini_cli as gc
-from social_research_probe.cli import _flag, _write_final_report
+from social_research_probe.cli import _service_flag, _stage_flag, _write_final_report
 from social_research_probe.config import Config
 from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
@@ -233,7 +233,7 @@ def test_first_media_url_runner_swallows_get_runner_exception():
 @pytest.mark.asyncio
 async def test_url_based_summary_swallows_runner_exception(monkeypatch):
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     class _Runner:
@@ -256,7 +256,7 @@ async def test_url_based_summary_returns_falsy_without_caching_when_runner_empty
     """Runner returns None: reach line 74 with falsy summary so the cache-write branch is skipped."""
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     class _Runner:
@@ -299,8 +299,8 @@ async def test_enrich_one_short_circuits_when_disabled(monkeypatch):
     class _Cfg:
         tunables: ClassVar[dict] = {}
 
-        def feature_enabled(self, name):
-            return name != "enrichment_enabled"
+        def allows(self, *, stage=None, service=None, technology=None):
+            return stage != "enrich"
 
     monkeypatch.setattr(
         "social_research_probe.pipeline.enrichment.load_active_config", lambda: _Cfg()
@@ -321,7 +321,7 @@ async def test_merge_or_pick_uses_reconcile_truthy_branch(monkeypatch):
     """When the reconciler returns a truthy string, it short-circuits the divergence return."""
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     monkeypatch.setattr(
@@ -354,19 +354,27 @@ def test_divergence_warnings_emits_when_above_threshold(tmp_path):
 # ---------------------------------------------------------------- cli/__init__.py
 
 
-def test_flag_returns_default_when_method_missing():
+def test_stage_flag_returns_default_when_method_missing():
     class _Empty:
         pass
 
-    assert _flag(_Empty(), "anything", default=True) is True
+    assert _stage_flag(_Empty(), "anything", default=True) is True
 
 
-def test_flag_returns_default_when_method_raises():
+def test_stage_flag_returns_default_when_method_raises():
     class _Bad:
-        def feature_enabled(self, name):
+        def stage_enabled(self, name):
             raise RuntimeError("boom")
 
-    assert _flag(_Bad(), "x", default=False) is False
+    assert _stage_flag(_Bad(), "x", default=False) is False
+
+
+def test_service_flag_returns_default_when_method_raises():
+    class _Bad:
+        def service_enabled(self, name):
+            raise RuntimeError("boom")
+
+    assert _service_flag(_Bad(), "x", default=False) is False
 
 
 def test_write_final_report_falls_back_to_markdown_on_html_exception(tmp_path, monkeypatch):
@@ -385,7 +393,7 @@ def test_write_final_report_falls_back_to_markdown_on_html_exception(tmp_path, m
 @pytest.mark.asyncio
 async def test_fetch_transcript_skipped_when_flag_off(monkeypatch):
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return False
 
     monkeypatch.setattr(
@@ -407,7 +415,7 @@ async def test_merge_or_pick_falls_through_when_reconcile_returns_falsy(monkeypa
     """Reconciler returning empty/None means we fall back to the text summary."""
 
     class _Cfg:
-        def feature_enabled(self, name):
+        def allows(self, **kwargs):
             return True
 
     async def _empty(*_a, **_kw):
@@ -550,8 +558,8 @@ def test_run_research_skips_non_string_verdict(monkeypatch, tmp_path):
         assert "corroboration_verdict" not in item
 
 
-def test_handle_research_skips_synthesis_when_flag_off(monkeypatch, tmp_path):
-    """Covers the if cfg.feature_enabled('synthesis_enabled') False branch."""
+def test_handle_research_skips_synthesis_when_stage_off(monkeypatch, tmp_path):
+    """Covers the synthesis-stage gate inside the research command."""
     from unittest.mock import AsyncMock
 
     from social_research_probe.cli import main
@@ -567,7 +575,7 @@ def test_handle_research_skips_synthesis_when_flag_off(monkeypatch, tmp_path):
     )
 
     cfg = Config.load(tmp_path)
-    cfg.raw["features"]["synthesis_enabled"] = False
+    cfg.raw["stages"]["synthesis"] = False
     monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: cfg)
 
     rc = main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])

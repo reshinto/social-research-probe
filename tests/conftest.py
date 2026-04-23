@@ -63,7 +63,7 @@ if "rpds" not in sys.modules:
         sys.modules["rpds"] = _FakeRpds()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect SRP data dir to a per-test temp path."""
     data_dir = tmp_path / ".skill-data"

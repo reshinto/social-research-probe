@@ -35,12 +35,12 @@ def test_unknown_future_version_raises(tmp_path: Path):
 
 def test_backup_written_before_migration(tmp_path: Path):
     path = tmp_path / "topics.json"
-    path.write_text(json.dumps({"topics": ["legacy"]}))
+    path.write_text(json.dumps({"topics": ["topic-a"]}))
     data = json.loads(path.read_text())
     migrate_to_current(path, data, kind="topics")
     backups = list((tmp_path / ".backups").glob("topics.v0.*.json"))
     assert len(backups) == 1
-    assert json.loads(backups[0].read_text()) == {"topics": ["legacy"]}
+    assert json.loads(backups[0].read_text()) == {"topics": ["topic-a"]}
 
 
 def test_migrators_for_known_kinds():

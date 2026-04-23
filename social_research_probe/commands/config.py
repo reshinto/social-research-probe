@@ -8,7 +8,7 @@ import stat
 import tomllib
 from pathlib import Path
 
-from social_research_probe.config import Config
+from social_research_probe.config import DEFAULT_CONFIG, Config
 from social_research_probe.errors import ValidationError
 from social_research_probe.types import JSONObject, JSONScalar
 
@@ -104,6 +104,9 @@ def mask_secret(value: str) -> str:
 def show_config(data_dir: Path) -> str:
     """Render the merged config plus masked secret status for CLI display."""
     cfg = Config.load(data_dir)
+    display_config = {
+        key: value for key, value in cfg.raw.items() if key not in {"features", "logging"}
+    }
     secrets = _read_secrets_file(data_dir)
     lines = [
         f"data_dir: {data_dir}",
@@ -111,7 +114,7 @@ def show_config(data_dir: Path) -> str:
         f"secrets_file: {data_dir / SECRET_FILENAME}",
         "",
         "[config]",
-        json.dumps(cfg.raw, indent=2),
+        json.dumps(display_config, indent=2),
         "",
         "[secrets]",
     ]
@@ -169,6 +172,27 @@ def _emit_table(name: str, entries: JSONObject, lines: list[str]) -> None:
         _emit_table(f"{name}.{child_name}", child_entries, lines)
 
 
+def _order_like_template(data: JSONObject, template: JSONObject) -> JSONObject:
+    """Return *data* reordered to match *template* first, preserving extras last."""
+    ordered: JSONObject = {}
+    for key, template_value in template.items():
+        if key not in data:
+            continue
+        value = data[key]
+        if isinstance(value, dict) and isinstance(template_value, dict):
+            ordered[key] = _order_like_template(value, template_value)
+        else:
+            ordered[key] = value
+    for key, value in data.items():
+        if key in ordered:
+            continue
+        if isinstance(value, dict):
+            ordered[key] = _order_like_template(value, {})
+        else:
+            ordered[key] = value
+    return ordered
+
+
 def _set_nested_value(config: JSONObject, parts: list[str], value: JSONScalar) -> None:
     """Create any missing tables and assign the final scalar value."""
     current = config
@@ -197,9 +221,10 @@ def write_config_value(data_dir: Path, dotted_key: str, value: str) -> None:
             existing = tomllib.load(f)
 
     _set_nested_value(existing, parts, _parse_scalar_value(value))
+    ordered = _order_like_template(existing, DEFAULT_CONFIG)
 
     lines: list[str] = []
-    for sec, entries in existing.items():
+    for sec, entries in ordered.items():
         if not isinstance(entries, dict):
             raise ValidationError(f"top-level config section {sec!r} must be a table")
         _emit_table(sec, entries, lines)

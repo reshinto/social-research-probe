@@ -1,4 +1,8 @@
-"""CLI entry point — thin argparse shell that delegates to command modules."""
+"""Command-line interface entry point.
+
+Provides an argparse-based shell that parses CLI input and dispatches
+execution to subcommand handlers.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ from .handlers import (
     _handle_install_skill,
     _handle_render,
     _handle_report,
+    _handle_serve_report,
     _handle_setup,
     _handle_show_pending,
     _handle_show_purposes,
@@ -36,32 +41,44 @@ from .handlers import (
     _handle_set_secret as _handle_set_secret,
 )
 from .parsers import _global_parser
-from .utils import (
-    _emit as _emit,
-)
-from .utils import (
-    _id_selector as _id_selector,
-)
-from .utils import (
-    _to_markdown as _to_markdown,
-)
-from .utils import (
-    _to_text as _to_text,
-)
+from .utils import _emit as _emit
+from .utils import _id_selector as _id_selector
+from .utils import _to_markdown as _to_markdown
+from .utils import _to_text as _to_text
 
 
 @dataclass(frozen=True)
 class _ResearchArgs:
+    """Container for normalized research arguments.
+
+    Attributes:
+        platform: Target platform (for example, "youtube").
+        topic: Topic string. Empty when a natural-language query is used.
+        purposes: Tuple of purposes. Empty when a query is used.
+        query: Natural-language query. Empty when topic and purposes are used.
+    """
+
     platform: str
-    topic: str  # empty string when query is set
-    purposes: tuple[str, ...]  # empty tuple when query is set
-    query: str  # empty string when topic/purposes are set
+    topic: str
+    purposes: tuple[str, ...]
+    query: str
 
 
 def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
-    """Parse [platform] topic purposes into a _ResearchArgs.
+    """Parse positional CLI arguments into structured research arguments.
 
-    If only one non-platform arg is given, treat it as a free-form NL query.
+    Supports both:
+        - Classic form: [platform] topic purposes
+        - Natural-language query form: [platform] query
+
+    Args:
+        positional: Raw positional CLI arguments.
+
+    Returns:
+        Normalized research arguments.
+
+    Raises:
+        ValidationError: If required arguments are missing or invalid.
     """
     known_platforms = {"youtube"}
     if positional[0] in known_platforms:
@@ -87,7 +104,17 @@ def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
 
 
 def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
-    """Return preferred structured runner first, then the remaining fallbacks."""
+    """Return an ordered list of structured runners.
+
+    The preferred runner is placed first, followed by remaining candidates
+    in fallback order.
+
+    Args:
+        preferred: Preferred runner.
+
+    Returns:
+        Ordered list of runner names.
+    """
     candidates: list[RunnerName] = ["claude", "gemini", "codex", "local"]
     if preferred == "none":
         return []
@@ -95,10 +122,15 @@ def _structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
 
 
 def _run_required_synthesis(packet: dict) -> dict | None:
-    """Call structured LLM runners to produce sections 10-11 when enabled.
+    """Run the synthesis pipeline using structured LLM runners.
 
-    Returns a dict with 'compiled_synthesis' and 'opportunity_analysis', or
-    None when the runner is disabled or all runner attempts fail.
+    Attempts multiple runners in fallback order until one succeeds.
+
+    Args:
+        packet: Input research packet.
+
+    Returns:
+        A dictionary containing synthesis fields if successful, otherwise None.
     """
     from social_research_probe.synthesize.llm_contract import (
         SYNTHESIS_JSON_SCHEMA,
@@ -108,6 +140,14 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     from social_research_probe.utils.progress import log
 
     cfg = load_active_config()
+    if not _stage_flag(cfg, "synthesis", default=True):
+        log("[srp] synthesis: disabled (stages.synthesis = false).")
+        return None
+    if not _service_flag(cfg, "llm", default=True):
+        log(
+            "[srp] synthesis: disabled (services.llm = false). Enable the LLM service to allow synthesis."
+        )
+        return None
     preferred = cfg.default_structured_runner
     if preferred == "none":
         log(
@@ -119,6 +159,10 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     failures: list[str] = []
     runners = _structured_runner_order(preferred)
     for i, runner_name in enumerate(runners, start=1):
+        if hasattr(cfg, "technology_enabled") and not cfg.technology_enabled(runner_name):
+            log(f"[srp] synthesis: runner={runner_name} outcome=disabled_by_config")
+            failures.append(f"{runner_name}: disabled by technologies.{runner_name}")
+            continue
         log(f"[srp] synthesis: attempting runner {i}/{len(runners)} ({runner_name})")
         try:
             runner = get_runner(runner_name)
@@ -140,13 +184,19 @@ def _run_required_synthesis(packet: dict) -> dict | None:
             failures.append(f"{runner_name}: {exc}")
     detail = "; ".join(failures) if failures else "no runners were attempted"
     log(
-        f"[srp] synthesis: all runners failed — sections 10-11 will be omitted. failures=[{detail}]"
+        "[srp] synthesis: all runners failed — "
+        "Compiled Synthesis, Opportunity Analysis, and Final Summary will be omitted. "
+        f"failures=[{detail}]"
     )
     return None
 
 
 def _attach_synthesis(packet: dict) -> None:
-    """Attach synthesized sections 10-11 to a research packet when available."""
+    """Attach synthesis results to a research packet in place.
+
+    Args:
+        packet: Research packet to update.
+    """
     children = packet.get("multi")
     if isinstance(children, list):
         for child in children:
@@ -165,7 +215,16 @@ def _resolve_topic_and_purposes(
     data_dir: Path,
     cfg: object,
 ) -> tuple[str, tuple[str, ...]]:
-    """Resolve topic and purposes from either NL query or classic topic/purpose args."""
+    """Resolve topic and purposes from structured input or a query.
+
+    Args:
+        research_args: Parsed research arguments.
+        data_dir: Data directory.
+        cfg: Active configuration.
+
+    Returns:
+        Resolved topic and purposes.
+    """
     from social_research_probe.commands.nl_query import classify_query
     from social_research_probe.utils.progress import log
 
@@ -181,9 +240,21 @@ def _resolve_topic_and_purposes(
 
 
 def _log_synthesis_runner_status(cfg: object) -> None:
-    """Log whether the configured synthesis runner is available."""
+    """Log synthesis runner availability based on configuration.
+
+    Args:
+        cfg: Active configuration.
+    """
     from social_research_probe.utils.progress import log
 
+    if not _stage_flag(cfg, "synthesis", default=True):
+        log("[srp] synthesis: disabled (stages.synthesis = false).")
+        return
+    if not _service_flag(cfg, "llm", default=True):
+        log(
+            "[srp] synthesis: disabled (services.llm = false). Enable the LLM service to allow synthesis."
+        )
+        return
     preferred = cfg.default_structured_runner
     if preferred == "none":
         log(
@@ -193,12 +264,21 @@ def _log_synthesis_runner_status(cfg: object) -> None:
         runner = get_runner(preferred)
         if not runner.health_check():
             log(
-                f"[srp] synthesis: runner '{preferred}' binary not found on PATH — sections 10-11 will be skipped. Install the CLI or pick a different runner."
+                "[srp] synthesis: runner "
+                f"'{preferred}' binary not found on PATH — synthesis will be skipped."
             )
 
 
 def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
-    """Dispatch research subcommand. Supports classic and NL-query forms."""
+    """Execute the research pipeline for the 'research' subcommand.
+
+    Args:
+        args: Parsed CLI arguments.
+        data_dir: Data directory.
+
+    Returns:
+        Exit status code.
+    """
     from social_research_probe.commands.parse import parse
     from social_research_probe.pipeline import run_research
 
@@ -213,7 +293,7 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
     _log_synthesis_runner_status(cfg)
     packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
-    if _flag(cfg, "synthesis_enabled", default=True):
+    if _stage_flag(cfg, "synthesis", default=True):
         _attach_synthesis(packet)
     report_path = _write_final_report(
         packet, data_dir, cfg, allow_html=not getattr(args, "no_html", False)
@@ -223,13 +303,38 @@ def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
     return 0
 
 
-def _flag(cfg, name: str, *, default: bool) -> bool:
-    """Return cfg.feature_enabled(name) if available, else ``default``.
+def _stage_flag(cfg, name: str, *, default: bool) -> bool:
+    """Check whether a pipeline stage is enabled.
 
-    Lets the CLI accept mock Config objects in tests without forcing every
-    fixture to implement the full feature-toggle surface.
+    Args:
+        cfg: Configuration object.
+        name: Stage name.
+        default: Fallback value if lookup fails.
+
+    Returns:
+        True if the stage is enabled, otherwise the fallback value.
     """
-    fn = getattr(cfg, "feature_enabled", None)
+    fn = getattr(cfg, "stage_enabled", None)
+    if fn is None:
+        return default
+    try:
+        return bool(fn(name))
+    except Exception:
+        return default
+
+
+def _service_flag(cfg, name: str, *, default: bool) -> bool:
+    """Check whether a service is enabled.
+
+    Args:
+        cfg: Configuration object.
+        name: Service name.
+        default: Fallback value if lookup fails.
+
+    Returns:
+        True if the service is enabled, otherwise the fallback value.
+    """
+    fn = getattr(cfg, "service_enabled", None)
     if fn is None:
         return default
     try:
@@ -239,25 +344,45 @@ def _flag(cfg, name: str, *, default: bool) -> bool:
 
 
 def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) -> str:
-    """Always produce a final report file; return its path/URI.
+    """Write the final report and return an access path or command.
 
-    Honours the ``html_report_enabled`` feature flag as format-selection
-    only — Markdown is always written as the fallback so stdout never
-    loses the final report path contract, even when every other feature
-    is disabled.
+    Always produces a report file. Markdown output is used as a fallback
+    when HTML generation is disabled or fails, ensuring a consistent
+    output contract.
+
+    Args:
+        packet: Research output packet.
+        data_dir: Data directory.
+        cfg: Active configuration.
+        allow_html: Whether HTML output is allowed.
+
+    Returns:
+        File path or command to access the report.
     """
-    from social_research_probe.render.html import write_html_report
+    from social_research_probe.render.html import (
+        serve_report_command,
+        write_html_report,
+    )
     from social_research_probe.synthesize.formatter import render_full
 
     html_on = (
-        allow_html and _flag(cfg, "html_report_enabled", default=True) and "multi" not in packet
+        allow_html
+        and _stage_flag(cfg, "report", default=True)
+        and _service_flag(cfg, "html_report", default=True)
+        and "multi" not in packet
     )
     if html_on:
         try:
-            path = write_html_report(packet, data_dir)
+            path = write_html_report(
+                packet,
+                data_dir,
+                prepare_voicebox_audio=_service_flag(cfg, "audio_report", default=True),
+            )
             uri = path.resolve().as_uri()
             packet["html_report_path"] = uri
-            return uri
+            command = serve_report_command(path)
+            packet["html_report_command"] = command
+            return command
         except Exception:
             pass
     md_path = data_dir / "report.md"
@@ -287,12 +412,20 @@ _HANDLERS = {
     "install-skill": _handle_install_skill,
     "setup": _handle_setup,
     "report": _handle_report,
+    "serve-report": _handle_serve_report,
     "config": lambda args, data_dir: _dispatch_config(args, data_dir),
 }
 
 
 def _dispatch(args: argparse.Namespace) -> int:
-    """Route parsed args to the appropriate command handler."""
+    """Dispatch parsed CLI arguments to the appropriate handler.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Exit code from the selected handler.
+    """
     data_dir = resolve_data_dir(args.data_dir)
     os.environ["SRP_DATA_DIR"] = str(data_dir)
     handler = _HANDLERS.get(args.command)
@@ -302,7 +435,19 @@ def _dispatch(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Parse argv and dispatch to the matching subcommand."""
+    """Run the command-line interface.
+
+    Parses arguments and dispatches execution to subcommand handlers.
+
+    Args:
+        argv: Optional argument list. Defaults to sys.argv.
+
+    Returns:
+        Exit status code.
+
+    Raises:
+        SrpError: Raised by handlers and converted to exit codes.
+    """
     import social_research_probe as _srp_pkg
 
     parser = _global_parser()

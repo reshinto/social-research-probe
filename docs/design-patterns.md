@@ -116,7 +116,7 @@ The same pattern is used by [`platforms/registry.py`](../social_research_probe/p
 
 A strategy is a pluggable behaviour that can be swapped at runtime without changing the code that uses it. In `srp`:
 
-- The corroboration strategy is selected by `Config.corroboration_backend`: `host` discovers all available backends; `exa` forces one; `none` disables corroboration entirely.
+- The corroboration strategy is selected by `Config.corroboration_backend`: `auto` discovers all available backends; `exa` forces one; `none` disables corroboration entirely.
 - The LLM ensemble is a strategy set: all configured runners are called concurrently and the first successful result wins.
 
 ### Why it was used
@@ -139,7 +139,7 @@ def _available_backends(config: Config) -> list[CorroborationBackend]:
     choice = config.corroboration_backend
     if choice == "none":
         return []
-    if choice == "host":
+    if choice == "auto":
         # Try every registered backend; keep the healthy ones.
         return [b for b in (get_backend(n) for n in list_backends()) if b.health_check()]
     backend = get_backend(choice)

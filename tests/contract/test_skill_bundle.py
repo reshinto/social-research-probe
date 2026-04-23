@@ -23,4 +23,7 @@ def test_skill_manifest_documents_runner_override_rule() -> None:
 def test_research_reference_documents_host_llm_fallback() -> None:
     text = RESEARCH_REFERENCE.read_text(encoding="utf-8")
     assert "If the user gave a natural-language query and `llm.runner = none`" in text
-    assert "use the host LLM to write sections 10-11 inline from the packet" in text
+    assert (
+        "use the host LLM to write Compiled Synthesis, Opportunity Analysis, and Final Summary inline from the packet"
+        in text
+    )

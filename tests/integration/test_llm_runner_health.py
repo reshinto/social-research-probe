@@ -1,8 +1,8 @@
-"""Live integration tests — verify that Claude, Gemini, and Codex CLIs all respond.
+"""Live integration tests — verify that Claude, Gemini, and Codex runners respond.
 
 Run manually when checking LLM availability:
 
-    pytest tests/integration/test_llm_cli_health.py -v
+    pytest tests/integration/test_llm_runner_health.py -v
 
 These tests shell out to the real CLIs and require network/auth. They are
 excluded from the default test run (no marker required by CI config).

@@ -47,6 +47,8 @@ coverage.xml
 .pytest_cache/
 .ruff_cache/
 .nyc_output
+cov*.txt
+test_output*.txt
 
 # Storybook
 storybook-static
