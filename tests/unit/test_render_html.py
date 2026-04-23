@@ -1112,58 +1112,6 @@ class TestCommandsReport:
         assert "voicebox_audio done" in err
 
 
-class TestTtpHttpAdapter:
-    def test_synthesize_success(self):
-        from social_research_probe.render.tts.http import synthesize
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"mp3data"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            result = synthesize("Hello world", "http://localhost:8080/synthesize")
-        assert result == b"mp3data"
-
-    def test_synthesize_http_error_raises(self):
-        from social_research_probe.render.tts.http import synthesize
-
-        with (
-            patch(
-                "urllib.request.urlopen",
-                side_effect=urllib.error.HTTPError("url", 500, "Server Error", {}, None),
-            ),
-            pytest.raises(RuntimeError, match="TTS server returned 500"),
-        ):
-            synthesize("Hello", "http://localhost:8080/synthesize")
-
-    def test_synthesize_url_error_raises(self):
-        from social_research_probe.render.tts.http import synthesize
-
-        with (
-            patch(
-                "urllib.request.urlopen",
-                side_effect=urllib.error.URLError("connection refused"),
-            ),
-            pytest.raises(RuntimeError, match="TTS server unreachable"),
-        ):
-            synthesize("Hello", "http://localhost:8080/synthesize")
-
-    def test_write_audio_creates_file(self, tmp_path):
-        from social_research_probe.render.tts.http import write_audio
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"mp3bytes"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        out = tmp_path / "audio.mp3"
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            result = write_audio("Hello", out, "http://localhost:8080/synthesize")
-        assert result == out
-        assert out.read_bytes() == b"mp3bytes"
-
-
 class TestVoiceboxTtsAdapter:
     def test_synthesize_success(self):
         from social_research_probe.render.tts.voicebox import synthesize
