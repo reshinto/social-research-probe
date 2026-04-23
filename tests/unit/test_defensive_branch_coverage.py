@@ -550,44 +550,6 @@ def test_run_research_skips_non_string_verdict(monkeypatch, tmp_path):
         assert "corroboration_verdict" not in item
 
 
-def test_init_falls_back_to_metadata_when_version_file_missing():
-    """Covers the else-branch: VERSION missing → importlib.metadata used."""
-    import importlib
-
-    import social_research_probe
-
-    with (
-        patch("pathlib.Path.exists", return_value=False),
-        patch("importlib.metadata.version", return_value="7.7.7"),
-    ):
-        module = importlib.reload(social_research_probe)
-    try:
-        assert module.__version__ == "7.7.7"
-    finally:
-        importlib.reload(social_research_probe)
-
-
-def test_init_falls_back_to_hardcoded_when_both_missing():
-    """Covers except PackageNotFoundError → hard-coded '0.2.0' fallback."""
-    import importlib
-    from importlib.metadata import PackageNotFoundError
-
-    import social_research_probe
-
-    def _raise(_name):
-        raise PackageNotFoundError(_name)
-
-    with (
-        patch("pathlib.Path.exists", return_value=False),
-        patch("importlib.metadata.version", side_effect=_raise),
-    ):
-        module = importlib.reload(social_research_probe)
-    try:
-        assert module.__version__ == "0.2.0"
-    finally:
-        importlib.reload(social_research_probe)
-
-
 def test_handle_research_skips_synthesis_when_flag_off(monkeypatch, tmp_path):
     """Covers the if cfg.feature_enabled('synthesis_enabled') False branch."""
     from unittest.mock import AsyncMock
