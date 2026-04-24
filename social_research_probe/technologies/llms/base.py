@@ -14,7 +14,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
-from social_research_probe.technologies.llms.types import AgenticSearchResult
+from social_research_probe.technologies.llms import AgenticSearchResult
 
 
 class CapabilityUnavailableError(RuntimeError):
