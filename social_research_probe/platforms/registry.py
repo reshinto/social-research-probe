@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.platforms.base import PlatformAdapter
+from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import AdapterConfig
 
 _REGISTRY: dict[str, type[PlatformAdapter]] = {}

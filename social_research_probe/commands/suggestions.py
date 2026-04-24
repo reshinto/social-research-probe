@@ -9,13 +9,6 @@ from social_research_probe.commands.purposes import add_purpose
 from social_research_probe.commands.topics import add_topics
 from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
-from social_research_probe.utils.state.migrate import migrate_to_current
-from social_research_probe.utils.state.schemas import (
-    PENDING_SUGGESTIONS_SCHEMA,
-    default_pending_suggestions,
-)
-from social_research_probe.utils.state.store import atomic_write_json, read_json
-from social_research_probe.utils.state.validate import validate
 from social_research_probe.utils.core.types import (
     JSONObject,
     PendingPurposeSuggestion,
@@ -24,6 +17,13 @@ from social_research_probe.utils.core.types import (
     PurposeSuggestionCandidate,
     TopicSuggestionCandidate,
 )
+from social_research_probe.utils.state.migrate import migrate_to_current
+from social_research_probe.utils.state.schemas import (
+    PENDING_SUGGESTIONS_SCHEMA,
+    default_pending_suggestions,
+)
+from social_research_probe.utils.state.store import atomic_write_json, read_json
+from social_research_probe.utils.state.validate import validate
 
 _FILENAME = "pending_suggestions.json"
 

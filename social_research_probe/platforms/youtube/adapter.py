@@ -10,7 +10,6 @@ import re
 from datetime import UTC
 from typing import ClassVar
 
-from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.platforms.base import (
     FetchLimits,
     PlatformAdapter,
@@ -19,6 +18,7 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import register
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import AdapterConfig, JSONObject
 
 

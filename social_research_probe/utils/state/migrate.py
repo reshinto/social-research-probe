@@ -8,8 +8,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from social_research_probe.utils.core.errors import MigrationError
-from social_research_probe.utils.state.schemas import SCHEMA_VERSION
 from social_research_probe.utils.core.types import JSONObject
+from social_research_probe.utils.state.schemas import SCHEMA_VERSION
 
 Migrator = Callable[[JSONObject], JSONObject]
 

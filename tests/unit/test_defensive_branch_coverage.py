@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 import pytest
 import social_research_probe.llm.gemini_cli as gc
+from social_research_probe.errors import AdapterError
+from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
 from social_research_probe.pipeline.charts import (
     _chart_takeaways,
@@ -23,8 +25,6 @@ from social_research_probe.pipeline.charts import (
 
 from social_research_probe.cli import _service_flag, _stage_flag, _write_final_report
 from social_research_probe.config import Config
-from social_research_probe.errors import AdapterError
-from social_research_probe.llm.base import LLMRunner
 from social_research_probe.pipeline import enrichment
 from social_research_probe.pipeline.orchestrator import _divergence_warnings
 

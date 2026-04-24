@@ -10,8 +10,8 @@ pipeline, the corroboration host, and CLI commands that need to select a runner.
 
 from __future__ import annotations
 
-from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.technologies.llms.base import LLMRunner
+from social_research_probe.utils.core.errors import ValidationError
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.
 # Populated at import time as each runners/*.py module is loaded.

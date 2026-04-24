@@ -8,6 +8,7 @@ from typing import ClassVar
 from unittest.mock import AsyncMock
 
 import pytest
+from social_research_probe.errors import ValidationError
 from social_research_probe.pipeline.charts import _render_charts
 from social_research_probe.pipeline.corroboration import _corroborate_top_n
 from social_research_probe.pipeline.enrichment import _enrich_top_n_with_transcripts
@@ -21,7 +22,6 @@ from social_research_probe.pipeline.stats import _build_stats_summary, _stats_mo
 from social_research_probe.pipeline.svs import _build_svs
 
 from social_research_probe.commands.parse import parse
-from social_research_probe.errors import ValidationError
 from social_research_probe.pipeline.orchestrator import (
     _available_backends,
     _maybe_register_fake,
@@ -165,8 +165,9 @@ def test_score_item_custom_weights_shift_overall():
 
 
 def test_resolve_scoring_weights_purpose_overrides_config():
-    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
     from social_research_probe.purposes.merge import MergedPurpose
+
+    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
 
     class _Cfg:
         raw: ClassVar[dict] = {
@@ -186,9 +187,10 @@ def test_resolve_scoring_weights_purpose_overrides_config():
 
 
 def test_resolve_scoring_weights_defaults_when_empty():
-    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
     from social_research_probe.purposes.merge import MergedPurpose
     from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
+
+    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
 
     class _Cfg:
         raw: ClassVar[dict] = {"scoring": {"weights": {}}}

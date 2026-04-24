@@ -8,21 +8,25 @@ from pathlib import Path
 
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.config import Config
-from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.platform import YouTubePipeline, run_all_platforms
 from social_research_probe.platforms.platform.state import PipelineState
-from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.registry import get_adapter
-from social_research_probe.utils.purposes import registry as purpose_registry
-from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
 from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS
-from social_research_probe.utils.core.types import AdapterConfig, MultiResearchPacket, ResearchPacket
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import (
+    AdapterConfig,
+    MultiResearchPacket,
+    ResearchPacket,
+)
 from social_research_probe.utils.display.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
     FAST_MODE_TOP_N,
     fast_mode_enabled,
 )
 from social_research_probe.utils.display.progress import log
+from social_research_probe.utils.purposes import registry as purpose_registry
+from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
 
 _QUERY_STOPWORDS = frozenset(
     {

@@ -993,8 +993,9 @@ class TestCommandsReport:
         assert "Final report summary here" in content
 
     def test_run_invalid_json_raises_validation_error(self, tmp_path):
-        from social_research_probe.commands.report import run
         from social_research_probe.errors import ValidationError
+
+        from social_research_probe.commands.report import run
 
         bad = tmp_path / "bad.json"
         bad.write_text("not json", encoding="utf-8")
@@ -1002,15 +1003,17 @@ class TestCommandsReport:
             run(str(bad), None, None, None, None)
 
     def test_run_missing_packet_raises_validation_error(self, tmp_path):
-        from social_research_probe.commands.report import run
         from social_research_probe.errors import ValidationError
+
+        from social_research_probe.commands.report import run
 
         with pytest.raises(ValidationError, match="cannot read packet file"):
             run(str(tmp_path / "nonexistent.json"), None, None, None, None)
 
     def test_run_non_dict_packet_raises_validation_error(self, tmp_path):
-        from social_research_probe.commands.report import run
         from social_research_probe.errors import ValidationError
+
+        from social_research_probe.commands.report import run
 
         bad = tmp_path / "list.json"
         bad.write_text("[1, 2, 3]", encoding="utf-8")
@@ -1030,8 +1033,9 @@ class TestCommandsReport:
         assert _read_text_file(str(f)) is None
 
     def test_read_text_file_missing_raises_validation_error(self, tmp_path):
-        from social_research_probe.commands.report import _read_text_file
         from social_research_probe.errors import ValidationError
+
+        from social_research_probe.commands.report import _read_text_file
 
         with pytest.raises(ValidationError):
             _read_text_file(str(tmp_path / "missing.txt"))
@@ -1281,8 +1285,9 @@ class TestResearchHtmlInCli:
         assert render_cmd.run(str(pkt_path)) == 0
 
     def test_synthesis_error_returns_nonzero(self, monkeypatch, tmp_path):
-        from social_research_probe.cli import main
         from social_research_probe.errors import SynthesisError
+
+        from social_research_probe.cli import main
 
         monkeypatch.setattr(
             "social_research_probe.pipeline.run_research",

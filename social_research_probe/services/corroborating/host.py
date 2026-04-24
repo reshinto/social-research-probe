@@ -16,8 +16,8 @@ import asyncio
 import sys
 from collections import Counter
 
-from social_research_probe.technologies.corroborates.base import CorroborationResult
 from social_research_probe.services.corroborating.registry import get_backend
+from social_research_probe.technologies.corroborates.base import CorroborationResult
 from social_research_probe.utils.caching.pipeline_cache import (
     corroboration_cache,
     get_json,

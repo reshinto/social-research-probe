@@ -1350,8 +1350,9 @@ class TestAttachSynthesis:
 
     def test_run_required_synthesis_validation_error_is_caught(self, monkeypatch):
         """ValidationError from parse_synthesis_response is caught and logged."""
-        from social_research_probe.cli import _run_required_synthesis
         from social_research_probe.errors import ValidationError
+
+        from social_research_probe.cli import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"

@@ -9,10 +9,10 @@ from tempfile import TemporaryDirectory
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.utils.core.errors import AdapterError
+from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
 from social_research_probe.technologies.llms.registry import register
 from social_research_probe.technologies.llms.types import AgenticSearchCitation, AgenticSearchResult
-from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
 from social_research_probe.utils.display.progress import log
 

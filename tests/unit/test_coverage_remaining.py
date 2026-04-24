@@ -6,15 +6,12 @@ from typing import ClassVar
 from unittest.mock import AsyncMock
 
 import pytest
+from social_research_probe.errors import SynthesisError
+from social_research_probe.llm.ensemble import _run_provider
 from social_research_probe.pipeline.enrichment import (
     _enrich_top_n_with_transcripts,
     _fallback_transcript_summary,
 )
-
-from social_research_probe.cli import main
-from social_research_probe.errors import SynthesisError
-from social_research_probe.llm.ensemble import _run_provider
-from social_research_probe.pipeline.orchestrator import run_research
 from social_research_probe.synthesize.explanations import (
     explain_bayesian as _explain_bayesian,
 )
@@ -30,6 +27,9 @@ from social_research_probe.synthesize.explanations import (
 from social_research_probe.synthesize.explanations import (
     explain_regression as _explain_regression,
 )
+
+from social_research_probe.cli import main
+from social_research_probe.pipeline.orchestrator import run_research
 
 _VALID_PACKET = {
     "topic": "ai",

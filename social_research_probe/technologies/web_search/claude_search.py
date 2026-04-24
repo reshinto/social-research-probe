@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.technologies.llms.types import AgenticSearchResult
 from social_research_probe.technologies.llms.claude_cli import ClaudeRunner
+from social_research_probe.technologies.llms.types import AgenticSearchResult
 
 
 class ClaudeWebSearch(ClaudeRunner):
