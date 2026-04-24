@@ -23,7 +23,7 @@ from social_research_probe.pipeline.charts import (
     _interpret_strongest_correlation,
 )
 
-from social_research_probe.cli import _service_flag, _stage_flag, _write_final_report
+from social_research_probe.commands.research import _service_flag, _stage_flag, _write_final_report
 from social_research_probe.config import Config
 from social_research_probe.pipeline import enrichment
 from social_research_probe.pipeline.orchestrator import _divergence_warnings

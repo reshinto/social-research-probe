@@ -45,3 +45,23 @@ def _id_selector(raw: str):
         return [int(x.strip()) for x in raw.split(",") if x.strip()]
     except ValueError as exc:
         raise ValidationError(f"invalid id selector: {raw!r}") from exc
+
+
+def _stage_flag(cfg, name: str, *, default: bool) -> bool:
+    """Check whether a pipeline stage is enabled.
+
+    Args:
+        cfg: Configuration object.
+        name: Stage name.
+        default: Fallback value if lookup fails.
+
+    Returns:
+        True if the stage is enabled, otherwise the fallback value.
+    """
+    fn = getattr(cfg, "stage_enabled", None)
+    if fn is None:
+        return default
+    try:
+        return bool(fn(name))
+    except Exception:
+        return default

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import stat
@@ -260,3 +261,50 @@ def check_secrets(
         "present": sorted(set(present)),
         "missing": sorted(set(missing)),
     }
+
+
+def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
+    import getpass
+    import sys
+
+    from social_research_probe.utils.core.errors import ValidationError
+
+    if args.from_stdin:
+        value = sys.stdin.read().rstrip("\n")
+    else:
+        value = getpass.getpass(f"{args.name}: ")
+    if not value:
+        raise ValidationError("empty secret value")
+    write_secret(data_dir, args.name, value)
+    return 0
+
+
+def run(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.commands import ConfigSubcommand
+    from social_research_probe.cli.utils import _emit
+
+    if args.config_cmd == ConfigSubcommand.SHOW:
+        print(show_config(data_dir))
+        return 0
+    if args.config_cmd == ConfigSubcommand.PATH:
+        print(f"config: {data_dir / 'config.toml'}")
+        print(f"secrets: {data_dir / 'secrets.toml'}")
+        return 0
+    if args.config_cmd == ConfigSubcommand.SET:
+        write_config_value(data_dir, args.key, args.value)
+        return 0
+    if args.config_cmd == ConfigSubcommand.SET_SECRET:
+        return run_set_secret(args, data_dir)
+    if args.config_cmd == ConfigSubcommand.UNSET_SECRET:
+        unset_secret(data_dir, args.name)
+        return 0
+    if args.config_cmd == ConfigSubcommand.CHECK_SECRETS:
+        result = check_secrets(
+            data_dir,
+            needed_for=args.needed_for,
+            platform=args.platform,
+            corroboration=args.corroboration,
+        )
+        _emit(result, args.output)
+        return 0
+    return 2

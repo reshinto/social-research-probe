@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
+import json
+import sys
 from pathlib import Path
 from typing import Literal, TypeVar, cast
 
@@ -198,3 +201,71 @@ def discard_pending(data_dir: Path, *, topic_ids: IdSelector, purpose_ids: IdSel
     pending["pending_topic_suggestions"] = topic_rest
     pending["pending_purpose_suggestions"] = purpose_rest
     _save_pending(data_dir, pending)
+
+
+def run_suggest_topics(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit
+
+    drafts = suggest_topics(data_dir, count=args.count)
+    stage_suggestions(data_dir, topic_candidates=drafts, purpose_candidates=[])
+    _emit({"staged_topic_suggestions": drafts}, args.output)
+    return 0
+
+
+def run_suggest_purposes(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit
+
+    drafts = suggest_purposes(data_dir, count=args.count)
+    stage_suggestions(data_dir, topic_candidates=[], purpose_candidates=drafts)
+    _emit({"staged_purpose_suggestions": drafts}, args.output)
+    return 0
+
+
+def run_show_pending(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit
+
+    _emit(show_pending(data_dir), args.output)
+    return 0
+
+
+def run_apply_pending(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit, _id_selector
+
+    apply_pending(
+        data_dir,
+        topic_ids=_id_selector(args.topics),
+        purpose_ids=_id_selector(args.purposes),
+    )
+    _emit({"ok": True}, args.output)
+    return 0
+
+
+def run_discard_pending(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit, _id_selector
+
+    discard_pending(
+        data_dir,
+        topic_ids=_id_selector(args.topics),
+        purpose_ids=_id_selector(args.purposes),
+    )
+    _emit({"ok": True}, args.output)
+    return 0
+
+
+def run_stage(args: argparse.Namespace, data_dir: Path) -> int:
+    from social_research_probe.cli.utils import _emit
+    from social_research_probe.utils.core.errors import ValidationError
+
+    if not args.from_stdin:
+        raise ValidationError("stage-suggestions requires --from-stdin")
+    try:
+        payload = json.loads(sys.stdin.read())
+    except json.JSONDecodeError as exc:
+        raise ValidationError(f"invalid JSON from stdin: {exc}") from exc
+    stage_suggestions(
+        data_dir,
+        topic_candidates=payload.get("topic_candidates", []),
+        purpose_candidates=payload.get("purpose_candidates", []),
+    )
+    _emit({"ok": True}, args.output)
+    return 0

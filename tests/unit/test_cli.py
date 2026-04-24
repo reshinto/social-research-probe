@@ -977,7 +977,7 @@ class TestRequiredSynthesis:
     """Unit tests for cli._run_required_synthesis and envelope output."""
 
     def test_returns_none_when_synthesis_stage_disabled(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -989,7 +989,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis({}) is None
 
     def test_returns_none_when_runner_is_none(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "none"
@@ -998,7 +998,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis({}) is None
 
     def test_returns_none_when_llm_service_disabled(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -1010,7 +1010,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis({}) is None
 
     def test_returns_synthesis_on_success(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -1045,7 +1045,7 @@ class TestRequiredSynthesis:
         }
 
     def test_returns_none_when_all_runners_fail(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"
@@ -1058,7 +1058,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis(_VALID_PACKET) is None
 
     def test_returns_none_when_all_runners_unavailable(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "gemini"
@@ -1072,7 +1072,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis(_VALID_PACKET) is None
 
     def test_skips_runners_disabled_by_technology_config(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "gemini"
@@ -1088,7 +1088,7 @@ class TestRequiredSynthesis:
         assert _run_required_synthesis(_VALID_PACKET) is None
 
     def test_falls_back_when_preferred_structured_runner_fails(self, monkeypatch):
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "gemini"
@@ -1295,7 +1295,7 @@ class TestAttachSynthesis:
 
     def test_attach_synthesis_multi_children_path(self, monkeypatch):
         """_attach_synthesis iterates children when packet has a 'multi' list."""
-        from social_research_probe.cli import _attach_synthesis
+        from social_research_probe.commands.research import _attach_synthesis
 
         synth = {
             "compiled_synthesis": "compiled synthesis",
@@ -1311,7 +1311,7 @@ class TestAttachSynthesis:
 
     def test_attach_synthesis_multi_child_synthesis_none_skips_update(self, monkeypatch):
         """_attach_synthesis skips update for children when synthesis returns None."""
-        from social_research_probe.cli import _attach_synthesis
+        from social_research_probe.commands.research import _attach_synthesis
 
         monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: None)
         packet = {"multi": [{"topic": "a"}]}
@@ -1320,7 +1320,7 @@ class TestAttachSynthesis:
 
     def test_attach_synthesis_single_packet_updates_when_synthesis_not_none(self, monkeypatch):
         """_attach_synthesis merges synthesis into the packet when synthesis is returned."""
-        from social_research_probe.cli import _attach_synthesis
+        from social_research_probe.commands.research import _attach_synthesis
 
         synth = {
             "compiled_synthesis": "compiled synthesis",
@@ -1335,7 +1335,7 @@ class TestAttachSynthesis:
 
     def test_attach_synthesis_single_packet_synthesis_none_no_update(self, monkeypatch):
         """_attach_synthesis leaves the packet unchanged when synthesis returns None."""
-        from social_research_probe.cli import _attach_synthesis
+        from social_research_probe.commands.research import _attach_synthesis
 
         monkeypatch.setattr("social_research_probe.cli._run_required_synthesis", lambda pkt: None)
         packet = {"topic": "ai"}
@@ -1344,7 +1344,7 @@ class TestAttachSynthesis:
 
     def test_structured_runner_order_none_returns_empty(self):
         """_structured_runner_order returns [] when preferred is 'none'."""
-        from social_research_probe.cli import _structured_runner_order
+        from social_research_probe.commands.research import _structured_runner_order
 
         assert _structured_runner_order("none") == []
 
@@ -1352,7 +1352,7 @@ class TestAttachSynthesis:
         """ValidationError from parse_synthesis_response is caught and logged."""
         from social_research_probe.errors import ValidationError
 
-        from social_research_probe.cli import _run_required_synthesis
+        from social_research_probe.commands.research import _run_required_synthesis
 
         class _Cfg:
             default_structured_runner = "claude"

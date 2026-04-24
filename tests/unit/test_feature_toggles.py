@@ -8,7 +8,7 @@ import pytest
 from social_research_probe.pipeline.charts import _chart_takeaways
 from social_research_probe.pipeline.enrichment import _url_based_summary
 
-from social_research_probe.cli import _write_final_report
+from social_research_probe.commands.research import _write_final_report
 from social_research_probe.config import Config
 from social_research_probe.pipeline.orchestrator import _auto_mode_backends, _available_backends
 
