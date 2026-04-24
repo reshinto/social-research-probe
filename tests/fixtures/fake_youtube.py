@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
+from social_research_probe.types import AdapterConfig
+
 from social_research_probe.platforms.base import (
     FetchLimits,
     PlatformAdapter,
@@ -13,7 +15,6 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import register
-from social_research_probe.types import AdapterConfig
 
 
 def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:

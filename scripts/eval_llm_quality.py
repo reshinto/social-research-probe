@@ -47,8 +47,9 @@ def _summarize_with_runner(runner_name: str, prompt: str) -> str:
 
 
 def _grade_with_judge(runner_name: str, prompt: str):
-    from social_research_probe.evals.judge import parse_judge_reply
     from social_research_probe.llm.registry import get_runner
+
+    from social_research_probe.evals.judge import parse_judge_reply
 
     runner = get_runner(runner_name)
     raw = runner.run(prompt)
@@ -76,6 +77,8 @@ def main() -> int:
     parser.add_argument("--word-limit", type=int, default=100)
     args = parser.parse_args()
 
+    from social_research_probe.pipeline.enrichment import _build_summary_prompt
+
     from social_research_probe.config import load_active_config
     from social_research_probe.evals.harness import (
         evaluate_sample,
@@ -87,7 +90,6 @@ def main() -> int:
         write_json,
         write_markdown,
     )
-    from social_research_probe.pipeline.enrichment import _build_summary_prompt
 
     cfg = load_active_config()
     generator_runner = cfg.llm_runner

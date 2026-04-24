@@ -48,6 +48,8 @@ from social_research_probe.render.html import (
 )
 from social_research_probe.render.markdown_to_html import md_to_html
 
+from social_research_probe.commands import Command
+
 _SVS = {
     "validated": 1,
     "partially": 0,
@@ -1234,7 +1236,7 @@ class TestResearchHtmlInCli:
         from social_research_probe.cli import main
 
         self._patch_pipeline(monkeypatch)
-        assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 0
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
         out = capsys.readouterr().out.strip()
@@ -1245,7 +1247,8 @@ class TestResearchHtmlInCli:
 
         self._patch_pipeline(monkeypatch)
         assert (
-            main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"]) == 0
+            main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news", "--no-html"])
+            == 0
         )
         reports_dir = tmp_path / "reports"
         assert not reports_dir.exists() or not list(reports_dir.glob("*.html"))
@@ -1297,7 +1300,7 @@ class TestResearchHtmlInCli:
             "social_research_probe.cli._attach_synthesis",
             lambda pkt: (_ for _ in ()).throw(SynthesisError("boom")),
         )
-        assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 4
+        assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 4
 
 
 class TestHtmlCoverageGaps:

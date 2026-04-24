@@ -18,9 +18,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from social_research_probe.platforms.base import RawItem, TrustHints
 from social_research_probe.validation.ai_slop import score as slop_score
 from social_research_probe.validation.source import SourceClass, classify
+
+from social_research_probe.platforms.base import RawItem, TrustHints
 
 
 def _item(title: str = "t") -> RawItem:

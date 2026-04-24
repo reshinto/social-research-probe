@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from social_research_probe.synthesize.formatter import _render_timing_footer, render_full
+
 from social_research_probe.utils import progress
 
 

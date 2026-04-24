@@ -7,9 +7,9 @@ import urllib.error
 import urllib.request
 
 import pytest
+from social_research_probe.errors import ValidationError
 
 import social_research_probe.commands.serve_report as serve_report_cmd
-from social_research_probe.errors import ValidationError
 
 
 class _FakeResponse:

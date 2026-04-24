@@ -34,13 +34,20 @@ class TranscriptService(BaseService):
         tech_results: list[TechResult] = []
         try:
             transcript = await yt_tech.execute(url)
-            tech_results.append(TechResult(
-                tech_name=yt_tech.name, input=url, output=transcript, success=transcript is not None
-            ))
+            tech_results.append(
+                TechResult(
+                    tech_name=yt_tech.name,
+                    input=url,
+                    output=transcript,
+                    success=transcript is not None,
+                )
+            )
         except Exception as exc:
-            tech_results.append(TechResult(
-                tech_name=yt_tech.name, input=url, output=None, success=False, error=str(exc)
-            ))
+            tech_results.append(
+                TechResult(
+                    tech_name=yt_tech.name, input=url, output=None, success=False, error=str(exc)
+                )
+            )
 
         # Whisper fallback if captions unavailable
         if not transcript:
@@ -57,12 +64,25 @@ class TranscriptService(BaseService):
                     audio_path = await asyncio.to_thread(download_audio, url, tmpdir)
                     if audio_path is not None:
                         transcript = await asyncio.to_thread(transcribe_audio, audio_path)
-                tech_results.append(TechResult(
-                    tech_name="whisper_fallback", input=url, output=transcript, success=transcript is not None
-                ))
+                tech_results.append(
+                    TechResult(
+                        tech_name="whisper_fallback",
+                        input=url,
+                        output=transcript,
+                        success=transcript is not None,
+                    )
+                )
             except Exception as exc:
-                tech_results.append(TechResult(
-                    tech_name="whisper_fallback", input=url, output=None, success=False, error=str(exc)
-                ))
+                tech_results.append(
+                    TechResult(
+                        tech_name="whisper_fallback",
+                        input=url,
+                        output=None,
+                        success=False,
+                        error=str(exc),
+                    )
+                )
 
-        return ServiceResult(service_name=self.service_name, input_key=url, tech_results=tech_results)
+        return ServiceResult(
+            service_name=self.service_name, input_key=url, tech_results=tech_results
+        )

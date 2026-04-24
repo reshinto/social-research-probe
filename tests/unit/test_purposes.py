@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 
 import pytest
+from social_research_probe.errors import DuplicateError, SrpError, ValidationError
 
-from social_research_probe.commands.purposes import (
+from social_research_probe.utils.command_models.purposes import (
     add_purpose,
     remove_purposes,
     rename_purpose,
     show_purposes,
 )
-from social_research_probe.errors import DuplicateError, SrpError, ValidationError
 
 
 def _read(data_dir: Path) -> dict:

@@ -7,7 +7,6 @@ Who calls it: pytest, as part of the unit test suite.
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 
 

@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
-from social_research_probe.platforms.base import RawItem, TrustHints
 from social_research_probe.validation.source import SourceClass, classify
+
+from social_research_probe.platforms.base import RawItem, TrustHints
 
 
 def _item(url="https://youtube.com/watch?v=x", extras=None):

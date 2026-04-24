@@ -33,7 +33,11 @@ class SummaryService(BaseService):
         )
         try:
             summary = await multi_llm_prompt(prompt) or ""
-            tr = TechResult(tech_name="llm_ensemble", input=data, output=summary, success=bool(summary))
+            tr = TechResult(
+                tech_name="llm_ensemble", input=data, output=summary, success=bool(summary)
+            )
         except Exception as exc:
-            tr = TechResult(tech_name="llm_ensemble", input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name="llm_ensemble", input=data, output=None, success=False, error=str(exc)
+            )
         return ServiceResult(service_name=self.service_name, input_key=title, tech_results=[tr])

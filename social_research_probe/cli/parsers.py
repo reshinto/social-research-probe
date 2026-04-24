@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from social_research_probe.cli.commands import Command, ConfigSubcommand, SpecialCommand
+from social_research_probe.commands import Command, ConfigSubcommand, SpecialCommand
 
 
 def _add_topics_subparsers(sub: argparse._SubParsersAction) -> None:
@@ -42,9 +42,7 @@ def _add_suggestions_subparsers(sub: argparse._SubParsersAction) -> None:
     sug_p.add_argument("--count", type=int, default=5)
     sug_p.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     show_pend = sub.add_parser(Command.SHOW_PENDING)
-    show_pend.add_argument(
-        "--output", choices=["text", "json", "markdown"], default="text"
-    )
+    show_pend.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     ap = sub.add_parser(Command.APPLY_PENDING)
     ap.add_argument("--topics", default="")
     ap.add_argument("--purposes", default="")
@@ -80,32 +78,20 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Skip writing the HTML report to the reports directory",
     )
-    cc = sub.add_parser(
-        Command.CORROBORATE_CLAIMS, help="Corroborate claims from a JSON file"
-    )
+    cc = sub.add_parser(Command.CORROBORATE_CLAIMS, help="Corroborate claims from a JSON file")
     cc.add_argument("--input", required=True, help="Path to claims JSON file")
-    cc.add_argument(
-        "--backends", default="llm_search", help="Comma-separated backend names"
-    )
+    cc.add_argument("--backends", default="llm_search", help="Comma-separated backend names")
     cc.add_argument("--output", default=None, help="Output file path (default: stdout)")
-    rend = sub.add_parser(
-        Command.RENDER, help="Render charts and stats for a research packet"
-    )
+    rend = sub.add_parser(Command.RENDER, help="Render charts and stats for a research packet")
     rend.add_argument("--packet", required=True, help="Path to packet JSON file")
     rend.add_argument("--output-dir", default=None, help="Directory to save charts")
-    ins = sub.add_parser(
-        Command.INSTALL_SKILL, help="Copy skill files into ~/.claude/skills/srp"
-    )
-    ins.add_argument(
-        "--target", default=None, help="Destination (default: ~/.claude/skills/srp)"
-    )
+    ins = sub.add_parser(Command.INSTALL_SKILL, help="Copy skill files into ~/.claude/skills/srp")
+    ins.add_argument("--target", default=None, help="Destination (default: ~/.claude/skills/srp)")
     sub.add_parser(
         Command.SETUP,
         help="Interactive first-time setup: default config + LLM + API keys",
     )
-    rep = sub.add_parser(
-        Command.REPORT, help="Re-render an HTML report from a saved packet file"
-    )
+    rep = sub.add_parser(Command.REPORT, help="Re-render an HTML report from a saved packet file")
     rep.add_argument("--packet", required=True, help="Path to packet JSON file")
     rep.add_argument(
         "--compiled-synthesis",
@@ -129,15 +115,9 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     serve = sub.add_parser(
         Command.SERVE_REPORT, help="Serve one HTML report with a local Voicebox proxy"
     )
-    serve.add_argument(
-        "--report", required=True, help="Path to an existing HTML report"
-    )
-    serve.add_argument(
-        "--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)"
-    )
-    serve.add_argument(
-        "--port", type=int, default=8000, help="Bind port (default: 8000)"
-    )
+    serve.add_argument("--report", required=True, help="Path to an existing HTML report")
+    serve.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    serve.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
     serve.add_argument(
         "--voicebox-base",
         default=None,
@@ -150,13 +130,9 @@ def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
     cfg = sub.add_parser(Command.CONFIG)
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
     cfg_show = cfg_sub.add_parser(ConfigSubcommand.SHOW)
-    cfg_show.add_argument(
-        "--output", choices=["text", "json", "markdown"], default="text"
-    )
+    cfg_show.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     cfg_path = cfg_sub.add_parser(ConfigSubcommand.PATH)
-    cfg_path.add_argument(
-        "--output", choices=["text", "json", "markdown"], default="text"
-    )
+    cfg_path.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     set_p = cfg_sub.add_parser(ConfigSubcommand.SET)
     set_p.add_argument("key")
     set_p.add_argument("value")
@@ -167,16 +143,12 @@ def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
     sec_p.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     unset_p = cfg_sub.add_parser(ConfigSubcommand.UNSET_SECRET)
     unset_p.add_argument("name")
-    unset_p.add_argument(
-        "--output", choices=["text", "json", "markdown"], default="text"
-    )
+    unset_p.add_argument("--output", choices=["text", "json", "markdown"], default="text")
     check_p = cfg_sub.add_parser(ConfigSubcommand.CHECK_SECRETS)
     check_p.add_argument("--needed-for", default=None)
     check_p.add_argument("--platform", default=None)
     check_p.add_argument("--corroboration", default=None)
-    check_p.add_argument(
-        "--output", choices=["text", "json", "markdown"], default="text"
-    )
+    check_p.add_argument("--output", choices=["text", "json", "markdown"], default="text")
 
 
 def _global_parser() -> argparse.ArgumentParser:

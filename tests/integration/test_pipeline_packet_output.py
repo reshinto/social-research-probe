@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 
+from social_research_probe.commands import Command
+
 
 def test_run_research_emits_packet_envelope(tmp_path):
     env = {
@@ -15,7 +17,7 @@ def test_run_research_emits_packet_envelope(tmp_path):
             sys.executable,
             "-m",
             "social_research_probe.cli",
-            "update-purposes",
+            Command.UPDATE_PURPOSES,
             "--add",
             '"trends"="Track emergence"',
         ],

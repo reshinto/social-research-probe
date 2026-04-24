@@ -28,7 +28,6 @@ from __future__ import annotations
 import httpx
 import pytest
 import respx
-
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.brave import BraveBackend
 from social_research_probe.corroboration.exa import ExaBackend

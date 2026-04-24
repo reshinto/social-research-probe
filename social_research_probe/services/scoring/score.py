@@ -27,16 +27,21 @@ class ScoringService(BaseService):
         weights = data.get("weights", {}) if isinstance(data, dict) else {}
         try:
             scored = [
-                {**item, "overall_score": overall_score(
-                    trust=item.get("trust", 0.0),
-                    trend=item.get("trend", 0.0),
-                    opportunity=item.get("opportunity", 0.0),
-                    weights=weights or None,
-                )}
+                {
+                    **item,
+                    "overall_score": overall_score(
+                        trust=item.get("trust", 0.0),
+                        trend=item.get("trend", 0.0),
+                        opportunity=item.get("opportunity", 0.0),
+                        weights=weights or None,
+                    ),
+                }
                 for item in items
                 if isinstance(item, dict)
             ]
             tr = TechResult(tech_name="scoring.combine", input=data, output=scored, success=True)
         except Exception as exc:
-            tr = TechResult(tech_name="scoring.combine", input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name="scoring.combine", input=data, output=None, success=False, error=str(exc)
+            )
         return ServiceResult(service_name=self.service_name, input_key="items", tech_results=[tr])

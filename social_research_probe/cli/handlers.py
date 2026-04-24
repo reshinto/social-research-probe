@@ -7,69 +7,73 @@ from pathlib import Path
 
 
 def _handle_update_topics(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import topics as topics_cmd
+    from social_research_probe.commands import update_topics
 
-    return topics_cmd.run_update(args, data_dir)
+    return update_topics.run(args, data_dir)
 
 
 def _handle_show_topics(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import topics as topics_cmd
+    from social_research_probe.commands import show_topics
 
-    return topics_cmd.run_show(args, data_dir)
+    return show_topics.run(args, data_dir)
 
 
 def _handle_update_purposes(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import purposes as purposes_cmd
+    from social_research_probe.commands import update_purposes
 
-    return purposes_cmd.run_update(args, data_dir)
+    return update_purposes.run(args, data_dir)
 
 
 def _handle_show_purposes(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import purposes as purposes_cmd
+    from social_research_probe.commands import show_purposes
 
-    return purposes_cmd.run_show(args, data_dir)
+    return show_purposes.run(args, data_dir)
 
 
 def _handle_suggest_topics(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import suggest_topics
 
-    return suggestions_cmd.run_suggest_topics(args, data_dir)
+    return suggest_topics.run(args, data_dir)
 
 
 def _handle_suggest_purposes(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import suggest_purposes
 
-    return suggestions_cmd.run_suggest_purposes(args, data_dir)
+    return suggest_purposes.run(args, data_dir)
 
 
 def _handle_show_pending(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import show_pending
 
-    return suggestions_cmd.run_show_pending(args, data_dir)
+    return show_pending.run(args, data_dir)
 
 
 def _handle_apply_pending(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import apply_pending
 
-    return suggestions_cmd.run_apply_pending(args, data_dir)
+    return apply_pending.run(args, data_dir)
 
 
 def _handle_discard_pending(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import discard_pending
 
-    return suggestions_cmd.run_discard_pending(args, data_dir)
+    return discard_pending.run(args, data_dir)
 
 
 def _handle_stage_suggestions(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import suggestions as suggestions_cmd
+    from social_research_probe.commands import stage_suggestions
 
-    return suggestions_cmd.run_stage(args, data_dir)
+    return stage_suggestions.run(args, data_dir)
 
 
 def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.commands import corroborate_claims as cc_cmd
 
-    return cc_cmd.run(args.input, [b.strip() for b in args.backends.split(",") if b.strip()], output_path=args.output)
+    return cc_cmd.run(
+        args.input,
+        [b.strip() for b in args.backends.split(",") if b.strip()],
+        output_path=args.output,
+    )
 
 
 def _handle_render(args: argparse.Namespace, data_dir: Path) -> int:
@@ -128,7 +132,7 @@ def _dispatch_config(args: argparse.Namespace, data_dir: Path) -> int:
 
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions."""
-    from social_research_probe.cli.commands import Command
+    from social_research_probe.commands import Command
 
     return {
         Command.UPDATE_TOPICS: _handle_update_topics,

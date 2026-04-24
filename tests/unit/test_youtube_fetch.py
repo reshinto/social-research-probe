@@ -7,8 +7,8 @@ mock API clients — no live network calls.
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.errors import AdapterError
+
 from social_research_probe.platforms.youtube import fetch
 
 

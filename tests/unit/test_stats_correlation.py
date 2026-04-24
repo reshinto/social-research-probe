@@ -5,7 +5,6 @@ and insufficient-data cases.
 """
 
 import pytest
-
 from social_research_probe.stats.correlation import run
 
 

@@ -12,10 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from social_research_probe.commands.purposes import add_purpose
-from social_research_probe.commands.topics import add_topics, show_topics
 from social_research_probe.technologies.llms.registry import get_runner
 from social_research_probe.technologies.llms.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
+from social_research_probe.utils.command_models.purposes import add_purpose
+from social_research_probe.utils.command_models.topics import add_topics, show_topics
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 from social_research_probe.utils.core.types import RunnerName
 from social_research_probe.utils.display.progress import log

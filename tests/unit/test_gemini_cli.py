@@ -6,7 +6,6 @@ import json
 from unittest.mock import patch
 
 import pytest
-
 import social_research_probe.llm.gemini_cli as gc
 from social_research_probe.errors import AdapterError
 

@@ -6,7 +6,7 @@ import asyncio
 import os
 from pathlib import Path
 
-from social_research_probe.commands.parse import ParsedRunResearch
+from social_research_probe.cli.dsl_parser import ParsedRunResearch
 from social_research_probe.config import Config
 from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.platform import YouTubePipeline, run_all_platforms
@@ -30,9 +30,33 @@ from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purp
 
 _QUERY_STOPWORDS = frozenset(
     {
-        "the", "a", "an", "of", "for", "to", "and", "or", "in", "on", "with",
-        "get", "my", "by", "via", "from", "about", "how", "what", "which",
-        "track", "latest", "across", "channels", "velocity", "saturation", "emergence",
+        "the",
+        "a",
+        "an",
+        "of",
+        "for",
+        "to",
+        "and",
+        "or",
+        "in",
+        "on",
+        "with",
+        "get",
+        "my",
+        "by",
+        "via",
+        "from",
+        "about",
+        "how",
+        "what",
+        "which",
+        "track",
+        "latest",
+        "across",
+        "channels",
+        "velocity",
+        "saturation",
+        "emergence",
     }
 )
 

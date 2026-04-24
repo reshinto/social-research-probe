@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from social_research_probe.purposes.registry import get
 
 

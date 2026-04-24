@@ -27,14 +27,16 @@ class ChartsService(BaseService):
         from social_research_probe.technologies.charts.selector import select_and_render
 
         scored_items = data.get("scored_items", []) if isinstance(data, dict) else []
-        scores = [
-            item.get("overall_score", 0.0)
-            for item in scored_items
-            if isinstance(item, dict)
-        ]
+        scores = [item.get("overall_score", 0.0) for item in scored_items if isinstance(item, dict)]
         try:
             chart_result = await asyncio.to_thread(select_and_render, scores, "overall_score")
-            tr = TechResult(tech_name="charts_selector", input=data, output=chart_result, success=True)
+            tr = TechResult(
+                tech_name="charts_selector", input=data, output=chart_result, success=True
+            )
         except Exception as exc:
-            tr = TechResult(tech_name="charts_selector", input=data, output=None, success=False, error=str(exc))
-        return ServiceResult(service_name=self.service_name, input_key="stats_results", tech_results=[tr])
+            tr = TechResult(
+                tech_name="charts_selector", input=data, output=None, success=False, error=str(exc)
+            )
+        return ServiceResult(
+            service_name=self.service_name, input_key="stats_results", tech_results=[tr]
+        )

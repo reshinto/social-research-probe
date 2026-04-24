@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from social_research_probe.platforms.base import RawItem, SignalSet
 from social_research_probe.synthesize.warnings import detect
+
+from social_research_probe.platforms.base import RawItem, SignalSet
 
 
 def _item(channel: str = "ch") -> RawItem:

@@ -20,6 +20,7 @@ class YouTubeSourceService(BaseService):
     async def execute_batch(self, inputs: list[YoutubeQuery], *, cfg) -> list[ServiceResult]:
         """Run each YoutubeQuery through YoutubeAPIFetch; return one ServiceResult per query."""
         import asyncio
+
         results = await asyncio.gather(*(self.execute_one(q, cfg=cfg) for q in inputs))
         return list(results)
 
@@ -28,7 +29,13 @@ class YouTubeSourceService(BaseService):
         tech.caller_service = self.service_name
         try:
             output = await tech.execute(data)
-            tr = TechResult(tech_name=tech.name, input=data, output=output, success=output is not None)
+            tr = TechResult(
+                tech_name=tech.name, input=data, output=output, success=output is not None
+            )
         except Exception as exc:
-            tr = TechResult(tech_name=tech.name, input=data, output=None, success=False, error=str(exc))
-        return ServiceResult(service_name=self.service_name, input_key=repr(data), tech_results=[tr])
+            tr = TechResult(
+                tech_name=tech.name, input=data, output=None, success=False, error=str(exc)
+            )
+        return ServiceResult(
+            service_name=self.service_name, input_key=repr(data), tech_results=[tr]
+        )

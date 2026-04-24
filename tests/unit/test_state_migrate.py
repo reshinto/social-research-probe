@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from social_research_probe.errors import MigrationError
 from social_research_probe.state.migrate import migrate_to_current, migrators_for
 from social_research_probe.state.schemas import SCHEMA_VERSION

@@ -47,7 +47,6 @@ import random
 import statistics
 
 import pytest
-
 from social_research_probe.stats import (
     bayesian_linear,
     bootstrap,

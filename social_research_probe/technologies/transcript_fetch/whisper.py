@@ -48,6 +48,7 @@ class WhisperTranscript(BaseTechnology[Path, dict]):
     async def _execute(self, data: Path) -> dict:
         """Transcribe audio at data path; return {filename: text}."""
         import asyncio
+
         text = await asyncio.to_thread(transcribe_audio, data)
         if text is None:
             raise RuntimeError(f"Whisper produced no transcript for: {data}")

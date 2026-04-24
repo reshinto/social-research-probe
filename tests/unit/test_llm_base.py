@@ -9,7 +9,6 @@ Who calls it: pytest, run as part of the unit test suite.
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.llm.base import LLMRunner
 
 

@@ -10,6 +10,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from social_research_probe.errors import ValidationError
+from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 
 from social_research_probe.commands.nl_query import (
     ClassifiedQuery,
@@ -19,8 +21,6 @@ from social_research_probe.commands.nl_query import (
     _runner_order,
     classify_query,
 )
-from social_research_probe.errors import ValidationError
-from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 
 # ---------------------------------------------------------------------------
 # NL_QUERY_CLASSIFICATION_SCHEMA
@@ -211,7 +211,7 @@ def test_classify_query_topic_already_exists(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """topic_created is False when the topic already exists (DuplicateError)."""
-    from social_research_probe.commands.topics import add_topics
+    from social_research_probe.utils.command_models.topics import add_topics
 
     add_topics(tmp_data_dir, ["ai"], force=False)
 
@@ -227,7 +227,7 @@ def test_classify_query_purpose_already_exists(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """purpose_created is False when the purpose already exists (DuplicateError)."""
-    from social_research_probe.commands.purposes import add_purpose
+    from social_research_probe.utils.command_models.purposes import add_purpose
 
     add_purpose(tmp_data_dir, name="latest-news", method="latest news and updates", force=False)
 

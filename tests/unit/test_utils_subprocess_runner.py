@@ -12,7 +12,6 @@ from __future__ import annotations
 import subprocess
 
 import pytest
-
 from social_research_probe.errors import AdapterError
 from social_research_probe.utils.subprocess_runner import run
 

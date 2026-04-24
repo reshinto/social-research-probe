@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.errors import ValidationError
+from social_research_probe.types import AdapterConfig
+
 from social_research_probe.platforms.base import (
     FetchLimits,
     PlatformAdapter,
@@ -13,7 +14,6 @@ from social_research_probe.platforms.base import (
     TrustHints,
 )
 from social_research_probe.platforms.registry import get_adapter, list_adapters, register
-from social_research_probe.types import AdapterConfig
 
 
 def test_register_and_get():

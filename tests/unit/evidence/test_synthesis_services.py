@@ -19,12 +19,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
-from social_research_probe.platforms.base import SignalSet
 from social_research_probe.stats.base import StatResult
 from social_research_probe.synthesize.divergence import jaccard_divergence
 from social_research_probe.synthesize.evidence import summarize_signals
 from social_research_probe.synthesize.explain import explain
+
+from social_research_probe.platforms.base import SignalSet
 
 # ---------------------------------------------------------------------------
 # jaccard_divergence

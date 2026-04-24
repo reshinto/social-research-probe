@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from social_research_probe.state.store import atomic_write_json, read_json
 
 

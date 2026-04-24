@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from social_research_probe.errors import ValidationError
 
 from social_research_probe.commands import render as render_cmd
-from social_research_probe.errors import ValidationError
 
 # ---------------------------------------------------------------------------
 # Stub return types

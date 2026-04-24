@@ -11,13 +11,13 @@ from __future__ import annotations
 import httpx
 import pytest
 import respx
-
-from social_research_probe.commands.config import write_secret
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.brave import BraveBackend
 from social_research_probe.corroboration.exa import ExaBackend
 from social_research_probe.corroboration.tavily import TavilyBackend
 from social_research_probe.errors import AdapterError
+
+from social_research_probe.commands.config import write_secret
 
 
 class _FakeClaim:

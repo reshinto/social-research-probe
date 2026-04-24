@@ -81,9 +81,7 @@ class BaseResearchPlatform(ABC):
                 if _asyncio.iscoroutine(result):
                     seen[key] = await result
                 else:
-                    seen[key] = HealthCheckResult(
-                        key=key, healthy=bool(result), message="ok"
-                    )
+                    seen[key] = HealthCheckResult(key=key, healthy=bool(result), message="ok")
         return seen
 
     def _collect_technologies(

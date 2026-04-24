@@ -23,7 +23,6 @@ from __future__ import annotations
 import httpx
 import pytest
 import respx
-
 from social_research_probe.corroboration._filters import (
     filter_results,
     is_self_source,

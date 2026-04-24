@@ -84,9 +84,10 @@ def word_count(text: str) -> int:
 
 async def _summarize_with_active_runner(transcript: str, word_limit: int) -> str:
     """Ask the configured runner for a summary. Imports lazily so --help is fast."""
-    from social_research_probe.config import load_active_config
     from social_research_probe.llm.registry import get_runner
     from social_research_probe.pipeline.enrichment import _build_summary_prompt
+
+    from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
     if cfg.llm_runner == "none":

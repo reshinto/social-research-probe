@@ -58,8 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     Raises:
         SrpError: Raised by handlers and converted to exit codes.
     """
-    from .commands import SpecialCommand
     import social_research_probe as _srp_pkg
+    from social_research_probe.commands import SpecialCommand
 
     parser = _global_parser()
     args = parser.parse_args(argv)

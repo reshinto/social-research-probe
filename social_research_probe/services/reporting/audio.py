@@ -20,6 +20,7 @@ class AudioReportService(BaseService):
 
     def _get_technologies(self, cfg):
         from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
+
         return [VoiceboxTTS()]
 
     async def execute_one(self, data: object, *, cfg) -> ServiceResult:
@@ -31,7 +32,11 @@ class AudioReportService(BaseService):
         tech.caller_service = self.service_name
         try:
             output = await tech.execute(text)
-            tr = TechResult(tech_name=tech.name, input=data, output=output, success=output is not None)
+            tr = TechResult(
+                tech_name=tech.name, input=data, output=output, success=output is not None
+            )
         except Exception as exc:
-            tr = TechResult(tech_name=tech.name, input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name=tech.name, input=data, output=None, success=False, error=str(exc)
+            )
         return ServiceResult(service_name=self.service_name, input_key="text", tech_results=[tr])

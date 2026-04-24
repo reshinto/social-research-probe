@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import tempfile
 from pathlib import Path
@@ -51,10 +52,8 @@ class MacTTS(BaseTechnology[str, Path]):
 
         cfg = load_active_config()
         voice = "Alex"
-        try:
+        with contextlib.suppress(AttributeError, TypeError):
             voice = cfg.tunables.get("tts", {}).get("mac", {}).get("voice", "Alex")  # type: ignore[attr-defined]
-        except (AttributeError, TypeError):
-            pass
         out_path = Path(tempfile.mkdtemp(prefix="srp-mactts-")) / "audio.aiff"
 
         await asyncio.to_thread(synthesize_mac, data, voice, out_path)

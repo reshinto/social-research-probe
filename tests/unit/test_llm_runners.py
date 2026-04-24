@@ -17,7 +17,6 @@ Who calls it: pytest, run as part of the unit test suite.
 from __future__ import annotations
 
 import pytest
-
 import social_research_probe.llm.registry as registry_module
 from social_research_probe.errors import AdapterError
 

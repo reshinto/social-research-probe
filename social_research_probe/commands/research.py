@@ -104,9 +104,7 @@ def _run_required_synthesis(packet: dict) -> dict | None:
             log(f"[srp] synthesis: runner={runner_name} outcome=success")
             return result
         except ValidationError as exc:
-            log(
-                f"[srp] synthesis: runner={runner_name} outcome=invalid_response err={exc}"
-            )
+            log(f"[srp] synthesis: runner={runner_name} outcome=invalid_response err={exc}")
             failures.append(f"{runner_name}: invalid response ({exc})")
         except Exception as exc:
             log(f"[srp] synthesis: runner={runner_name} outcome=error err={exc}")
@@ -213,11 +211,7 @@ def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) 
     md_path = data_dir / "report.md"
     md_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        body = (
-            render_full(packet)
-            if "multi" not in packet
-            else "# Report\n\n_(no content)_\n"
-        )
+        body = render_full(packet) if "multi" not in packet else "# Report\n\n_(no content)_\n"
     except Exception:
         body = "# Report\n\n_(no content — every feature disabled or pipeline empty)_\n"
     md_path.write_text(body, encoding="utf-8")
@@ -256,8 +250,7 @@ def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
     """Execute the research pipeline for the 'research' subcommand."""
-    import social_research_probe.technologies.llms  # registers all runners
-    from social_research_probe.commands.parse import parse
+    from social_research_probe.commands import DslCommand, parse
     from social_research_probe.pipeline import run_research
 
     research_args = _parse_simple_research_args(args.args)
@@ -268,11 +261,9 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     cfg = load_active_config()
     topic, purposes = _resolve_topic_and_purposes(research_args, data_dir, cfg)
     platform = research_args.platform
-    raw = f'run-research platform:{platform} "{topic}"->{"+".join(purposes)}'
+    raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
     _log_synthesis_runner_status(cfg)
-    packet = asyncio.run(
-        run_research(parse(raw), data_dir, adapter_config=config_extras)
-    )
+    packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
     if _stage_flag(cfg, "synthesis", default=True):
         _attach_synthesis(packet)
     report_path = _write_final_report(

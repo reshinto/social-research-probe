@@ -4,7 +4,6 @@ API key is missing."""
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.errors import AdapterError
 
 
@@ -80,6 +79,7 @@ def test_api_key_raises_when_both_absent(monkeypatch: pytest.MonkeyPatch):
     """Lines 39-41: _api_key raises AdapterError when no env var and no data_dir secret."""
     monkeypatch.delenv("SRP_YOUTUBE_API_KEY", raising=False)
     from social_research_probe.errors import AdapterError
+
     from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
 
     adapter = YouTubeAdapter({"data_dir": None})
@@ -91,6 +91,7 @@ def test_api_key_data_dir_set_but_no_secret_raises(monkeypatch: pytest.MonkeyPat
     """Branch 37->39: data_dir is set but read_secret returns None → AdapterError raised."""
     monkeypatch.delenv("SRP_YOUTUBE_API_KEY", raising=False)
     from social_research_probe.errors import AdapterError
+
     from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
 
     # tmp_path has no secrets file, so read_secret returns None

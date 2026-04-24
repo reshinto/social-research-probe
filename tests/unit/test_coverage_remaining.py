@@ -29,6 +29,7 @@ from social_research_probe.synthesize.explanations import (
 )
 
 from social_research_probe.cli import main
+from social_research_probe.commands import Command
 from social_research_probe.pipeline.orchestrator import run_research
 
 _VALID_PACKET = {
@@ -64,7 +65,7 @@ def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys
     monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run_research)
     monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
-    assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
+    assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 0
     assert calls
     _cmd, _data_dir, adapter_config = calls[0]
     assert adapter_config == {"include_shorts": True, "fetch_transcripts": True}
@@ -81,7 +82,7 @@ def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
         "social_research_probe.cli._attach_synthesis",
         lambda pkt: (_ for _ in ()).throw(SynthesisError("boom")),
     )
-    assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 4
+    assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 4
 
 
 @pytest.mark.parametrize(
@@ -180,7 +181,7 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
     """When backends config is non-none but no backends pass health-check, skip_reason
     is 'no API credentials usable' (the else-branch of the cfg_corr == 'none' check)."""
 
-    from social_research_probe.commands.parse import parse
+    from social_research_probe.cli.dsl_parser import parse
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
 

@@ -1,11 +1,30 @@
-"""Recursive-descent parser for the srp command DSL. Never consults an LLM."""
+"""Parser for research DSL (domain-specific language). Never consults an LLM."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Literal
 
 from social_research_probe.utils.core.errors import SrpError
+
+
+class DslCommand(StrEnum):
+    """Domain-specific language command names used within the research pipeline.
+    These strings are parsed as part of the research DSL (not CLI top-level commands).
+    """
+
+    UPDATE_TOPICS = "update-topics"
+    SHOW_TOPICS = "show-topics"
+    UPDATE_PURPOSES = "update-purposes"
+    SHOW_PURPOSES = "show-purposes"
+    SUGGEST_TOPICS = "suggest-topics"
+    SUGGEST_PURPOSES = "suggest-purposes"
+    SHOW_PENDING_SUGGESTIONS = "show-pending-suggestions"
+    APPLY_PENDING_SUGGESTIONS = "apply-pending-suggestions"
+    DISCARD_PENDING_SUGGESTIONS = "discard-pending-suggestions"
+    RESEARCH = "run-research"
+    STAGE_SUGGESTIONS = "stage-suggestions"
 
 
 class ParseError(SrpError):
@@ -127,16 +146,16 @@ def parse(text: str) -> Parsed:
     tail = tail.strip()
 
     dispatch = {
-        "update-topics": _parse_update_topics,
-        "show-topics": lambda _: ParsedShowTopics(),
-        "update-purposes": _parse_update_purposes,
-        "show-purposes": lambda _: ParsedShowPurposes(),
-        "suggest-topics": lambda _: ParsedSuggestTopics(),
-        "suggest-purposes": lambda _: ParsedSuggestPurposes(),
-        "show-pending-suggestions": lambda _: ParsedShowPending(),
-        "apply-pending-suggestions": _parse_apply_pending,
-        "discard-pending-suggestions": _parse_discard_pending,
-        "run-research": _parse_run_research,
+        DslCommand.UPDATE_TOPICS: _parse_update_topics,
+        DslCommand.SHOW_TOPICS: lambda _: ParsedShowTopics(),
+        DslCommand.UPDATE_PURPOSES: _parse_update_purposes,
+        DslCommand.SHOW_PURPOSES: lambda _: ParsedShowPurposes(),
+        DslCommand.SUGGEST_TOPICS: lambda _: ParsedSuggestTopics(),
+        DslCommand.SUGGEST_PURPOSES: lambda _: ParsedSuggestPurposes(),
+        DslCommand.SHOW_PENDING_SUGGESTIONS: lambda _: ParsedShowPending(),
+        DslCommand.APPLY_PENDING_SUGGESTIONS: _parse_apply_pending,
+        DslCommand.DISCARD_PENDING_SUGGESTIONS: _parse_discard_pending,
+        DslCommand.RESEARCH: _parse_run_research,
     }
     if head not in dispatch:
         raise ParseError(f"unknown command: {head!r}")

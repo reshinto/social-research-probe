@@ -104,6 +104,7 @@ class YoutubeTranscriptFetch(BaseTechnology[str, str]):
     async def _execute(self, data: str) -> str:
         """Fetch transcript for the given YouTube URL or video ID."""
         import asyncio
+
         result = await asyncio.to_thread(fetch_transcript, data)
         if result is None:
             raise RuntimeError(f"No transcript available for: {data}")

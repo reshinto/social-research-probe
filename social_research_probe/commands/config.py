@@ -9,6 +9,7 @@ import stat
 import tomllib
 from pathlib import Path
 
+from social_research_probe.commands import DslCommand
 from social_research_probe.config import DEFAULT_CONFIG, Config
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import JSONObject, JSONScalar
@@ -242,7 +243,7 @@ def check_secrets(
     """Report which secrets are required, optional, present, and missing."""
     required: list[str] = []
 
-    if needed_for == "run-research" and platform:
+    if needed_for == DslCommand.RESEARCH and platform:
         required.extend(_PLATFORM_SECRETS.get(platform, []))
     if corroboration:
         required.extend(_CORROBORATION_SECRETS.get(corroboration, []))
@@ -269,10 +270,7 @@ def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
 
     from social_research_probe.utils.core.errors import ValidationError
 
-    if args.from_stdin:
-        value = sys.stdin.read().rstrip("\n")
-    else:
-        value = getpass.getpass(f"{args.name}: ")
+    value = sys.stdin.read().rstrip("\n") if args.from_stdin else getpass.getpass(f"{args.name}: ")
     if not value:
         raise ValidationError("empty secret value")
     write_secret(data_dir, args.name, value)
@@ -280,8 +278,8 @@ def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.commands import ConfigSubcommand
     from social_research_probe.cli.utils import _emit
+    from social_research_probe.commands import ConfigSubcommand
 
     if args.config_cmd == ConfigSubcommand.SHOW:
         print(show_config(data_dir))

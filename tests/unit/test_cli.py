@@ -13,9 +13,12 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from social_research_probe.render.html import serve_report_command
 
 from social_research_probe.cli import _emit, _id_selector, main
+from social_research_probe.commands import Command, ConfigSubcommand, DslCommand
+from social_research_probe.technologies.report_render.html.raw_html.youtube import (
+    serve_report_command,
+)
 
 _VALID_PACKET = {
     "topic": "ai",
@@ -109,12 +112,12 @@ class TestShowTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.show_topics", lambda d: ["ai", "blockchain"]
         )
-        assert main(["--data-dir", str(tmp_path), "show-topics"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS]) == 0
         assert "ai" in capsys.readouterr().out
 
     def test_show_topics_json(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr("social_research_probe.commands.topics.show_topics", lambda d: ["ai"])
-        main(["--data-dir", str(tmp_path), "show-topics", "--output", "json"])
+        main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS, "--output", "json"])
         out = json.loads(capsys.readouterr().out)
         assert out["topics"] == ["ai"]
 
@@ -125,7 +128,7 @@ class TestUpdateTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.add_topics", lambda d, v, force: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), "update-topics", "--add", '"ai"']) == 0
+        assert main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--add", '"ai"']) == 0
         assert len(calls) == 1
 
     def test_remove_topic(self, monkeypatch, tmp_path):
@@ -133,7 +136,7 @@ class TestUpdateTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.remove_topics", lambda d, v: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), "update-topics", "--remove", '"ai"']) == 0
+        assert main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--remove", '"ai"']) == 0
 
     def test_rename_topic(self, monkeypatch, tmp_path):
         calls = []
@@ -141,10 +144,15 @@ class TestUpdateTopics:
             "social_research_probe.commands.topics.rename_topic",
             lambda d, o, n: calls.append((o, n)),
         )
-        assert main(["--data-dir", str(tmp_path), "update-topics", "--rename", '"old"->"new"']) == 0
+        assert (
+            main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--rename", '"old"->"new"'])
+            == 0
+        )
 
     def test_rename_bad_format_raises(self, monkeypatch, tmp_path):
-        result = main(["--data-dir", str(tmp_path), "update-topics", "--rename", '"bad"-->"worse"'])
+        result = main(
+            ["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--rename", '"bad"-->"worse"']
+        )
         assert result != 0
 
 
@@ -154,7 +162,7 @@ class TestShowPurposes:
             "social_research_probe.commands.purposes.show_purposes",
             lambda d: {"p1": {"method": "m1"}},
         )
-        assert main(["--data-dir", str(tmp_path), "show-purposes"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.SHOW_PURPOSES]) == 0
         assert "p1" in capsys.readouterr().out
 
 
@@ -166,12 +174,20 @@ class TestUpdatePurposes:
             lambda d, name, method, force: calls.append(name),
         )
         assert (
-            main(["--data-dir", str(tmp_path), "update-purposes", "--add", '"name"="method desc"'])
+            main(
+                [
+                    "--data-dir",
+                    str(tmp_path),
+                    Command.UPDATE_PURPOSES,
+                    "--add",
+                    '"name"="method desc"',
+                ]
+            )
             == 0
         )
 
     def test_add_purpose_bad_format_raises(self, monkeypatch, tmp_path):
-        result = main(["--data-dir", str(tmp_path), "update-purposes", "--add", '"bad"'])
+        result = main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--add", '"bad"'])
         assert result != 0
 
     def test_remove_purpose(self, monkeypatch, tmp_path):
@@ -179,7 +195,7 @@ class TestUpdatePurposes:
         monkeypatch.setattr(
             "social_research_probe.commands.purposes.remove_purposes", lambda d, v: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), "update-purposes", "--remove", '"p1"']) == 0
+        assert main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--remove", '"p1"']) == 0
 
     def test_rename_purpose(self, monkeypatch, tmp_path):
         calls = []
@@ -188,12 +204,13 @@ class TestUpdatePurposes:
             lambda d, o, n: calls.append((o, n)),
         )
         assert (
-            main(["--data-dir", str(tmp_path), "update-purposes", "--rename", '"old"->"new"']) == 0
+            main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--rename", '"old"->"new"'])
+            == 0
         )
 
     def test_rename_purpose_bad_format_raises(self, monkeypatch, tmp_path):
         result = main(
-            ["--data-dir", str(tmp_path), "update-purposes", "--rename", '"bad"--"worse"']
+            ["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--rename", '"bad"--"worse"']
         )
         assert result != 0
 
@@ -208,7 +225,7 @@ class TestSuggestTopics:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), "suggest-topics"]) == 0
+        assert main(["--data-dir", str(tmp_path), DslCommand.SUGGEST_TOPICS]) == 0
 
 
 class TestSuggestPurposes:
@@ -221,7 +238,7 @@ class TestSuggestPurposes:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), "suggest-purposes"]) == 0
+        assert main(["--data-dir", str(tmp_path), DslCommand.SUGGEST_PURPOSES]) == 0
 
 
 class TestPending:
@@ -230,7 +247,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.show_pending",
             lambda d: {"topic_candidates": [], "purpose_candidates": []},
         )
-        assert main(["--data-dir", str(tmp_path), "show-pending"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.SHOW_PENDING]) == 0
 
     def test_apply_pending(self, monkeypatch, tmp_path):
         calls = []
@@ -238,7 +255,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.apply_pending",
             lambda d, topic_ids, purpose_ids: calls.append(1),
         )
-        assert main(["--data-dir", str(tmp_path), "apply-pending", "--topics", "all"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.APPLY_PENDING, "--topics", "all"]) == 0
 
     def test_discard_pending(self, monkeypatch, tmp_path):
         calls = []
@@ -246,7 +263,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.discard_pending",
             lambda d, topic_ids, purpose_ids: calls.append(1),
         )
-        assert main(["--data-dir", str(tmp_path), "discard-pending", "--topics", "1,2"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.DISCARD_PENDING, "--topics", "1,2"]) == 0
 
 
 class TestStageSuggestions:
@@ -257,15 +274,15 @@ class TestStageSuggestions:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), "stage-suggestions", "--from-stdin"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS, "--from-stdin"]) == 0
 
     def test_stage_without_from_stdin_raises(self, monkeypatch, tmp_path):
-        result = main(["--data-dir", str(tmp_path), "stage-suggestions"])
+        result = main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS])
         assert result != 0
 
     def test_stage_invalid_json_raises(self, monkeypatch, tmp_path):
         monkeypatch.setattr("sys.stdin", io.StringIO("not json"))
-        result = main(["--data-dir", str(tmp_path), "stage-suggestions", "--from-stdin"])
+        result = main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS, "--from-stdin"])
         assert result != 0
 
 
@@ -388,11 +405,11 @@ class TestConfig:
         monkeypatch.setattr(
             "social_research_probe.commands.config.show_config", lambda d: "config output"
         )
-        assert main(["--data-dir", str(tmp_path), "config", "show"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SHOW]) == 0
         assert "config output" in capsys.readouterr().out
 
     def test_config_path(self, monkeypatch, tmp_path, capsys):
-        assert main(["--data-dir", str(tmp_path), "config", "path"]) == 0
+        assert main(["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.PATH]) == 0
         out = capsys.readouterr().out
         assert "config" in out
 
@@ -402,7 +419,12 @@ class TestConfig:
             "social_research_probe.commands.config.write_config_value",
             lambda d, k, v: calls.append((k, v)),
         )
-        assert main(["--data-dir", str(tmp_path), "config", "set", "key", "value"]) == 0
+        assert (
+            main(
+                ["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SET, "key", "value"]
+            )
+            == 0
+        )
 
     def test_config_set_secret_from_stdin(self, monkeypatch, tmp_path):
         monkeypatch.setattr("sys.stdin", io.StringIO("my-secret"))
@@ -411,7 +433,16 @@ class TestConfig:
             "social_research_probe.commands.config.write_secret", lambda d, n, v: calls.append(v)
         )
         assert (
-            main(["--data-dir", str(tmp_path), "config", "set-secret", "my_key", "--from-stdin"])
+            main(
+                [
+                    "--data-dir",
+                    str(tmp_path),
+                    Command.CONFIG,
+                    ConfigSubcommand.SET_SECRET,
+                    "my_key",
+                    "--from-stdin",
+                ]
+            )
             == 0
         )
 
@@ -436,7 +467,9 @@ class TestConfig:
         fake_getpass_mod.getpass = lambda prompt="": "secret-from-tty"
         monkeypatch.setitem(sys.modules, "getpass", fake_getpass_mod)
 
-        result = main(["--data-dir", str(tmp_path), "config", "set-secret", "my_key"])
+        result = main(
+            ["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SET_SECRET, "my_key"]
+        )
         assert result == 0
         assert calls == ["secret-from-tty"]
 
@@ -445,7 +478,18 @@ class TestConfig:
         monkeypatch.setattr(
             "social_research_probe.commands.config.unset_secret", lambda d, n: calls.append(n)
         )
-        assert main(["--data-dir", str(tmp_path), "config", "unset-secret", "my_key"]) == 0
+        assert (
+            main(
+                [
+                    "--data-dir",
+                    str(tmp_path),
+                    Command.CONFIG,
+                    ConfigSubcommand.UNSET_SECRET,
+                    "my_key",
+                ]
+            )
+            == 0
+        )
 
     def test_config_check_secrets(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
@@ -453,12 +497,22 @@ class TestConfig:
             lambda d, needed_for, platform, corroboration: {"missing": []},
         )
         assert (
-            main(["--data-dir", str(tmp_path), "config", "check-secrets", "--output", "json"]) == 0
+            main(
+                [
+                    "--data-dir",
+                    str(tmp_path),
+                    Command.CONFIG,
+                    ConfigSubcommand.CHECK_SECRETS,
+                    "--output",
+                    "json",
+                ]
+            )
+            == 0
         )
 
     def test_config_unknown_subcommand_returns_2(self, monkeypatch, tmp_path):
         # config with no subcommand → returns 2
-        result = main(["--data-dir", str(tmp_path), "config"])
+        result = main(["--data-dir", str(tmp_path), Command.CONFIG])
         assert result == 2
 
 
@@ -504,7 +558,7 @@ class TestSrpErrorHandling:
             "social_research_probe.commands.topics.show_topics",
             lambda d: (_ for _ in ()).throw(ValidationError("bad")),
         )
-        result = main(["--data-dir", str(tmp_path), "show-topics"])
+        result = main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS])
         assert result == 2
 
 

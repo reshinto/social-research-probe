@@ -25,7 +25,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from social_research_probe.scoring.combine import DEFAULT_WEIGHTS, overall_score
 from social_research_probe.scoring.opportunity import opportunity_score
 from social_research_probe.scoring.trend import recency_decay, trend_score

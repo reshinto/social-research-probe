@@ -34,5 +34,7 @@ class HtmlReportService(BaseService):
             html_path = await asyncio.to_thread(write_html_report, packet, data_dir)
             tr = TechResult(tech_name="html_render", input=data, output=html_path, success=True)
         except Exception as exc:
-            tr = TechResult(tech_name="html_render", input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name="html_render", input=data, output=None, success=False, error=str(exc)
+            )
         return ServiceResult(service_name=self.service_name, input_key="packet", tech_results=[tr])

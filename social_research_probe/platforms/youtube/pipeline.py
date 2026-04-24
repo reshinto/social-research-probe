@@ -99,7 +99,7 @@ class YouTubeEnrichStage(BaseStage):
             *(transcript_svc.execute_one(item, cfg=state.cfg) for item in top_n)
         )
         enriched: list[dict] = []
-        for item, tr in zip(top_n, transcript_results):
+        for item, tr in zip(top_n, transcript_results, strict=True):
             row = dict(item) if isinstance(item, dict) else {}
             transcript = _first_success(tr)
             if transcript:
@@ -110,7 +110,7 @@ class YouTubeEnrichStage(BaseStage):
             *(summary_svc.execute_one(item, cfg=state.cfg) for item in enriched)
         )
         final: list[dict] = []
-        for item, sr in zip(enriched, summary_results):
+        for item, sr in zip(enriched, summary_results, strict=True):
             summary = _first_success(sr)
             if summary:
                 item["summary"] = summary
@@ -205,15 +205,18 @@ class YouTubeAnalyzeStage(BaseStage):
         synth_result = await synthesis_svc.execute_one(synthesis_context, cfg=state.cfg)
         synthesis_text = _first_success(synth_result) or ""
 
-        state.set_stage_output("analyze", {
-            "top_n": top_n,
-            "stats_summary": stats_output if isinstance(stats_output, dict) else {},
-            "chart_captions": [],
-            "chart_takeaways": [],
-            "source_validation_summary": {},
-            "warnings": [],
-            "synthesis": synthesis_text,
-        })
+        state.set_stage_output(
+            "analyze",
+            {
+                "top_n": top_n,
+                "stats_summary": stats_output if isinstance(stats_output, dict) else {},
+                "chart_captions": [],
+                "chart_takeaways": [],
+                "source_validation_summary": {},
+                "warnings": [],
+                "synthesis": synthesis_text,
+            },
+        )
         return state
 
 

@@ -17,6 +17,7 @@ def __getattr__(name: str):
     """Support lazy import of YouTubePipeline to avoid circular imports."""
     if name == "YouTubePipeline":
         from social_research_probe.platforms.youtube.pipeline import YouTubePipeline
+
         return YouTubePipeline
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

@@ -123,9 +123,7 @@ async def gemini_search(
     if not await gemini_cli_available():
         return None
     try:
-        stdout = await asyncio.to_thread(
-            _run_search_sync, _search_binary(), query, timeout_s
-        )
+        stdout = await asyncio.to_thread(_run_search_sync, _search_binary(), query, timeout_s)
         return _parse_search_stdout(stdout)
     except (AdapterError, json.JSONDecodeError, ValueError, OSError):
         return None
@@ -173,14 +171,10 @@ class GeminiRunner(JsonCliRunner):
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
-            raise AdapterError(
-                f"gemini returned non-JSON envelope: {stdout[:200]!r}"
-            ) from exc
+            raise AdapterError(f"gemini returned non-JSON envelope: {stdout[:200]!r}") from exc
 
         inner_text: str = envelope.get("response", "")
-        stripped = re.sub(
-            r"^```(?:json)?\s*|\s*```$", "", inner_text.strip(), flags=re.DOTALL
-        )
+        stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", inner_text.strip(), flags=re.DOTALL)
         try:
             return json.loads(stripped)
         except json.JSONDecodeError as exc:

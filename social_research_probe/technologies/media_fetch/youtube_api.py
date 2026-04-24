@@ -133,6 +133,7 @@ class YoutubeAPIFetch(BaseTechnology[YoutubeQuery, list]):
 
     async def _execute(self, data: YoutubeQuery) -> list:
         import asyncio
+
         client = build_client(data.api_key)
         raw = await asyncio.to_thread(
             search_videos,

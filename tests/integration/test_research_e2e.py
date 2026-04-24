@@ -1,5 +1,7 @@
 """End-to-end research CLI tests with deterministic fake providers.
 
+from social_research_probe.commands import Command, ConfigSubcommand
+
 These tests shell out through the real ``python -m social_research_probe.cli``
 entrypoint, but replace external dependencies with local fakes:
 
@@ -19,6 +21,8 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+
+from social_research_probe.commands import Command, ConfigSubcommand
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUMMARY_PHRASE = "Generated summary from codex fallback."
@@ -119,11 +123,11 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
 
     commands = [
-        ("update-purposes", "--add", '"trends"="Track emergence across channels"'),
-        ("config", "set", "llm.runner", "gemini"),
-        ("config", "set", "technologies.gemini", "true"),
-        ("config", "set", "technologies.codex", "true"),
-        ("config", "set", "corroboration.backend", "auto"),
+        (Command.UPDATE_PURPOSES, "--add", '"trends"="Track emergence across channels"'),
+        (Command.CONFIG, ConfigSubcommand.SET, "llm.runner", "gemini"),
+        (Command.CONFIG, ConfigSubcommand.SET, "technologies.gemini", "true"),
+        (Command.CONFIG, ConfigSubcommand.SET, "technologies.codex", "true"),
+        (Command.CONFIG, ConfigSubcommand.SET, "corroboration.backend", "auto"),
     ]
     for args in commands:
         result = _run(data_dir, env, *args)
@@ -137,7 +141,7 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
             data_dir,
             env,
             "config",
-            "set-secret",
+            ConfigSubcommand.SET_SECRET,
             secret_name,
             "--from-stdin",
             stdin=secret_value,

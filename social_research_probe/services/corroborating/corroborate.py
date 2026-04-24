@@ -35,5 +35,11 @@ class CorroborationService(BaseService):
             result = await corroborate_claim(claim, backends)
             tr = TechResult(tech_name="corroboration_host", input=data, output=result, success=True)
         except Exception as exc:
-            tr = TechResult(tech_name="corroboration_host", input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name="corroboration_host",
+                input=data,
+                output=None,
+                success=False,
+                error=str(exc),
+            )
         return ServiceResult(service_name=self.service_name, input_key=title, tech_results=[tr])

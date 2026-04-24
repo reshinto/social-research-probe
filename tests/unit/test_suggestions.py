@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.commands.purposes import add_purpose
-from social_research_probe.commands.suggestions import (
+from social_research_probe.utils.command_models.purposes import add_purpose
+from social_research_probe.utils.command_models.suggestions import (
     apply_pending,
     discard_pending,
     show_pending,
@@ -16,7 +16,7 @@ from social_research_probe.commands.suggestions import (
     suggest_purposes,
     suggest_topics,
 )
-from social_research_probe.commands.topics import add_topics
+from social_research_probe.utils.command_models.topics import add_topics
 
 
 def _pending(data_dir: Path) -> dict:
@@ -191,7 +191,7 @@ def test_suggest_topics_exhausts_pool(tmp_data_dir):
 def test_suggest_topics_skips_non_new(tmp_data_dir):
     """Branch 65->62: suggest_topics skips candidates that are duplicates."""
     # Add all seed pool topics to existing so classify returns non-NEW for all
-    from social_research_probe.commands.suggestions import _TOPIC_SEED_POOL
+    from social_research_probe.utils.command_models.suggestions import _TOPIC_SEED_POOL
 
     add_topics(tmp_data_dir, list(_TOPIC_SEED_POOL), force=True)
     drafts = suggest_topics(tmp_data_dir, count=5)
@@ -201,7 +201,7 @@ def test_suggest_topics_skips_non_new(tmp_data_dir):
 def test_suggest_purposes_exhausts_pool(tmp_data_dir):
     """Branch 75->80: suggest_purposes loop exhausts all pool candidates."""
     drafts = suggest_purposes(tmp_data_dir, count=999)
-    from social_research_probe.commands.suggestions import _PURPOSE_SEED_POOL
+    from social_research_probe.utils.command_models.suggestions import _PURPOSE_SEED_POOL
 
     assert len(drafts) <= len(_PURPOSE_SEED_POOL)
     assert len(drafts) > 0
@@ -209,7 +209,7 @@ def test_suggest_purposes_exhausts_pool(tmp_data_dir):
 
 def test_suggest_purposes_skips_non_new(tmp_data_dir):
     """Branch 78->75: suggest_purposes skips candidates that are duplicates."""
-    from social_research_probe.commands.suggestions import _PURPOSE_SEED_POOL
+    from social_research_probe.utils.command_models.suggestions import _PURPOSE_SEED_POOL
 
     for name, method in _PURPOSE_SEED_POOL:
         add_purpose(tmp_data_dir, name=name, method=method, force=False)

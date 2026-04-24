@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 
 import pytest
+from social_research_probe.errors import ValidationError
 
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.commands.report import _audio_report_enabled, _technology_logs_enabled
 from social_research_probe.config import Config
-from social_research_probe.errors import ValidationError
 
 
 def test_audio_report_enabled_fallback(monkeypatch):

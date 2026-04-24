@@ -39,9 +39,12 @@ def download_audio(url: str, tmpdir: str) -> Path | None:
     cmd = [
         "yt-dlp",
         "--extract-audio",
-        "--audio-format", "mp3",
-        "--audio-quality", "0",
-        "--output", audio_path,
+        "--audio-format",
+        "mp3",
+        "--audio-quality",
+        "0",
+        "--output",
+        audio_path,
         "--no-playlist",
         "--quiet",
         "--no-warnings",
@@ -79,6 +82,7 @@ class YtDlpFetch(BaseTechnology[str, Path]):
     async def _execute(self, data: str) -> Path:
         """Download audio from data (video URL) to a temp dir."""
         import asyncio
+
         with tempfile.TemporaryDirectory(prefix="srp-ytdlp-") as tmpdir:
             result = await asyncio.to_thread(download_audio, data, tmpdir)
             if result is None:

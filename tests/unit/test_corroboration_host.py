@@ -8,12 +8,12 @@ Who calls it: pytest, as part of the unit test suite.
 from __future__ import annotations
 
 import pytest
-
-from social_research_probe.corroboration import registry as reg_module
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.host import aggregate_verdict, corroborate_claim
 from social_research_probe.errors import AdapterError
 from social_research_probe.validation.claims import Claim
+
+from social_research_probe.corroboration import registry as reg_module
 
 
 @pytest.fixture(autouse=True)

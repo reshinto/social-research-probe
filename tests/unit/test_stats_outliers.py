@@ -5,7 +5,6 @@ insufficient-data cases.
 """
 
 import pytest
-
 from social_research_probe.stats.outliers import run
 
 

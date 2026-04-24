@@ -28,7 +28,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
@@ -67,34 +66,3 @@ def rename_purpose(data_dir: Path, old: str, new: str) -> None:
         raise DuplicateError(f"{new!r} already exists; rename would overwrite an existing purpose")
     data["purposes"][new] = data["purposes"].pop(old)
     registry.save(data_dir, data)
-
-
-def run_update(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.utils import _emit
-    from social_research_probe.commands.parse import _take_quoted
-    from social_research_probe.utils.core.errors import ValidationError
-
-    if args.add:
-        name, pos = _take_quoted(args.add, 0)
-        if args.add[pos : pos + 1] != "=":
-            raise ValidationError('add expects "name"="method"')
-        method, _ = _take_quoted(args.add, pos + 1)
-        add_purpose(data_dir, name=name, method=method, force=args.force)
-    elif args.remove:
-        from social_research_probe.commands.parse import _parse_quoted_list
-        remove_purposes(data_dir, _parse_quoted_list(args.remove))
-    else:
-        old, pos = _take_quoted(args.rename, 0)
-        if args.rename[pos : pos + 2] != "->":
-            raise ValidationError("rename expects old->new")
-        new, _ = _take_quoted(args.rename, pos + 2)
-        rename_purpose(data_dir, old, new)
-    _emit({"ok": True}, args.output)
-    return 0
-
-
-def run_show(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.utils import _emit
-
-    _emit({"purposes": show_purposes(data_dir)}, args.output)
-    return 0

@@ -12,7 +12,6 @@ Who calls it:
 from __future__ import annotations
 
 import pytest
-
 from social_research_probe.errors import ValidationError
 from social_research_probe.synthesize.llm_contract import (
     build_synthesis_prompt,

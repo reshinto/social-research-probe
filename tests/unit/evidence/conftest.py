@@ -31,7 +31,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.types import AgenticSearchResult
 

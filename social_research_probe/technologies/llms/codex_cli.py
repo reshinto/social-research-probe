@@ -45,16 +45,12 @@ class CodexRunner(JsonCliRunner):
                 argv += ["--output-schema", str(schema_path)]
             result = sp_run([*argv, prompt], input=None, timeout=timeout)
             text = (
-                output_path.read_text(encoding="utf-8")
-                if output_path.exists()
-                else result.stdout
+                output_path.read_text(encoding="utf-8") if output_path.exists() else result.stdout
             )
         try:
             return self._parse_response(text)
         except AdapterError as exc:
-            raise AdapterError(
-                f"codex returned non-JSON final message: {text[:200]!r}"
-            ) from exc
+            raise AdapterError(f"codex returned non-JSON final message: {text[:200]!r}") from exc
 
     async def agentic_search(
         self,
@@ -82,9 +78,7 @@ class CodexRunner(JsonCliRunner):
                 prompt,
             ]
             try:
-                result = await asyncio.to_thread(
-                    sp_run, argv, input=None, timeout=int(timeout_s)
-                )
+                result = await asyncio.to_thread(sp_run, argv, input=None, timeout=int(timeout_s))
                 text = (
                     output_path.read_text(encoding="utf-8")
                     if output_path.exists()

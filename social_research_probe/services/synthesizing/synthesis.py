@@ -28,7 +28,11 @@ class SynthesisService(BaseService):
         try:
             prompt = build_synthesis_prompt(data if isinstance(data, dict) else {})
             synthesis = await multi_llm_prompt(prompt) or ""
-            tr = TechResult(tech_name="llm_synthesis", input=data, output=synthesis, success=bool(synthesis))
+            tr = TechResult(
+                tech_name="llm_synthesis", input=data, output=synthesis, success=bool(synthesis)
+            )
         except Exception as exc:
-            tr = TechResult(tech_name="llm_synthesis", input=data, output=None, success=False, error=str(exc))
+            tr = TechResult(
+                tech_name="llm_synthesis", input=data, output=None, success=False, error=str(exc)
+            )
         return ServiceResult(service_name=self.service_name, input_key="context", tech_results=[tr])
