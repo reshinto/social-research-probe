@@ -13,7 +13,15 @@ from typing import TYPE_CHECKING
 
 from social_research_probe.services.llm.runners import prioritize_runner
 from social_research_probe.technologies.llms.registry import get_runner
-from social_research_probe.technologies.llms.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
+from social_research_probe.technologies.llms.schemas import (
+    NL_QUERY_CLASSIFICATION_SCHEMA,
+)
+from social_research_probe.utils.caching.pipeline_cache import (
+    classification_cache,
+    get_json,
+    hash_key,
+    set_json,
+)
 from social_research_probe.utils.command_models.purposes import add_purpose
 from social_research_probe.utils.command_models.topics import add_topics, show_topics
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
@@ -75,10 +83,13 @@ def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuer
     )
 
 
-
-
 def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     """Try each runner in order and return the first valid classification result."""
+    cache_key = hash_key(prompt)
+    cached = get_json(classification_cache(), cache_key)
+    if cached is not None:
+        return cached
+
     for name in prioritize_runner(_RUNNER_CANDIDATES, preferred):
         runner = get_runner(name)
         if not runner.health_check():
@@ -89,6 +100,7 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
             log(f"[srp] nl-query: runner={name} outcome=error err={exc}")
             continue
         if _is_valid_result(result):
+            set_json(classification_cache(), cache_key, result)
             return result
     raise ValidationError(
         "unable to classify query: all LLM runners failed or are unavailable. "
@@ -131,19 +143,29 @@ def _build_classification_prompt(
     """Build the LLM prompt that instructs classification with existing-name preference."""
     topics_str = ", ".join(existing_topics) if existing_topics else "(none yet)"
     purposes_str = ", ".join(existing_purposes) if existing_purposes else "(none yet)"
+
     return f"""You are classifying a research query for a social media research tool.
 
-Classify the following query into a topic and a purpose:
+Classify the following query into a topic and a purpose.
 
 QUERY: {query}
 
-EXISTING TOPICS (prefer reusing one if semantically close): {topics_str}
-EXISTING PURPOSES (prefer reusing one if semantically close): {purposes_str}
+EXISTING TOPICS (prefer reuse if meaningfully similar): {topics_str}
+EXISTING PURPOSES (prefer reuse if meaningfully similar): {purposes_str}
 
 Rules:
 - topic: 1-4 word lowercase hyphenated label for the subject area (e.g. "ai", "quantitative-finance", "climate-change").
 - purpose_name: 1-4 word lowercase hyphenated label for the research goal (e.g. "latest-news", "job-opportunities", "deep-dive").
-- purpose_method: short 3-8 word phrase describing HOW to research this (e.g. "latest news and updates", "career paths and hiring trends"). Used to enrich search queries.
-- If an existing topic or purpose name is semantically equivalent, use EXACTLY that existing name.
+- purpose_method: 3-8 word phrase describing how to research this. Used to expand search queries.
 
-Respond with JSON only, no other text."""
+Reuse rules:
+- If an existing topic or purpose_name is even moderately similar in meaning, reuse it EXACTLY.
+- Only create a new label if no existing option is a reasonable fit.
+- Prefer broader existing categories over creating new narrow ones.
+
+Output format (JSON only):
+{{
+  "topic": "...",
+  "purpose_name": "...",
+  "purpose_method": "..."
+}}"""

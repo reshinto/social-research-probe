@@ -27,6 +27,7 @@ TTL_TRANSCRIPT = 7 * 24 * 3600
 TTL_WHISPER = 30 * 24 * 3600
 TTL_SUMMARY = 7 * 24 * 3600
 TTL_CORROBORATION = 6 * 3600
+TTL_CLASSIFICATION = 24 * 3600
 _STAGE_TTLS = {
     "fetch": 6 * 3600,
     "score": 24 * 3600,
@@ -67,6 +68,10 @@ def summary_cache() -> FilesystemCache:
 
 def corroboration_cache() -> FilesystemCache:
     return _make_cache("corroboration", TTL_CORROBORATION)
+
+
+def classification_cache() -> FilesystemCache:
+    return _make_cache("classification", TTL_CLASSIFICATION)
 
 
 def stage_cache(stage_name: str) -> FilesystemCache:
