@@ -24,20 +24,21 @@ _REGISTRY: dict[str, type[LLMRunner]] = {}
 
 
 def register(cls: type[LLMRunner]) -> type[LLMRunner]:
-    """Class decorator that adds a runner class to the registry.
+    """Register an LLMRunner implementation so it can be selected by name.
 
-    Stores cls under cls.name so get_runner() can find it later. Designed to
-    be used as @register on each concrete LLMRunner subclass.
+    This decorator adds each concrete runner class to the shared registry under
+    its class-level ``name`` value. That lets orchestration code look up runners
+    dynamically instead of hard-coding specific classes.
 
     Args:
-        cls: The LLMRunner subclass to register. Must define a non-empty
-            class variable ``name``.
+        cls: LLMRunner subclass to register. Must define a non-empty ``name``.
 
     Returns:
-        cls unchanged (so the decorator is transparent to the class definition).
+        The same class unchanged, so this can be used transparently as
+        ``@register``.
 
     Raises:
-        ValueError: If cls does not define a non-empty ``name`` class variable.
+        ValueError: If the runner does not define a non-empty ``name``.
     """
     if not hasattr(cls, "name") or not cls.name:
         raise ValueError(f"{cls!r} must define class var `name`")
@@ -46,16 +47,20 @@ def register(cls: type[LLMRunner]) -> type[LLMRunner]:
 
 
 def get_runner(name: str) -> LLMRunner:
-    """Instantiate and return the runner registered under name.
+    """Create the runner selected by name.
+
+    Looks up the requested runner in the registry and returns a fresh instance.
+    This keeps callers decoupled from concrete runner classes and centralizes
+    validation of supported runner names.
 
     Args:
-        name: The runner key to look up (e.g. "claude", "gemini").
+        name: Registered runner name, such as ``"claude"`` or ``"gemini"``.
 
     Returns:
-        A fresh instance of the corresponding LLMRunner subclass.
+        A new instance of the matching LLMRunner subclass.
 
     Raises:
-        ValidationError: If name is not present in the registry.
+        ValidationError: If no runner has been registered with that name.
     """
     if name not in _REGISTRY:
         known = sorted(_REGISTRY.keys())
@@ -64,30 +69,37 @@ def get_runner(name: str) -> LLMRunner:
 
 
 def list_runners() -> list[str]:
-    """Return a sorted list of all registered runner names.
+    """Return runner names in the order they should be tried.
+
+    The preferred runner is placed first so callers can attempt it before
+    falling back to the remaining registered runners. The preferred runner is
+    excluded from the fallback portion to avoid trying it twice.
 
     Returns:
-        Sorted list of name strings (e.g. ["claude", "codex", "gemini", "local"]).
+        Ordered list of runner name strings.
     """
     return sorted(_REGISTRY.keys())
 
 
 def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
-    """Try runners in priority order, skip unhealthy ones, return first success.
+    """Run the prompt using the preferred runner, then fallback runners.
 
-    Implements resilient runner orchestration: prefers the specified runner but
-    falls back to others if health checks fail or execution raises exceptions.
+    The preferred runner is tried first so caller intent is respected. Remaining
+    registered runners are tried afterward, excluding the preferred runner to
+    avoid duplicate attempts. Unhealthy runners and runners that raise during
+    execution are skipped so another available runner can still handle the
+    request.
 
     Args:
         prompt: Input prompt to send to the runner.
-        schema: JSON schema for structured output validation.
-        preferred: Preferred runner name (tried first).
+        schema: JSON schema used to request structured output.
+        preferred: Runner to try before all fallback runners.
 
     Returns:
-        The first successful classification result dict.
+        The first successful runner result.
 
     Raises:
-        ValidationError: If all runners are unhealthy or fail execution.
+        ValidationError: If every runner is unhealthy or fails execution.
     """
     candidates = list_runners()
     runner_order = [preferred, *[n for n in candidates if n != preferred]]

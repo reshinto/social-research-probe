@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from social_research_probe.technologies.llms.registry import run_with_fallback
+from social_research_probe.services.llm.registry import run_with_fallback
 from social_research_probe.technologies.llms.schemas import (
     NL_QUERY_CLASSIFICATION_SCHEMA,
 )
