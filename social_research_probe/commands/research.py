@@ -73,16 +73,18 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
 
     if len(positional) == 0:
         raise ValidationError(
-            "research needs PLATFORM (or 'all'), then TOPIC and PURPOSES (or a natural-language query)"
+            "research needs TOPIC and PURPOSES (or a natural-language query)"
         )
 
-    platform = positional[0]
-    if platform not in REGISTRY:
-        raise ValidationError(
-            f"unknown platform: {platform!r} (valid: {sorted(REGISTRY.keys())})"
-        )
-
-    rest = positional[1:]
+    # Check if first positional is a platform or a topic
+    first_arg = positional[0]
+    if first_arg in REGISTRY:
+        platform = first_arg
+        rest = positional[1:]
+    else:
+        # First arg is not a registered platform, default to "all" and treat all args as topic/query
+        platform = "all"
+        rest = positional
     if len(rest) == 0:
         raise ValidationError(
             "research needs at least TOPIC and PURPOSES (or a natural-language query)"
