@@ -14,7 +14,7 @@ import json
 from typing import Final
 
 from social_research_probe.services.synthesizing.synthesis_context import build_synthesis_context
-from social_research_probe.technologies.llms.prompts import SYNTHESIS_PROMPT
+from social_research_probe.services.llm.prompts import SYNTHESIS_PROMPT
 from social_research_probe.utils.core.errors import ValidationError
 
 SYNTHESIS_JSON_SCHEMA: Final[dict] = {
