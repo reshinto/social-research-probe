@@ -23,8 +23,3 @@ def get_adapter(name: str, config: AdapterConfig) -> PlatformAdapter:
         known = sorted(REGISTRY.keys())
         raise ValidationError(f"unknown platform: {name!r} (registered: {known})")
     return REGISTRY[name](config)
-
-
-def list_adapters() -> list[str]:
-    """Return the registered adapter names in deterministic order."""
-    return sorted(REGISTRY.keys())
