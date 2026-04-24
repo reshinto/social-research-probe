@@ -66,18 +66,24 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
         - Classic form: [platform] topic purposes
         - Natural-language query form: [platform] query
 
-    If no platform is specified, defaults to "all" (runs on all available platforms).
+    Platform must be specified and match a registered adapter exactly.
+    Use "all" to run on all available platforms.
     """
     from social_research_probe.platforms.registry import list_adapters
 
-    known_platforms = set(list_adapters())
-    if positional[0] in known_platforms:
-        platform = positional[0]
-        rest = positional[1:]
-    else:
-        platform = "all"
-        rest = positional
+    if len(positional) == 0:
+        raise ValidationError(
+            "research needs PLATFORM (or 'all'), then TOPIC and PURPOSES (or a natural-language query)"
+        )
 
+    known_platforms = set(list_adapters()) | {"all"}
+    platform = positional[0]
+    if platform not in known_platforms:
+        raise ValidationError(
+            f"unknown platform: {platform!r} (registered: {sorted(list_adapters())}, or use 'all')"
+        )
+
+    rest = positional[1:]
     if len(rest) == 0:
         raise ValidationError(
             "research needs at least TOPIC and PURPOSES (or a natural-language query)"
