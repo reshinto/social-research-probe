@@ -23,7 +23,7 @@ class SynthesisService(BaseService):
     async def execute_one(self, data: object, *, cfg) -> ServiceResult:
         """Generate synthesis from the research context in data."""
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
-        from social_research_probe.synthesize.llm_contract import build_synthesis_prompt
+        from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
 
         try:
             prompt = build_synthesis_prompt(data if isinstance(data, dict) else {})

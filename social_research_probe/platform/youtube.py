@@ -219,9 +219,9 @@ class YouTubeAnalyzeStage(BaseStage):
 
 def _assemble_packet(state: PipelineState) -> dict:
     """Build a ResearchPacket dict from accumulated stage outputs."""
-    from social_research_probe.synthesize.evidence import summarize as summarize_evidence
-    from social_research_probe.synthesize.evidence import summarize_signals
-    from social_research_probe.synthesize.formatter import build_packet
+    from social_research_probe.services.synthesizing.evidence import summarize as summarize_evidence
+    from social_research_probe.services.synthesizing.evidence import summarize_signals
+    from social_research_probe.services.synthesizing.formatter import build_packet
 
     fetch = state.get_stage_output("fetch")
     corroborate = state.get_stage_output("corroborate")

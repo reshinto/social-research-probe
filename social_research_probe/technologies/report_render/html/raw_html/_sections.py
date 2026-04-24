@@ -2,7 +2,7 @@
 
 Each public function takes packet data and returns an HTML string fragment
 for one numbered section. Mirrors the section structure in
-synthesize/formatter.py but produces HTML instead of Markdown.
+services/synthesizing/formatter.py but produces HTML instead of Markdown.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import html
 import re
 from pathlib import Path
 
-from social_research_probe.synthesize.formatter import (
+from social_research_probe.services.synthesizing.formatter import (
     _contextual_explanation,
     _infer_model,
 )

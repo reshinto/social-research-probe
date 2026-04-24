@@ -1,6 +1,6 @@
-"""synthesize/llm_contract.py — Prompt building and response parsing for LLM synthesis.
+"""services/synthesizing/llm_contract.py — Prompt building and response parsing for LLM synthesis.
 
-The pipeline produces a raw evidence packet (via synthesize.formatter.build_packet).
+The pipeline produces a raw evidence packet (via services.synthesizing.formatter.build_packet).
 This module's job is to:
   1. Turn that packet into a prompt the LLM can respond to (build_synthesis_prompt).
   2. Parse and validate the LLM's JSON response (parse_synthesis_response).
@@ -15,7 +15,7 @@ from typing import Final
 
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.technologies.llms.prompts import SYNTHESIS_PROMPT
-from social_research_probe.synthesize.synthesis_context import build_synthesis_context
+from social_research_probe.services.synthesizing.synthesis_context import build_synthesis_context
 
 SYNTHESIS_JSON_SCHEMA: Final[dict] = {
     "type": "object",
@@ -50,7 +50,7 @@ def build_synthesis_prompt(packet: dict) -> str:
     the runner.
 
     Args:
-        packet: A dict produced by synthesize.formatter.build_packet.
+        packet: A dict produced by services.synthesizing.formatter.build_packet.
 
     Returns:
         A formatted prompt string ready to send to an LLMRunner.

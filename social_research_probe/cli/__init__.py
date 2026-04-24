@@ -133,7 +133,7 @@ def _run_required_synthesis(packet: dict) -> dict | None:
     Returns:
         A dictionary containing synthesis fields if successful, otherwise None.
     """
-    from social_research_probe.synthesize.llm_contract import (
+    from social_research_probe.services.synthesizing.llm_contract import (
         SYNTHESIS_JSON_SCHEMA,
         build_synthesis_prompt,
         parse_synthesis_response,
@@ -360,7 +360,7 @@ def _write_final_report(packet: dict, data_dir: Path, cfg, *, allow_html: bool) 
     Returns:
         File path or command to access the report.
     """
-    from social_research_probe.synthesize.formatter import render_full
+    from social_research_probe.services.synthesizing.formatter import render_full
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         serve_report_command,
         write_html_report,
