@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.utils import _emit
+    from social_research_probe.utils.display.cli_output import _emit
     from social_research_probe.utils.command_models.purposes import show_purposes
 
     _emit({"purposes": show_purposes(data_dir)}, args.output)

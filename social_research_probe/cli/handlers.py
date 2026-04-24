@@ -67,9 +67,9 @@ def _handle_stage_suggestions(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import corroborate_claims as cc_cmd
+    from social_research_probe.commands import corroborate_claims
 
-    return cc_cmd.run(
+    return corroborate_claims.run(
         args.input,
         [b.strip() for b in args.backends.split(",") if b.strip()],
         output_path=args.output,
@@ -77,15 +77,15 @@ def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _handle_render(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import render as render_cmd
+    from social_research_probe.commands import render
 
-    return render_cmd.run(args.packet, output_dir=args.output_dir)
+    return render.run(args.packet, output_dir=args.output_dir)
 
 
 def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import research as research_cmd
+    from social_research_probe.commands import research
 
-    return research_cmd.run(args, data_dir)
+    return research.run(args, data_dir)
 
 
 def _handle_install_skill(args: argparse.Namespace, data_dir: Path) -> int:
@@ -95,15 +95,15 @@ def _handle_install_skill(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _handle_setup(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import setup as setup_cmd
+    from social_research_probe.commands import setup
 
-    return setup_cmd.run(data_dir)
+    return setup.run(data_dir)
 
 
 def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import report as report_cmd
+    from social_research_probe.commands import report
 
-    return report_cmd.run(
+    return report.run(
         args.packet,
         compiled_synthesis_path=args.compiled_synthesis_path,
         opportunity_analysis_path=args.opportunity_analysis_path,
@@ -114,9 +114,9 @@ def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _handle_serve_report(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import serve_report as serve_report_cmd
+    from social_research_probe.commands import serve_report
 
-    return serve_report_cmd.run(
+    return serve_report.run(
         args.report,
         host=args.host,
         port=args.port,
@@ -125,9 +125,9 @@ def _handle_serve_report(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def _dispatch_config(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.commands import config as config_cmd
+    from social_research_probe.commands import config
 
-    return config_cmd.run(args, data_dir)
+    return config.run(args, data_dir)
 
 
 def handlers_factory() -> dict[str, callable]:

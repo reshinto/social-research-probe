@@ -7,7 +7,8 @@ from pathlib import Path
 
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.utils import _emit, _id_selector
+    from social_research_probe.utils.display.cli_output import _emit
+    from social_research_probe.utils.cli import _id_selector
     from social_research_probe.utils.command_models.suggestions import apply_pending
 
     apply_pending(

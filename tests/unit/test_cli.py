@@ -14,7 +14,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from social_research_probe.cli import _emit, _id_selector, main
+from social_research_probe.utils.display.cli_output import _emit
+from social_research_probe.cli import _id_selector, main
 from social_research_probe.commands import Command, ConfigSubcommand, DslCommand
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     serve_report_command,

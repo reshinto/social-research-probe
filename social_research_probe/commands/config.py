@@ -278,7 +278,7 @@ def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.utils import _emit
+    from social_research_probe.utils.display.cli_output import _emit
     from social_research_probe.commands import ConfigSubcommand
 
     if args.config_cmd == ConfigSubcommand.SHOW:
