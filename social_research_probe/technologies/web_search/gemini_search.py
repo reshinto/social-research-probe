@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.llm.types import AgenticSearchResult
+from social_research_probe.technologies.llms.types import AgenticSearchResult
 from social_research_probe.technologies.llms.gemini_cli import GeminiRunner
 
 

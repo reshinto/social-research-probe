@@ -22,7 +22,7 @@ class SummaryService(BaseService):
 
     async def execute_one(self, data: object, *, cfg) -> ServiceResult:
         """Generate summary for one ScoredItem via LLM ensemble."""
-        from social_research_probe.llm.ensemble import multi_llm_prompt
+        from social_research_probe.services.llm.ensemble import multi_llm_prompt
 
         title = data.get("title", "") if isinstance(data, dict) else ""
         transcript = data.get("transcript", "") if isinstance(data, dict) else ""

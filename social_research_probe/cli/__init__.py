@@ -15,7 +15,8 @@ from pathlib import Path
 
 from social_research_probe.config import load_active_config, resolve_data_dir
 from social_research_probe.utils.core.errors import SrpError, ValidationError
-from social_research_probe.llm.registry import get_runner
+import social_research_probe.technologies.llms  # registers all runners
+from social_research_probe.technologies.llms.registry import get_runner
 from social_research_probe.utils.core.types import RunnerName
 
 from .handlers import (

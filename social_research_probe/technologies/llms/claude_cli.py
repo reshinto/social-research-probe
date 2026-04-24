@@ -8,8 +8,8 @@ import re
 from typing import ClassVar
 
 from social_research_probe.utils.core.errors import AdapterError
-from social_research_probe.llm.registry import register
-from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
+from social_research_probe.technologies.llms.registry import register
+from social_research_probe.technologies.llms.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
 

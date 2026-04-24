@@ -4,14 +4,14 @@ Why this exists: provides a central lookup table so the pipeline can request a
 runner by name (e.g. "claude") and receive a ready-to-use instance without
 importing vendor-specific modules directly.
 
-Who calls it: llm/__init__.py (to trigger registration), the pipeline, the
-corroboration host, and CLI commands that need to select a runner.
+Who calls it: technologies/llms/__init__.py (to trigger registration), the
+pipeline, the corroboration host, and CLI commands that need to select a runner.
 """
 
 from __future__ import annotations
 
 from social_research_probe.utils.core.errors import ValidationError
-from social_research_probe.llm.base import LLMRunner
+from social_research_probe.technologies.llms.base import LLMRunner
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.
 # Populated at import time as each runners/*.py module is loaded.

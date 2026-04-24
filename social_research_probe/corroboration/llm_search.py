@@ -31,9 +31,10 @@ from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
 from social_research_probe.utils.core.errors import AdapterError
-from social_research_probe.llm.base import CapabilityUnavailableError, LLMRunner
-from social_research_probe.llm.registry import get_runner
-from social_research_probe.llm.types import AgenticSearchResult
+from social_research_probe.technologies.llms.base import CapabilityUnavailableError, LLMRunner
+import social_research_probe.technologies.llms  # registers all runners
+from social_research_probe.technologies.llms.registry import get_runner
+from social_research_probe.technologies.llms.types import AgenticSearchResult
 from social_research_probe.utils.display.progress import log
 
 _SUPPORT_TOKENS = (
