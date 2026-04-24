@@ -22,7 +22,7 @@ class CorroborationService(BaseService):
 
     async def execute_one(self, data: object, *, cfg) -> ServiceResult:
         """Corroborate one ScoredItem via its title as the claim text."""
-        from social_research_probe.corroboration.host import corroborate_claim
+        from social_research_probe.services.corroborating.host import corroborate_claim
         from social_research_probe.technologies.validation.claim_extractor import Claim
 
         title = data.get("title", "") if isinstance(data, dict) else str(data)

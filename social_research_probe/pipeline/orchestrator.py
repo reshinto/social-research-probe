@@ -103,7 +103,7 @@ def _available_backends(data_dir: Path, cfg=None) -> list[str]:
     credentials or runner capabilities are usable. A specific backend value
     uses only that backend. ``backend = none`` disables corroboration entirely.
     """
-    from social_research_probe.corroboration.registry import get_backend
+    from social_research_probe.services.corroborating.registry import get_backend
 
     if cfg is None:
         cfg = Config.load(data_dir)

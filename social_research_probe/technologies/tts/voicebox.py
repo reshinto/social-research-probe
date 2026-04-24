@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 from typing import ClassVar
 
-from social_research_probe.corroboration._secret_utils import read_runtime_secret
+from social_research_probe.utils.secrets import read_runtime_secret
 from social_research_probe.technologies.base import BaseTechnology
 
 _DEFAULT_TIMEOUT_SECONDS = 300

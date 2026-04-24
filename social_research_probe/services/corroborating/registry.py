@@ -12,7 +12,7 @@ host.py (calls get_backend()), and CLI commands that want to list available back
 
 from __future__ import annotations
 
-from social_research_probe.corroboration.base import CorroborationBackend
+from social_research_probe.technologies.corroborates.base import CorroborationBackend
 from social_research_probe.utils.core.errors import ValidationError
 
 # Mapping from backend name string to the backend class (not instance).

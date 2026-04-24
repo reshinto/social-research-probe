@@ -135,7 +135,7 @@ class YouTubeCorroborateStage(BaseStage):
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
 
-        from social_research_probe.corroboration.host import corroborate_claim
+        from social_research_probe.services.corroborating.host import corroborate_claim
         from social_research_probe.technologies.validation.claim_extractor import Claim
 
         sem = asyncio.Semaphore(3)
