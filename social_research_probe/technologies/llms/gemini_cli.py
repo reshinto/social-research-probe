@@ -9,6 +9,7 @@ import shutil
 from typing import ClassVar, TypedDict
 
 from social_research_probe.config import load_active_config
+from social_research_probe.services.llm.prompts import GEMINI_MEDIA_PROMPT
 from social_research_probe.services.llm.registry import register
 from social_research_probe.technologies.llms import (
     AgenticSearchCitation,
@@ -137,17 +138,6 @@ async def gemini_search(
 # ---------------------------------------------------------------------------
 
 
-def _build_media_prompt(url: str, word_limit: int) -> str:
-    """Compose the direct-URL summary instruction sent to Gemini."""
-    return (
-        f"Summarize the video at this URL in approximately {word_limit} words. "
-        "Cover the main topic, key arguments or findings, target audience, and "
-        "any specific claims, tools, people, or data points referenced. Be "
-        "specific and factual. Do not start with 'This video' or 'In this "
-        f"video'.\n\nURL: {url}"
-    )
-
-
 @register
 class GeminiRunner(JsonCliRunner):
     """Structured JSON runner for the Gemini CLI."""
@@ -191,7 +181,7 @@ class GeminiRunner(JsonCliRunner):
         """Ask Gemini to summarise the video at ``url`` directly."""
         if not self.health_check():
             return None
-        prompt = _build_media_prompt(url, word_limit)
+        prompt = GEMINI_MEDIA_PROMPT.format(url=url, word_limit=word_limit)
         argv = [self._binary(), *self.base_argv, *self._extra_flags(), "--prompt", prompt]
         try:
             result = await asyncio.to_thread(sp_run, argv, timeout=int(timeout_s))

@@ -102,3 +102,11 @@ Use the web_search tool to find authoritative sources about the following claim.
 
 Claim: {query}
 """
+
+# Used by Gemini runner media summarization: instruct Gemini to summarize a
+# video at the given URL with specified word limit.
+GEMINI_MEDIA_PROMPT = """\
+Summarize the video at this URL in approximately {word_limit} words. Cover the main topic, key arguments or findings, target audience, and any specific claims, tools, people, or data points referenced. Be specific and factual. Do not start with 'This video' or 'In this video'.
+
+URL: {url}
+"""
