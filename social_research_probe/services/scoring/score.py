@@ -21,7 +21,7 @@ class ScoringService(BaseService):
 
     async def execute_one(self, data: object, *, cfg) -> ServiceResult:
         """Score a list of raw items; data is dict with 'items' and 'weights' keys."""
-        from social_research_probe.scoring.combine import overall_score
+        from social_research_probe.technologies.scoring.combine import overall_score
 
         items = data.get("items", []) if isinstance(data, dict) else []
         weights = data.get("weights", {}) if isinstance(data, dict) else {}

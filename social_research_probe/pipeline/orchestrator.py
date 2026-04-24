@@ -15,7 +15,7 @@ from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.utils.purposes import registry as purpose_registry
 from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
-from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
+from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS
 from social_research_probe.utils.core.types import AdapterConfig, MultiResearchPacket, ResearchPacket
 from social_research_probe.utils.display.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
