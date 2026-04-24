@@ -7,7 +7,7 @@ import json
 import re
 from typing import ClassVar
 
-from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
+from social_research_probe.technologies.llms import JsonCliRunner
 from social_research_probe.services.llm.registry import register
 from social_research_probe.technologies.llms import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.utils.core.errors import AdapterError

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from social_research_probe.technologies.llms.base import LLMRunner
+from social_research_probe.technologies.llms import LLMRunner
 from social_research_probe.utils.core.errors import ValidationError
 
 if TYPE_CHECKING:
