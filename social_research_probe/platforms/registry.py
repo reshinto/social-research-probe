@@ -30,6 +30,9 @@ def list_adapters() -> list[str]:
     return sorted(_REGISTRY.keys())
 
 
-def list_valid_platforms() -> list[str]:
-    """Return all valid platform names including special platforms (e.g., 'all')."""
-    return sorted(_REGISTRY.keys()) + ["all"]
+def get_valid_platforms() -> dict[str, type[PlatformAdapter] | None]:
+    """Return dict of valid platform names (registered adapters + special platforms).
+
+    Special platforms like "all" map to None instead of an adapter class.
+    """
+    return {**_REGISTRY, "all": None}
