@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Generic, TypeVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 TInput = TypeVar("TInput")
 TOutput = TypeVar("TOutput")

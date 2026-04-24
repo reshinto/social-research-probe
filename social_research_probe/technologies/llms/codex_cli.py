@@ -14,7 +14,7 @@ from social_research_probe.llm.registry import register
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
 from social_research_probe.utils.core.types import JSONObject
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 
 @register
@@ -31,7 +31,7 @@ class CodexRunner(JsonCliRunner):
 
     def run(self, prompt: str, *, schema: JSONObject | None = None) -> dict:
         """Send prompt to Codex exec and parse the final message as JSON."""
-        from social_research_probe.utils.subprocess_runner import run as sp_run
+        from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
         log(f"[srp] CodexRunner LLM ({self.name}): running structured JSON task")
         timeout = load_active_config().llm_timeout_seconds
@@ -64,7 +64,7 @@ class CodexRunner(JsonCliRunner):
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
         """Run ``query`` via Codex CLI with its ``--search`` flag."""
-        from social_research_probe.utils.subprocess_runner import run as sp_run
+        from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
         prompt = (
             "Use your native --search tool to find authoritative non-video "

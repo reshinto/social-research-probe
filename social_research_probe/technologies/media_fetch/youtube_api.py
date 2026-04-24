@@ -9,7 +9,7 @@ from typing import ClassVar, Protocol
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.utils.core.types import JSONObject, JSONValue
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 
 def build_client(api_key: str):

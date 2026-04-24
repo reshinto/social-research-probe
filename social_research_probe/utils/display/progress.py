@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sys
 
-from social_research_probe.utils.service_log import logs_enabled
+from social_research_probe.utils.display.service_log import logs_enabled
 
 
 def log(msg: str) -> None:

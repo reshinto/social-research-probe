@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
-from social_research_probe.state.migrate import migrate_to_current
-from social_research_probe.state.schemas import PURPOSES_SCHEMA, default_purposes
-from social_research_probe.state.store import atomic_write_json, read_json
-from social_research_probe.state.validate import validate
+from social_research_probe.utils.state.migrate import migrate_to_current
+from social_research_probe.utils.state.schemas import PURPOSES_SCHEMA, default_purposes
+from social_research_probe.utils.state.store import atomic_write_json, read_json
+from social_research_probe.utils.state.validate import validate
 from social_research_probe.utils.core.types import JSONObject, PurposeEntry, PurposesState
 
 _FILENAME = "purposes.json"

@@ -12,7 +12,7 @@ from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.utils.core.types import JSONObject
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 
 class JsonCliRunner(LLMRunner, BaseTechnology[str, dict]):
@@ -65,7 +65,7 @@ class JsonCliRunner(LLMRunner, BaseTechnology[str, dict]):
 
     def run(self, prompt: str, *, schema: JSONObject | None = None) -> dict:
         """Send prompt to the CLI and return its parsed JSON response (sync)."""
-        from social_research_probe.utils.subprocess_runner import run as sp_run
+        from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
         log(f"[srp] LLM ({self.name}): running structured JSON task")
         timeout = load_active_config().llm_timeout_seconds

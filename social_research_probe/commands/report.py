@@ -18,7 +18,7 @@ from pathlib import Path
 from social_research_probe.config import Config, resolve_data_dir
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.packet import unwrap_packet
-from social_research_probe.utils.service_log import service_log_sync
+from social_research_probe.utils.display.service_log import service_log_sync
 
 
 def run(

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.technologies.base import BaseTechnology
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 _bot_hint_shown = False
 

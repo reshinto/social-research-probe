@@ -51,7 +51,7 @@ class BaseResearchPlatform(ABC):
         """Execute each stage sequentially, skipping disabled ones."""
         start = time.monotonic()
         name = type(self).__name__
-        from social_research_probe.utils.progress import log
+        from social_research_probe.utils.display.progress import log
 
         log(f"[PLATFORM][{name}] starting")
         for stage in self.stages():

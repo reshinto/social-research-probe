@@ -15,7 +15,7 @@ import hashlib
 import os
 from pathlib import Path
 
-from social_research_probe.utils.cache import FilesystemCache
+from social_research_probe.utils.caching.cache import FilesystemCache
 
 _DISABLE_ENV = "SRP_DISABLE_CACHE"
 _TRUTHY = {"1", "true", "yes", "on"}

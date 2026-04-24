@@ -137,7 +137,7 @@ def _run_required_synthesis(packet: dict) -> dict | None:
         build_synthesis_prompt,
         parse_synthesis_response,
     )
-    from social_research_probe.utils.progress import log
+    from social_research_probe.utils.display.progress import log
 
     cfg = load_active_config()
     if not _stage_flag(cfg, "synthesis", default=True):
@@ -226,7 +226,7 @@ def _resolve_topic_and_purposes(
         Resolved topic and purposes.
     """
     from social_research_probe.commands.nl_query import classify_query
-    from social_research_probe.utils.progress import log
+    from social_research_probe.utils.display.progress import log
 
     if research_args.query:
         classified = classify_query(research_args.query, data_dir=data_dir, cfg=cfg)
@@ -245,7 +245,7 @@ def _log_synthesis_runner_status(cfg: object) -> None:
     Args:
         cfg: Active configuration.
     """
-    from social_research_probe.utils.progress import log
+    from social_research_probe.utils.display.progress import log
 
     if not _stage_flag(cfg, "synthesis", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")

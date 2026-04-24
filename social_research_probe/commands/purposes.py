@@ -6,7 +6,7 @@ from pathlib import Path
 
 from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
 from social_research_probe.utils.core.errors import DuplicateError, SrpError, ValidationError
-from social_research_probe.purposes import registry
+from social_research_probe.utils.purposes import registry
 
 
 def show_purposes(data_dir: Path) -> dict:

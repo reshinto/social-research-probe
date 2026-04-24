@@ -15,12 +15,12 @@ import re
 from typing import ClassVar
 
 from social_research_probe.technologies.base import BaseTechnology
-from social_research_probe.utils.pipeline_cache import (
+from social_research_probe.utils.caching.pipeline_cache import (
     get_str,
     set_str,
     transcript_cache,
 )
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 _VIDEO_ID_RE = re.compile(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})")
 

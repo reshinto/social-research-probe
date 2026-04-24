@@ -17,9 +17,9 @@ from social_research_probe.commands.topics import add_topics, show_topics
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 from social_research_probe.llm.registry import get_runner
 from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
-from social_research_probe.purposes.registry import load
+from social_research_probe.utils.purposes.registry import load
 from social_research_probe.utils.core.types import RunnerName
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 if TYPE_CHECKING:
     from social_research_probe.config import Config

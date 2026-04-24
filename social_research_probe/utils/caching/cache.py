@@ -18,7 +18,7 @@ import re
 import time
 from pathlib import Path
 
-from social_research_probe.utils.io import read_json, write_json
+from social_research_probe.utils.io.io import read_json, write_json
 
 # Only these characters are safe in filenames across all major filesystems.
 # All other characters in a cache key are replaced with an underscore.

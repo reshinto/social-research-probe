@@ -23,7 +23,7 @@ from social_research_probe.corroboration.base import CorroborationBackend, Corro
 from social_research_probe.corroboration.registry import register
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.technologies.base import BaseTechnology
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 
 @register

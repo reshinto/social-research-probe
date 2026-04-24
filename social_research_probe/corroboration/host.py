@@ -18,7 +18,7 @@ from collections import Counter
 
 from social_research_probe.corroboration.base import CorroborationResult
 from social_research_probe.corroboration.registry import get_backend
-from social_research_probe.utils.pipeline_cache import (
+from social_research_probe.utils.caching.pipeline_cache import (
     corroboration_cache,
     get_json,
     hash_key,

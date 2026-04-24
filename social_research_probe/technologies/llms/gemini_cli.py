@@ -13,7 +13,7 @@ from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.llm.registry import register
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner
-from social_research_probe.utils.subprocess_runner import run as sp_run
+from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
 # ---------------------------------------------------------------------------
 # Gemini CLI google-search adapter (merged from llm/gemini_cli.py)

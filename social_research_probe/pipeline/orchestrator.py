@@ -13,16 +13,16 @@ from social_research_probe.platform import YouTubePipeline, run_all_platforms
 from social_research_probe.platform.state import PipelineState
 from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.registry import get_adapter
-from social_research_probe.purposes import registry as purpose_registry
-from social_research_probe.purposes.merge import MergedPurpose, merge_purposes
+from social_research_probe.utils.purposes import registry as purpose_registry
+from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
 from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
 from social_research_probe.utils.core.types import AdapterConfig, MultiResearchPacket, ResearchPacket
-from social_research_probe.utils.fast_mode import (
+from social_research_probe.utils.display.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
     FAST_MODE_TOP_N,
     fast_mode_enabled,
 )
-from social_research_probe.utils.progress import log
+from social_research_probe.utils.display.progress import log
 
 from .scoring import _enrich_query
 
