@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from social_research_probe.errors import SrpError
+from social_research_probe.utils.core.errors import SrpError
 
 
 class ParseError(SrpError):

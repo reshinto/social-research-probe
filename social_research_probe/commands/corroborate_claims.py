@@ -52,7 +52,7 @@ def run(
         ValidationError: If the input file is missing, unreadable, or is not
             valid JSON.
     """
-    from social_research_probe.errors import ValidationError
+    from social_research_probe.utils.core.errors import ValidationError
 
     cfg = load_active_config()
     if hasattr(cfg, "stage_enabled") and not cfg.stage_enabled("corroborate"):

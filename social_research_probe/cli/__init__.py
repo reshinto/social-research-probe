@@ -14,9 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from social_research_probe.config import load_active_config, resolve_data_dir
-from social_research_probe.errors import SrpError, ValidationError
+from social_research_probe.utils.core.errors import SrpError, ValidationError
 from social_research_probe.llm.registry import get_runner
-from social_research_probe.types import RunnerName
+from social_research_probe.utils.core.types import RunnerName
 
 from .handlers import (
     _dispatch_config,

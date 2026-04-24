@@ -9,7 +9,7 @@ import shutil
 from typing import ClassVar, TypedDict
 
 from social_research_probe.config import load_active_config
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.llm.registry import register
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.technologies.llms.cli_json_base import JsonCliRunner

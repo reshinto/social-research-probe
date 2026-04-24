@@ -9,7 +9,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TypeVar, cast
 
-from social_research_probe.types import (
+from social_research_probe.utils.core.types import (
     JSONObject,
     PendingSuggestionsState,
     PurposesState,

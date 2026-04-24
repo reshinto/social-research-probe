@@ -8,10 +8,10 @@ import shutil
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.technologies.base import BaseTechnology
-from social_research_probe.types import JSONObject
+from social_research_probe.utils.core.types import JSONObject
 from social_research_probe.utils.progress import log
 
 

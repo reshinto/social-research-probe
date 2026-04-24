@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 
-from social_research_probe.types import (
+from social_research_probe.utils.core.types import (
     ResearchPacket,
     ScoredItem,
     SourceValidationSummary,

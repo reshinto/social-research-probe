@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from social_research_probe.dedupe import DuplicateStatus, classify
-from social_research_probe.errors import DuplicateError
+from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
+from social_research_probe.utils.core.errors import DuplicateError
 from social_research_probe.state.migrate import migrate_to_current
 from social_research_probe.state.schemas import TOPICS_SCHEMA, default_topics
 from social_research_probe.state.store import atomic_write_json, read_json
@@ -78,7 +78,7 @@ def rename_topic(data_dir: Path, old: str, new: str) -> None:
     data = _load(data_dir)
     existing = list(data["topics"])
     if old not in existing:
-        from social_research_probe.errors import SrpError
+        from social_research_probe.utils.core.errors import SrpError
 
         raise SrpError(f"topic {old!r} not found")
     if new in existing:

@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 8000

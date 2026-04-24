@@ -12,7 +12,7 @@ from social_research_probe.commands import purposes as purposes_cmd
 from social_research_probe.commands import suggestions as suggestions_cmd
 from social_research_probe.commands import topics as topics_cmd
 from social_research_probe.commands.parse import _parse_quoted_list, _take_quoted
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 
 from .utils import _emit, _id_selector
 

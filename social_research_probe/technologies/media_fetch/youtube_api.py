@@ -6,9 +6,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import ClassVar, Protocol
 
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.technologies.base import BaseTechnology
-from social_research_probe.types import JSONObject, JSONValue
+from social_research_probe.utils.core.types import JSONObject, JSONValue
 from social_research_probe.utils.progress import log
 
 

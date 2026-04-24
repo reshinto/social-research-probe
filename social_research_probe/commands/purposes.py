@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from social_research_probe.dedupe import DuplicateStatus, classify
-from social_research_probe.errors import DuplicateError, SrpError, ValidationError
+from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
+from social_research_probe.utils.core.errors import DuplicateError, SrpError, ValidationError
 from social_research_probe.purposes import registry
 
 

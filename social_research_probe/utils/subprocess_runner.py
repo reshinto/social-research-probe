@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import subprocess
 
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 
 
 def run(

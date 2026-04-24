@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import ClassVar
 
-from social_research_probe.types import MetricMap
+from social_research_probe.utils.core.types import MetricMap
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from social_research_probe.errors import ValidationError
-from social_research_probe.types import PurposeEntry
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import PurposeEntry
 
 
 @dataclass(frozen=True)

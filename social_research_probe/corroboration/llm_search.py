@@ -30,7 +30,7 @@ from social_research_probe.config import load_active_config
 from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.llm.base import CapabilityUnavailableError, LLMRunner
 from social_research_probe.llm.registry import get_runner
 from social_research_probe.llm.types import AgenticSearchResult

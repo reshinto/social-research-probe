@@ -9,7 +9,7 @@ missing so disabled features silently produce empty sections.
 
 from __future__ import annotations
 
-from social_research_probe.types import (
+from social_research_probe.utils.core.types import (
     Coverage,
     ResearchPacket,
     ScoredItem,

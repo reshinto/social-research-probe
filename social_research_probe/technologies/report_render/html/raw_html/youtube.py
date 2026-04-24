@@ -44,7 +44,7 @@ from social_research_probe.technologies.report_render.html.raw_html._sections im
     section_11_opportunity,
     section_12_summary,
 )
-from social_research_probe.types import ResearchPacket
+from social_research_probe.utils.core.types import ResearchPacket
 from social_research_probe.utils.service_log import service_log_sync
 
 _SECTIONS = [

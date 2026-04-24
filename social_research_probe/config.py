@@ -12,7 +12,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from social_research_probe.types import (
+from social_research_probe.utils.core.types import (
     AdapterConfig,
     AppConfig,
     DebugConfigSection,

@@ -14,7 +14,7 @@ import statistics
 from datetime import UTC, datetime
 
 from social_research_probe.platforms.base import RawItem, SignalSet
-from social_research_probe.types import ScoredItem
+from social_research_probe.utils.core.types import ScoredItem
 
 _LOW_CHANNEL_THRESHOLD = 3
 _LOW_SCORE_THRESHOLD = 0.5

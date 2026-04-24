@@ -8,7 +8,7 @@ from pathlib import Path
 
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.config import Config
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.platform import YouTubePipeline, run_all_platforms
 from social_research_probe.platform.state import PipelineState
 from social_research_probe.platforms.base import FetchLimits
@@ -16,7 +16,7 @@ from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.purposes import registry as purpose_registry
 from social_research_probe.purposes.merge import MergedPurpose, merge_purposes
 from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
-from social_research_probe.types import AdapterConfig, MultiResearchPacket, ResearchPacket
+from social_research_probe.utils.core.types import AdapterConfig, MultiResearchPacket, ResearchPacket
 from social_research_probe.utils.fast_mode import (
     FAST_MODE_MAX_BACKENDS,
     FAST_MODE_TOP_N,

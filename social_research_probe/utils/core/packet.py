@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-from social_research_probe.types import PacketPayload
+from social_research_probe.utils.core.types import PacketPayload
 
 PacketKind = Literal["synthesis", "suggestions", "corroboration"]
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from jsonschema import Draft202012Validator
 
-from social_research_probe.errors import ValidationError
-from social_research_probe.types import JSONObject, JSONValue
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import JSONObject, JSONValue
 
 
 def validate(data: JSONValue, schema: JSONObject) -> None:

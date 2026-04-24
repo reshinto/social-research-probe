@@ -16,7 +16,7 @@ from social_research_probe.synthesize.formatter import (
     _contextual_explanation,
     _infer_model,
 )
-from social_research_probe.types import ResearchPacket, ScoredItem
+from social_research_probe.utils.core.types import ResearchPacket, ScoredItem
 
 
 def _esc(text: str) -> str:

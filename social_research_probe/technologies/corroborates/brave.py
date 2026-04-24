@@ -20,7 +20,7 @@ from social_research_probe.corroboration._filters import filter_results
 from social_research_probe.corroboration._secret_utils import HTTP_USER_AGENT, read_runtime_secret
 from social_research_probe.corroboration.base import CorroborationBackend, CorroborationResult
 from social_research_probe.corroboration.registry import register
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.utils.progress import log
 

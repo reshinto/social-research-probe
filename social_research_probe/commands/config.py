@@ -9,8 +9,8 @@ import tomllib
 from pathlib import Path
 
 from social_research_probe.config import DEFAULT_CONFIG, Config
-from social_research_probe.errors import ValidationError
-from social_research_probe.types import JSONObject, JSONScalar
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import JSONObject, JSONScalar
 
 SECRET_FILENAME = "secrets.toml"
 CONFIG_FILENAME = "config.toml"

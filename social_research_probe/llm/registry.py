@@ -10,7 +10,7 @@ corroboration host, and CLI commands that need to select a runner.
 
 from __future__ import annotations
 
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.llm.base import LLMRunner
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.

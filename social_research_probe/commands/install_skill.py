@@ -14,7 +14,7 @@ import tomllib
 from pathlib import Path
 
 from social_research_probe.config import resolve_data_dir
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
 _BUNDLED_CONFIG = Path(__file__).resolve().parents[2] / "config.toml.example"

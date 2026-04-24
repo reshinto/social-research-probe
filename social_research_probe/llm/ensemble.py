@@ -21,7 +21,7 @@ import asyncio
 import os
 
 from social_research_probe.config import load_active_config
-from social_research_probe.types import FreeTextRunnerName
+from social_research_probe.utils.core.types import FreeTextRunnerName
 from social_research_probe.utils.progress import log
 
 # Seconds to wait for each provider before giving up.

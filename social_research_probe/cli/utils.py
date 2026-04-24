@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sys
 
-from social_research_probe.errors import ValidationError
+from social_research_probe.utils.core.errors import ValidationError
 
 
 def _emit(data: object, fmt: str) -> None:
