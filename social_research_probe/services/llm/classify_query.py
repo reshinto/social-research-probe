@@ -7,16 +7,17 @@ Persists any newly created topic or purpose before returning.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from social_research_probe.services.llm.runners import prioritize_runner
 from social_research_probe.technologies.llms.registry import get_runner
 from social_research_probe.technologies.llms.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 from social_research_probe.utils.command_models.purposes import add_purpose
 from social_research_probe.utils.command_models.topics import add_topics, show_topics
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
+from social_research_probe.utils.core.strings import normalize_whitespace
 from social_research_probe.utils.core.types import RunnerName
 from social_research_probe.utils.display.progress import log
 from social_research_probe.utils.purposes.registry import load
@@ -26,8 +27,6 @@ if TYPE_CHECKING:
 
 # Runner candidates in stable priority order; preferred runner is moved to front.
 _RUNNER_CANDIDATES: list[RunnerName] = ["claude", "gemini", "codex", "local"]
-
-_MULTI_SPACE = re.compile(r" {2,}")
 
 
 @dataclass(frozen=True)
@@ -60,9 +59,9 @@ def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuer
 
     result = _run_classification(prompt, preferred=cfg.default_structured_runner)
 
-    topic = _normalize(result["topic"])
-    purpose_name = _normalize(result["purpose_name"])
-    purpose_method = _normalize(result["purpose_method"])
+    topic = normalize_whitespace(result["topic"])
+    purpose_name = normalize_whitespace(result["purpose_name"])
+    purpose_method = normalize_whitespace(result["purpose_method"])
 
     topic_created = _persist_topic(data_dir, topic)
     purpose_created = _persist_purpose(data_dir, purpose_name, purpose_method)
@@ -76,14 +75,11 @@ def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuer
     )
 
 
-def _runner_order(preferred: RunnerName) -> list[RunnerName]:
-    """Return runner names with the preferred runner first."""
-    return [preferred, *[n for n in _RUNNER_CANDIDATES if n != preferred]]
 
 
 def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     """Try each runner in order and return the first valid classification result."""
-    for name in _runner_order(preferred):
+    for name in prioritize_runner(_RUNNER_CANDIDATES, preferred):
         runner = get_runner(name)
         if not runner.health_check():
             continue
@@ -107,11 +103,6 @@ def _is_valid_result(result: dict) -> bool:
         if not isinstance(value, str) or not value.strip():
             return False
     return True
-
-
-def _normalize(value: str) -> str:
-    """Strip, lowercase, and collapse internal whitespace."""
-    return _MULTI_SPACE.sub(" ", value.strip().lower())
 
 
 def _persist_topic(data_dir: Path, topic: str) -> bool:

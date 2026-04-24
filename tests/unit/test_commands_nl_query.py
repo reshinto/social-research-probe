@@ -13,14 +13,15 @@ import pytest
 from social_research_probe.errors import ValidationError
 from social_research_probe.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 
-from social_research_probe.commands.nl_query import (
+from social_research_probe.services.llm.classify_query import (
+    _RUNNER_CANDIDATES,
     ClassifiedQuery,
     _build_classification_prompt,
     _is_valid_result,
-    _normalize,
-    _runner_order,
     classify_query,
 )
+from social_research_probe.services.llm.runners import prioritize_runner
+from social_research_probe.utils.core.strings import normalize_whitespace
 
 # ---------------------------------------------------------------------------
 # NL_QUERY_CLASSIFICATION_SCHEMA
@@ -55,13 +56,13 @@ def test_schema_field_types() -> None:
 
 
 def test_normalize_strips_and_lowercases() -> None:
-    """_normalize strips whitespace and lowercases the value."""
-    assert _normalize("  Hello World  ") == "hello world"
+    """normalize_whitespace strips whitespace and lowercases the value."""
+    assert normalize_whitespace("  Hello World  ") == "hello world"
 
 
 def test_normalize_collapses_multiple_spaces() -> None:
-    """_normalize collapses runs of spaces to a single space."""
-    assert _normalize("hello   world") == "hello world"
+    """normalize_whitespace collapses runs of spaces to a single space."""
+    assert normalize_whitespace("hello   world") == "hello world"
 
 
 def test_is_valid_result_true_for_complete_dict() -> None:
@@ -94,16 +95,16 @@ def test_is_valid_result_false_when_value_not_string() -> None:
 
 
 def test_runner_order_puts_preferred_first() -> None:
-    """_runner_order places the preferred runner at index 0."""
-    order = _runner_order("gemini")
+    """prioritize_runner places the preferred runner at index 0."""
+    order = prioritize_runner(_RUNNER_CANDIDATES, "gemini")
     assert order[0] == "gemini"
     assert "claude" in order
     assert order.count("gemini") == 1
 
 
 def test_runner_order_no_duplicates() -> None:
-    """_runner_order never repeats a name."""
-    order = _runner_order("claude")
+    """prioritize_runner never repeats a name."""
+    order = prioritize_runner(_RUNNER_CANDIDATES, "claude")
     assert len(order) == len(set(order))
 
 

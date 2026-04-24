@@ -733,7 +733,7 @@ class TestSimpleResearch:
     def test_nl_query_dispatches_classify_then_run_research(self, monkeypatch, tmp_path):
         # NL query mode: single non-platform positional → classify_query is called,
         # and topic/purposes are taken from the ClassifiedQuery result.
-        from social_research_probe.commands.nl_query import ClassifiedQuery
+        from social_research_probe.services.llm.classify_query import ClassifiedQuery
 
         def fake_classify_query(query, *, data_dir, cfg):
             return ClassifiedQuery(
@@ -759,7 +759,7 @@ class TestSimpleResearch:
 
     def test_nl_query_default_platform_is_youtube(self, monkeypatch, tmp_path):
         # When no platform is specified, NL query mode defaults to youtube.
-        from social_research_probe.commands.nl_query import ClassifiedQuery
+        from social_research_probe.services.llm.classify_query import ClassifiedQuery
 
         def fake_classify_query(query, *, data_dir, cfg):
             return ClassifiedQuery(

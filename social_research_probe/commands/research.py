@@ -45,7 +45,7 @@ def _normalize_to_topic_and_purposes(
     If a natural-language query was provided, classify it into topic and purpose.
     Otherwise, return topic and purposes as-is.
     """
-    from social_research_probe.services.llm.nl_query import classify_query
+    from social_research_probe.services.llm.classify_query import classify_query
     from social_research_probe.utils.display.progress import log
 
     if research_args.query:
@@ -62,34 +62,79 @@ def _normalize_to_topic_and_purposes(
 def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     """Parse positional CLI arguments into structured research arguments.
 
-    Supports both:
-        - Classic form: [platform] topic purposes
-        - Natural-language query form: [platform] query
+    Current behavior:
+        - If the first positional argument matches a registered platform,
+        it is used as the platform.
+        - If the first positional argument does not match a registered platform,
+        the platform defaults to "all".
+        - If one argument remains after platform detection, it is treated as a
+        natural-language query.
+        - If two or more arguments remain after platform detection, the first is
+        treated as the topic and the second is treated as the comma-separated
+        purposes.
 
-    Platform must be specified and match a registered adapter exactly.
-    Use "all" to run on all available platforms.
+    Important limitations:
+        - Extra arguments after topic and purposes are silently ignored.
+        - Unknown platform-looking values are not rejected; they are treated as
+        topics unless they match REGISTRY.
+        - The default platform is hard-coded as "all".
+
+    Examples:
+        ["youtube", "quant", "job-opportunity"]
+            -> platform="youtube", topic="quant", purposes=("job-opportunity",)
+
+        ["youtube", "what are the job opportunities for quants"]
+            -> platform="youtube", query="what are the job opportunities for quants"
+
+        ["quant", "job-opportunity"]
+            -> platform="all", topic="quant", purposes=("job-opportunity",)
+
+        ["wrongPlatformName", "quant", "job-opportunity"]
+            -> platform="all", topic="wrongPlatformName", purposes=("quant",)
+            and "job-opportunity" is ignored
     """
     from social_research_probe.platforms.registry import REGISTRY
 
+    # A research command needs at least one positional argument.
+    # That single argument can be either:
+    #   - a natural-language query, or
+    #   - a platform name, although platform-only later fails because no
+    #     query/topic remains.
     if len(positional) == 0:
         raise ValidationError(
             "research needs TOPIC and PURPOSES (or a natural-language query)"
         )
 
-    # Check if first positional is a platform or a topic
+    # If the first argument is a registered platform, consume it as the platform.
+    # Everything after it becomes the actual research input.
     first_arg = positional[0]
     if first_arg in REGISTRY:
         platform = first_arg
         rest = positional[1:]
+
+    # Otherwise, treat the first argument as part of the research input and
+    # silently default to "all" platforms.
+    #
+    # Note: this means an invalid platform name is not rejected here.
+    # For example:
+    #   ["wrongPlatformName", "quant", "job-opportunity"]
+    # becomes:
+    #   platform="all", rest=["wrongPlatformName", "quant", "job-opportunity"]
     else:
-        # First arg is not a registered platform, default to "all" and treat all args as topic/query
         platform = "all"
         rest = positional
+
+    # This happens when the user provided only a platform, for example:
+    #   ["youtube"]
+    #
+    # Since there is no query/topic after the platform, the command is invalid.
     if len(rest) == 0:
         raise ValidationError(
             "research needs at least TOPIC and PURPOSES (or a natural-language query)"
         )
 
+    # If exactly one research argument remains, treat it as a natural-language
+    # query rather than classic topic/purpose input.
     if len(rest) == 1:
         return _ResearchArgs(platform=platform, topic="", purposes=(), query=rest[0])
 
@@ -115,7 +160,9 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     platform = research_args.platform
     raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
     log_synthesis_runner_status(cfg)
-    packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
+    packet = asyncio.run(
+        run_research(parse(raw), data_dir, adapter_config=config_extras)
+    )
     if stage_flag(cfg, "synthesis", default=True):
         attach_synthesis(packet, cfg)
     report_path = write_final_report(
