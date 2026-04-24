@@ -69,18 +69,18 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     Platform must be specified and match a registered adapter exactly.
     Use "all" to run on all available platforms.
     """
-    from social_research_probe.platforms.registry import list_adapters
+    from social_research_probe.platforms.registry import list_valid_platforms
 
     if len(positional) == 0:
         raise ValidationError(
             "research needs PLATFORM (or 'all'), then TOPIC and PURPOSES (or a natural-language query)"
         )
 
-    known_platforms = set(list_adapters()) | {"all"}
+    valid_platforms = set(list_valid_platforms())
     platform = positional[0]
-    if platform not in known_platforms:
+    if platform not in valid_platforms:
         raise ValidationError(
-            f"unknown platform: {platform!r} (registered: {sorted(list_adapters())}, or use 'all')"
+            f"unknown platform: {platform!r} (valid: {list_valid_platforms()})"
         )
 
     rest = positional[1:]

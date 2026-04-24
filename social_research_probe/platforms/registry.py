@@ -28,3 +28,8 @@ def get_adapter(name: str, config: AdapterConfig) -> PlatformAdapter:
 def list_adapters() -> list[str]:
     """Return the registered adapter names in deterministic order."""
     return sorted(_REGISTRY.keys())
+
+
+def list_valid_platforms() -> list[str]:
+    """Return all valid platform names including special platforms (e.g., 'all')."""
+    return sorted(_REGISTRY.keys()) + ["all"]
