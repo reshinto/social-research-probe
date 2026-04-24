@@ -114,6 +114,5 @@ def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
             continue
 
     raise ValidationError(
-        "unable to run LLM: all runners are unhealthy or failed. "
-        "Check runner health and try again."
+        "unable to run LLM: all runners are unhealthy or failed. Check runner health and try again."
     )

@@ -9,12 +9,14 @@ from tempfile import TemporaryDirectory
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.technologies.llms import JsonCliRunner
 from social_research_probe.services.llm.registry import register
-from social_research_probe.technologies.llms import AgenticSearchCitation, AgenticSearchResult
+from social_research_probe.technologies.llms import (
+    AgenticSearchCitation,
+    AgenticSearchResult,
+    JsonCliRunner,
+)
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
-from social_research_probe.utils.display.progress import log
 
 
 @register
@@ -33,7 +35,6 @@ class CodexRunner(JsonCliRunner):
         """Send prompt to Codex exec and parse the final message as JSON."""
         from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
-        log(f"[srp] CodexRunner LLM ({self.name}): running structured JSON task")
         timeout = load_active_config().llm_timeout_seconds
         with TemporaryDirectory(prefix="srp-codex-") as tmpdir:
             tmp = Path(tmpdir)

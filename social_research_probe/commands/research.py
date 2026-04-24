@@ -101,9 +101,7 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     #   - a platform name, although platform-only later fails because no
     #     query/topic remains.
     if len(positional) == 0:
-        raise ValidationError(
-            "research needs TOPIC and PURPOSES (or a natural-language query)"
-        )
+        raise ValidationError("research needs TOPIC and PURPOSES (or a natural-language query)")
 
     # If the first argument is a registered platform, consume it as the platform.
     # Everything after it becomes the actual research input.
@@ -160,9 +158,7 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     platform = research_args.platform
     raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
     log_synthesis_runner_status(cfg)
-    packet = asyncio.run(
-        run_research(parse(raw), data_dir, adapter_config=config_extras)
-    )
+    packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
     if stage_flag(cfg, "synthesis", default=True):
         attach_synthesis(packet, cfg)
     report_path = write_final_report(

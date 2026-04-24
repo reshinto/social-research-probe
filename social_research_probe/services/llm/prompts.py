@@ -94,3 +94,11 @@ Output format (JSON only):
   "purpose_method": "..."
 }}
 """
+
+# Used by Claude runner agentic search: instruct Claude to use its web_search
+# tool to find authoritative sources about a claim.
+CLAUDE_SEARCH_PROMPT = """\
+Use the web_search tool to find authoritative sources about the following claim. Then reply with a single JSON object {"answer": "...", "citations": [{"url": "...", "title": "..."}]}. Do not include citations for video hosts (youtube.com, vimeo.com, tiktok.com) — they cannot be verified from snippets.
+
+Claim: {query}
+"""

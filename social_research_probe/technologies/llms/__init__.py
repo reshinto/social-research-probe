@@ -15,7 +15,6 @@ from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
 from social_research_probe.utils.display.progress import log
 
-
 # ---------------------------------------------------------------------------
 # Exception for capability checks
 # ---------------------------------------------------------------------------

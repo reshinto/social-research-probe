@@ -7,25 +7,17 @@ import json
 import re
 from typing import ClassVar
 
-from social_research_probe.technologies.llms import JsonCliRunner
+from social_research_probe.services.llm.prompts import CLAUDE_SEARCH_PROMPT
 from social_research_probe.services.llm.registry import register
-from social_research_probe.technologies.llms import AgenticSearchCitation, AgenticSearchResult
+from social_research_probe.technologies.llms import (
+    AgenticSearchCitation,
+    AgenticSearchResult,
+    JsonCliRunner,
+)
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
 _URL_RE = re.compile(r"https?://[^\s)\]]+")
-
-
-def _build_search_prompt(query: str) -> str:
-    """Compose the prompt that instructs Claude to use its web_search tool."""
-    return (
-        "Use the web_search tool to find authoritative sources about the "
-        "following claim. Then reply with a single JSON object "
-        '{"answer": "...", "citations": [{"url": "...", "title": "..."}]}. '
-        "Do not include citations for video hosts (youtube.com, vimeo.com, "
-        "tiktok.com) — they cannot be verified from snippets.\n\n"
-        f"Claim: {query}"
-    )
 
 
 def _parse_claude_search_body(
@@ -83,7 +75,7 @@ class ClaudeRunner(JsonCliRunner):
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
         """Run ``query`` via Claude CLI with the ``web_search`` tool enabled."""
-        prompt = _build_search_prompt(query)
+        prompt = CLAUDE_SEARCH_PROMPT.format(query=query)
         argv = [
             self._binary(),
             *self.base_argv,

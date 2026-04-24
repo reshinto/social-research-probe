@@ -7,11 +7,11 @@ from pathlib import Path
 
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.utils.display.cli_output import _emit
     from social_research_probe.utils.command_models.suggestions import (
         stage_suggestions,
         suggest_purposes,
     )
+    from social_research_probe.utils.display.cli_output import _emit
 
     drafts = suggest_purposes(data_dir, count=args.count)
     stage_suggestions(data_dir, topic_candidates=[], purpose_candidates=drafts)

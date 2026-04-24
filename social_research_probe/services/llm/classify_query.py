@@ -33,6 +33,7 @@ from social_research_probe.utils.purposes.registry import load
 if TYPE_CHECKING:
     from social_research_probe.config import Config
 
+
 @dataclass(frozen=True)
 class ClassifiedQuery:
     """Result of classifying a free-form query into a topic and purpose."""

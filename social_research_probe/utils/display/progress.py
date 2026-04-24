@@ -8,11 +8,10 @@ the final report path.
 
 from __future__ import annotations
 
-import sys
-import time
 import functools
 import inspect
-
+import sys
+import time
 from contextlib import contextmanager
 
 from social_research_probe.utils.display.service_log import logs_enabled
@@ -65,9 +64,7 @@ def log_with_time(msg: str):
                 start = time.time()
                 try:
                     result = await func(*args, **kwargs)
-                    log(
-                        f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s"
-                    )
+                    log(f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s")
                     return result
                 except Exception as exc:
                     log(
@@ -83,14 +80,10 @@ def log_with_time(msg: str):
             start = time.time()
             try:
                 result = func(*args, **kwargs)
-                log(
-                    f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s"
-                )
+                log(f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s")
                 return result
             except Exception as exc:
-                log(
-                    f"{operation_msg} outcome=error elapsed={time.time() - start:.2f}s err={exc}"
-                )
+                log(f"{operation_msg} outcome=error elapsed={time.time() - start:.2f}s err={exc}")
                 raise
 
         return sync_wrapper

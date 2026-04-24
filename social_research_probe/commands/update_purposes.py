@@ -8,13 +8,13 @@ from pathlib import Path
 
 def run(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.cli.dsl_parser import _parse_quoted_list, _take_quoted
-    from social_research_probe.utils.display.cli_output import _emit
     from social_research_probe.utils.command_models.purposes import (
         add_purpose,
         remove_purposes,
         rename_purpose,
     )
     from social_research_probe.utils.core.errors import ValidationError
+    from social_research_probe.utils.display.cli_output import _emit
 
     if args.add:
         name, pos = _take_quoted(args.add, 0)

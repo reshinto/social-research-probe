@@ -11,12 +11,15 @@ import os
 import sys
 
 from social_research_probe.config import resolve_data_dir
-from social_research_probe.utils.core.errors import SrpError
-
 from social_research_probe.utils.cli import _id_selector as _id_selector
+from social_research_probe.utils.core.errors import SrpError
 from social_research_probe.utils.display.cli_output import (
     _emit as _emit,
+)
+from social_research_probe.utils.display.cli_output import (
     _to_markdown as _to_markdown,
+)
+from social_research_probe.utils.display.cli_output import (
     _to_text as _to_text,
 )
 

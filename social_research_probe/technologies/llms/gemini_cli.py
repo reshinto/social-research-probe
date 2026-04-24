@@ -9,9 +9,12 @@ import shutil
 from typing import ClassVar, TypedDict
 
 from social_research_probe.config import load_active_config
-from social_research_probe.technologies.llms import JsonCliRunner
 from social_research_probe.services.llm.registry import register
-from social_research_probe.technologies.llms import AgenticSearchCitation, AgenticSearchResult
+from social_research_probe.technologies.llms import (
+    AgenticSearchCitation,
+    AgenticSearchResult,
+    JsonCliRunner,
+)
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
