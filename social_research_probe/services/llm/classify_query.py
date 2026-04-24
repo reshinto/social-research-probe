@@ -7,8 +7,6 @@ Persists any newly created topic or purpose before returning.
 
 from __future__ import annotations
 
-import time
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,7 +27,7 @@ from social_research_probe.utils.command_models.topics import add_topics, show_t
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 from social_research_probe.utils.core.strings import normalize_whitespace
 from social_research_probe.utils.core.types import RunnerName
-from social_research_probe.utils.display.progress import log
+from social_research_probe.utils.display.progress import log, timed_operation
 from social_research_probe.utils.purposes.registry import load
 
 if TYPE_CHECKING:
@@ -37,20 +35,6 @@ if TYPE_CHECKING:
 
 # Runner candidates in stable priority order; preferred runner is moved to front.
 _RUNNER_CANDIDATES: list[RunnerName] = ["claude", "gemini", "codex", "local"]
-
-
-@contextmanager
-def _timed_operation(msg: str):
-    """Log operation start, run block, log result with elapsed time."""
-    try:
-        start = time.time()
-        yield
-        elapsed = time.time() - start
-        log(f"[srp] nl-query: {msg} outcome=success elapsed={elapsed:.2f}s")
-    except Exception as exc:
-        elapsed = time.time() - start
-        log(f"[srp] nl-query: {msg} outcome=error elapsed={elapsed:.2f}s err={exc}")
-        raise
 
 
 @dataclass(frozen=True)
@@ -114,7 +98,7 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
         if not runner.health_check():
             continue
         try:
-            with _timed_operation(f"runner={name}"):
+            with timed_operation(f"[srp] nl-query: runner={name}"):
                 result = runner.run(prompt, schema=NL_QUERY_CLASSIFICATION_SCHEMA)
         except Exception:
             continue

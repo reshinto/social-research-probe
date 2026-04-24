@@ -9,6 +9,8 @@ the final report path.
 from __future__ import annotations
 
 import sys
+import time
+from contextlib import contextmanager
 
 from social_research_probe.utils.display.service_log import logs_enabled
 
@@ -18,6 +20,20 @@ def log(msg: str) -> None:
     if not _enabled():
         return
     print(msg, file=sys.stderr)
+
+
+@contextmanager
+def timed_operation(msg: str):
+    """Log operation start, run block, log result with elapsed time."""
+    try:
+        start = time.time()
+        yield
+        elapsed = time.time() - start
+        log(f"{msg} outcome=success elapsed={elapsed:.2f}s")
+    except Exception as exc:
+        elapsed = time.time() - start
+        log(f"{msg} outcome=error elapsed={elapsed:.2f}s err={exc}")
+        raise
 
 
 def _enabled() -> bool:
