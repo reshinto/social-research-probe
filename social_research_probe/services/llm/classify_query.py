@@ -7,6 +7,7 @@ Persists any newly created topic or purpose before returning.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -88,20 +89,28 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     cache_key = hash_key(prompt)
     cached = get_json(classification_cache(), cache_key)
     if cached is not None:
+        log(f"[srp] nl-query: cache=hit key={cache_key[:8]}...")
         return cached["result"]
+
+    log(f"[srp] nl-query: cache=miss key={cache_key[:8]}...")
 
     for name in prioritize_runner(_RUNNER_CANDIDATES, preferred):
         runner = get_runner(name)
         if not runner.health_check():
             continue
+        start = time.time()
         try:
             result = runner.run(prompt, schema=NL_QUERY_CLASSIFICATION_SCHEMA)
+            elapsed = time.time() - start
+            log(f"[srp] nl-query: runner={name} outcome=success elapsed={elapsed:.2f}s")
         except Exception as exc:
-            log(f"[srp] nl-query: runner={name} outcome=error err={exc}")
+            elapsed = time.time() - start
+            log(f"[srp] nl-query: runner={name} outcome=error elapsed={elapsed:.2f}s err={exc}")
             continue
         if _is_valid_result(result):
             cache_entry = {"prompt": prompt, "result": result}
             set_json(classification_cache(), cache_key, cache_entry)
+            log(f"[srp] nl-query: cache=stored key={cache_key[:8]}...")
             return result
     raise ValidationError(
         "unable to classify query: all LLM runners failed or are unavailable. "
