@@ -90,6 +90,7 @@ def run(target: str | None) -> int:
     data_dir = resolve_data_dir(None)
     _copy_config_example(data_dir)
     _prompt_for_secrets(data_dir)
+    _ensure_voicebox_secrets(data_dir)
     _prompt_for_runner(data_dir)
     return 0
 
@@ -234,3 +235,12 @@ def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:
         if value:
             write_secret(data_dir, name, value)
             print("    saved.")
+
+
+def _ensure_voicebox_secrets(data_dir: Path) -> None:
+    """Auto-write default tts_voicebox_server_url secret if missing."""
+    from social_research_probe.commands.config import read_secret, write_secret
+
+    if not read_secret(data_dir, "tts_voicebox_server_url"):
+        write_secret(data_dir, "tts_voicebox_server_url", "http://127.0.0.1:17493")
+        print("  tts_voicebox_server_url defaulted to http://127.0.0.1:17493")
