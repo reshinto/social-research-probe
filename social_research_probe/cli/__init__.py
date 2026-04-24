@@ -58,11 +58,12 @@ def main(argv: list[str] | None = None) -> int:
     Raises:
         SrpError: Raised by handlers and converted to exit codes.
     """
+    from .commands import SpecialCommand
     import social_research_probe as _srp_pkg
 
     parser = _global_parser()
     args = parser.parse_args(argv)
-    if getattr(args, "version", False):
+    if getattr(args, SpecialCommand.VERSION, False):
         print(f"srp {_srp_pkg.get_version()}  ({_srp_pkg.__file__})")
         return 0
     if args.command is None:

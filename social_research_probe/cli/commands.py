@@ -51,3 +51,12 @@ class ConfigSubcommand(StrEnum):
     SET_SECRET = "set-secret"
     UNSET_SECRET = "unset-secret"
     CHECK_SECRETS = "check-secrets"
+
+
+class SpecialCommand(StrEnum):
+    """Argparse built-in commands handled outside handlers_factory.
+    These are not dispatched to command modules; they are processed directly in main().
+    """
+
+    HELP = "help"
+    VERSION = "version"

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from social_research_probe.cli.commands import Command, ConfigSubcommand
+from social_research_probe.cli.commands import Command, ConfigSubcommand, SpecialCommand
 
 
 def _add_topics_subparsers(sub: argparse._SubParsersAction) -> None:
@@ -187,7 +187,7 @@ def _global_parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", default=None)
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
-        "--version",
+        f"--{SpecialCommand.VERSION}",
         action="store_true",
         help="Print version and resolved package path, then exit.",
     )
