@@ -88,7 +88,7 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     cache_key = hash_key(prompt)
     cached = get_json(classification_cache(), cache_key)
     if cached is not None:
-        return cached
+        return cached["result"]
 
     for name in prioritize_runner(_RUNNER_CANDIDATES, preferred):
         runner = get_runner(name)
@@ -100,7 +100,8 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
             log(f"[srp] nl-query: runner={name} outcome=error err={exc}")
             continue
         if _is_valid_result(result):
-            set_json(classification_cache(), cache_key, result)
+            cache_entry = {"prompt": prompt, "result": result}
+            set_json(classification_cache(), cache_key, cache_entry)
             return result
     raise ValidationError(
         "unable to classify query: all LLM runners failed or are unavailable. "
