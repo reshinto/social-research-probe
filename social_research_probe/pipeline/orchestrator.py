@@ -9,8 +9,8 @@ from pathlib import Path
 from social_research_probe.commands.parse import ParsedRunResearch
 from social_research_probe.config import Config
 from social_research_probe.utils.core.errors import ValidationError
-from social_research_probe.platform import YouTubePipeline, run_all_platforms
-from social_research_probe.platform.state import PipelineState
+from social_research_probe.platforms.platform import YouTubePipeline, run_all_platforms
+from social_research_probe.platforms.platform.state import PipelineState
 from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.registry import get_adapter
 from social_research_probe.utils.purposes import registry as purpose_registry
