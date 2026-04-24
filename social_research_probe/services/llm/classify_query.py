@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from social_research_probe.services.llm.prompts import CLASSIFICATION_PROMPT
 from social_research_probe.services.llm.registry import run_with_fallback
-from social_research_probe.technologies.llms.schemas import (
+from social_research_probe.services.llm.schemas import (
     NL_QUERY_CLASSIFICATION_SCHEMA,
 )
 from social_research_probe.utils.caching.pipeline_cache import (
