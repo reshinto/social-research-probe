@@ -5,7 +5,7 @@ import sys
 from social_research_probe.commands import Command
 
 
-def test_run_research_emits_packet_envelope(tmp_path):
+def test_run_pipeline_emits_packet_envelope(tmp_path):
     env = {
         **os.environ,
         "SRP_DATA_DIR": str(tmp_path),

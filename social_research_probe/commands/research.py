@@ -146,7 +146,7 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
 def run(args: argparse.Namespace, data_dir: Path) -> int:
     """Execute the research pipeline for the 'research' subcommand."""
     from social_research_probe.commands import DslCommand, parse
-    from social_research_probe.pipeline import run_research
+    from social_research_probe.pipeline import run_pipeline
 
     research_args = _parse_research_input(args.args)
     config_extras = {
@@ -158,7 +158,7 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     platform = research_args.platform
     raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
     log_synthesis_runner_status(cfg)
-    packet = asyncio.run(run_research(parse(raw), data_dir, adapter_config=config_extras))
+    packet = asyncio.run(run_pipeline(parse(raw), data_dir, adapter_config=config_extras))
     if stage_flag(cfg, "synthesis", default=True):
         attach_synthesis(packet, cfg)
     report_path = write_final_report(

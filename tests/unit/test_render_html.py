@@ -1220,7 +1220,7 @@ class TestResearchHtmlInCli:
 
     def _patch_pipeline(self, monkeypatch):
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=self._PACKET_WITH_SYNTHESIS),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -1293,7 +1293,7 @@ class TestResearchHtmlInCli:
         from social_research_probe.cli import main
 
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=_PACKET),
         )
         monkeypatch.setattr(

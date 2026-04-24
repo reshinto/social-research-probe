@@ -22,10 +22,10 @@ from social_research_probe.pipeline.stats import _build_stats_summary, _stats_mo
 from social_research_probe.pipeline.svs import _build_svs
 
 from social_research_probe.commands import DslCommand, parse
-from social_research_probe.pipeline.orchestrator import (
+from social_research_probe.platforms.orchestrator import (
     _available_backends,
     _maybe_register_fake,
-    run_research,
+    run_pipeline,
 )
 
 
@@ -167,7 +167,7 @@ def test_score_item_custom_weights_shift_overall():
 def test_resolve_scoring_weights_purpose_overrides_config():
     from social_research_probe.purposes.merge import MergedPurpose
 
-    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
+    from social_research_probe.platforms.orchestrator import _resolve_scoring_weights
 
     class _Cfg:
         raw: ClassVar[dict] = {
@@ -190,7 +190,7 @@ def test_resolve_scoring_weights_defaults_when_empty():
     from social_research_probe.purposes.merge import MergedPurpose
     from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
 
-    from social_research_probe.pipeline.orchestrator import _resolve_scoring_weights
+    from social_research_probe.platforms.orchestrator import _resolve_scoring_weights
 
     class _Cfg:
         raw: ClassVar[dict] = {"scoring": {"weights": {}}}
@@ -199,7 +199,7 @@ def test_resolve_scoring_weights_defaults_when_empty():
     assert _resolve_scoring_weights(_Cfg(), merged) == DEFAULT_WEIGHTS
 
 
-async def test_run_research_returns_packet(monkeypatch, tmp_path):
+async def test_run_pipeline_returns_packet(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -212,13 +212,13 @@ async def test_run_research_returns_packet(monkeypatch, tmp_path):
     )
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    packet = await run_research(cmd, tmp_path)
+    packet = await run_pipeline(cmd, tmp_path)
     assert "topic" in packet
     assert "items_top_n" in packet
     assert isinstance(packet["items_top_n"], list)
 
 
-async def test_run_research_degrades_when_fetch_stage_disabled(monkeypatch, tmp_path):
+async def test_run_pipeline_degrades_when_fetch_stage_disabled(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -234,13 +234,13 @@ async def test_run_research_degrades_when_fetch_stage_disabled(monkeypatch, tmp_
         encoding="utf-8",
     )
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
-    packet = await run_research(parse(raw), tmp_path)
+    packet = await run_pipeline(parse(raw), tmp_path)
     assert packet["topic"] == "AI"
     assert packet["items_top_n"] == []
     assert packet["chart_captions"] == []
 
 
-async def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
+async def test_run_pipeline_does_not_emit_or_exit(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -253,13 +253,13 @@ async def test_run_research_does_not_emit_or_exit(monkeypatch, tmp_path):
     )
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
-    packet = await run_research(cmd, tmp_path)
+    packet = await run_pipeline(cmd, tmp_path)
     assert packet["topic"] == "AI"
     assert "compiled_synthesis" not in packet
     assert "opportunity_analysis" not in packet
 
 
-async def test_run_research_multi_topic(monkeypatch, tmp_path):
+async def test_run_pipeline_multi_topic(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -272,11 +272,11 @@ async def test_run_research_multi_topic(monkeypatch, tmp_path):
     )
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news;"blockchain"->latest-news'
     cmd = parse(raw)
-    result = await run_research(cmd, tmp_path)
+    result = await run_pipeline(cmd, tmp_path)
     assert "multi" in result
 
 
-async def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
+async def test_run_pipeline_unknown_purpose_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     # Write purposes.json but without "nonexistent_purpose"
     _write_purposes(
@@ -292,10 +292,10 @@ async def test_run_research_unknown_purpose_raises(monkeypatch, tmp_path):
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->nonexistent_purpose'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        await run_research(cmd, tmp_path)
+        await run_pipeline(cmd, tmp_path)
 
 
-async def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
+async def test_run_pipeline_bad_adapter_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
         tmp_path,
@@ -310,7 +310,7 @@ async def test_run_research_bad_adapter_raises(monkeypatch, tmp_path):
     raw = 'run-research platform:nonexistent "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
-        await run_research(cmd, tmp_path)
+        await run_pipeline(cmd, tmp_path)
 
 
 def _fake_top_n(n: int) -> list[dict]:
@@ -397,7 +397,7 @@ def test_render_charts_writes_full_chart_suite(tmp_path):
     assert "Table" in joined or "table" in joined
 
 
-async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
+async def test_run_pipeline_health_check_fails_raises(monkeypatch, tmp_path):
     """Line 97: adapter.health_check() == False raises ValidationError."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -410,7 +410,7 @@ async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
         },
     )
     # Patch get_adapter to return an adapter whose health_check returns False
-    import social_research_probe.pipeline.orchestrator as orchestrator_mod
+    import social_research_probe.platforms.orchestrator as orchestrator_mod
 
     class FailingAdapter:
         def health_check(self):
@@ -421,7 +421,7 @@ async def test_run_research_health_check_fails_raises(monkeypatch, tmp_path):
     raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError, match="health check"):
-        await run_research(cmd, tmp_path)
+        await run_pipeline(cmd, tmp_path)
 
 
 def test_build_stats_summary_single_item_runs_only_descriptive():
@@ -536,7 +536,7 @@ async def test_enrich_top_n_skips_when_transcript_is_whitespace_only(monkeypatch
     assert items[0]["one_line_takeaway"] == "orig"
 
 
-async def test_run_research_respects_enrich_top_n_config(monkeypatch, tmp_path):
+async def test_run_pipeline_respects_enrich_top_n_config(monkeypatch, tmp_path):
     """adapter_config.enrich_top_n=2 limits items_top_n to 2 entries instead of 5."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -544,11 +544,11 @@ async def test_run_research_respects_enrich_top_n_config(monkeypatch, tmp_path):
         {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
     )
     cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
-    packet = await run_research(cmd, tmp_path, adapter_config={"enrich_top_n": 2})
+    packet = await run_pipeline(cmd, tmp_path, adapter_config={"enrich_top_n": 2})
     assert len(packet["items_top_n"]) == 2
 
 
-async def test_run_research_default_enrich_top_n_is_5(monkeypatch, tmp_path):
+async def test_run_pipeline_default_enrich_top_n_is_5(monkeypatch, tmp_path):
     """Without enrich_top_n override, items_top_n keeps the 5-item default."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -556,11 +556,11 @@ async def test_run_research_default_enrich_top_n_is_5(monkeypatch, tmp_path):
         {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
     )
     cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
-    packet = await run_research(cmd, tmp_path)
+    packet = await run_pipeline(cmd, tmp_path)
     assert len(packet["items_top_n"]) == 5
 
 
-async def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
+async def test_run_pipeline_skips_transcript_enrich_when_disabled(monkeypatch, tmp_path):
     """adapter_config.fetch_transcripts=False skips the _enrich_top_n call."""
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _write_purposes(
@@ -573,7 +573,7 @@ async def test_run_research_skips_transcript_enrich_when_disabled(monkeypatch, t
         AsyncMock(side_effect=called.append),
     )
     cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
-    await run_research(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
+    await run_pipeline(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
     assert called == []
 
 
@@ -636,7 +636,7 @@ def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path
             return True
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
     assert _available_backends(tmp_path) == ["llm_search"]
@@ -649,7 +649,7 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
         corroboration_backend = "none"
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     assert _available_backends(tmp_path) == []
 
@@ -662,7 +662,7 @@ def test_available_backends_returns_empty_when_stage_disables_corroboration(monk
             return name != "corroborate"
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     assert _available_backends(tmp_path) == []
 
@@ -677,7 +677,7 @@ def test_available_backends_returns_empty_when_service_disables_corroboration(
             return name != "corroboration"
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     assert _available_backends(tmp_path) == []
 
@@ -692,7 +692,7 @@ def test_available_backends_skips_backend_when_technology_is_disabled(monkeypatc
             return name != "exa"
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     monkeypatch.setattr(
         reg,
@@ -715,7 +715,7 @@ def test_available_backends_skips_llm_search_when_llm_service_is_disabled(monkey
             return name != "llm"
 
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator.Config.load", lambda data_dir: _Cfg()
+        "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     monkeypatch.setattr(
         reg,

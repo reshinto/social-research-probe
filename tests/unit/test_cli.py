@@ -291,7 +291,7 @@ class TestResearchCommand:
     def test_research(self, monkeypatch, tmp_path, capsys):
         calls = []
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(
                 side_effect=lambda cmd, d, adapter_config=None: (
                     calls.append(adapter_config) or copy.deepcopy(_VALID_PACKET)
@@ -678,7 +678,7 @@ class TestSimpleResearch:
             captured.append((cmd, adapter_config))
             return copy.deepcopy(_VALID_PACKET)
 
-        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+        monkeypatch.setattr("social_research_probe.pipeline.run_pipeline", fake)
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
     def test_default_platform_is_youtube(self, monkeypatch, tmp_path):
@@ -799,7 +799,7 @@ class TestSimpleResearchTranscripts:
             captured.append((cmd, adapter_config))
             return copy.deepcopy(_VALID_PACKET)
 
-        monkeypatch.setattr("social_research_probe.pipeline.run_research", fake)
+        monkeypatch.setattr("social_research_probe.pipeline.run_pipeline", fake)
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
     def test_no_transcripts_flag_disables_transcripts(self, monkeypatch, tmp_path):
@@ -1202,7 +1202,7 @@ class TestRequiredSynthesis:
 
     def test_research_emits_envelope_with_html_path(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr(
@@ -1223,7 +1223,7 @@ class TestRequiredSynthesis:
 
     def test_no_html_still_emits_synthesized_packet(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr(
@@ -1253,7 +1253,7 @@ class TestRequiredSynthesis:
 
     def test_runner_none_emits_packet_without_sections_10_12(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -1288,7 +1288,7 @@ class TestResearchPreflightWarning:
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _UnhealthyRunner())
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -1304,7 +1304,7 @@ class TestResearchPreflightWarning:
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -1324,7 +1324,7 @@ class TestResearchPreflightWarning:
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())
         monkeypatch.setattr("social_research_probe.cli.get_runner", lambda name: _HealthyRunner())
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
@@ -1335,7 +1335,7 @@ class TestResearchPreflightWarning:
         """Multi-topic packets cannot render HTML — fall back to Markdown stub."""
         multi = {**_VALID_PACKET, "multi": [_VALID_PACKET]}
         monkeypatch.setattr(
-            "social_research_probe.pipeline.run_research",
+            "social_research_probe.pipeline.run_pipeline",
             AsyncMock(return_value=copy.deepcopy(multi)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)

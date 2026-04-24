@@ -10,7 +10,7 @@ from social_research_probe.pipeline.enrichment import _url_based_summary
 
 from social_research_probe.commands.research import _write_final_report
 from social_research_probe.config import Config
-from social_research_probe.pipeline.orchestrator import _auto_mode_backends, _available_backends
+from social_research_probe.platforms.orchestrator import _auto_mode_backends, _available_backends
 
 _ALL_STAGE_FLAGS = (
     "fetch",

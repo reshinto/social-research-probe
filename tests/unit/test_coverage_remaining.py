@@ -30,7 +30,7 @@ from social_research_probe.synthesize.explanations import (
 
 from social_research_probe.cli import main
 from social_research_probe.commands import Command
-from social_research_probe.pipeline.orchestrator import run_research
+from social_research_probe.platforms.orchestrator import run_pipeline
 
 _VALID_PACKET = {
     "topic": "ai",
@@ -58,11 +58,11 @@ _VALID_PACKET = {
 def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys):
     calls = []
 
-    async def fake_run_research(cmd, data_dir, adapter_config=None):
+    async def fake_run_pipeline(cmd, data_dir, adapter_config=None):
         calls.append((cmd, data_dir, adapter_config))
         return _VALID_PACKET
 
-    monkeypatch.setattr("social_research_probe.pipeline.run_research", fake_run_research)
+    monkeypatch.setattr("social_research_probe.pipeline.run_pipeline", fake_run_pipeline)
     monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
 
     assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 0
@@ -75,7 +75,7 @@ def test_research_emits_packet_without_render_full(monkeypatch, tmp_path, capsys
 
 def test_research_propagates_synthesis_error(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "social_research_probe.pipeline.run_research",
+        "social_research_probe.pipeline.run_pipeline",
         AsyncMock(return_value=_VALID_PACKET),
     )
     monkeypatch.setattr(
@@ -177,7 +177,7 @@ def test_fallback_transcript_summary_empty_string_returns_empty():
     assert _fallback_transcript_summary("") == ""
 
 
-async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path):
+async def test_run_pipeline_skip_reason_no_api_credentials(monkeypatch, tmp_path):
     """When backends config is non-none but no backends pass health-check, skip_reason
     is 'no API credentials usable' (the else-branch of the cfg_corr == 'none' check)."""
 
@@ -198,9 +198,9 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
         default_structured_runner = "none"
         llm_runner = "none"
 
-    monkeypatch.setattr("social_research_probe.pipeline.orchestrator.Config.load", lambda d: _Cfg())
+    monkeypatch.setattr("social_research_probe.platforms.orchestrator.Config.load", lambda d: _Cfg())
     monkeypatch.setattr(
-        "social_research_probe.pipeline.orchestrator._available_backends",
+        "social_research_probe.platforms.orchestrator._available_backends",
         lambda d, cfg=None: ["exa"],
     )
     monkeypatch.setattr(
@@ -222,7 +222,7 @@ async def test_run_research_skip_reason_no_api_credentials(monkeypatch, tmp_path
             }
         },
     )
-    packet = await run_research(parse('run-research platform:youtube "AI"->latest-news'), tmp_path)
+    packet = await run_pipeline(parse('run-research platform:youtube "AI"->latest-news'), tmp_path)
     assert "topic" in packet
 
 

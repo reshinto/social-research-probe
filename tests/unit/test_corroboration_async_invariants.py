@@ -129,15 +129,15 @@ def test_ensemble_does_not_use_thread_pool_executor():
 
 
 # ---------------------------------------------------------------------------
-# A5: pipeline.run_research must be async
+# A5: pipeline.run_pipeline must be async
 # ---------------------------------------------------------------------------
 
 
-def test_run_research_is_coroutine_function():
-    """pipeline.run_research() must be a coroutine function after Phase A."""
-    from social_research_probe.pipeline import run_research
+def test_run_pipeline_is_coroutine_function():
+    """pipeline.run_pipeline() must be a coroutine function after Phase A."""
+    from social_research_probe.pipeline import run_pipeline
 
-    assert inspect.iscoroutinefunction(run_research)
+    assert inspect.iscoroutinefunction(run_pipeline)
 
 
 # ---------------------------------------------------------------------------

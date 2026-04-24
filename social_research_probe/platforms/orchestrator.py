@@ -171,7 +171,7 @@ def _available_backends(data_dir: Path, cfg=None) -> list[str]:
     return available
 
 
-async def run_research(
+async def run_pipeline(
     cmd: ParsedRunResearch,
     data_dir: Path,
     adapter_config: AdapterConfig | None = None,

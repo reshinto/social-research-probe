@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from .orchestrator import run_research
+from social_research_probe.platforms.orchestrator import run_pipeline
 
 __all__ = [
-    "run_research",
+    "run_pipeline",
 ]
