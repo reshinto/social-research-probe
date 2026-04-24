@@ -35,11 +35,16 @@ class _ResearchArgs:
     query: str
 
 
-def _resolve_topic_and_purposes(
+def _normalize_to_topic_and_purposes(
     research_args: _ResearchArgs,
     data_dir: Path,
     cfg: object,
 ) -> tuple[str, tuple[str, ...]]:
+    """Ensure research_args has topic and purposes.
+
+    If a natural-language query was provided, classify it into topic and purpose.
+    Otherwise, return topic and purposes as-is.
+    """
     from social_research_probe.services.llm.nl_query import classify_query
     from social_research_probe.utils.display.progress import log
 
@@ -54,19 +59,23 @@ def _resolve_topic_and_purposes(
     return research_args.topic, research_args.purposes
 
 
-def _parse_simple_research_args(positional: list[str]) -> _ResearchArgs:
+def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     """Parse positional CLI arguments into structured research arguments.
 
     Supports both:
         - Classic form: [platform] topic purposes
         - Natural-language query form: [platform] query
+
+    If no platform is specified, defaults to "all" (runs on all available platforms).
     """
-    known_platforms = {"youtube"}
+    from social_research_probe.platforms.registry import list_adapters
+
+    known_platforms = set(list_adapters())
     if positional[0] in known_platforms:
         platform = positional[0]
         rest = positional[1:]
     else:
-        platform = "youtube"
+        platform = "all"
         rest = positional
 
     if len(rest) == 0:
@@ -89,13 +98,13 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     from social_research_probe.commands import DslCommand, parse
     from social_research_probe.pipeline import run_research
 
-    research_args = _parse_simple_research_args(args.args)
+    research_args = _parse_research_input(args.args)
     config_extras = {
         "include_shorts": not args.no_shorts,
         "fetch_transcripts": not args.no_transcripts,
     }
     cfg = load_active_config()
-    topic, purposes = _resolve_topic_and_purposes(research_args, data_dir, cfg)
+    topic, purposes = _normalize_to_topic_and_purposes(research_args, data_dir, cfg)
     platform = research_args.platform
     raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
     log_synthesis_runner_status(cfg)
