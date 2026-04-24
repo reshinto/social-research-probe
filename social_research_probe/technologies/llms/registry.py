@@ -10,8 +10,13 @@ pipeline, the corroboration host, and CLI commands that need to select a runner.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from social_research_probe.technologies.llms.base import LLMRunner
 from social_research_probe.utils.core.errors import ValidationError
+
+if TYPE_CHECKING:
+    from social_research_probe.utils.core.types import RunnerName
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.
 # Populated at import time as each runners/*.py module is loaded.
@@ -65,3 +70,38 @@ def list_runners() -> list[str]:
         Sorted list of name strings (e.g. ["claude", "codex", "gemini", "local"]).
     """
     return sorted(_REGISTRY.keys())
+
+
+def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
+    """Try runners in priority order, skip unhealthy ones, return first success.
+
+    Implements resilient runner orchestration: prefers the specified runner but
+    falls back to others if health checks fail or execution raises exceptions.
+
+    Args:
+        prompt: Input prompt to send to the runner.
+        schema: JSON schema for structured output validation.
+        preferred: Preferred runner name (tried first).
+
+    Returns:
+        The first successful classification result dict.
+
+    Raises:
+        ValidationError: If all runners are unhealthy or fail execution.
+    """
+    candidates = list_runners()
+    runner_order = [preferred, *[n for n in candidates if n != preferred]]
+
+    for name in runner_order:
+        runner = get_runner(name)
+        if not runner.health_check():
+            continue
+        try:
+            return runner.run(prompt, schema=schema)
+        except Exception:
+            continue
+
+    raise ValidationError(
+        "unable to run LLM: all runners are unhealthy or failed. "
+        "Check runner health and try again."
+    )

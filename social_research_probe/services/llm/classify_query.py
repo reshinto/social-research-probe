@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from social_research_probe.services.llm.runners import prioritize_runner
-from social_research_probe.technologies.llms.registry import get_runner
+from social_research_probe.technologies.llms.registry import run_with_fallback
 from social_research_probe.technologies.llms.schemas import (
     NL_QUERY_CLASSIFICATION_SCHEMA,
 )
@@ -27,15 +26,11 @@ from social_research_probe.utils.command_models.topics import add_topics, show_t
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 from social_research_probe.utils.core.strings import normalize_whitespace
 from social_research_probe.utils.core.types import RunnerName
-from social_research_probe.utils.display.progress import log, timed_operation
+from social_research_probe.utils.display.progress import log_with_time
 from social_research_probe.utils.purposes.registry import load
 
 if TYPE_CHECKING:
     from social_research_probe.config import Config
-
-# Runner candidates in stable priority order; preferred runner is moved to front.
-_RUNNER_CANDIDATES: list[RunnerName] = ["claude", "gemini", "codex", "local"]
-
 
 @dataclass(frozen=True)
 class ClassifiedQuery:
@@ -65,7 +60,7 @@ def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuer
     existing_purposes = list(load(data_dir)["purposes"].keys())
     prompt = _build_classification_prompt(query, existing_topics, existing_purposes)
 
-    result = _run_classification(prompt, preferred=cfg.default_structured_runner)
+    result = run_classification(prompt, preferred=cfg.default_structured_runner)
 
     topic = normalize_whitespace(result["topic"])
     purpose_name = normalize_whitespace(result["purpose_name"])
@@ -83,32 +78,23 @@ def classify_query(query: str, *, data_dir: Path, cfg: Config) -> ClassifiedQuer
     )
 
 
-def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
+@log_with_time("[srp] run_classification: classifying query")
+def run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     """Try each runner in order and return the first valid classification result."""
     cache_key = hash_key(prompt)
     cached = get_json(classification_cache(), cache_key)
     if cached is not None:
-        log(f"[srp] nl-query: cache=hit key={cache_key[:8]}...")
         return cached["result"]
 
-    log(f"[srp] nl-query: cache=miss key={cache_key[:8]}...")
+    result = run_with_fallback(prompt, NL_QUERY_CLASSIFICATION_SCHEMA, preferred)
 
-    for name in prioritize_runner(_RUNNER_CANDIDATES, preferred):
-        runner = get_runner(name)
-        if not runner.health_check():
-            continue
-        try:
-            with timed_operation(f"[srp] nl-query: runner={name}"):
-                result = runner.run(prompt, schema=NL_QUERY_CLASSIFICATION_SCHEMA)
-        except Exception:
-            continue
-        if _is_valid_result(result):
-            cache_entry = {"prompt": prompt, "result": result}
-            set_json(classification_cache(), cache_key, cache_entry)
-            log(f"[srp] nl-query: cache=stored key={cache_key[:8]}...")
-            return result
+    if _is_valid_result(result):
+        cache_entry = {"prompt": prompt, "result": result}
+        set_json(classification_cache(), cache_key, cache_entry)
+        return result
+
     raise ValidationError(
-        "unable to classify query: all LLM runners failed or are unavailable. "
+        "classification result is invalid: missing or empty required fields. "
         "Provide explicit topic+purpose instead."
     )
 

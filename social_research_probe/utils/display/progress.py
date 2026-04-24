@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import sys
 import time
+import functools
+import inspect
+
 from contextlib import contextmanager
 
 from social_research_probe.utils.display.service_log import logs_enabled
@@ -46,3 +49,50 @@ def _enabled() -> bool:
     except Exception:
         flag = False
     return logs_enabled(flag)
+
+
+def log_with_time(msg: str):
+    def decorator(func):
+        def format_msg(*args, **kwargs):
+            bound = inspect.signature(func).bind_partial(*args, **kwargs)
+            return msg.format(**bound.arguments)
+
+        if inspect.iscoroutinefunction(func):
+
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                operation_msg = format_msg(*args, **kwargs)
+                start = time.time()
+                try:
+                    result = await func(*args, **kwargs)
+                    log(
+                        f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s"
+                    )
+                    return result
+                except Exception as exc:
+                    log(
+                        f"{operation_msg} outcome=error elapsed={time.time() - start:.2f}s err={exc}"
+                    )
+                    raise
+
+            return async_wrapper
+
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            operation_msg = format_msg(*args, **kwargs)
+            start = time.time()
+            try:
+                result = func(*args, **kwargs)
+                log(
+                    f"{operation_msg} outcome=success elapsed={time.time() - start:.2f}s"
+                )
+                return result
+            except Exception as exc:
+                log(
+                    f"{operation_msg} outcome=error elapsed={time.time() - start:.2f}s err={exc}"
+                )
+                raise
+
+        return sync_wrapper
+
+    return decorator
