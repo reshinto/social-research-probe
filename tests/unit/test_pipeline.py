@@ -23,10 +23,11 @@ from social_research_probe.pipeline.svs import _build_svs
 
 from social_research_probe.commands import DslCommand, parse
 from social_research_probe.platforms.orchestrator import (
-    _available_backends,
     _maybe_register_fake,
     run_pipeline,
 )
+from social_research_probe.services.corroborating.backends import available_backends
+from social_research_probe.services.scoring.weights import resolve_scoring_weights
 
 
 def _write_purposes(tmp_path, purposes: dict):
@@ -167,8 +168,6 @@ def test_score_item_custom_weights_shift_overall():
 def test_resolve_scoring_weights_purpose_overrides_config():
     from social_research_probe.purposes.merge import MergedPurpose
 
-    from social_research_probe.platforms.orchestrator import _resolve_scoring_weights
-
     class _Cfg:
         raw: ClassVar[dict] = {
             "scoring": {"weights": {"trust": 0.6, "trend": 0.2, "opportunity": 0.2}}
@@ -180,7 +179,7 @@ def test_resolve_scoring_weights_purpose_overrides_config():
         evidence_priorities=(),
         scoring_overrides={"trust": 0.9},
     )
-    w = _resolve_scoring_weights(_Cfg(), merged)
+    w = resolve_scoring_weights(_Cfg(), merged)
     assert w["trust"] == 0.9
     assert w["trend"] == 0.2
     assert w["opportunity"] == 0.2
@@ -190,13 +189,11 @@ def test_resolve_scoring_weights_defaults_when_empty():
     from social_research_probe.purposes.merge import MergedPurpose
     from social_research_probe.scoring.combine import DEFAULT_WEIGHTS
 
-    from social_research_probe.platforms.orchestrator import _resolve_scoring_weights
-
     class _Cfg:
         raw: ClassVar[dict] = {"scoring": {"weights": {}}}
 
     merged = MergedPurpose(names=("p",), method="m", evidence_priorities=())
-    assert _resolve_scoring_weights(_Cfg(), merged) == DEFAULT_WEIGHTS
+    assert resolve_scoring_weights(_Cfg(), merged) == DEFAULT_WEIGHTS
 
 
 async def test_run_pipeline_returns_packet(monkeypatch, tmp_path):
@@ -598,7 +595,7 @@ def test_available_backends_returns_healthy_ones(monkeypatch, tmp_path):
         return _HealthyBackend() if name == "exa" else _SickBackend()
 
     monkeypatch.setattr(reg, "get_backend", fake_get)
-    result = _available_backends(tmp_path)
+    result = available_backends(tmp_path)
     assert result == ["exa"]
 
 
@@ -611,7 +608,7 @@ def test_available_backends_returns_empty_when_all_unhealthy(monkeypatch, tmp_pa
             return False
 
     monkeypatch.setattr(reg, "get_backend", lambda _name: _SickBackend())
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
@@ -621,7 +618,7 @@ def test_available_backends_swallows_validation_error(monkeypatch, tmp_path):
     monkeypatch.setattr(
         reg, "get_backend", lambda _name: (_ for _ in ()).throw(ValidationError("bad"))
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path):
@@ -639,7 +636,7 @@ def test_available_backends_honors_specific_backend_config(monkeypatch, tmp_path
         "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
     monkeypatch.setattr(reg, "get_backend", lambda name: _Backend())
-    assert _available_backends(tmp_path) == ["llm_search"]
+    assert available_backends(tmp_path) == ["llm_search"]
 
 
 def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, tmp_path):
@@ -651,7 +648,7 @@ def test_available_backends_returns_empty_when_config_disables_it(monkeypatch, t
     monkeypatch.setattr(
         "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_returns_empty_when_stage_disables_corroboration(monkeypatch, tmp_path):
@@ -664,7 +661,7 @@ def test_available_backends_returns_empty_when_stage_disables_corroboration(monk
     monkeypatch.setattr(
         "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_returns_empty_when_service_disables_corroboration(
@@ -679,7 +676,7 @@ def test_available_backends_returns_empty_when_service_disables_corroboration(
     monkeypatch.setattr(
         "social_research_probe.platforms.orchestrator.Config.load", lambda data_dir: _Cfg()
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_skips_backend_when_technology_is_disabled(monkeypatch, tmp_path):
@@ -699,7 +696,7 @@ def test_available_backends_skips_backend_when_technology_is_disabled(monkeypatc
         "get_backend",
         lambda name: (_ for _ in ()).throw(AssertionError("backend lookup should be skipped")),
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 def test_available_backends_skips_llm_search_when_llm_service_is_disabled(monkeypatch, tmp_path):
@@ -722,7 +719,7 @@ def test_available_backends_skips_llm_search_when_llm_service_is_disabled(monkey
         "get_backend",
         lambda name: (_ for _ in ()).throw(AssertionError("llm_search should be skipped")),
     )
-    assert _available_backends(tmp_path) == []
+    assert available_backends(tmp_path) == []
 
 
 # ---------------------------------------------------------------------------

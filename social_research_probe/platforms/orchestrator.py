@@ -12,7 +12,11 @@ from social_research_probe.platforms.base import FetchLimits
 from social_research_probe.platforms.platform import YouTubePipeline, run_all_platforms
 from social_research_probe.platforms.platform.state import PipelineState
 from social_research_probe.platforms.registry import get_adapter
-from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS
+from social_research_probe.services.corroborating.backends import (
+    auto_mode_backends,
+    available_backends,
+)
+from social_research_probe.services.scoring.weights import resolve_scoring_weights
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import (
     AdapterConfig,
@@ -27,62 +31,8 @@ from social_research_probe.utils.display.fast_mode import (
 from social_research_probe.utils.display.progress import log
 from social_research_probe.utils.purposes import registry as purpose_registry
 from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
+from social_research_probe.utils.search.query import enrich_query
 
-_QUERY_STOPWORDS = frozenset(
-    {
-        "the",
-        "a",
-        "an",
-        "of",
-        "for",
-        "to",
-        "and",
-        "or",
-        "in",
-        "on",
-        "with",
-        "get",
-        "my",
-        "by",
-        "via",
-        "from",
-        "about",
-        "how",
-        "what",
-        "which",
-        "track",
-        "latest",
-        "across",
-        "channels",
-        "velocity",
-        "saturation",
-        "emergence",
-    }
-)
-
-
-def _enrich_query(topic: str, method: str) -> str:
-    """Append up to 3 meaningful method keywords to the search topic."""
-    words = [w for w in method.lower().split() if w not in _QUERY_STOPWORDS and len(w) > 2][:3]
-    extra = " ".join(dict.fromkeys(words))
-    return f"{topic} {extra}".strip() if extra else topic
-
-
-def _resolve_scoring_weights(cfg: Config, merged: MergedPurpose) -> dict[str, float]:
-    """Merge spec §6 defaults with config-wide overrides, then purpose-specific overrides.
-
-    Precedence (later wins): DEFAULT_WEIGHTS → [scoring.weights] in config.toml →
-    merged purpose ``scoring_overrides``. Only keys ``trust``, ``trend``, and
-    ``opportunity`` are recognised; unknown keys are silently ignored.
-    """
-    resolved: dict[str, float] = dict(DEFAULT_WEIGHTS)
-    config_weights = cfg.raw.get("scoring", {}).get("weights", {})
-    for key in ("trust", "trend", "opportunity"):
-        if key in config_weights:
-            resolved[key] = float(config_weights[key])
-        if key in merged.scoring_overrides:
-            resolved[key] = float(merged.scoring_overrides[key])
-    return resolved
 
 
 def _maybe_register_fake() -> None:
@@ -90,85 +40,6 @@ def _maybe_register_fake() -> None:
         import importlib
 
         importlib.import_module("tests.fixtures.fake_youtube")
-
-
-def _auto_mode_backends(cfg: Config) -> tuple[str, ...]:
-    """Return the ordered tuple of backend names to try in auto mode.
-
-    Each backend has its own technology gate; a disabled backend is removed
-    from the candidate list without affecting the others.
-    """
-    return tuple(
-        name for name in ("exa", "brave", "tavily", "llm_search") if _technology_enabled(cfg, name)
-    )
-
-
-def _stage_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
-    fn = getattr(cfg, "stage_enabled", None)
-    if callable(fn):
-        return bool(fn(name))
-    return default
-
-
-def _service_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
-    fn = getattr(cfg, "service_enabled", None)
-    if callable(fn):
-        return bool(fn(name))
-    return default
-
-
-def _technology_enabled(cfg: object, name: str, *, default: bool = True) -> bool:
-    fn = getattr(cfg, "technology_enabled", None)
-    if callable(fn):
-        return bool(fn(name))
-    return default
-
-
-def _available_backends(data_dir: Path, cfg=None) -> list[str]:
-    """Return corroboration backends allowed by config and available at runtime.
-
-    ``backend = auto`` auto-discovers the configured search backends whose
-    credentials or runner capabilities are usable. A specific backend value
-    uses only that backend. ``backend = none`` disables corroboration entirely.
-    """
-    from social_research_probe.services.corroborating.registry import get_backend
-
-    if cfg is None:
-        cfg = Config.load(data_dir)
-    configured = cfg.corroboration_backend
-    if not _stage_enabled(cfg, "corroborate"):
-        log("[srp] corroboration: disabled by stages.corroborate = false.")
-        return []
-    if not _service_enabled(cfg, "corroboration"):
-        log("[srp] corroboration: disabled by services.corroboration = false.")
-        return []
-    if configured == "none":
-        log(
-            "[srp] corroboration: disabled in config (corroboration.backend = 'none'). Enable with 'srp config set corroboration.backend auto'."
-        )
-        return []
-    auto_candidates = _auto_mode_backends(cfg)
-    candidates = auto_candidates if configured == "auto" else (configured,)
-
-    available: list[str] = []
-    for name in candidates:
-        if not _technology_enabled(cfg, name):
-            continue
-        if name == "llm_search" and not _service_enabled(cfg, "llm"):
-            continue
-        try:
-            if get_backend(name).health_check():
-                available.append(name)
-        except ValidationError:
-            pass
-
-    if not available:
-        checked = ", ".join(candidates)
-        log(
-            f"[srp] corroboration: backend '{configured}' configured but no provider usable"
-            f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
-        )
-    return available
 
 
 async def run_pipeline(
@@ -192,9 +63,9 @@ async def run_pipeline(
     adapter = get_adapter(cmd.platform, platform_config)
     fetch_technology = f"{cmd.platform}_api"
     if (
-        _stage_enabled(cfg, "fetch")
-        and _service_enabled(cfg, "platform_api")
-        and _technology_enabled(cfg, fetch_technology)
+        cfg.stage_enabled("fetch")
+        and cfg.service_enabled("platform_api")
+        and cfg.technology_enabled(fetch_technology)
         and not await asyncio.to_thread(adapter.health_check)
     ):
         raise ValidationError(f"adapter {cmd.platform} failed health check")
@@ -205,10 +76,10 @@ async def run_pipeline(
             if n not in purposes:
                 raise ValidationError(f"unknown purpose: {n!r}")
         merged = merge_purposes(purposes, list(purpose_names))
-        scoring_weights = _resolve_scoring_weights(cfg, merged)
-        search_topic = _enrich_query(topic, merged.method)
+        scoring_weights = resolve_scoring_weights(cfg, merged)
+        search_topic = enrich_query(topic, merged.method)
         timings: dict = {"stage_timings": []}
-        backends = _available_backends(data_dir, cfg=cfg)
+        backends = available_backends(data_dir, cfg=cfg)
         if fast_mode_enabled():
             backends = backends[:FAST_MODE_MAX_BACKENDS]
         if fast_mode_enabled():
