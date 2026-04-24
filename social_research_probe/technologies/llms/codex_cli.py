@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
+from social_research_probe.services.llm.prompts import CODEX_SEARCH_PROMPT
 from social_research_probe.services.llm.registry import register
 from social_research_probe.technologies.llms import (
     AgenticSearchCitation,
@@ -63,12 +64,7 @@ class CodexRunner(JsonCliRunner):
         """Run ``query`` via Codex CLI with its ``--search`` flag."""
         from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
-        prompt = (
-            "Use your native --search tool to find authoritative non-video "
-            'sources about this claim. Output JSON: {"answer": "...", '
-            '"citations": [{"url": "...", "title": "..."}]}.\n\n'
-            f"Claim: {query}"
-        )
+        prompt = CODEX_SEARCH_PROMPT.format(query=query)
         with TemporaryDirectory(prefix="srp-codex-search-") as tmpdir:
             output_path = Path(tmpdir) / "last-message.json"
             argv = [

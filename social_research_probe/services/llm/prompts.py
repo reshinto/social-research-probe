@@ -110,3 +110,11 @@ Summarize the video at this URL in approximately {word_limit} words. Cover the m
 
 URL: {url}
 """
+
+# Used by Codex runner agentic search: instruct Codex to use its native
+# search tool to find authoritative non-video sources about a claim.
+CODEX_SEARCH_PROMPT = """\
+Use your native --search tool to find authoritative non-video sources about this claim. Output JSON: {{"answer": "...", "citations": [{{"url": "...", "title": "..."}}]}}.
+
+Claim: {query}
+"""
