@@ -6,7 +6,7 @@ from social_research_probe.platforms.base import PlatformAdapter
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import AdapterConfig
 
-REGISTRY: dict[str, type[PlatformAdapter]] = {}
+REGISTRY: dict[str, type[PlatformAdapter] | None] = {"all": None}
 
 
 def register(cls: type[PlatformAdapter]) -> type[PlatformAdapter]:

@@ -77,10 +77,9 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
         )
 
     platform = positional[0]
-    valid_platforms = {**REGISTRY, "all": None}
-    if platform not in valid_platforms:
+    if platform not in REGISTRY:
         raise ValidationError(
-            f"unknown platform: {platform!r} (valid: {sorted(valid_platforms.keys())})"
+            f"unknown platform: {platform!r} (valid: {sorted(REGISTRY.keys())})"
         )
 
     rest = positional[1:]
