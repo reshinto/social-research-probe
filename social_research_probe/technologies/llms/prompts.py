@@ -64,3 +64,33 @@ Transcript-based summary:
 URL-based summary:
 {url_summary}
 """
+
+# Used by the classification service: given a free-form research query,
+# classify it into topic and purpose, preferring to reuse existing labels.
+CLASSIFICATION_PROMPT = """\
+You are classifying a research query for a social media research tool.
+
+Classify the following query into a topic and a purpose.
+
+QUERY: {query}
+
+EXISTING TOPICS (prefer reuse if meaningfully similar): {existing_topics}
+EXISTING PURPOSES (prefer reuse if meaningfully similar): {existing_purposes}
+
+Rules:
+- topic: 1-4 word lowercase hyphenated label for the subject area (e.g. "ai", "quantitative-finance", "climate-change").
+- purpose_name: 1-4 word lowercase hyphenated label for the research goal (e.g. "latest-news", "job-opportunities", "deep-dive").
+- purpose_method: 3-8 word phrase describing how to research this. Used to expand search queries.
+
+Reuse rules:
+- If an existing topic or purpose_name is even moderately similar in meaning, reuse it EXACTLY.
+- Only create a new label if no existing option is a reasonable fit.
+- Prefer broader existing categories over creating new narrow ones.
+
+Output format (JSON only):
+{{
+  "topic": "...",
+  "purpose_name": "...",
+  "purpose_method": "..."
+}}
+"""

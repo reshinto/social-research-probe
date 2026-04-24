@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from social_research_probe.services.llm.registry import run_with_fallback
+from social_research_probe.technologies.llms.prompts import CLASSIFICATION_PROMPT
 from social_research_probe.technologies.llms.schemas import (
     NL_QUERY_CLASSIFICATION_SCHEMA,
 )
@@ -135,28 +136,8 @@ def _build_classification_prompt(
     topics_str = ", ".join(existing_topics) if existing_topics else "(none yet)"
     purposes_str = ", ".join(existing_purposes) if existing_purposes else "(none yet)"
 
-    return f"""You are classifying a research query for a social media research tool.
-
-Classify the following query into a topic and a purpose.
-
-QUERY: {query}
-
-EXISTING TOPICS (prefer reuse if meaningfully similar): {topics_str}
-EXISTING PURPOSES (prefer reuse if meaningfully similar): {purposes_str}
-
-Rules:
-- topic: 1-4 word lowercase hyphenated label for the subject area (e.g. "ai", "quantitative-finance", "climate-change").
-- purpose_name: 1-4 word lowercase hyphenated label for the research goal (e.g. "latest-news", "job-opportunities", "deep-dive").
-- purpose_method: 3-8 word phrase describing how to research this. Used to expand search queries.
-
-Reuse rules:
-- If an existing topic or purpose_name is even moderately similar in meaning, reuse it EXACTLY.
-- Only create a new label if no existing option is a reasonable fit.
-- Prefer broader existing categories over creating new narrow ones.
-
-Output format (JSON only):
-{{
-  "topic": "...",
-  "purpose_name": "...",
-  "purpose_method": "..."
-}}"""
+    return CLASSIFICATION_PROMPT.format(
+        query=query,
+        existing_topics=topics_str,
+        existing_purposes=purposes_str,
+    )
