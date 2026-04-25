@@ -12,10 +12,10 @@ Acceptance thresholds (exit-non-zero below):
 
 This is the Phase 9 companion to the deterministic coverage test. For
 multi-sample variance tracking, see the Phase 10 reliability harness
-(``scripts/eval_llm_quality.py``).
+(``tests/evals/eval_llm_quality.py``).
 
 Usage:
-    python scripts/eval_summary_quality.py [--word-limit 100]
+    python tests/evals/eval_summary_quality.py [--word-limit 100]
 """
 
 from __future__ import annotations
@@ -23,11 +23,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CORPUS_DIR = REPO_ROOT / "tests" / "fixtures" / "golden" / "transcripts"
 
 
@@ -49,37 +48,11 @@ def _load_corpus() -> list[dict]:
     return items
 
 
-def coverage_score(summary: str, keyphrases: list[str]) -> float:
-    """Fraction of required tokens present in ``summary`` (case-insensitive)."""
-    if not keyphrases:
-        return 1.0
-    text = summary.lower()
-    hits = sum(1 for token in keyphrases if token.lower() in text)
-    return hits / len(keyphrases)
-
-
-_PROPER_NOUN_RE = re.compile(r"\b[A-Z][A-Za-z0-9]{2,}\b")
-
-
-def hallucinated_proper_nouns(summary: str, transcript: str, allowed: list[str]) -> list[str]:
-    """Proper nouns in ``summary`` that do not appear in the transcript + allowed list.
-
-    A proper noun is any capitalized word ≥ 3 chars. Sentence-initial words
-    are noisy but generally safe — callers can tighten the regex later.
-    """
-    allowed_lower = {a.lower() for a in allowed}
-    transcript_lower = transcript.lower()
-    candidates = set(_PROPER_NOUN_RE.findall(summary))
-    hallucinated = [
-        w
-        for w in candidates
-        if w.lower() not in allowed_lower and w.lower() not in transcript_lower
-    ]
-    return sorted(set(hallucinated))
-
-
-def word_count(text: str) -> int:
-    return len(text.split())
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    p.add_argument("--word-limit", type=int, default=100)
+    p.add_argument("--min-mean-coverage", type=float, default=0.80)
+    return p.parse_args()
 
 
 async def _summarize_with_active_runner(transcript: str, word_limit: int) -> str:
@@ -99,28 +72,20 @@ async def _summarize_with_active_runner(transcript: str, word_limit: int) -> str
         transcript=transcript,
         word_limit=word_limit,
     )
-    # The structured JSON path would need a schema; use run() and treat its
-    # first string field as the summary, or fall back to summarize_media-like
-    # plain-text if the runner returns a string.
     result = runner.run(prompt)
     if isinstance(result, dict):
         return str(result.get("summary") or next(iter(result.values()), ""))
     return str(result)
 
 
-def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    p.add_argument("--word-limit", type=int, default=100)
-    p.add_argument("--min-mean-coverage", type=float, default=0.80)
-    return p.parse_args()
-
-
 def main() -> int:
+    from tests.evals.metrics import coverage, hallucinated_names
+
     args = _parse_args()
     corpus = _load_corpus()
     if not corpus:
         print("no reference transcripts found under", CORPUS_DIR, file=sys.stderr)
-        return 1
+        return EXIT_NO_CORPUS
 
     coverage_scores: list[float] = []
     any_hallucination = False
@@ -129,11 +94,11 @@ def main() -> int:
     for item in corpus:
         summary = asyncio.run(_summarize_with_active_runner(item["transcript"], args.word_limit))
         kp_spec = item["keyphrases"]
-        cov = coverage_score(summary, kp_spec.get("required_tokens", []))
-        hallucinations = hallucinated_proper_nouns(
+        cov = coverage(summary, kp_spec.get("required_tokens", []))
+        hallucinations = hallucinated_names(
             summary, item["transcript"], kp_spec.get("allowed_proper_nouns", [])
         )
-        wc = word_count(summary)
+        wc = len(summary.split())
         length_ok = (args.word_limit - 5) <= wc <= args.word_limit
 
         coverage_scores.append(cov)
@@ -151,12 +116,18 @@ def main() -> int:
 
     if mean_cov < args.min_mean_coverage:
         print(f"FAIL: mean coverage {mean_cov:.3f} below {args.min_mean_coverage:.2f}")
-        return 2
+        return EXIT_COVERAGE_FAIL
     if any_hallucination:
         print("FAIL: hallucinated proper nouns present")
-        return 3
+        return EXIT_HALLUCINATION_FAIL
     print("PASS")
-    return 0
+    return EXIT_SUCCESS
+
+
+EXIT_SUCCESS = 0
+EXIT_NO_CORPUS = 1
+EXIT_COVERAGE_FAIL = 2
+EXIT_HALLUCINATION_FAIL = 3
 
 
 if __name__ == "__main__":

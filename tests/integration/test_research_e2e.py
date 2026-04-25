@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 from social_research_probe.commands import Command, ConfigSubcommand
+from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUMMARY_PHRASE = "Generated summary from codex fallback."
@@ -68,6 +69,7 @@ sys.exit(1)
 import json
 import sys
 from pathlib import Path
+from social_research_probe.cli.parsers import Arg
 
 SUMMARY = "{_SUMMARY_PHRASE} {summary_tail}"
 SYNTHESIS = {{
@@ -85,11 +87,11 @@ output_path = None
 i = 0
 while i < len(args) and args[i].startswith("--"):
     flag = args[i]
-    if flag in ("--output-last-message", "--output-schema"):
+    if flag in (CodexCliFlag.OUTPUT_LAST_MESSAGE, CodexCliFlag.OUTPUT_SCHEMA):
         if i + 1 >= len(args):
             sys.stderr.write(f"missing value for {{flag}}\\n")
             sys.exit(2)
-        if flag == "--output-last-message":
+        if flag == CodexCliFlag.OUTPUT_LAST_MESSAGE:
             output_path = Path(args[i + 1])
         i += 2
         continue
@@ -123,7 +125,7 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
 
     commands = [
-        (Command.UPDATE_PURPOSES, "--add", '"trends"="Track emergence across channels"'),
+        (Command.UPDATE_PURPOSES, Arg.ADD, '"trends"="Track emergence across channels"'),
         (Command.CONFIG, ConfigSubcommand.SET, "llm.runner", "gemini"),
         (Command.CONFIG, ConfigSubcommand.SET, "technologies.gemini", "true"),
         (Command.CONFIG, ConfigSubcommand.SET, "technologies.codex", "true"),
@@ -143,7 +145,7 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
             "config",
             ConfigSubcommand.SET_SECRET,
             secret_name,
-            "--from-stdin",
+            Arg.FROM_STDIN,
             stdin=secret_value,
         )
         assert result.returncode == 0, result.stderr
@@ -151,7 +153,7 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
 
 def _path_from_serve_report_command(command: str) -> Path:
     parts = shlex.split(command)
-    assert parts[:3] == ["srp", "serve-report", "--report"], command
+    assert parts[:3] == ["srp", "serve-report", Arg.REPORT], command
     return Path(parts[3]).expanduser()
 
 

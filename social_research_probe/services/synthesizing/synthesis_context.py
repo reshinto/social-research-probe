@@ -39,7 +39,7 @@ def build_synthesis_context(packet: ResearchPacket) -> SynthesisContext:
                 "notes": "",
             },
         ),
-        platform_signals_summary=str(packet.get("platform_signals_summary", "") or ""),
+        platform_engagement_summary=str(packet.get("platform_engagement_summary", "") or ""),
         evidence_summary=str(packet.get("evidence_summary", "") or ""),
         stats_highlights=list(packet.get("stats_summary", {}).get("highlights", []) or []),
         chart_takeaways=list(packet.get("chart_takeaways", []) or []),

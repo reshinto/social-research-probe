@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from social_research_probe.synthesize.warnings import detect
 
-from social_research_probe.platforms.base import RawItem, SignalSet
+from social_research_probe.platforms.base import RawItem, EngagementMetrics
 
 
 def _item(channel: str = "ch") -> RawItem:
@@ -24,8 +24,8 @@ def _item(channel: str = "ch") -> RawItem:
     )
 
 
-def _signal(upload: datetime | None) -> SignalSet:
-    return SignalSet(
+def _signal(upload: datetime | None) -> EngagementMetrics:
+    return EngagementMetrics(
         views=100,
         likes=1,
         comments=1,
@@ -86,24 +86,24 @@ def test_low_score_warning():
 def test_stale_content_warning():
     now = datetime(2026, 4, 19, tzinfo=UTC)
     items = [_item(f"ch{i}") for i in range(5)]
-    signals = [_signal(now - timedelta(days=60))]
-    notes = detect(items, signals, [], now=now)
+    engagement_metrics = [_signal(now - timedelta(days=60))]
+    notes = detect(items, engagement_metrics, [], now=now)
     assert any("stale content" in n for n in notes)
 
 
 def test_clean_run_only_emits_corroboration_note():
     now = datetime(2026, 4, 19, tzinfo=UTC)
     items = [_item(f"ch{i}") for i in range(5)]
-    signals = [_signal(now - timedelta(days=1))]
+    engagement_metrics = [_signal(now - timedelta(days=1))]
     top_n = [_scored("secondary", overall=0.7) for _ in range(5)]
-    notes = detect(items, signals, top_n, now=now)
+    notes = detect(items, engagement_metrics, top_n, now=now)
     assert notes == ["source corroboration was not run; trust scores are heuristic only"]
 
 
 def test_corroboration_warning_omitted_when_corroboration_ran():
     now = datetime(2026, 4, 19, tzinfo=UTC)
     items = [_item(f"ch{i}") for i in range(5)]
-    signals = [_signal(now - timedelta(days=1))]
+    engagement_metrics = [_signal(now - timedelta(days=1))]
     top_n = [_scored("secondary", overall=0.7) for _ in range(5)]
-    notes = detect(items, signals, top_n, now=now, corroboration_ran=True)
+    notes = detect(items, engagement_metrics, top_n, now=now, corroboration_ran=True)
     assert "source corroboration was not run; trust scores are heuristic only" not in notes

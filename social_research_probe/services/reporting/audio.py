@@ -18,12 +18,12 @@ class AudioReportService(BaseService):
     service_name: ClassVar[str] = "youtube.reporting.audio"
     enabled_config_key: ClassVar[str] = "services.youtube.reporting.audio"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
 
         return [VoiceboxTTS()]
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Synthesize narration audio; try Voicebox then MacTTS fallback."""
         from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
 

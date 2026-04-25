@@ -25,6 +25,9 @@ from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.codex import CodexRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
 from social_research_probe.llm.runners.local import LocalRunner
+from social_research_probe.technologies.llms.claude_cli import ClaudeCliFlag
+from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
+from social_research_probe.technologies.llms.gemini_cli import GeminiCliFlag
 
 
 @pytest.fixture(autouse=True)
@@ -84,8 +87,8 @@ def test_claude_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base claude invocation only."""
     runner = ClaudeRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["claude", "--print", "--output-format", "json"]
-    assert "--json-schema" not in argv
+    assert argv == ["claude", ClaudeCliFlag.PRINT, ClaudeCliFlag.OUTPUT_FORMAT, "json"]
+    assert ClaudeCliFlag.JSON_SCHEMA not in argv
 
 
 def test_claude_build_argv_with_schema() -> None:
@@ -95,8 +98,8 @@ def test_claude_build_argv_with_schema() -> None:
     runner = ClaudeRunner()
     schema = {"type": "object", "properties": {"result": {"type": "string"}}}
     argv = runner._build_argv(schema=schema)
-    assert "--json-schema" in argv
-    idx = argv.index("--json-schema")
+    assert ClaudeCliFlag.JSON_SCHEMA in argv
+    idx = argv.index(ClaudeCliFlag.JSON_SCHEMA)
     assert json.loads(argv[idx + 1]) == schema
 
 
@@ -141,7 +144,7 @@ def test_gemini_build_argv_no_schema() -> None:
     """_build_argv without a schema returns the base gemini invocation only."""
     runner = GeminiRunner()
     argv = runner._build_argv(schema=None)
-    assert argv == ["gemini", "--output-format", "json"]
+    assert argv == ["gemini", GeminiCliFlag.OUTPUT_FORMAT, "json"]
     assert "--schema" not in argv
 
 
@@ -150,7 +153,7 @@ def test_gemini_build_argv_with_schema() -> None:
     runner = GeminiRunner()
     schema = {"type": "object"}
     argv = runner._build_argv(schema=schema)
-    assert argv == ["gemini", "--output-format", "json"]
+    assert argv == ["gemini", GeminiCliFlag.OUTPUT_FORMAT, "json"]
     assert "--schema" not in argv
 
 
@@ -464,7 +467,7 @@ def test_codex_run_with_schema_writes_schema_file(monkeypatch: pytest.MonkeyPatc
     schema = {"type": "object", "properties": {"x": {"type": "string"}}}
     result = runner.run("hello", schema=schema)
     assert result == {"ok": 1}
-    assert "--output-schema" in captured_argv
+    assert CodexCliFlag.OUTPUT_SCHEMA in captured_argv
 
 
 def test_codex_run_raises_adapter_error_when_output_json_invalid(

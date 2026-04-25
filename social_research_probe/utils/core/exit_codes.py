@@ -7,3 +7,4 @@ class ExitCode(IntEnum):
     """Standard exit codes for command execution."""
 
     SUCCESS = 0
+    ERROR = 2

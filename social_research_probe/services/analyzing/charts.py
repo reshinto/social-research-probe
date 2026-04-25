@@ -17,10 +17,10 @@ class ChartsService(BaseService):
     service_name: ClassVar[str] = "youtube.analyzing.charts"
     enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Generate charts from scored_items scores in data dict."""
         import asyncio
 

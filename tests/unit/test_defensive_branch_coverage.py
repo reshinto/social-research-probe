@@ -1,6 +1,6 @@
 """Defensive-branch coverage across LLM runners, enrichment, viz, and reporting.
 
-from social_research_probe.commands import DslCommand
+from social_research_probe.commands import ResearchCommand
 
 Grab-bag of tests that exercise fallback / error / empty-input branches
 that aren't naturally covered by happy-path tests elsewhere.
@@ -25,11 +25,12 @@ from social_research_probe.pipeline.charts import (
     _interpret_strongest_correlation,
 )
 
-from social_research_probe.commands import DslCommand
+from social_research_probe.commands import ResearchCommand
 from social_research_probe.commands.research import _service_flag, _stage_flag, _write_final_report
 from social_research_probe.config import Config
 from social_research_probe.pipeline import enrichment
 from social_research_probe.platforms.orchestrator import _divergence_warnings
+from social_research_probe.cli.parsers import Arg
 
 # ---------------------------------------------------------------- llm/base.py
 
@@ -489,7 +490,7 @@ def test_run_pipeline_skip_reason_when_no_backends(monkeypatch, tmp_path):
     """Covers orchestrator.py:181 (skip_reason assignment when not backends)."""
     import asyncio as _asyncio
 
-    from social_research_probe.cli.dsl_parser import parse
+    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
@@ -498,7 +499,7 @@ def test_run_pipeline_skip_reason_when_no_backends(monkeypatch, tmp_path):
         "social_research_probe.platforms.orchestrator._available_backends",
         lambda d, cfg=None: [],
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "ai"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "ai"->latest-news'
     packet = _asyncio.run(run_pipeline(parse(raw), tmp_path))
     assert "warnings" in packet
 
@@ -507,7 +508,7 @@ def test_run_pipeline_caps_top_n_and_backends_in_fast_mode(monkeypatch, tmp_path
     """Fast mode forces enrich_top_n<=3 and limits corroboration to one backend."""
     import asyncio as _asyncio
 
-    from social_research_probe.cli.dsl_parser import parse
+    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
@@ -529,7 +530,7 @@ def test_run_pipeline_caps_top_n_and_backends_in_fast_mode(monkeypatch, tmp_path
     monkeypatch.setattr(
         "social_research_probe.pipeline.corroboration._corroborate_top_n", _fake_corroborate
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "ai"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "ai"->latest-news'
     _asyncio.run(run_pipeline(parse(raw), tmp_path))
 
     assert captured["backends"] == ["exa"]
@@ -540,7 +541,7 @@ def test_run_pipeline_skips_non_string_verdict(monkeypatch, tmp_path):
     """Covers orchestrator.py:172->170 branch (verdict is not a str)."""
     import asyncio as _asyncio
 
-    from social_research_probe.cli.dsl_parser import parse
+    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
 
     async def _fake_corroborate(top_n, backends):
@@ -555,7 +556,7 @@ def test_run_pipeline_skips_non_string_verdict(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "social_research_probe.pipeline.corroboration._corroborate_top_n", _fake_corroborate
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "ai"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "ai"->latest-news'
     packet = _asyncio.run(run_pipeline(parse(raw), tmp_path))
     for item in packet.get("items_top_n", []):
         assert "corroboration_verdict" not in item
@@ -581,6 +582,6 @@ def test_handle_research_skips_synthesis_when_stage_off(monkeypatch, tmp_path):
     cfg.raw["stages"]["synthesis"] = False
     monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: cfg)
 
-    rc = main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
+    rc = main([Arg.DATA_DIR, str(tmp_path), "research", "youtube", "AI", "latest-news"])
     assert rc == 0
     assert called == []

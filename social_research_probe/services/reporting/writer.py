@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from social_research_probe.services.synthesizing.formatter import render_full
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     serve_report_command,
@@ -12,22 +10,18 @@ from social_research_probe.technologies.report_render.html.raw_html.youtube impo
 from social_research_probe.utils.core.flags import service_flag, stage_flag
 
 
-def write_final_report(
-    packet: dict,
-    data_dir: Path,
-    cfg: object,
-    *,
-    allow_html: bool,
-) -> str:
+def write_final_report(packet: dict, *, allow_html: bool) -> str:
     """Write final report and return access path or command.
 
     Produces both HTML and Markdown. Markdown is fallback when HTML
     generation disabled or fails, ensuring consistent output.
     """
+    from social_research_probe.config import load_active_config
+    data_dir = load_active_config().data_dir
     html_on = (
         allow_html
-        and stage_flag(cfg, "report", default=True)
-        and service_flag(cfg, "html_report", default=True)
+        and stage_flag("report", default=True)
+        and service_flag("html_report", default=True)
         and "multi" not in packet
     )
     if html_on:
@@ -35,7 +29,7 @@ def write_final_report(
             path = write_html_report(
                 packet,
                 data_dir,
-                prepare_voicebox_audio=service_flag(cfg, "audio_report", default=True),
+                prepare_voicebox_audio=service_flag("audio_report", default=True),
             )
             uri = path.resolve().as_uri()
             packet["html_report_path"] = uri

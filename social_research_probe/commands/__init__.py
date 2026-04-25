@@ -120,35 +120,44 @@ def show_topics() -> list[str]:
     return list(_load_topics()["topics"])
 
 
-def add_topics(values: list[str], *, force: bool) -> None:
-    """Add one or more topics, checking for duplicates unless force is True."""
-    data = _load_topics()
-    existing = list(data["topics"])
+def _check_topic_duplicates(
+    values: list[str], existing: list[str], force: bool
+) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    """Classify each value against existing topics; return (to_add, conflicts)."""
     to_add: list[str] = []
     conflicts: list[tuple[str, list[str]]] = []
-
     for value in values:
         result = classify(value, existing + to_add)
         if result.status is DuplicateStatus.NEW or force:
             to_add.append(value)
         else:
             conflicts.append((value, result.matches))
+    return to_add, conflicts
 
+
+def _merge_new_topics(data: dict, existing: list[str], to_add: list[str]) -> None:
+    """Deduplicate to_add against existing and append to data, then save."""
+    seen = set(existing)
+    deduped: list[str] = []
+    for v in to_add:
+        if v not in seen:
+            deduped.append(v)
+            seen.add(v)
+    data["topics"] = existing + deduped
+    _save_topics(data)
+
+
+def add_topics(values: list[str], *, force: bool) -> None:
+    """Add one or more topics, checking for duplicates unless force is True."""
+    data = _load_topics()
+    existing = list(data["topics"])
+    to_add, conflicts = _check_topic_duplicates(values, existing, force)
     if conflicts and not force:
         descriptions = "; ".join(f"{v!r} ~ {m}" for v, m in conflicts)
         raise DuplicateError(
             f"duplicate/near-duplicate topics: {descriptions} (use --force to override)"
         )
-
-    seen = set(existing)
-    deduped_to_add = []
-    for v in to_add:
-        if v not in seen:
-            deduped_to_add.append(v)
-            seen.add(v)
-
-    data["topics"] = existing + deduped_to_add
-    _save_topics(data)
+    _merge_new_topics(data, existing, to_add)
 
 
 def remove_topics(values: list[str]) -> None:
@@ -189,6 +198,19 @@ def show_purposes() -> dict:
     return out
 
 
+def _validate_purpose_addition(name: str, existing_names: list[str], force: bool) -> None:
+    """Raise DuplicateError if name conflicts with existing purposes."""
+    result = classify(name, existing_names)
+    if result.status in (DuplicateStatus.DUPLICATE, DuplicateStatus.NEAR_DUPLICATE) and not force:
+        raise DuplicateError(
+            f"purpose {name!r} {result.status.value} with {result.matches} (use --force to override)"
+        )
+    if name in existing_names and force:
+        raise DuplicateError(
+            f"purpose {name!r} already exists; use rename to update an existing purpose"
+        )
+
+
 def add_purpose(*, name: str, method: str, force: bool) -> None:
     """Add a new purpose entry, checking for duplicates unless force is True."""
     from social_research_probe.utils.purposes import registry
@@ -198,21 +220,7 @@ def add_purpose(*, name: str, method: str, force: bool) -> None:
 
     data = registry.load()
     existing_names = list(data["purposes"].keys())
-
-    result = classify(name, existing_names)
-    if result.status is DuplicateStatus.DUPLICATE and not force:
-        raise DuplicateError(
-            f"purpose {name!r} {result.status.value} with {result.matches} (use --force to override)"
-        )
-    if result.status is DuplicateStatus.NEAR_DUPLICATE and not force:
-        raise DuplicateError(
-            f"purpose {name!r} {result.status.value} with {result.matches} (use --force to override)"
-        )
-    # Even with force, never silently overwrite an existing entry
-    if name in data["purposes"] and force:
-        raise DuplicateError(
-            f"purpose {name!r} already exists; use rename to update an existing purpose"
-        )
+    _validate_purpose_addition(name, existing_names, force)
 
     data["purposes"][name] = {
         "method": method,

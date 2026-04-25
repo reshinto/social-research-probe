@@ -3,70 +3,69 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 
-def _handle_update_topics(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_update_topics(args: argparse.Namespace) -> int:
     from social_research_probe.commands import update_topics
 
-    return update_topics.run(args, data_dir)
+    return update_topics.run(args)
 
 
-def _handle_show_topics(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_show_topics(args: argparse.Namespace) -> int:
     from social_research_probe.commands import show_topics
 
-    return show_topics.run(args, data_dir)
+    return show_topics.run(args)
 
 
-def _handle_update_purposes(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_update_purposes(args: argparse.Namespace) -> int:
     from social_research_probe.commands import update_purposes
 
-    return update_purposes.run(args, data_dir)
+    return update_purposes.run(args)
 
 
-def _handle_show_purposes(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_show_purposes(args: argparse.Namespace) -> int:
     from social_research_probe.commands import show_purposes
 
-    return show_purposes.run(args, data_dir)
+    return show_purposes.run(args)
 
 
-def _handle_suggest_topics(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_suggest_topics(args: argparse.Namespace) -> int:
     from social_research_probe.commands import suggest_topics
 
-    return suggest_topics.run(args, data_dir)
+    return suggest_topics.run(args)
 
 
-def _handle_suggest_purposes(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_suggest_purposes(args: argparse.Namespace) -> int:
     from social_research_probe.commands import suggest_purposes
 
-    return suggest_purposes.run(args, data_dir)
+    return suggest_purposes.run(args)
 
 
-def _handle_show_pending(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_show_pending(args: argparse.Namespace) -> int:
     from social_research_probe.commands import show_pending
 
-    return show_pending.run(args, data_dir)
+    return show_pending.run(args)
 
 
-def _handle_apply_pending(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_apply_pending(args: argparse.Namespace) -> int:
     from social_research_probe.commands import apply_pending
 
-    return apply_pending.run(args, data_dir)
+    return apply_pending.run(args)
 
 
-def _handle_discard_pending(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_discard_pending(args: argparse.Namespace) -> int:
     from social_research_probe.commands import discard_pending
 
-    return discard_pending.run(args, data_dir)
+    return discard_pending.run(args)
 
 
-def _handle_stage_suggestions(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_stage_suggestions(args: argparse.Namespace) -> int:
     from social_research_probe.commands import stage_suggestions
 
-    return stage_suggestions.run(args, data_dir)
+    return stage_suggestions.run(args)
 
 
-def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_corroborate_claims(args: argparse.Namespace) -> int:
     from social_research_probe.commands import corroborate_claims
 
     return corroborate_claims.run(
@@ -76,31 +75,31 @@ def _handle_corroborate_claims(args: argparse.Namespace, data_dir: Path) -> int:
     )
 
 
-def _handle_render(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_render(args: argparse.Namespace) -> int:
     from social_research_probe.commands import render
 
     return render.run(args.packet, output_dir=args.output_dir)
 
 
-def _handle_research(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_research(args: argparse.Namespace) -> int:
     from social_research_probe.commands import research
 
-    return research.run(args, data_dir)
+    return research.run(args)
 
 
-def _handle_install_skill(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_install_skill(args: argparse.Namespace) -> int:
     from social_research_probe.commands import install_skill
 
     return install_skill.run(args.target)
 
 
-def _handle_setup(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_setup(args: argparse.Namespace) -> int:
     from social_research_probe.commands import setup
 
-    return setup.run(data_dir)
+    return setup.run()
 
 
-def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_report(args: argparse.Namespace) -> int:
     from social_research_probe.commands import report
 
     return report.run(
@@ -109,11 +108,10 @@ def _handle_report(args: argparse.Namespace, data_dir: Path) -> int:
         opportunity_analysis_path=args.opportunity_analysis_path,
         final_summary_path=args.final_summary_path,
         out_path=args.out,
-        data_dir=data_dir,
     )
 
 
-def _handle_serve_report(args: argparse.Namespace, data_dir: Path) -> int:
+def _handle_serve_report(args: argparse.Namespace) -> int:
     from social_research_probe.commands import serve_report
 
     return serve_report.run(
@@ -124,10 +122,10 @@ def _handle_serve_report(args: argparse.Namespace, data_dir: Path) -> int:
     )
 
 
-def _dispatch_config(args: argparse.Namespace, data_dir: Path) -> int:
+def _dispatch_config(args: argparse.Namespace) -> int:
     from social_research_probe.commands import config
 
-    return config.run(args, data_dir)
+    return config.run(args)
 
 
 def handlers_factory() -> dict[str, callable]:

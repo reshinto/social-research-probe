@@ -1,7 +1,7 @@
 """Reliability harness — multi-sample aggregation with gates.
 
 See ``docs/llm-reliability-harness.md`` (Phase 11) for the full methodology.
-This module provides the pure orchestration logic; scripts/eval_llm_quality.py
+This module provides the pure orchestration logic; tests/evals/eval_llm_quality.py
 is the CLI entry point that wires real runners into it.
 """
 
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from social_research_probe.evals.judge import JudgeScores
-from social_research_probe.evals.metrics import (
+from .judge import JudgeScores
+from .metrics import (
     aggregate,
     coverage,
     hallucinated_names,
@@ -160,7 +160,7 @@ def run_reliability_check(
 ) -> EvalReport:
     """Assemble an :class:`EvalReport` from pre-collected samples.
 
-    Real-runner execution lives in ``scripts/eval_llm_quality.py``. This
+    Real-runner execution lives in ``tests/evals/eval_llm_quality.py``. This
     function takes already-computed samples so it is trivially unit-testable
     (no subprocess, no LLM calls).
     """

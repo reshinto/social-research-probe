@@ -16,10 +16,10 @@ class ScoringService(BaseService):
     service_name: ClassVar[str] = "youtube.scoring.score"
     enabled_config_key: ClassVar[str] = "services.youtube.scoring.score"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Score a list of raw items; data is dict with 'items' and 'weights' keys."""
         from social_research_probe.technologies.scoring.combine import overall_score
 

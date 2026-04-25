@@ -176,14 +176,14 @@ def test_classify_query_raises_when_runner_disabled(tmp_data_dir: Path) -> None:
     """classify_query raises ValidationError when runner is 'none'."""
     cfg = _make_cfg("none")
     with pytest.raises(ValidationError, match=r"llm\.runner is disabled"):
-        classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+        classify_query("find AI jobs")
 
 
 def test_classify_query_raises_when_llm_service_disabled(tmp_data_dir: Path) -> None:
     cfg = _make_cfg("claude")
     cfg.service_enabled.side_effect = lambda name: name != "llm"
     with pytest.raises(ValidationError, match=r"services\.llm is false"):
-        classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+        classify_query("find AI jobs")
 
 
 def test_classify_query_returns_classified_query(
@@ -199,7 +199,7 @@ def test_classify_query_returns_classified_query(
         }
     )
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
-    result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("find AI jobs")
     assert isinstance(result, ClassifiedQuery)
     assert result.topic == "ai"
     assert result.purpose_name == "latest-news"
@@ -212,14 +212,14 @@ def test_classify_query_topic_already_exists(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """topic_created is False when the topic already exists (DuplicateError)."""
-    from social_research_probe.utils.command_models.topics import add_topics
+    from social_research_probe.commands import add_topics
 
     add_topics(tmp_data_dir, ["ai"], force=False)
 
     cfg = _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
-    result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("find AI jobs")
     assert result.topic_created is False
     assert result.purpose_created is True
 
@@ -228,14 +228,14 @@ def test_classify_query_purpose_already_exists(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """purpose_created is False when the purpose already exists (DuplicateError)."""
-    from social_research_probe.utils.command_models.purposes import add_purpose
+    from social_research_probe.commands import add_purpose
 
     add_purpose(tmp_data_dir, name="latest-news", method="latest news and updates", force=False)
 
     cfg = _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
-    result = classify_query("find AI jobs", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("find AI jobs")
     assert result.topic_created is True
     assert result.purpose_created is False
 
@@ -258,7 +258,7 @@ def test_classify_query_skips_unhealthy_runner(
         return healthy
 
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", fake_get_runner)
-    result = classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("q")
     assert result.topic == "ai"
     # unhealthy runner's run() must never have been called
     unhealthy.run.assert_not_called()
@@ -277,7 +277,7 @@ def test_classify_query_skips_runner_that_raises(
         "social_research_probe.commands.nl_query.get_runner",
         lambda name: runners.get(name, good),
     )
-    result = classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("q")
     assert result.topic == "ai"
 
 
@@ -294,7 +294,7 @@ def test_classify_query_skips_invalid_result(
         "social_research_probe.commands.nl_query.get_runner",
         lambda name: runners.get(name, good),
     )
-    result = classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+    result = classify_query("q")
     assert result.topic == "ai"
 
 
@@ -306,7 +306,7 @@ def test_classify_query_raises_when_all_runners_fail(
     broken = _make_runner(raises=RuntimeError("always fails"))
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: broken)
     with pytest.raises(ValidationError, match="all LLM runners failed"):
-        classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+        classify_query("q")
 
 
 def test_classify_query_propagates_unexpected_topic_error(
@@ -321,7 +321,7 @@ def test_classify_query_propagates_unexpected_topic_error(
         lambda *a, **kw: (_ for _ in ()).throw(OSError("disk full")),
     )
     with pytest.raises(OSError, match="disk full"):
-        classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+        classify_query("q")
 
 
 def test_classify_query_propagates_unexpected_purpose_error(
@@ -336,4 +336,4 @@ def test_classify_query_propagates_unexpected_purpose_error(
         lambda *a, **kw: (_ for _ in ()).throw(OSError("disk full")),
     )
     with pytest.raises(OSError, match="disk full"):
-        classify_query("q", data_dir=tmp_data_dir, cfg=cfg)
+        classify_query("q")

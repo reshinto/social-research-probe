@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 from social_research_probe.commands import Command
+from social_research_probe.cli.parsers import Arg
 
 
 def test_run_pipeline_emits_packet_envelope(tmp_path):
@@ -18,7 +19,7 @@ def test_run_pipeline_emits_packet_envelope(tmp_path):
             "-m",
             "social_research_probe.cli",
             Command.UPDATE_PURPOSES,
-            "--add",
+            Arg.ADD,
             '"trends"="Track emergence"',
         ],
         check=True,

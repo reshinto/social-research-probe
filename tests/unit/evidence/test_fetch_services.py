@@ -52,13 +52,13 @@ def test_extract_video_id_handles_standard_url_forms(url, expected):
 
 @pytest.fixture
 def adapter(monkeypatch, tmp_path):
-    """Build a YouTubeAdapter with a temp SRP_DATA_DIR so it can load config."""
-    from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+    """Build a YouTubeConnector with a temp SRP_DATA_DIR so it can load config."""
+    from social_research_probe.services.sourcing.youtube import YouTubeConnector
 
     monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("YOUTUBE_API_KEY", "test-key")
     config = {"data_dir": str(tmp_path)}
-    return YouTubeAdapter(config=config)
+    return YouTubeConnector(config=config)
 
 
 def test_url_normalize_strips_tracking_params(adapter):

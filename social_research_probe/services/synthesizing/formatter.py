@@ -45,7 +45,7 @@ def build_packet(
     purpose_set: list[str],
     items_top_n: list[ScoredItem],
     source_validation_summary: SourceValidationSummary,
-    platform_signals_summary: str,
+    platform_engagement_summary: str,
     evidence_summary: str,
     stats_summary: StatsSummary,
     chart_captions: list[str],
@@ -59,7 +59,7 @@ def build_packet(
         "purpose_set": purpose_set,
         "items_top_n": items_top_n,
         "source_validation_summary": source_validation_summary,
-        "platform_signals_summary": platform_signals_summary,
+        "platform_engagement_summary": platform_engagement_summary,
         "evidence_summary": evidence_summary,
         "stats_summary": stats_summary,
         "chart_captions": chart_captions,
@@ -207,7 +207,7 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
         )
     else:
         parts.append("## 3. Top Items\n\n_(no items returned)_")
-    parts.append("## 4. Platform Signals\n\n" + _to_bullets(packet["platform_signals_summary"]))
+    parts.append("## 4. Platform Signals\n\n" + _to_bullets(packet["platform_engagement_summary"]))
     parts.append(
         "## 5. Source Validation\n\n"
         f"- validated: {svs['validated']}, partial: {svs['partially']}, "
@@ -277,9 +277,9 @@ def build_fallback_report_summary(packet: ResearchPacket) -> str | None:
     if chart_takeaways:
         sentences.append("Chart signals: " + " ".join(chart_takeaways))
 
-    signal_summary = _summary_sentences(packet.get("platform_signals_summary", ""), limit=2)
+    signal_summary = _summary_sentences(packet.get("platform_engagement_summary", ""), limit=2)
     if signal_summary:
-        sentences.append("Platform signals: " + " ".join(signal_summary))
+        sentences.append("Platform engagement: " + " ".join(signal_summary))
 
     evidence_summary = _summary_sentences(packet.get("evidence_summary", ""), limit=2)
     if evidence_summary:

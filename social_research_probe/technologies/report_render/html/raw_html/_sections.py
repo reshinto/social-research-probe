@@ -96,9 +96,9 @@ def _items_links(items: list[ScoredItem]) -> str:
     return f"<ul>{''.join(lis)}</ul>"
 
 
-def section_4_platform_signals(packet: ResearchPacket) -> str:
+def section_4_platform_engagement(packet: ResearchPacket) -> str:
     """Section 4: Platform signals as bullet list."""
-    return _bulletise(packet.get("platform_signals_summary", ""))
+    return _bulletise(packet.get("platform_engagement_summary", ""))
 
 
 def section_5_source_validation(packet: ResearchPacket) -> str:

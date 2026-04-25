@@ -7,6 +7,7 @@ import sys
 from social_research_probe.platforms.youtube.whisper_transcript import (
     fetch_transcript_whisper,
 )
+from social_research_probe.technologies.media_fetch.yt_dlp import YtDlpFlag
 
 
 def test_returns_none_when_whisper_not_installed(monkeypatch):
@@ -73,7 +74,7 @@ def test_returns_transcript_text_on_success(monkeypatch, tmp_path):
         stderr = ""
 
     def fake_run(cmd, *a, **kw):
-        if "--extract-audio" in cmd:
+        if YtDlpFlag.EXTRACT_AUDIO in cmd:
             # Simulate yt-dlp writing an mp3 into the tmpdir
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
@@ -106,7 +107,7 @@ def test_returns_none_when_whisper_returns_empty_text(monkeypatch):
         returncode = 0
 
     def fake_run(cmd, *a, **kw):
-        if "--extract-audio" in cmd:
+        if YtDlpFlag.EXTRACT_AUDIO in cmd:
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
                 import os
@@ -151,7 +152,7 @@ def test_cached_transcript_short_circuits_download_and_model(monkeypatch, tmp_pa
 
     def fake_run(cmd, *a, **kw):
         subprocess_calls[0] += 1
-        if "--extract-audio" in cmd:
+        if YtDlpFlag.EXTRACT_AUDIO in cmd:
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
                 import os
@@ -196,7 +197,7 @@ def test_model_is_loaded_once_across_multiple_invocations(monkeypatch):
         stderr = ""
 
     def fake_run(cmd, *a, **kw):
-        if "--extract-audio" in cmd:
+        if YtDlpFlag.EXTRACT_AUDIO in cmd:
             output_template = next((c for c in cmd if "%(ext)s" in c), None)
             if output_template:
                 import os
@@ -238,5 +239,5 @@ def test_cookies_from_browser_flag_added_when_env_set(monkeypatch):
     fetch_transcript_whisper("https://www.youtube.com/watch?v=test")
 
     assert captured, "subprocess.run was never called"
-    assert "--cookies-from-browser" in captured[0]
+    assert YtDlpFlag.COOKIES_FROM_BROWSER in captured[0]
     assert "safari" in captured[0]

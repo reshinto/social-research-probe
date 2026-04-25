@@ -31,6 +31,7 @@ from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import CapabilityUnavailableError
 from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.codex import CodexRunner
+from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
 from social_research_probe.llm.runners.gemini import GeminiRunner
 from social_research_probe.llm.runners.local import LocalRunner
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
@@ -402,7 +403,7 @@ async def test_codex_runner_agentic_search_parses_last_message_file(monkeypatch)
     }
 
     def _fake_sp_run(argv, *, timeout, input=None):
-        out_path = argv[argv.index("--output-last-message") + 1]
+        out_path = argv[argv.index(CodexCliFlag.OUTPUT_LAST_MESSAGE) + 1]
         Path(out_path).write_text(json.dumps(payload), encoding="utf-8")
         return SimpleNamespace(stdout="", stderr="", returncode=0)
 

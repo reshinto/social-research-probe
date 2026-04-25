@@ -9,6 +9,7 @@ import stat
 import tomllib
 from pathlib import Path
 
+from social_research_probe.utils.core.exit_codes import ExitCode
 from social_research_probe.utils.core.research_command_parser import ResearchCommand
 from social_research_probe.config import DEFAULT_CONFIG
 from social_research_probe.utils.core.errors import ValidationError
@@ -37,9 +38,6 @@ _MIN_SECRET_LENGTH_FOR_MASKING = 8
 _MASKED_CHARS_TO_SHOW = 4
 _MASKED_PLACEHOLDER = "***"
 
-# Exit codes
-_EXIT_SUCCESS = 0
-_EXIT_ERROR = 2
 
 
 def _env_key(name: str) -> str:
@@ -309,17 +307,24 @@ def check_secrets(
     }
 
 
-def run_set_secret(args: argparse.Namespace) -> int:
+def _read_secret_input(args: argparse.Namespace) -> str:
+    """Read secret value from stdin or interactive prompt."""
     import getpass
     import sys
 
+    if args.from_stdin:
+        return sys.stdin.read().rstrip("\n")
+    return getpass.getpass(f"{args.name}: ")
+
+
+def run_set_secret(args: argparse.Namespace) -> int:
     from social_research_probe.utils.core.errors import ValidationError
 
-    value = sys.stdin.read().rstrip("\n") if args.from_stdin else getpass.getpass(f"{args.name}: ")
+    value = _read_secret_input(args)
     if not value:
         raise ValidationError("empty secret value")
     write_secret(args.name, value)
-    return _EXIT_SUCCESS
+    return ExitCode.SUCCESS
 
 
 def run(args: argparse.Namespace) -> int:
@@ -330,20 +335,20 @@ def run(args: argparse.Namespace) -> int:
 
     if args.config_cmd == ConfigSubcommand.SHOW:
         print(show_config())
-        return _EXIT_SUCCESS
+        return ExitCode.SUCCESS
     if args.config_cmd == ConfigSubcommand.PATH:
         data_dir = load_active_config().data_dir
         print(f"config: {data_dir / 'config.toml'}")
         print(f"secrets: {data_dir / 'secrets.toml'}")
-        return _EXIT_SUCCESS
+        return ExitCode.SUCCESS
     if args.config_cmd == ConfigSubcommand.SET:
         write_config_value(args.key, args.value)
-        return _EXIT_SUCCESS
+        return ExitCode.SUCCESS
     if args.config_cmd == ConfigSubcommand.SET_SECRET:
         return run_set_secret(args)
     if args.config_cmd == ConfigSubcommand.UNSET_SECRET:
         unset_secret(args.name)
-        return _EXIT_SUCCESS
+        return ExitCode.SUCCESS
     if args.config_cmd == ConfigSubcommand.CHECK_SECRETS:
         result = check_secrets(
             needed_for=args.needed_for,
@@ -351,5 +356,5 @@ def run(args: argparse.Namespace) -> int:
             corroboration=args.corroboration,
         )
         emit(result, args.output)
-        return _EXIT_SUCCESS
-    return _EXIT_ERROR
+        return ExitCode.SUCCESS
+    return ExitCode.ERROR

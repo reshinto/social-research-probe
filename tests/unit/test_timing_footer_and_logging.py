@@ -23,7 +23,7 @@ def _packet_with_timings(timings):
             "commentary": 0,
             "notes": "",
         },
-        "platform_signals_summary": "",
+        "platform_engagement_summary": "",
         "evidence_summary": "",
         "stats_summary": {"models_run": [], "highlights": [], "low_confidence": False},
         "chart_captions": [],

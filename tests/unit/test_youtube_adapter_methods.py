@@ -1,4 +1,4 @@
-"""Tests for YouTubeAdapter methods that require mocking the YouTube API client.
+"""Tests for YouTubeClient methods that require mocking the YouTube API client.
 
 Covers search, _items_from_search, enrich, to_signals, and trust_hints using
 mock fetch functions — no live API calls.
@@ -11,13 +11,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import FetchLimits, RawItem
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
-from social_research_probe.platforms.youtube.adapter import _coerce_int as _as_int
+from social_research_probe.services.sourcing.youtube import YouTubeConnector, compute_engagement_metrics
+from social_research_probe.utils.core.coerce import coerce_int as _as_int
 
 
-def _make_adapter(monkeypatch, api_key="test-key"):
+def _make_connector(monkeypatch, api_key="test-key"):
     monkeypatch.setenv("SRP_YOUTUBE_API_KEY", api_key)
-    return YouTubeAdapter({"data_dir": None})
+    return YouTubeConnector({"data_dir": None})
 
 
 def _raw_item(
@@ -52,7 +52,7 @@ def _raw_item(
 
 def test_items_from_search_parses_raw(monkeypatch):
     """_items_from_search converts raw search result dicts into RawItem instances."""
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     raw = [
         {
             "id": {"videoId": "vid001"},
@@ -66,7 +66,7 @@ def test_items_from_search_parses_raw(monkeypatch):
             },
         }
     ]
-    items = adapter._items_from_search(raw)
+    items = adapter._parse_search_results(raw)
     assert len(items) == 1
     item = items[0]
     assert item.id == "vid001"
@@ -78,7 +78,7 @@ def test_items_from_search_parses_raw(monkeypatch):
 
 def test_items_from_search_handles_bad_date(monkeypatch):
     """_items_from_search falls back to now() when publishedAt is unparseable."""
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     before = datetime.now(UTC)
     raw = [
         {
@@ -86,15 +86,15 @@ def test_items_from_search_handles_bad_date(monkeypatch):
             "snippet": {"publishedAt": "not-a-date"},
         }
     ]
-    items = adapter._items_from_search(raw)
+    items = adapter._parse_search_results(raw)
     assert len(items) == 1
     assert items[0].published_at >= before
 
 
 def test_items_from_search_empty_raw(monkeypatch):
     """_items_from_search returns empty list for empty input."""
-    adapter = _make_adapter(monkeypatch)
-    assert adapter._items_from_search([]) == []
+    adapter = _make_connector(monkeypatch)
+    assert adapter._parse_search_results([]) == []
 
 
 def test_as_int_handles_bool_float_and_bad_string():
@@ -109,8 +109,8 @@ def test_as_int_handles_bool_float_and_bad_string():
 
 
 def test_search_calls_fetch_and_parses(monkeypatch):
-    """search() calls fetch.build_client and fetch.search_videos, returns RawItems."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    """search() calls fetch._search_videos, returns RawItems."""
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
     fake_raw = [
         {
@@ -123,57 +123,64 @@ def test_search_calls_fetch_and_parses(monkeypatch):
             },
         }
     ]
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "search_videos",
-        lambda client, topic, max_items, published_after: fake_raw,
+        "_search_videos",
+        lambda api_key, topic, max_items, published_after: fake_raw,
     )
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     limits = FetchLimits(max_items=5, recency_days=30)
-    items = adapter.search("ai safety", limits)
+    items = adapter.find_by_topic("ai safety", limits)
     assert len(items) == 1
     assert items[0].id == "s001"
 
 
 def test_client_is_rebuilt_per_call_to_avoid_stale_sockets(monkeypatch):
-    """Each search/enrich builds a fresh client so httplib2 keep-alive sockets
+    """Each search builds a fresh client so httplib2 keep-alive sockets
     never go stale between calls (seen as SSL record-layer failures in prod)."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
     build_calls = [0]
 
+    class _Exec:
+        def execute(self):
+            return {"items": []}
+
+    class _Resource:
+        def list(self, **_):
+            return _Exec()
+
+    class _FakeClient:
+        def search(self):
+            return _Resource()
+
     def _build(key):
         build_calls[0] += 1
-        return object()
+        return _FakeClient()
 
-    monkeypatch.setattr(fetch_mod, "build_client", _build)
-    monkeypatch.setattr(
-        fetch_mod, "search_videos", lambda client, topic, max_items, published_after: []
-    )
+    monkeypatch.setattr(fetch_mod, "_build_client", _build)
 
-    adapter = _make_adapter(monkeypatch)
-    adapter.search("topic", FetchLimits(max_items=1, recency_days=0))
-    adapter.search("topic-2", FetchLimits(max_items=1, recency_days=0))
+    adapter = _make_connector(monkeypatch)
+    adapter.find_by_topic("topic", FetchLimits(max_items=1, recency_days=0))
+    adapter.find_by_topic("topic-2", FetchLimits(max_items=1, recency_days=0))
 
     assert build_calls[0] == 2
 
 
 def test_search_no_recency_days(monkeypatch):
     """search() passes published_after=None when recency_days is None."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
     captured = {}
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "search_videos",
-        lambda client, topic, max_items, published_after: (
+        "_search_videos",
+        lambda api_key, topic, max_items, published_after: (
             captured.update({"pa": published_after}) or []
         ),
     )
-    adapter = _make_adapter(monkeypatch)
-    adapter.search("ai", FetchLimits(max_items=5, recency_days=None))
+    adapter = _make_connector(monkeypatch)
+    adapter.find_by_topic("ai", FetchLimits(max_items=5, recency_days=None))
     assert captured["pa"] is None
 
 
@@ -184,39 +191,42 @@ def test_search_no_recency_days(monkeypatch):
 
 async def test_enrich_empty_returns_empty(monkeypatch):
     """enrich() returns empty list unchanged when given no items."""
-    adapter = _make_adapter(monkeypatch)
-    assert await adapter.enrich([]) == []
+    adapter = _make_connector(monkeypatch)
+    assert await adapter.fetch_item_details([]) == []
 
 
 async def test_enrich_hydrates_items(monkeypatch):
     """enrich() merges video and channel stats into RawItem metrics."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_videos",
-        lambda client, video_ids: [
+        "_fetch_video_details",
+        lambda api_key, video_ids: [
             {
                 "id": "abc123",
-                "statistics": {"viewCount": "2000", "likeCount": "100", "commentCount": "20"},
+                "statistics": {
+                    "viewCount": "2000",
+                    "likeCount": "100",
+                    "commentCount": "20",
+                },
                 "contentDetails": {"duration": "PT5M30S"},
             }
         ],
     )
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_channels",
-        lambda client, channel_ids: [
+        "_fetch_channel_details",
+        lambda api_key, channel_ids: [
             {
                 "id": "UC001",
                 "statistics": {"subscriberCount": "10000", "videoCount": "50"},
             }
         ],
     )
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     items = [_raw_item()]
-    enriched = await adapter.enrich(items)
+    enriched = await adapter.fetch_item_details(items)
     assert len(enriched) == 1
     assert enriched[0].metrics["views"] == 2000
     assert enriched[0].metrics["likes"] == 100
@@ -225,75 +235,84 @@ async def test_enrich_hydrates_items(monkeypatch):
 
 async def test_enrich_no_duration_string(monkeypatch):
     """enrich() handles items with no contentDetails.duration gracefully."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_videos",
-        lambda client, video_ids: [
+        "_fetch_video_details",
+        lambda api_key, video_ids: [
             {
                 "id": "abc123",
-                "statistics": {"viewCount": "300", "likeCount": "10", "commentCount": "2"},
+                "statistics": {
+                    "viewCount": "300",
+                    "likeCount": "10",
+                    "commentCount": "2",
+                },
                 "contentDetails": {"duration": ""},
             }
         ],
     )
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_channels",
-        lambda client, channel_ids: [],
+        "_fetch_channel_details",
+        lambda api_key, channel_ids: [],
     )
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     items = [_raw_item()]
-    enriched = await adapter.enrich(items)
+    enriched = await adapter.fetch_item_details(items)
     assert len(enriched) == 1
     assert enriched[0].metrics["views"] == 300
 
 
 async def test_enrich_includes_shorts_by_default(monkeypatch):
     """enrich() now keeps YouTube Shorts by default and tags them in extras."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_videos",
-        lambda client, video_ids: [
+        "_fetch_video_details",
+        lambda api_key, video_ids: [
             {
                 "id": "abc123",
-                "statistics": {"viewCount": "500", "likeCount": "5", "commentCount": "1"},
+                "statistics": {
+                    "viewCount": "500",
+                    "likeCount": "5",
+                    "commentCount": "1",
+                },
                 "contentDetails": {"duration": "PT45S"},
             }
         ],
     )
-    monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
-    adapter = _make_adapter(monkeypatch)
-    enriched = await adapter.enrich([_raw_item()])
+    monkeypatch.setattr(fetch_mod, "_fetch_channel_details", lambda api_key, channel_ids: [])
+    adapter = _make_connector(monkeypatch)
+    enriched = await adapter.fetch_item_details([_raw_item()])
     assert len(enriched) == 1
     assert enriched[0].extras["is_short"] is True
 
 
 async def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
     """When config has include_shorts=False, Shorts are filtered out."""
-    import social_research_probe.platforms.youtube.fetch as fetch_mod
+    import social_research_probe.technologies.media_fetch.youtube_api as fetch_mod
 
-    monkeypatch.setattr(fetch_mod, "build_client", lambda key: object())
     monkeypatch.setattr(
         fetch_mod,
-        "hydrate_videos",
-        lambda client, video_ids: [
+        "_fetch_video_details",
+        lambda api_key, video_ids: [
             {
                 "id": "abc123",
-                "statistics": {"viewCount": "500", "likeCount": "5", "commentCount": "1"},
+                "statistics": {
+                    "viewCount": "500",
+                    "likeCount": "5",
+                    "commentCount": "1",
+                },
                 "contentDetails": {"duration": "PT45S"},
             }
         ],
     )
-    monkeypatch.setattr(fetch_mod, "hydrate_channels", lambda client, channel_ids: [])
-    adapter = _make_adapter(monkeypatch)
+    monkeypatch.setattr(fetch_mod, "_fetch_channel_details", lambda api_key, channel_ids: [])
+    adapter = _make_connector(monkeypatch)
     adapter.config["include_shorts"] = False
-    assert await adapter.enrich([_raw_item()]) == []
+    assert await adapter.fetch_item_details([_raw_item()]) == []
 
 
 # ---------------------------------------------------------------------------
@@ -303,12 +322,12 @@ async def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
 
 def test_to_signals_computes_velocity(monkeypatch):
     """to_signals() computes view_velocity and engagement_ratio from metrics."""
-    adapter = _make_adapter(monkeypatch)
+    adapter = _make_connector(monkeypatch)
     published = datetime.now(UTC) - timedelta(days=10)
     item = _raw_item(views=1000, likes=50, comments=10, published_at=published)
-    signals = adapter.to_signals([item])
-    assert len(signals) == 1
-    sig = signals[0]
+    engagement_metrics = compute_engagement_metrics([item])
+    assert len(engagement_metrics) == 1
+    sig = engagement_metrics[0]
     assert sig.views == 1000
     assert sig.view_velocity == pytest.approx(100.0)
     assert sig.engagement_ratio == pytest.approx(60 / 1000)
@@ -316,20 +335,7 @@ def test_to_signals_computes_velocity(monkeypatch):
 
 def test_to_signals_empty(monkeypatch):
     """to_signals() returns empty list for empty input."""
-    adapter = _make_adapter(monkeypatch)
-    assert adapter.to_signals([]) == []
+    adapter = _make_connector(monkeypatch)
+    assert compute_engagement_metrics([]) == []
 
 
-# ---------------------------------------------------------------------------
-# trust_hints
-# ---------------------------------------------------------------------------
-
-
-def test_trust_hints_returns_subscriber_count(monkeypatch):
-    """trust_hints() surfaces channel_subscribers from item.extras."""
-    adapter = _make_adapter(monkeypatch)
-    item = _raw_item(subscribers=12345)
-    hints = adapter.trust_hints(item)
-    assert hints.subscriber_count == 12345
-    assert hints.verified is None
-    assert hints.citation_markers == []

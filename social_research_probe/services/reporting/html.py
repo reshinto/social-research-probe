@@ -17,11 +17,11 @@ class HtmlReportService(BaseService):
     service_name: ClassVar[str] = "youtube.reporting.html"
     enabled_config_key: ClassVar[str] = "services.youtube.reporting.html"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
-        """Write HTML report; data must have 'packet' and 'data_dir' keys."""
+    async def execute_one(self, data: object) -> ServiceResult:
+        """Write HTML report; data must have a 'packet' key."""
         import asyncio
 
         from social_research_probe.technologies.report_render.html.raw_html.youtube import (
@@ -29,9 +29,8 @@ class HtmlReportService(BaseService):
         )
 
         packet = data.get("packet") if isinstance(data, dict) else data
-        data_dir = data.get("data_dir") if isinstance(data, dict) else None
         try:
-            html_path = await asyncio.to_thread(write_html_report, packet, data_dir)
+            html_path = await asyncio.to_thread(write_html_report, packet)
             tr = TechResult(tech_name="html_render", input=data, output=html_path, success=True)
         except Exception as exc:
             tr = TechResult(

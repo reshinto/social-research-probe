@@ -21,7 +21,7 @@ from social_research_probe.pipeline.scoring import (
 from social_research_probe.pipeline.stats import _build_stats_summary, _stats_models_for
 from social_research_probe.pipeline.svs import _build_svs
 
-from social_research_probe.commands import DslCommand, parse
+from social_research_probe.commands import ResearchCommand, parse
 from social_research_probe.platforms.orchestrator import (
     _maybe_register_fake,
     run_pipeline,
@@ -85,7 +85,8 @@ def test_zscore_two_values():
 def test_score_item_returns_score_and_dict():
     from datetime import datetime
 
-    from social_research_probe.platforms.base import RawItem, SignalSet, TrustHints
+    from social_research_probe.platforms.base import RawItem, EngagementMetrics
+    from social_research_probe.platforms.youtube.connector import TrustHints
 
     item = RawItem(
         id="x",
@@ -99,7 +100,7 @@ def test_score_item_returns_score_and_dict():
         thumbnail=None,
         extras={},
     )
-    sig = SignalSet(
+    sig = EngagementMetrics(
         views=1000,
         likes=50,
         comments=10,
@@ -126,7 +127,8 @@ def test_score_item_returns_score_and_dict():
 def test_score_item_custom_weights_shift_overall():
     from datetime import datetime
 
-    from social_research_probe.platforms.base import RawItem, SignalSet, TrustHints
+    from social_research_probe.platforms.base import RawItem, EngagementMetrics
+    from social_research_probe.platforms.youtube.connector import TrustHints
 
     item = RawItem(
         id="x",
@@ -140,7 +142,7 @@ def test_score_item_custom_weights_shift_overall():
         thumbnail=None,
         extras={},
     )
-    sig = SignalSet(
+    sig = EngagementMetrics(
         views=100,
         likes=1,
         comments=0,
@@ -207,7 +209,7 @@ async def test_run_pipeline_returns_packet(monkeypatch, tmp_path):
             }
         },
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     packet = await run_pipeline(cmd, tmp_path)
     assert "topic" in packet
@@ -230,7 +232,7 @@ async def test_run_pipeline_degrades_when_fetch_stage_disabled(monkeypatch, tmp_
         "[stages]\nfetch = false\n",
         encoding="utf-8",
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news'
     packet = await run_pipeline(parse(raw), tmp_path)
     assert packet["topic"] == "AI"
     assert packet["items_top_n"] == []
@@ -248,7 +250,7 @@ async def test_run_pipeline_does_not_emit_or_exit(monkeypatch, tmp_path):
             }
         },
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     packet = await run_pipeline(cmd, tmp_path)
     assert packet["topic"] == "AI"
@@ -267,7 +269,7 @@ async def test_run_pipeline_multi_topic(monkeypatch, tmp_path):
             }
         },
     )
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news;"blockchain"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news;"blockchain"->latest-news'
     cmd = parse(raw)
     result = await run_pipeline(cmd, tmp_path)
     assert "multi" in result
@@ -286,7 +288,7 @@ async def test_run_pipeline_unknown_purpose_raises(monkeypatch, tmp_path):
         },
     )
 
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->nonexistent_purpose'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->nonexistent_purpose'
     cmd = parse(raw)
     with pytest.raises(ValidationError):
         await run_pipeline(cmd, tmp_path)
@@ -413,9 +415,9 @@ async def test_run_pipeline_health_check_fails_raises(monkeypatch, tmp_path):
         def health_check(self):
             return False
 
-    monkeypatch.setattr(orchestrator_mod, "get_adapter", lambda name, cfg: FailingAdapter())
+    monkeypatch.setattr(orchestrator_mod, "get_client", lambda name, cfg: FailingAdapter())
 
-    raw = f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news'
+    raw = f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news'
     cmd = parse(raw)
     with pytest.raises(ValidationError, match="health check"):
         await run_pipeline(cmd, tmp_path)
@@ -540,7 +542,7 @@ async def test_run_pipeline_respects_enrich_top_n_config(monkeypatch, tmp_path):
         tmp_path,
         {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
     )
-    cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
+    cmd = parse(f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news')
     packet = await run_pipeline(cmd, tmp_path, adapter_config={"enrich_top_n": 2})
     assert len(packet["items_top_n"]) == 2
 
@@ -552,7 +554,7 @@ async def test_run_pipeline_default_enrich_top_n_is_5(monkeypatch, tmp_path):
         tmp_path,
         {"latest-news": {"method": "Track latest channels", "evidence_priorities": []}},
     )
-    cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
+    cmd = parse(f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news')
     packet = await run_pipeline(cmd, tmp_path)
     assert len(packet["items_top_n"]) == 5
 
@@ -569,7 +571,7 @@ async def test_run_pipeline_skips_transcript_enrich_when_disabled(monkeypatch, t
         "social_research_probe.pipeline.enrichment._enrich_top_n_with_transcripts",
         AsyncMock(side_effect=called.append),
     )
-    cmd = parse(f'{DslCommand.RESEARCH} platform:youtube "AI"->latest-news')
+    cmd = parse(f'{ResearchCommand.RESEARCH} platform:youtube "AI"->latest-news')
     await run_pipeline(cmd, tmp_path, adapter_config={"fetch_transcripts": False})
     assert called == []
 

@@ -10,9 +10,9 @@ mean floors *and* variance ceilings so the harness catches both quality
 drops and consistency drops.
 
 This package is non-CI — it runs nightly (or on demand) via
-``scripts/eval_llm_quality.py``. The deterministic scaffolding
+``tests/evals/eval_llm_quality.py``. The deterministic scaffolding
 (aggregation math, gate logic, judge fallback) is evidence-tested in
-``tests/evidence/test_eval_harness.py``.
+``tests/unit/evidence/test_eval_harness.py``.
 
 Public API:
     run_reliability_check(service_id, corpus_dir, runs, judge_runner)
@@ -20,7 +20,7 @@ Public API:
     apply_gates(report, gates) — pass/fail decision
 """
 
-from social_research_probe.evals.harness import (
+from .harness import (
     EvalReport,
     SampleOutcome,
     apply_gates,

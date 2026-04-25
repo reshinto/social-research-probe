@@ -21,7 +21,7 @@ from social_research_probe.render._sections import (
     section_1_topic_purpose,
     section_2_platform,
     section_3_top_items,
-    section_4_platform_signals,
+    section_4_platform_engagement,
     section_5_source_validation,
     section_6_evidence,
     section_7_statistics,
@@ -49,6 +49,7 @@ from social_research_probe.render.html import (
 from social_research_probe.render.markdown_to_html import md_to_html
 
 from social_research_probe.commands import Command
+from social_research_probe.cli.parsers import Arg
 
 _SVS = {
     "validated": 1,
@@ -76,7 +77,7 @@ _PACKET = {
     "purpose_set": ["latest-news", "trends"],
     "items_top_n": [_ITEM],
     "source_validation_summary": _SVS,
-    "platform_signals_summary": "high engagement; many views",
+    "platform_engagement_summary": "high engagement; many views",
     "evidence_summary": "strong data; reliable sources",
     "stats_summary": {
         "models_run": ["regression"],
@@ -205,7 +206,7 @@ class TestSectionBuilders:
         assert "0.70" in html or "0.7" in html
 
     def test_section_4(self):
-        html = section_4_platform_signals(_PACKET)
+        html = section_4_platform_engagement(_PACKET)
         assert "high engagement" in html
 
     def test_section_5_with_notes(self):
@@ -463,13 +464,14 @@ class TestRenderHtml:
         assert 'data-voice-name="Jarvis" selected="selected"' in html
 
     def test_tts_defaults_to_configured_profile_name(self, tmp_data_dir):
+        from social_research_probe.config import reset_config_cache
         (tmp_data_dir / "config.toml").write_text(
             '[voicebox]\ndefault_profile_name = "Friday"\n',
             encoding="utf-8",
         )
+        reset_config_cache()
         html = render_html(
             _PACKET,
-            data_dir=tmp_data_dir,
             tts_profiles=[
                 {"id": "voice-1", "name": "Friday"},
                 {"id": "voice-2", "name": "Jarvis"},
@@ -478,18 +480,18 @@ class TestRenderHtml:
         assert 'data-default-profile-name="Friday"' in html
         assert 'data-voice-name="Friday" selected="selected"' in html
 
-    def test_render_html_embeds_and_caches_profiles_when_requested(self, tmp_path):
+    def test_render_html_embeds_and_caches_profiles_when_requested(self, tmp_data_dir):
+        _render_module = "social_research_probe.technologies.report_render.html.raw_html.youtube"
         with patch(
-            "social_research_probe.render.html._fetch_voicebox_profiles",
+            f"{_render_module}._fetch_voicebox_profiles",
             return_value=[{"id": "voice-1", "name": "Jarvis"}],
         ):
             html = render_html(
                 _PACKET,
-                data_dir=tmp_path,
                 embed_voicebox_profiles=True,
             )
         assert 'data-voice-name="Jarvis" selected="selected"' in html
-        assert json.loads(_voicebox_profile_names_path(tmp_path).read_text(encoding="utf-8")) == [
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
             "Jarvis"
         ]
 
@@ -624,10 +626,12 @@ class TestVoiceoverHelpers:
         )
         assert prepared == {}
 
-    def test_audio_report_enabled_reads_data_dir_config(self, tmp_path):
-        cfg_path = tmp_path / "config.toml"
+    def test_audio_report_enabled_reads_data_dir_config(self, tmp_data_dir):
+        from social_research_probe.config import reset_config_cache
+        cfg_path = tmp_data_dir / "config.toml"
         cfg_path.write_text("[services.report]\naudio_report = false\n", encoding="utf-8")
-        assert _audio_report_enabled(tmp_path) is False
+        reset_config_cache()
+        assert _audio_report_enabled() is False
 
     def test_prepare_voiceover_audios_returns_one_file_per_profile(self, tmp_path, monkeypatch):
         report_path = tmp_path / "report.html"
@@ -699,93 +703,99 @@ class TestVoiceoverHelpers:
 
 
 class TestWriteHtmlReport:
+    _render_module = "social_research_probe.technologies.report_render.html.raw_html.youtube"
+
     @pytest.fixture(autouse=True)
-    def _stub_voicebox_helpers(self, monkeypatch):
+    def _setup(self, monkeypatch, tmp_data_dir):
+        from social_research_probe.config import reset_config_cache
+        reset_config_cache()
+        self.data_dir = tmp_data_dir
         monkeypatch.setattr(
-            "social_research_probe.render.html._fetch_voicebox_profiles", lambda api_base: []
+            f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: []
         )
         monkeypatch.setattr(
-            "social_research_probe.render.html._prepare_voiceover_audios",
+            f"{self._render_module}._prepare_voiceover_audios",
             lambda packet, report_path, *, tts_api_base, tts_profiles, tts_profile_name: {},
         )
 
-    def test_creates_report_file(self, tmp_path):
-        out = write_html_report(_PACKET, tmp_path)
+    def test_creates_report_file(self):
+        out = write_html_report(_PACKET)
         assert out.exists()
         assert out.suffix == ".html"
         assert "reports" in str(out)
 
-    def test_report_filename_contains_topic_slug(self, tmp_path):
-        out = write_html_report(_PACKET, tmp_path)
+    def test_report_filename_contains_topic_slug(self):
+        out = write_html_report(_PACKET)
         assert "ai-agents" in out.name or "ai" in out.name
 
-    def test_report_filename_contains_platform(self, tmp_path):
-        out = write_html_report(_PACKET, tmp_path)
+    def test_report_filename_contains_platform(self):
+        out = write_html_report(_PACKET)
         assert "youtube" in out.name
 
-    def test_synthesis_included_when_provided(self, tmp_path):
+    def test_synthesis_included_when_provided(self):
         out = write_html_report(
             {
                 **_PACKET,
                 "compiled_synthesis": "synth10 text",
                 "opportunity_analysis": "synth11 text",
             },
-            tmp_path,
         )
         content = out.read_text(encoding="utf-8")
         assert "synth10 text" in content
         assert "synth11 text" in content
 
-    def test_prints_serve_report_command_to_stderr(self, tmp_path, capsys):
-        out = write_html_report(_PACKET, tmp_path)
+    def test_prints_serve_report_command_to_stderr(self, capsys):
+        out = write_html_report(_PACKET)
         err = capsys.readouterr().err
         assert "Serve report" in err
         assert serve_report_command(out) in err
         assert "file://" not in err
 
-    def test_creates_reports_dir(self, tmp_path):
-        reports_dir = tmp_path / "reports"
+    def test_creates_reports_dir(self):
+        reports_dir = self.data_dir / "reports"
         assert not reports_dir.exists()
-        write_html_report(_PACKET, tmp_path)
+        write_html_report(_PACKET)
         assert reports_dir.is_dir()
 
-    def test_embeds_voicebox_profiles_when_available(self, tmp_path):
+    def test_embeds_voicebox_profiles_when_available(self):
         with patch(
-            "social_research_probe.render.html._fetch_voicebox_profiles",
+            f"{self._render_module}._fetch_voicebox_profiles",
             return_value=[{"id": "voice-1", "name": "Alpha"}],
         ):
-            out = write_html_report(_PACKET, tmp_path)
+            out = write_html_report(_PACKET)
         content = out.read_text(encoding="utf-8")
         assert 'value="voicebox::Alpha"' in content
         assert 'data-source="voicebox"' in content
         assert ">Alpha<" in content
-        assert json.loads(_voicebox_profile_names_path(tmp_path).read_text(encoding="utf-8")) == [
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
             "Alpha"
         ]
 
-    def test_does_not_touch_profile_name_cache_without_profiles(self, tmp_path):
-        cache_path = _voicebox_profile_names_path(tmp_path)
+    def test_does_not_touch_profile_name_cache_without_profiles(self):
+        cache_path = _voicebox_profile_names_path()
         cache_path.write_text(json.dumps(["Existing"]), encoding="utf-8")
-        write_html_report(_PACKET, tmp_path)
+        write_html_report(_PACKET)
         assert json.loads(cache_path.read_text(encoding="utf-8")) == ["Existing"]
 
-    def test_write_html_report_raises_when_html_report_is_disabled(self, tmp_path):
-        (tmp_path / "config.toml").write_text(
+    def test_write_html_report_raises_when_html_report_is_disabled(self):
+        from social_research_probe.config import reset_config_cache
+        (self.data_dir / "config.toml").write_text(
             "[services.report]\nhtml_report = false\n",
             encoding="utf-8",
         )
+        reset_config_cache()
 
         with pytest.raises(RuntimeError, match="HTML report generation is disabled by config"):
-            write_html_report(_PACKET, tmp_path)
+            write_html_report(_PACKET)
 
-    def test_embeds_prepared_audio_attrs_when_audio_is_pre_rendered(self, tmp_path):
+    def test_embeds_prepared_audio_attrs_when_audio_is_pre_rendered(self):
         with (
             patch(
-                "social_research_probe.render.html._fetch_voicebox_profiles",
+                f"{self._render_module}._fetch_voicebox_profiles",
                 return_value=[{"id": "voice-1", "name": "Alpha"}],
             ),
             patch(
-                "social_research_probe.render.html._prepare_voiceover_audios",
+                f"{self._render_module}._prepare_voiceover_audios",
                 return_value={"Alpha": "report.voicebox.alpha.wav"},
             ),
         ):
@@ -796,30 +806,31 @@ class TestWriteHtmlReport:
                     "opportunity_analysis": "synth11 text",
                     "report_summary": "summary12 text",
                 },
-                tmp_path,
             )
         content = out.read_text(encoding="utf-8")
         assert 'data-prepared-audio-src="report.voicebox.alpha.wav"' in content
         assert 'data-prepared-profile-name="Alpha"' in content
         assert '"Alpha": "report.voicebox.alpha.wav"' in content
 
-    def test_emits_voicebox_service_logs_when_enabled(self, tmp_path, capsys):
-        (tmp_path / "config.toml").write_text(
+    def test_emits_voicebox_service_logs_when_enabled(self, capsys):
+        from social_research_probe.config import reset_config_cache
+        (self.data_dir / "config.toml").write_text(
             "[debug]\ntechnology_logs_enabled = true\n",
             encoding="utf-8",
         )
+        reset_config_cache()
         packet = {**_PACKET}
         with (
             patch(
-                "social_research_probe.render.html._fetch_voicebox_profiles",
+                f"{self._render_module}._fetch_voicebox_profiles",
                 return_value=[{"id": "voice-1", "name": "Alpha"}],
             ),
             patch(
-                "social_research_probe.render.html._prepare_voiceover_audios",
+                f"{self._render_module}._prepare_voiceover_audios",
                 return_value={"Alpha": "report.voicebox.alpha.wav"},
             ),
         ):
-            write_html_report(packet, tmp_path)
+            write_html_report(packet)
         err = capsys.readouterr().err
         assert "voicebox_profiles started" in err
         assert "voicebox_profiles done" in err
@@ -829,16 +840,18 @@ class TestWriteHtmlReport:
         assert "voicebox_profiles" in stages
         assert "voicebox_audio" in stages
 
-    def test_skips_voicebox_profile_loading_when_voicebox_technology_disabled(self, tmp_path):
-        (tmp_path / "config.toml").write_text(
+    def test_skips_voicebox_profile_loading_when_voicebox_technology_disabled(self):
+        from social_research_probe.config import reset_config_cache
+        (self.data_dir / "config.toml").write_text(
             "[technologies]\nvoicebox = false\n",
             encoding="utf-8",
         )
+        reset_config_cache()
         with patch(
-            "social_research_probe.render.html._fetch_voicebox_profiles",
+            f"{self._render_module}._fetch_voicebox_profiles",
             side_effect=AssertionError("voicebox profiles should not load"),
         ):
-            out = write_html_report(_PACKET, tmp_path, prepare_voicebox_audio=False)
+            out = write_html_report(_PACKET, prepare_voicebox_audio=False)
         assert out.exists()
 
 
@@ -910,10 +923,9 @@ class TestVoiceboxProfileDiscovery:
         assert result == []
 
     def test_write_discovered_voicebox_profile_names_skips_duplicates_and_blank_names(
-        self, tmp_path
+        self, tmp_data_dir
     ):
         _write_discovered_voicebox_profile_names(
-            tmp_path,
             [
                 {"id": "voice-1", "name": "Jarvis"},
                 {"id": "voice-2", "name": " jarvis "},
@@ -921,32 +933,33 @@ class TestVoiceboxProfileDiscovery:
             ],
         )
 
-        assert json.loads(_voicebox_profile_names_path(tmp_path).read_text(encoding="utf-8")) == [
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
             "Jarvis"
         ]
 
     def test_write_discovered_voicebox_profile_names_does_not_write_when_names_are_empty(
-        self, tmp_path
+        self, tmp_data_dir
     ):
         _write_discovered_voicebox_profile_names(
-            tmp_path,
             [
                 {"id": "voice-1", "name": "   "},
                 {"id": "voice-2", "name": ""},
             ],
         )
 
-        assert not _voicebox_profile_names_path(tmp_path).exists()
+        assert not _voicebox_profile_names_path().exists()
 
 
 class TestCommandsReport:
+    _render_module = "social_research_probe.technologies.report_render.html.raw_html.youtube"
+
     @pytest.fixture(autouse=True)
-    def _stub_voicebox_helpers(self, monkeypatch):
+    def _stub_voicebox_helpers(self, monkeypatch, tmp_data_dir):
         monkeypatch.setattr(
-            "social_research_probe.render.html._fetch_voicebox_profiles", lambda api_base: []
+            f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: []
         )
         monkeypatch.setattr(
-            "social_research_probe.render.html._prepare_voiceover_audios",
+            f"{self._render_module}._prepare_voiceover_audios",
             lambda packet, report_path, *, tts_api_base, tts_profiles, tts_profile_name: {},
         )
 
@@ -1074,14 +1087,14 @@ class TestCommandsReport:
         out_path = tmp_path / "out.html"
         result = main(
             [
-                "--data-dir",
+                Arg.DATA_DIR,
                 str(tmp_path),
                 "report",
-                "--packet",
+                Arg.PACKET,
                 str(pkt_path),
-                "--final-summary",
+                Arg.FINAL_SUMMARY,
                 str(final_summary),
-                "--out",
+                Arg.OUT,
                 str(out_path),
             ]
         )
@@ -1089,24 +1102,25 @@ class TestCommandsReport:
         assert out_path.exists()
         assert "CLI-injected summary" in out_path.read_text(encoding="utf-8")
 
-    def test_run_emits_voicebox_service_logs_when_enabled(self, tmp_path, capsys, monkeypatch):
+    def test_run_emits_voicebox_service_logs_when_enabled(self, tmp_path, tmp_data_dir, capsys, monkeypatch):
         from social_research_probe.commands.report import run
+        from social_research_probe.config import reset_config_cache
 
-        (tmp_path / "config.toml").write_text(
+        (tmp_data_dir / "config.toml").write_text(
             "[debug]\ntechnology_logs_enabled = true\n",
             encoding="utf-8",
         )
-        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        reset_config_cache()
         pkt_path = tmp_path / "packet.json"
         pkt_path.write_text(json.dumps(_PACKET), encoding="utf-8")
         out_path = tmp_path / "out.html"
         with (
             patch(
-                "social_research_probe.render.html._fetch_voicebox_profiles",
+                f"{self._render_module}._fetch_voicebox_profiles",
                 return_value=[{"id": "voice-1", "name": "Alpha"}],
             ),
             patch(
-                "social_research_probe.render.html._prepare_voiceover_audios",
+                f"{self._render_module}._prepare_voiceover_audios",
                 return_value={"Alpha": "out.voicebox.alpha.wav"},
             ),
         ):
@@ -1236,7 +1250,7 @@ class TestResearchHtmlInCli:
         from social_research_probe.cli import main
 
         self._patch_pipeline(monkeypatch)
-        assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 0
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
         out = capsys.readouterr().out.strip()
@@ -1247,7 +1261,7 @@ class TestResearchHtmlInCli:
 
         self._patch_pipeline(monkeypatch)
         assert (
-            main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news", "--no-html"])
+            main([Arg.DATA_DIR, str(tmp_path), Command.RESEARCH, "ai", "latest-news", Arg.NO_HTML])
             == 0
         )
         reports_dir = tmp_path / "reports"
@@ -1300,7 +1314,7 @@ class TestResearchHtmlInCli:
             "social_research_probe.cli._attach_synthesis",
             lambda pkt: (_ for _ in ()).throw(SynthesisError("boom")),
         )
-        assert main(["--data-dir", str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 4
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.RESEARCH, "ai", "latest-news"]) == 4
 
 
 class TestHtmlCoverageGaps:
@@ -1330,23 +1344,21 @@ class TestHtmlCoverageGaps:
             result = _fetch_voicebox_profiles("http://127.0.0.1:17493")
         assert result == []
 
-    def test_audio_report_enabled_fallback_on_exception(self, tmp_path, monkeypatch):
-        def raise_exc(*args, **kwargs):
-            raise RuntimeError()
+    def test_audio_report_enabled_fallback_on_exception(self, monkeypatch):
+        _render_module = "social_research_probe.technologies.report_render.html.raw_html.youtube"
+        monkeypatch.setattr(
+            f"{_render_module}.load_active_config",
+            lambda: (_ for _ in ()).throw(RuntimeError()),
+        )
+        assert _audio_report_enabled() is True
 
-        from social_research_probe.config import Config
-
-        monkeypatch.setattr(Config, "load", raise_exc)
-        assert _audio_report_enabled(tmp_path) is True
-
-    def test_technology_logs_enabled_fallback_on_exception(self, tmp_path, monkeypatch):
-        def raise_exc(*args, **kwargs):
-            raise RuntimeError()
-
-        from social_research_probe.config import Config
-
-        monkeypatch.setattr(Config, "load", raise_exc)
-        assert _technology_logs_enabled(tmp_path) is False
+    def test_technology_logs_enabled_fallback_on_exception(self, monkeypatch):
+        _render_module = "social_research_probe.technologies.report_render.html.raw_html.youtube"
+        monkeypatch.setattr(
+            f"{_render_module}.load_active_config",
+            lambda: (_ for _ in ()).throw(RuntimeError()),
+        )
+        assert _technology_logs_enabled() is False
 
     def test_build_voiceover_text_skips_empty_markdown(self):
         text = build_voiceover_text(
@@ -1420,6 +1432,6 @@ class TestHtmlCoverageGaps:
         )
         assert res == {}
 
-    def test_write_html_report_skips_audio_when_disabled(self, tmp_path):
-        out = write_html_report(_PACKET, tmp_path, prepare_voicebox_audio=False)
+    def test_write_html_report_skips_audio_when_disabled(self, tmp_data_dir):
+        out = write_html_report(_PACKET, prepare_voicebox_audio=False)
         assert out.exists()

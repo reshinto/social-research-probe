@@ -22,10 +22,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import RawItem
-from social_research_probe.platforms.youtube.trust_hints import (
-    account_age_days,
-    citation_markers,
-)
+from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
+from social_research_probe.utils.core.strings import account_age_days, citation_markers
 
 # ---------------------------------------------------------------------------
 # to_signals — deterministic math from known metrics
@@ -34,11 +32,11 @@ from social_research_probe.platforms.youtube.trust_hints import (
 
 @pytest.fixture
 def adapter(monkeypatch, tmp_path):
-    from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+    from social_research_probe.services.sourcing.youtube import YouTubeConnector
 
     monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("YOUTUBE_API_KEY", "test-key")
-    return YouTubeAdapter(config={"data_dir": str(tmp_path)})
+    return YouTubeConnector(config={"data_dir": str(tmp_path)})
 
 
 def test_to_signals_computes_view_velocity_and_engagement_ratio(adapter):
@@ -57,9 +55,9 @@ def test_to_signals_computes_view_velocity_and_engagement_ratio(adapter):
         thumbnail=None,
         extras={},
     )
-    signals = adapter.to_signals([item])
-    assert len(signals) == 1
-    s = signals[0]
+    engagement_metrics = compute_engagement_metrics([item])
+    assert len(engagement_metrics) == 1
+    s = engagement_metrics[0]
     assert s.views == 1000
     assert s.likes == 50
     assert s.comments == 10
@@ -82,9 +80,9 @@ def test_to_signals_guards_against_zero_age(adapter):
         thumbnail=None,
         extras={},
     )
-    signals = adapter.to_signals([fresh_item])
+    engagement_metrics = compute_engagement_metrics([fresh_item])
     # age_days = max(1, 0) = 1, so view_velocity = 500 / 1 = 500.0.
-    assert signals[0].view_velocity == pytest.approx(500.0)
+    assert engagement_metrics[0].view_velocity == pytest.approx(500.0)
 
 
 def test_to_signals_handles_zero_views_without_division_error(adapter):
@@ -101,9 +99,9 @@ def test_to_signals_handles_zero_views_without_division_error(adapter):
         thumbnail=None,
         extras={},
     )
-    signals = adapter.to_signals([item])
+    engagement_metrics = compute_engagement_metrics([item])
     # engagement_ratio = (5+2) / max(1, 0) = 7.0.
-    assert signals[0].engagement_ratio == pytest.approx(7.0)
+    assert engagement_metrics[0].engagement_ratio == pytest.approx(7.0)
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +145,7 @@ def test_account_age_days_for_six_year_old_account():
     from unittest.mock import patch
 
     pinned = datetime(2026, 4, 21, tzinfo=UTC)
-    with patch("social_research_probe.platforms.youtube.trust_hints.datetime") as mock_dt:
+    with patch("social_research_probe.utils.core.strings.datetime") as mock_dt:
         mock_dt.now.return_value = pinned
         mock_dt.fromisoformat.side_effect = datetime.fromisoformat
         age = account_age_days("2020-04-21T00:00:00Z")

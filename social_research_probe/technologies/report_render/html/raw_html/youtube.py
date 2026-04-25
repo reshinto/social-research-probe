@@ -24,7 +24,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from social_research_probe.config import Config, resolve_data_dir
+from social_research_probe.config import load_active_config
 from social_research_probe.services.synthesizing.formatter import resolve_report_summary
 from social_research_probe.technologies.report_render.html.raw_html._assets import (
     CSS_STYLES,
@@ -34,7 +34,7 @@ from social_research_probe.technologies.report_render.html.raw_html._sections im
     section_1_topic_purpose,
     section_2_platform,
     section_3_top_items,
-    section_4_platform_signals,
+    section_4_platform_engagement,
     section_5_source_validation,
     section_6_evidence,
     section_7_statistics,
@@ -62,7 +62,10 @@ _SECTIONS = [
     ("final-summary", "12. Final Summary"),
 ]
 
-_DEFAULT_VOICEBOX_API_BASE = "http://127.0.0.1:17493"
+def _default_voicebox_api_base() -> str:
+    """Get default Voicebox API base from config."""
+    from social_research_probe.config import load_active_config
+    return load_active_config().voicebox["api_base"]
 _VOICEBOX_PROFILE_NAMES_FILENAME = "voicebox_profiles.json"
 
 
@@ -70,7 +73,6 @@ def render_html(
     packet: ResearchPacket,
     charts_dir: Path | None = None,
     *,
-    data_dir: Path | None = None,
     tts_api_base: str | None = None,
     tts_profile_name: str | None = None,
     tts_profiles: list[dict[str, str]] | None = None,
@@ -94,11 +96,11 @@ def render_html(
         A complete HTML document as a string.
     """
     api_base = tts_api_base or _voicebox_api_base()
-    selected_profile_name = tts_profile_name or _voicebox_default_profile_name(data_dir)
+    selected_profile_name = tts_profile_name or _voicebox_default_profile_name()
     if tts_profiles is None:
         tts_profiles = _fetch_voicebox_profiles(api_base) if embed_voicebox_profiles else []
-        if data_dir is not None:
-            _write_discovered_voicebox_profile_names(data_dir, tts_profiles)
+        if embed_voicebox_profiles:
+            _write_discovered_voicebox_profile_names(tts_profiles)
     selected_profile = _select_voicebox_profile(
         tts_profiles,
         tts_profile_name=selected_profile_name,
@@ -109,7 +111,7 @@ def render_html(
         section_1_topic_purpose(packet),
         section_2_platform(packet),
         section_3_top_items(packet),
-        section_4_platform_signals(packet),
+        section_4_platform_engagement(packet),
         section_5_source_validation(packet),
         section_6_evidence(packet),
         section_7_statistics(packet),
@@ -136,20 +138,12 @@ def render_html(
 
 def write_html_report(
     packet: ResearchPacket,
-    data_dir: Path,
     *,
     prepare_voicebox_audio: bool | None = None,
 ) -> Path:
-    """Write an HTML report to data_dir/reports/ and return its path.
-
-    Args:
-        packet: Research packet from the pipeline.
-        data_dir: Root data directory (charts live at data_dir/charts/).
-
-    Returns:
-        Absolute path to the written HTML file.
-    """
-    cfg = Config.load(data_dir)
+    """Write an HTML report to data_dir/reports/ and return its path."""
+    cfg = load_active_config()
+    data_dir = cfg.data_dir
     if not cfg.stage_enabled("report") or not cfg.service_enabled("html_report"):
         raise RuntimeError("HTML report generation is disabled by config")
 
@@ -161,21 +155,21 @@ def write_html_report(
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     out_path = reports_dir / f"{slug}-{platform}-{ts}.html"
 
-    cfg_logs = _technology_logs_enabled(data_dir)
+    cfg_logs = _technology_logs_enabled()
     api_base = _voicebox_api_base()
     tts_profiles: list[dict[str, str]] = []
     selected_profile = None
     if cfg.technology_enabled("voicebox"):
         with service_log_sync("voicebox_profiles", packet=packet, cfg_logs_enabled=cfg_logs):
             tts_profiles = _fetch_voicebox_profiles(api_base)
-        _write_discovered_voicebox_profile_names(data_dir, tts_profiles)
+        _write_discovered_voicebox_profile_names(tts_profiles)
         selected_profile = _select_voicebox_profile(
             tts_profiles,
-            tts_profile_name=_voicebox_default_profile_name(data_dir),
+            tts_profile_name=_voicebox_default_profile_name(),
         )
     selected_profile_name = selected_profile["name"] if selected_profile is not None else None
     audio_enabled = (
-        _audio_report_enabled(data_dir)
+        _audio_report_enabled()
         if prepare_voicebox_audio is None
         else bool(prepare_voicebox_audio)
     )
@@ -194,7 +188,6 @@ def write_html_report(
     html_content = render_html(
         packet,
         charts_dir=data_dir / "charts",
-        data_dir=data_dir,
         tts_api_base=api_base,
         tts_profile_name=selected_profile_name,
         tts_profiles=tts_profiles,
@@ -229,7 +222,7 @@ def _build_body(packet: ResearchPacket, section_bodies: list[str]) -> str:
 
 def _voicebox_api_base() -> str:
     """Return the Voicebox base URL used by the HTML report runtime."""
-    return os.environ.get("SRP_VOICEBOX_API_BASE", _DEFAULT_VOICEBOX_API_BASE).rstrip("/")
+    return os.environ.get("SRP_VOICEBOX_API_BASE", _default_voicebox_api_base()).rstrip("/")
 
 
 def _display_path(path: Path) -> str:
@@ -248,19 +241,18 @@ def serve_report_command(report_path: Path) -> str:
     return f"srp serve-report --report {shlex.quote(_display_path(report_path))}"
 
 
-def _voicebox_default_profile_name(data_dir: Path | None = None) -> str:
+def _voicebox_default_profile_name() -> str:
     """Return the configured preferred Voicebox profile name."""
     try:
-        cfg = Config.load(data_dir or resolve_data_dir(None))
-        value = str(cfg.voicebox.get("default_profile_name", "")).strip()
+        value = str(load_active_config().voicebox.get("default_profile_name", "")).strip()
     except Exception:
         value = ""
     return value or "Jarvis"
 
 
-def _voicebox_profile_names_path(data_dir: Path) -> Path:
+def _voicebox_profile_names_path() -> Path:
     """Return the discovered Voicebox profile-name cache path."""
-    return data_dir / _VOICEBOX_PROFILE_NAMES_FILENAME
+    return load_active_config().data_dir / _VOICEBOX_PROFILE_NAMES_FILENAME
 
 
 def _normalize_voicebox_profile_name(name: str) -> str:
@@ -280,10 +272,7 @@ def _dedupe_voicebox_profile_name(raw_name: str, seen_names: set[str]) -> str:
     return candidate
 
 
-def _write_discovered_voicebox_profile_names(
-    data_dir: Path,
-    tts_profiles: list[dict[str, str]],
-) -> None:
+def _write_discovered_voicebox_profile_names(tts_profiles: list[dict[str, str]]) -> None:
     """Overwrite the cached Voicebox profile-name list when profiles were found."""
     if not tts_profiles:
         return
@@ -298,7 +287,7 @@ def _write_discovered_voicebox_profile_names(
         seen_names.add(normalized)
     if not profile_names:
         return
-    out_path = _voicebox_profile_names_path(data_dir)
+    out_path = _voicebox_profile_names_path()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(profile_names, ensure_ascii=True, indent=2), encoding="utf-8")
 
@@ -338,19 +327,19 @@ def _fetch_voicebox_profiles(api_base: str) -> list[dict[str, str]]:
     return profiles
 
 
-def _audio_report_enabled(data_dir: Path) -> bool:
-    """Return whether pre-rendered Voicebox audio is enabled for *data_dir*."""
+def _audio_report_enabled() -> bool:
+    """Return whether pre-rendered Voicebox audio is enabled."""
     try:
-        cfg = Config.load(data_dir)
+        cfg = load_active_config()
         return cfg.stage_enabled("report") and cfg.service_enabled("audio_report")
     except Exception:
         return True
 
 
-def _technology_logs_enabled(data_dir: Path) -> bool:
-    """Return whether technology lifecycle logs are enabled for *data_dir*."""
+def _technology_logs_enabled() -> bool:
+    """Return whether technology lifecycle logs are enabled."""
     try:
-        return bool(Config.load(data_dir).debug.get("technology_logs_enabled", False))
+        return bool(load_active_config().debug.get("technology_logs_enabled", False))
     except Exception:
         return False
 

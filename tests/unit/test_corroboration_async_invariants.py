@@ -153,22 +153,22 @@ def test_pipeline_does_not_use_run_coro():
 
 
 # ---------------------------------------------------------------------------
-# A-fix: YouTubeAdapter.enrich must be natively async (no nested asyncio.run)
+# A-fix: YouTubeClient.enrich must be natively async (no nested asyncio.run)
 # ---------------------------------------------------------------------------
 
 
 def test_youtube_adapter_enrich_is_coroutine_function():
-    """YouTubeAdapter.enrich() must be async so pipeline can await it directly."""
-    from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+    """YouTubeConnector.fetch_item_details() must be async so pipeline can await it directly."""
+    from social_research_probe.services.sourcing.youtube import YouTubeConnector
 
-    assert inspect.iscoroutinefunction(YouTubeAdapter.enrich)
+    assert inspect.iscoroutinefunction(YouTubeConnector.enrich)
 
 
-def test_youtube_adapter_does_not_use_run_coro():
-    """adapter.py must not call run_coro — it creates a nested event loop."""
-    from social_research_probe.platforms.youtube import adapter
+def test_youtube_connector_does_not_use_run_coro():
+    """connector.py must not call run_coro — it creates a nested event loop."""
+    from social_research_probe.platforms.youtube import connector
 
-    assert "run_coro" not in inspect.getsource(adapter)
+    assert "run_coro" not in inspect.getsource(connector)
 
 
 def test_corroborate_claims_cmd_does_not_use_run_coro():

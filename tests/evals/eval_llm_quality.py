@@ -10,7 +10,7 @@ Non-CI. Run nightly or on demand. Writes a timestamped JSON + Markdown
 report under ``.srp-eval/<service>/``.
 
 Usage:
-    python scripts/eval_llm_quality.py --service summary --runs 5 \\
+    python tests/evals/eval_llm_quality.py --service summary --runs 5 \\
         --judge-runner claude
 """
 
@@ -20,7 +20,7 @@ import argparse
 import json
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def _load_manifest(service_id: str) -> dict:
@@ -36,7 +36,6 @@ def _summarize_with_runner(runner_name: str, prompt: str) -> str:
     runner = get_runner(runner_name)
     result = runner.run(prompt)
     if isinstance(result, dict):
-        # Prefer a 'summary' field; fall back to the first string value.
         if "summary" in result:
             return str(result["summary"])
         for v in result.values():
@@ -49,7 +48,7 @@ def _summarize_with_runner(runner_name: str, prompt: str) -> str:
 def _grade_with_judge(runner_name: str, prompt: str):
     from social_research_probe.llm.registry import get_runner
 
-    from social_research_probe.evals.judge import parse_judge_reply
+    from tests.evals.judge import parse_judge_reply
 
     runner = get_runner(runner_name)
     raw = runner.run(prompt)
@@ -80,16 +79,9 @@ def main() -> int:
     from social_research_probe.pipeline.enrichment import _build_summary_prompt
 
     from social_research_probe.config import load_active_config
-    from social_research_probe.evals.harness import (
-        evaluate_sample,
-        run_reliability_check,
-    )
-    from social_research_probe.evals.judge import build_judge_prompt
-    from social_research_probe.evals.report import (
-        timestamp_now,
-        write_json,
-        write_markdown,
-    )
+    from tests.evals.harness import evaluate_sample, run_reliability_check
+    from tests.evals.judge import build_judge_prompt
+    from tests.evals.report import timestamp_now, write_json, write_markdown
 
     cfg = load_active_config()
     generator_runner = cfg.llm_runner
@@ -147,7 +139,11 @@ def main() -> int:
     print(f"wrote {json_path.relative_to(REPO_ROOT)}")
     print(f"wrote {md_path.relative_to(REPO_ROOT)}")
     print(f"PASSED: {report.passed}")
-    return 0 if report.passed else 1
+    return EXIT_SUCCESS if report.passed else EXIT_EVAL_FAILED
+
+
+EXIT_SUCCESS = 0
+EXIT_EVAL_FAILED = 1
 
 
 if __name__ == "__main__":

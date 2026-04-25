@@ -95,9 +95,12 @@ def _extension_for_content_type(content_type: str) -> str:
 
 
 def _get_server_url() -> str:
-    """Return Voicebox server URL from secrets.toml, falling back to localhost default."""
+    """Return Voicebox server URL from secrets.toml, falling back to config default."""
     url = read_runtime_secret("tts_voicebox_server_url")
-    return url or "http://127.0.0.1:17493"
+    if url:
+        return url
+    from social_research_probe.config import load_active_config
+    return load_active_config().voicebox["api_base"]
 
 
 def _get_default_profile() -> str:

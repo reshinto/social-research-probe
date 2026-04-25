@@ -5,8 +5,21 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
+from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
+
+
+class YtDlpFlag(StrEnum):
+    EXTRACT_AUDIO = "--extract-audio"
+    AUDIO_FORMAT = "--audio-format"
+    AUDIO_QUALITY = "--audio-quality"
+    OUTPUT = "--output"
+    NO_PLAYLIST = "--no-playlist"
+    QUIET = "--quiet"
+    NO_WARNINGS = "--no-warnings"
+    COOKIES = "--cookies"
+    COOKIES_FROM_BROWSER = "--cookies-from-browser"
 
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.utils.display.progress import log
@@ -38,24 +51,24 @@ def download_audio(url: str, tmpdir: str) -> Path | None:
     audio_path = os.path.join(tmpdir, "audio.%(ext)s")
     cmd = [
         "yt-dlp",
-        "--extract-audio",
-        "--audio-format",
+        YtDlpFlag.EXTRACT_AUDIO,
+        YtDlpFlag.AUDIO_FORMAT,
         "mp3",
-        "--audio-quality",
+        YtDlpFlag.AUDIO_QUALITY,
         "0",
-        "--output",
+        YtDlpFlag.OUTPUT,
         audio_path,
-        "--no-playlist",
-        "--quiet",
-        "--no-warnings",
+        YtDlpFlag.NO_PLAYLIST,
+        YtDlpFlag.QUIET,
+        YtDlpFlag.NO_WARNINGS,
     ]
     cookies_file = os.environ.get("SRP_YTDLP_COOKIES_FILE")
     if cookies_file:
-        cmd += ["--cookies", cookies_file]
+        cmd += [YtDlpFlag.COOKIES, cookies_file]
     else:
         browser = os.environ.get("SRP_YTDLP_BROWSER", "none")
         if browser and browser.lower() != "none":
-            cmd += ["--cookies-from-browser", browser]
+            cmd += [YtDlpFlag.COOKIES_FROM_BROWSER, browser]
     cmd.append(url)
     dl = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if dl.returncode != 0:

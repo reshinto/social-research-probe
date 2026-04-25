@@ -18,6 +18,14 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as subprocess_run
+from enum import StrEnum
+
+
+class GeminiCliFlag(StrEnum):
+    OUTPUT_FORMAT = "--output-format"
+    PROMPT = "--prompt"
+    GOOGLE_SEARCH = "--google-search"
+
 
 # ---------------------------------------------------------------------------
 # Gemini CLI google-search adapter (merged from llm/gemini_cli.py)
@@ -110,7 +118,7 @@ def _parse_search_stdout(stdout: str) -> GeminiSearchResult:
 
 def _run_search_sync(binary: str, query: str, timeout_s: float) -> str:
     """Invoke the Gemini CLI synchronously and return raw stdout."""
-    argv = [binary, "--google-search", "--output-format", "json", "--prompt", query]
+    argv = [binary, GeminiCliFlag.GOOGLE_SEARCH, GeminiCliFlag.OUTPUT_FORMAT, "json", GeminiCliFlag.PROMPT, query]
     result = subprocess_run(argv, timeout=int(timeout_s))
     return result.stdout
 
@@ -127,9 +135,7 @@ async def gemini_search(
     if not await gemini_cli_available():
         return None
     try:
-        stdout = await asyncio.to_thread(
-            _run_search_sync, _search_binary(), query, timeout_s
-        )
+        stdout = await asyncio.to_thread(_run_search_sync, _search_binary(), query, timeout_s)
         return _parse_search_stdout(stdout)
     except (AdapterError, json.JSONDecodeError, ValueError, OSError):
         return None
@@ -146,7 +152,7 @@ class GeminiRunner(JsonCliRunner):
 
     name: ClassVar[str] = "gemini"
     binary_name: ClassVar[str] = "gemini"
-    base_argv: ClassVar[tuple[str, ...]] = ("--output-format", "json")
+    base_argv: ClassVar[tuple[str, ...]] = (GeminiCliFlag.OUTPUT_FORMAT, "json")
     schema_flag: ClassVar[str | None] = None
     health_check_key: ClassVar[str] = "gemini"
     enabled_config_key: ClassVar[str] = "gemini"
@@ -155,7 +161,7 @@ class GeminiRunner(JsonCliRunner):
 
     def _prompt_args(self, prompt: str) -> list[str]:
         """Gemini uses --prompt for non-interactive execution."""
-        return ["--prompt", prompt]
+        return [GeminiCliFlag.PROMPT, prompt]
 
     def _stdin_input(self, prompt: str) -> str | None:
         """Gemini prompt mode should not also receive stdin input."""
@@ -166,14 +172,10 @@ class GeminiRunner(JsonCliRunner):
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
-            raise AdapterError(
-                f"gemini returned non-JSON envelope: {stdout[:200]!r}"
-            ) from exc
+            raise AdapterError(f"gemini returned non-JSON envelope: {stdout[:200]!r}") from exc
 
         inner_text: str = envelope.get("response", "")
-        stripped = re.sub(
-            r"^```(?:json)?\s*|\s*```$", "", inner_text.strip(), flags=re.DOTALL
-        )
+        stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", inner_text.strip(), flags=re.DOTALL)
         try:
             return json.loads(stripped)
         except json.JSONDecodeError as exc:
@@ -192,13 +194,11 @@ class GeminiRunner(JsonCliRunner):
             self._binary(),
             *self.base_argv,
             *self._extra_flags(),
-            "--prompt",
+            GeminiCliFlag.PROMPT,
             prompt,
         ]
         try:
-            result = await asyncio.to_thread(
-                subprocess_run, argv, timeout=int(timeout_s)
-            )
+            result = await asyncio.to_thread(subprocess_run, argv, timeout=int(timeout_s))
             envelope = json.loads(result.stdout)
         except (AdapterError, json.JSONDecodeError, OSError):
             return None

@@ -61,6 +61,7 @@ def log_with_time(msg: str):
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 operation_msg = format_msg(*args, **kwargs)
+                log(f"{operation_msg} starting")
                 start = time.time()
                 try:
                     result = await func(*args, **kwargs)
@@ -77,6 +78,7 @@ def log_with_time(msg: str):
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             operation_msg = format_msg(*args, **kwargs)
+            log(f"{operation_msg} starting")
             start = time.time()
             try:
                 result = func(*args, **kwargs)

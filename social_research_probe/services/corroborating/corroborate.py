@@ -17,10 +17,10 @@ class CorroborationService(BaseService):
     service_name: ClassVar[str] = "youtube.corroborating.corroborate"
     enabled_config_key: ClassVar[str] = "services.youtube.corroborating.corroborate"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Corroborate one ScoredItem via its title as the claim text."""
         from social_research_probe.services.corroborating.host import corroborate_claim
         from social_research_probe.technologies.validation.claim_extractor import Claim

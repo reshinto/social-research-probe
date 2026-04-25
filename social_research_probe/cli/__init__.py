@@ -1,80 +1,96 @@
-"""Command-line interface entry point.
+"""Command-line entry point for the Social Research Probe CLI.
 
-Provides an argparse-based shell that parses CLI input and dispatches
-execution to subcommand handlers.
+This module owns the top-level CLI execution flow for the ``srp`` command. It
+builds the root parser, parses user-provided arguments, handles global commands
+such as ``--version``, resolves runtime configuration paths, and dispatches
+validated arguments to the appropriate subcommand handler.
+
+The goal is to keep process-level concerns here while leaving parser definition
+and command-specific behavior to dedicated modules.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 
 from social_research_probe.config import resolve_data_dir
 from social_research_probe.utils.cli import _id_selector as _id_selector
 from social_research_probe.utils.core.errors import SrpError
-from social_research_probe.utils.display.cli_output import (
-    _emit as _emit,
-)
-from social_research_probe.utils.display.cli_output import (
-    _to_markdown as _to_markdown,
-)
-from social_research_probe.utils.display.cli_output import (
-    _to_text as _to_text,
-)
 
 from .handlers import handlers_factory
-from .parsers import _global_parser
+from .parsers import global_parser
+
+EXIT_SUCCESS = 0
+EXIT_INVALID_USAGE = 2
 
 
-def _dispatch(args: argparse.Namespace) -> int:
-    """Dispatch parsed CLI arguments to the appropriate handler.
-
-    Args:
-        args: Parsed CLI arguments.
-
-    Returns:
-        Exit code from the selected handler.
-    """
-    # Override the data directory used for config, cache, and output.
-    # Defaults to .skill-data/ in the current directory, or ~/.social-research-probe/
-    data_dir = resolve_data_dir(args.data_dir)
-    os.environ["SRP_DATA_DIR"] = str(data_dir)
-
-    handler = handlers_factory().get(args.command)
-    if handler is None:
-        return 2
-    return handler(args, data_dir)
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Run the command-line interface.
-
-    Parses arguments and dispatches execution to subcommand handlers.
-
-    Example:
-        srp research youtube
+def _handle_version(args: argparse.Namespace) -> bool:
+    """Print package version information when requested.
 
     Args:
-        argv: Optional argument list. Defaults to sys.argv.
+        args: Parsed CLI arguments that may include the version flag.
 
     Returns:
-        Exit status code.
+        ``True`` if version information was printed and normal command
+        execution should stop; otherwise ``False``.
 
-    Raises:
-        SrpError: Raised by handlers and converted to exit codes.
     """
     import social_research_probe as _srp_pkg
     from social_research_probe.commands import SpecialCommand
 
-    parser = _global_parser()
-    args = parser.parse_args(argv)
     if getattr(args, SpecialCommand.VERSION, False):
         print(f"srp {_srp_pkg.get_version()}  ({_srp_pkg.__file__})")
-        return 0
+        return True
+    return False
+
+
+def _dispatch(args: argparse.Namespace) -> int:
+    """Route parsed arguments to the selected command handler.
+
+    This function prepares shared runtime state, such as the resolved data
+    directory, then looks up and invokes the handler for ``args.command``.
+
+    Args:
+        args: Parsed CLI arguments containing the selected command and any
+            command-specific options.
+
+    Returns:
+        Process exit code returned by the selected handler, or
+        ``EXIT_INVALID_USAGE`` when no matching handler exists.
+    """
+    resolve_data_dir(args.data_dir)
+    handler = handlers_factory().get(args.command)
+    if handler is None:
+        return EXIT_INVALID_USAGE
+    return handler(args)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the Social Research Probe command-line interface.
+
+    Builds the parser, parses command-line input, handles global flags, validates
+    that a command was selected, and dispatches execution to the matching
+    subcommand handler. Application-level errors are rendered to stderr and
+    converted into process exit codes.
+
+    Args:
+        argv: Optional argument list to parse. When omitted, argparse reads from
+            ``sys.argv``.
+
+    Returns:
+        Process exit code suitable for ``sys.exit``.
+
+    Raises:
+        SrpError: Handled internally when raised by command handlers.
+    """
+    parser = global_parser()
+    args = parser.parse_args(argv)
+    if _handle_version(args):
+        return EXIT_SUCCESS
     if args.command is None:
         parser.print_help(sys.stderr)
-        return 2
+        return EXIT_INVALID_USAGE
     try:
         return _dispatch(args)
     except SrpError as exc:

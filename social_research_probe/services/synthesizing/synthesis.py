@@ -17,10 +17,10 @@ class SynthesisService(BaseService):
     service_name: ClassVar[str] = "youtube.synthesizing.synthesis"
     enabled_config_key: ClassVar[str] = "services.youtube.synthesizing.synthesis"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Generate synthesis from the research context in data."""
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
         from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt

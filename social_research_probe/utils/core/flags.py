@@ -3,23 +3,19 @@
 from __future__ import annotations
 
 
-def stage_flag(cfg: object, name: str, *, default: bool) -> bool:
+def stage_flag(name: str, *, default: bool) -> bool:
     """Check whether a pipeline stage is enabled."""
-    fn = getattr(cfg, "stage_enabled", None)
-    if fn is None:
-        return default
+    from social_research_probe.config import load_active_config
     try:
-        return bool(fn(name))
+        return load_active_config().stage_enabled(name)
     except Exception:
         return default
 
 
-def service_flag(cfg: object, name: str, *, default: bool) -> bool:
+def service_flag(name: str, *, default: bool) -> bool:
     """Check whether a service is enabled."""
-    fn = getattr(cfg, "service_enabled", None)
-    if fn is None:
-        return default
+    from social_research_probe.config import load_active_config
     try:
-        return bool(fn(name))
+        return load_active_config().service_enabled(name)
     except Exception:
         return default

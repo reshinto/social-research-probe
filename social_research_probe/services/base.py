@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
-from social_research_probe.config import Config
 from social_research_probe.technologies.base import BaseTechnology
 
 TInput = TypeVar("TInput")
@@ -45,23 +44,19 @@ class BaseService(ABC, Generic[TInput, TOutput]):
     async def execute_batch(
         self,
         inputs: list[TInput],
-        *,
-        cfg: Config,
     ) -> list[ServiceResult]:
         """Run all inputs concurrently; return one ServiceResult per input."""
         results = await asyncio.gather(
-            *(self.execute_one(item, cfg=cfg) for item in inputs),
+            *(self.execute_one(item) for item in inputs),
         )
         return list(results)
 
     async def execute_one(
         self,
         data: TInput,
-        *,
-        cfg: Config,
     ) -> ServiceResult:
         """Run all technologies for one input; isolate per-technology errors."""
-        techs = self._get_technologies(cfg)
+        techs = self._get_technologies()
 
         async def _run(tech: BaseTechnology) -> TechResult:
             tech.caller_service = self.service_name
@@ -90,5 +85,5 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         )
 
     @abstractmethod
-    def _get_technologies(self, cfg: Config) -> list[BaseTechnology]:
+    def _get_technologies(self) -> list[BaseTechnology]:
         """Return technology instances to run for one input."""

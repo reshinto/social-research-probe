@@ -16,6 +16,15 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
+from enum import StrEnum
+
+
+class ClaudeCliFlag(StrEnum):
+    PRINT = "--print"
+    OUTPUT_FORMAT = "--output-format"
+    JSON_SCHEMA = "--json-schema"
+    ALLOWED_TOOLS = "--allowed-tools"
+
 
 _URL_RE = re.compile(r"https?://[^\s)\]]+")
 
@@ -53,8 +62,8 @@ class ClaudeRunner(JsonCliRunner):
 
     name: ClassVar[str] = "claude"
     binary_name: ClassVar[str] = "claude"
-    base_argv: ClassVar[tuple[str, ...]] = ("--print", "--output-format", "json")
-    schema_flag: ClassVar[str | None] = "--json-schema"
+    base_argv: ClassVar[tuple[str, ...]] = (ClaudeCliFlag.PRINT, ClaudeCliFlag.OUTPUT_FORMAT, "json")
+    schema_flag: ClassVar[str | None] = ClaudeCliFlag.JSON_SCHEMA
     health_check_key: ClassVar[str] = "claude"
     enabled_config_key: ClassVar[str] = "claude"
     supports_agentic_search: ClassVar[bool] = True
@@ -80,7 +89,7 @@ class ClaudeRunner(JsonCliRunner):
             self._binary(),
             *self.base_argv,
             *self._extra_flags(),
-            "--allowed-tools",
+            ClaudeCliFlag.ALLOWED_TOOLS,
             "web_search",
             prompt,
         ]

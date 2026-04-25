@@ -1,11 +1,15 @@
-"""Platform adapter contract. All per-platform logic lives in subpackages."""
+"""Platform base classes: client contracts, pipeline stages, and domain types."""
 
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from social_research_probe.platforms.state import PipelineState
 
 from social_research_probe.utils.core.types import MetricMap
 
@@ -35,7 +39,7 @@ class RawItem:
 
 
 @dataclass(frozen=True)
-class SignalSet:
+class EngagementMetrics:
     """Derived numeric signals computed from one or more raw items."""
 
     views: int | None
@@ -49,53 +53,69 @@ class SignalSet:
     raw: MetricMap = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
-class TrustHints:
-    """Non-engagement trust indicators extracted from an item or channel."""
-
-    account_age_days: int | None
-    verified: bool | None
-    subscriber_count: int | None
-    upload_cadence_days: float | None
-    citation_markers: list[str]
-
-
-class PlatformAdapter(ABC):
-    """Contract that every content-source adapter must implement."""
+class PlatformClient(ABC):
+    """Shared contract for every platform regardless of access type."""
 
     name: ClassVar[str]
+
+    @abstractmethod
+    def health_check(self) -> bool: ...
+
+
+class SearchClient(PlatformClient):
+    """API-based platform: discovers content by search query."""
+
     default_limits: ClassVar[FetchLimits]
 
     @abstractmethod
-    def health_check(self) -> bool:
-        """Return True when the adapter is configured and callable."""
-        ...
+    def find_by_topic(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...
 
     @abstractmethod
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
-        """Fetch raw items for a query topic subject to the provided limits."""
-        ...
+    async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]: ...
+
+
+class FetchClient(PlatformClient):
+    """URL-based platform: pulls content from a known URL."""
 
     @abstractmethod
-    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
-        """Hydrate raw items with additional metrics or channel metadata."""
-        ...
+    async def fetch(self, url: str) -> list[RawItem]: ...
+
+
+class BaseStage(ABC):
+    """A single named stage in a research pipeline."""
 
     @abstractmethod
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
-        """Convert raw items into the numeric signals used by scoring and stats."""
-        ...
+    async def execute(self, state: PipelineState) -> PipelineState: ...
 
     @abstractmethod
-    def trust_hints(self, item: RawItem) -> TrustHints:
-        """Extract trust-oriented metadata for one item."""
-        ...
+    def stage_name(self) -> str: ...
+
+    def _is_enabled(self, state: PipelineState) -> bool:
+        from social_research_probe.config import load_active_config
+        return load_active_config().stage_enabled(self.stage_name())
+
+
+class BaseResearchPlatform(ABC):
+    """Orchestrates an ordered list of stages for one platform type."""
 
     @abstractmethod
-    def url_normalize(self, url: str) -> str:
-        """Return a canonical URL string for deduplication and display."""
-        ...
+    def stages(self) -> list[BaseStage]: ...
 
-    def fetch_text_for_claim_extraction(self, item: RawItem) -> str | None:
-        """Optionally provide claim-extraction text for one item."""
-        return None
+    @abstractmethod
+    async def run(self, state: PipelineState) -> PipelineState: ...
+
+
+async def run_stages(
+    platform: BaseResearchPlatform, state: PipelineState
+) -> PipelineState:
+    """Execute all enabled stages of a platform pipeline in order."""
+    start = time.monotonic()
+    name = type(platform).__name__
+    from social_research_probe.utils.display.progress import log
+
+    log(f"[PLATFORM][{name}] starting")
+    for stage in platform.stages():
+        if stage._is_enabled(state):
+            state = await stage.execute(state)
+    log(f"[PLATFORM][{name}] done in {time.monotonic() - start:.2f}s")
+    return state

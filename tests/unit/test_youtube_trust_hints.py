@@ -1,10 +1,10 @@
-"""Tests for platforms/youtube/trust_hints.py."""
+"""Tests for account_age_days and citation_markers utilities."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from social_research_probe.platforms.youtube.trust_hints import account_age_days, citation_markers
+from social_research_probe.utils.core.strings import account_age_days, citation_markers
 
 
 def test_account_age_days_none_input():

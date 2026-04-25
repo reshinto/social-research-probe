@@ -11,7 +11,7 @@ from the known routing table in source.
 | jaccard_divergence | disjoint sets | 1.0 | no overlap |
 | jaccard_divergence | {a,b} vs {a,c} | 1 - 1/3 | formula |
 | explain | StatResult(pearson_r, 0.95) | contains "strong" "positive" | rules in explain.py:78-93 |
-| summarize_signals | 2 SignalSets | contains median view count | aggregator |
+| summarize_engagement_metrics | 2 EngagementMetricss | contains median view count | aggregator |
 """
 
 from __future__ import annotations
@@ -21,10 +21,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from social_research_probe.stats.base import StatResult
 from social_research_probe.synthesize.divergence import jaccard_divergence
-from social_research_probe.synthesize.evidence import summarize_signals
+from social_research_probe.synthesize.evidence import summarize_engagement_metrics
 from social_research_probe.synthesize.explain import explain
 
-from social_research_probe.platforms.base import SignalSet
+from social_research_probe.platforms.base import EngagementMetrics
 
 # ---------------------------------------------------------------------------
 # jaccard_divergence
@@ -78,14 +78,14 @@ def test_explain_unknown_stat_name_returns_caption_only():
 
 
 # ---------------------------------------------------------------------------
-# summarize_signals — compact metric aggregator
+# summarize_engagement_metrics — compact metric aggregator
 # ---------------------------------------------------------------------------
 
 
-def test_summarize_signals_includes_median_views():
+def test_summarize_engagement_metrics_includes_median_views():
     now = datetime.now(UTC)
-    signals = [
-        SignalSet(
+    engagement_metrics = [
+        EngagementMetrics(
             views=1000,
             likes=50,
             comments=10,
@@ -96,7 +96,7 @@ def test_summarize_signals_includes_median_views():
             cross_channel_repetition=0.0,
             raw={},
         ),
-        SignalSet(
+        EngagementMetrics(
             views=3000,
             likes=200,
             comments=30,
@@ -108,15 +108,15 @@ def test_summarize_signals_includes_median_views():
             raw={},
         ),
     ]
-    summary = summarize_signals(signals)
+    summary = summarize_engagement_metrics(engagement_metrics)
     # The aggregator reports total views = 1000 + 3000 = 4000 (formatted
     # with commas as "4,000") and mean view velocity = (200 + 300) / 2 = 250.
     assert "4,000" in summary
     assert "250" in summary
 
 
-def test_summarize_signals_empty_list_returns_plausible_placeholder():
+def test_summarize_engagement_metrics_empty_list_returns_plausible_placeholder():
     """Empty signal list must not crash; returns a human-readable placeholder."""
-    result = summarize_signals([])
+    result = summarize_engagement_metrics([])
     assert isinstance(result, str)
     assert len(result) > 0

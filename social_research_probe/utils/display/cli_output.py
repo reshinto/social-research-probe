@@ -6,7 +6,7 @@ import json
 import sys
 
 
-def _emit(data: object, fmt: str) -> None:
+def emit(data: object, fmt: str) -> None:
     """Write *data* to stdout in the requested format."""
     if fmt == "json":
         json.dump(data, sys.stdout)

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from social_research_probe import __version__
 from social_research_probe.commands.config import read_secret
-from social_research_probe.config import resolve_data_dir
 
 # Sent as User-Agent on all outbound corroboration HTTP requests so API
 # providers see an identifiable client rather than the default
@@ -21,4 +20,4 @@ HTTP_USER_AGENT = (
 
 def read_runtime_secret(name: str) -> str | None:
     """Return a secret from env or the active secrets file."""
-    return read_secret(resolve_data_dir(None), name)
+    return read_secret(name)

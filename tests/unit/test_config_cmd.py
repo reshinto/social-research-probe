@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.commands import DslCommand
+from social_research_probe.commands import ResearchCommand
 from social_research_probe.commands.config import (
     SECRET_FILENAME,
     _format_toml_value,
@@ -66,7 +66,7 @@ def test_show_config_masks_secrets(tmp_data_dir: Path):
 def test_check_secrets_structure(tmp_data_dir: Path):
     result = check_secrets(
         tmp_data_dir,
-        needed_for=DslCommand.RESEARCH,
+        needed_for=ResearchCommand.RESEARCH,
         platform="youtube",
         corroboration=None,
     )
@@ -79,7 +79,7 @@ def test_check_secrets_detects_present(tmp_data_dir: Path):
     write_secret(tmp_data_dir, "youtube_api_key", "x")
     result = check_secrets(
         tmp_data_dir,
-        needed_for=DslCommand.RESEARCH,
+        needed_for=ResearchCommand.RESEARCH,
         platform="youtube",
         corroboration=None,
     )
@@ -185,7 +185,7 @@ def test_check_secrets_corroboration_branch(tmp_data_dir: Path):
 
 
 def test_check_secrets_no_needed_for_skips_platform(tmp_data_dir: Path):
-    """Branch 153->155: needed_for != DslCommand.RESEARCH skips platform secrets."""
+    """Branch 153->155: needed_for != ResearchCommand.RESEARCH skips platform secrets."""
     result = check_secrets(
         tmp_data_dir,
         needed_for="something-else",

@@ -48,25 +48,25 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.evals.harness import (
+from tests.evals.harness import (
     SampleOutcome,
     apply_gates,
     default_gates,
     evaluate_sample,
     run_reliability_check,
 )
-from social_research_probe.evals.judge import (
+from tests.evals.judge import (
     JudgeScores,
     build_judge_prompt,
     parse_judge_reply,
 )
-from social_research_probe.evals.metrics import (
+from tests.evals.metrics import (
     aggregate,
     coverage,
     hallucinated_names,
     length_compliance,
 )
-from social_research_probe.evals.report import (
+from tests.evals.report import (
     timestamp_now,
     write_json,
     write_markdown,

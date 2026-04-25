@@ -3,7 +3,7 @@
 The pipeline previously hard-coded ``warnings=[]``, which always rendered as
 "_(none)_" even when results had real quality concerns (low channel
 diversity, no corroboration, low absolute scores, stale content). This
-module inspects the fetched items, derived signals, and scored top-N to
+module inspects the fetched items, derived engagement_metrics, and scored top-N to
 return a list of human-readable warnings the user should consider before
 acting on the report.
 """
@@ -13,7 +13,7 @@ from __future__ import annotations
 import statistics
 from datetime import UTC, datetime
 
-from social_research_probe.platforms.base import RawItem, SignalSet
+from social_research_probe.platforms.base import RawItem, EngagementMetrics
 from social_research_probe.utils.core.types import ScoredItem
 
 _LOW_CHANNEL_THRESHOLD = 3
@@ -24,7 +24,7 @@ _SPARSE_FETCH_THRESHOLD = 3
 
 def detect(
     items: list[RawItem],
-    signals: list[SignalSet],
+    engagement_metrics: list[EngagementMetrics],
     top_n: list[ScoredItem],
     now: datetime | None = None,
     corroboration_ran: bool = False,
@@ -42,7 +42,7 @@ def detect(
     _check_fetch_volume(items, notes)
     _check_channel_diversity(items, notes)
     _check_top_n_quality(top_n, notes)
-    _check_freshness(signals, reference_now, notes)
+    _check_freshness(engagement_metrics, reference_now, notes)
     if not corroboration_ran:
         suffix = f" ({corroboration_skip_reason})" if corroboration_skip_reason else ""
         notes.append(f"source corroboration was not run{suffix}; trust scores are heuristic only")
@@ -76,8 +76,8 @@ def _check_top_n_quality(top_n: list[ScoredItem], notes: list[str]) -> None:
         notes.append(f"all top-N items scored below {_LOW_SCORE_THRESHOLD}")
 
 
-def _check_freshness(signals: list[SignalSet], now: datetime, notes: list[str]) -> None:
-    ages = [max(0.0, (now - s.upload_date).days) for s in signals if s.upload_date]
+def _check_freshness(engagement_metrics: list[EngagementMetrics], now: datetime, notes: list[str]) -> None:
+    ages = [max(0.0, (now - s.upload_date).days) for s in engagement_metrics if s.upload_date]
     if not ages:
         return
     median_age = statistics.median(ages)

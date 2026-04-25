@@ -352,7 +352,7 @@ class SynthesisContext(TypedDict):
     coverage: Coverage
     items: list[SynthesisItem]
     source_validation_summary: SourceValidationSummary
-    platform_signals_summary: str
+    platform_engagement_summary: str
     evidence_summary: str
     stats_highlights: list[str]
     chart_takeaways: list[str]
@@ -367,7 +367,7 @@ class ResearchPacket(TypedDict, total=False):
     purpose_set: list[str]
     items_top_n: list[ScoredItem]
     source_validation_summary: SourceValidationSummary
-    platform_signals_summary: str
+    platform_engagement_summary: str
     evidence_summary: str
     stats_summary: StatsSummary
     chart_captions: list[str]

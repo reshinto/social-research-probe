@@ -1,6 +1,6 @@
 """Evidence aggregator — narrates what the fetched items collectively show.
 
-``run_research`` hands raw items, computed signals, and the scored top-N list
+``run_research`` hands raw items, computed engagement_metrics, and the scored top-N list
 to ``summarize()`` and receives a single human-readable sentence that
 captures channel diversity, freshness, engagement, and source-class mix.
 The pipeline stores this as ``packet["evidence_summary"]`` so downstream
@@ -13,21 +13,21 @@ from __future__ import annotations
 import statistics
 from datetime import UTC, datetime
 
-from social_research_probe.platforms.base import RawItem, SignalSet
+from social_research_probe.platforms.base import RawItem, EngagementMetrics
 from social_research_probe.utils.core.types import ScoredItem
 
 
 def summarize(
     items: list[RawItem],
-    signals: list[SignalSet],
+    engagement_metrics: list[EngagementMetrics],
     top_n: list[ScoredItem],
     now: datetime | None = None,
 ) -> str:
-    """Build an evidence sentence from fetched items, signals, and scored top-N.
+    """Build an evidence sentence from fetched items, engagement_metrics, and scored top-N.
 
     Args:
         items: All raw items returned by the adapter.
-        signals: Parallel list of derived signals (one per item).
+        engagement_metrics: Parallel list of derived engagement_metrics (one per item).
         top_n: The scored top-N dicts produced by ``_score_item``.
         now: Override for "now" (used by tests to make ages deterministic).
 
@@ -47,15 +47,15 @@ def summarize(
     reference_now = now or datetime.now(UTC)
     parts: list[str] = [f"{len(items)} items from {_unique_channels(items)} channels"]
 
-    median_age = _median_age_days(signals, reference_now)
+    median_age = _median_age_days(engagement_metrics, reference_now)
     if median_age is not None:
         parts.append(f"median upload age {median_age:.0f}d")
 
-    velocity = _mean_velocity(signals)
+    velocity = _mean_velocity(engagement_metrics)
     if velocity is not None:
         parts.append(f"avg view velocity {velocity:,.0f}/day")
 
-    engagement = _mean_engagement(signals)
+    engagement = _mean_engagement(engagement_metrics)
     if engagement is not None:
         parts.append(f"avg engagement {engagement:.3f}")
 
@@ -66,26 +66,26 @@ def summarize(
     return "; ".join(parts)
 
 
-def summarize_signals(signals: list[SignalSet]) -> str:
-    """Build a compact metric summary of platform signals.
+def summarize_engagement_metrics(engagement_metrics: list[EngagementMetrics]) -> str:
+    """Build a compact metric summary of platform engagement_metrics.
 
-    Used for ``packet["platform_signals_summary"]``. Focuses on raw numbers
+    Used for ``packet["platform_engagement_summary"]``. Focuses on raw numbers
     (counts, velocities, engagement) rather than the narrative view from
     :func:`summarize`.
     """
-    if not signals:
-        return "no signals"
+    if not engagement_metrics:
+        return "no data"
 
-    parts: list[str] = [f"{len(signals)} items"]
-    total_views = sum(s.views or 0 for s in signals)
+    parts: list[str] = [f"{len(engagement_metrics)} items"]
+    total_views = sum(s.views or 0 for s in engagement_metrics)
     parts.append(f"total views: {total_views:,}")
 
-    velocity = _mean_velocity(signals)
+    velocity = _mean_velocity(engagement_metrics)
     if velocity is not None:
-        max_velocity = max(s.view_velocity or 0.0 for s in signals)
+        max_velocity = max(s.view_velocity or 0.0 for s in engagement_metrics)
         parts.append(f"view velocity mean={velocity:,.0f}/day max={max_velocity:,.0f}/day")
 
-    engagement = _mean_engagement(signals)
+    engagement = _mean_engagement(engagement_metrics)
     if engagement is not None:
         parts.append(f"engagement ratio mean={engagement:.3f}")
 
@@ -96,18 +96,18 @@ def _unique_channels(items: list[RawItem]) -> int:
     return len({it.author_name for it in items if it.author_name})
 
 
-def _median_age_days(signals: list[SignalSet], now: datetime) -> float | None:
-    ages = [max(0.0, (now - s.upload_date).days) for s in signals if s.upload_date]
+def _median_age_days(engagement_metrics: list[EngagementMetrics], now: datetime) -> float | None:
+    ages = [max(0.0, (now - s.upload_date).days) for s in engagement_metrics if s.upload_date]
     return statistics.median(ages) if ages else None
 
 
-def _mean_velocity(signals: list[SignalSet]) -> float | None:
-    values = [s.view_velocity for s in signals if s.view_velocity is not None]
+def _mean_velocity(engagement_metrics: list[EngagementMetrics]) -> float | None:
+    values = [s.view_velocity for s in engagement_metrics if s.view_velocity is not None]
     return statistics.mean(values) if values else None
 
 
-def _mean_engagement(signals: list[SignalSet]) -> float | None:
-    values = [s.engagement_ratio for s in signals if s.engagement_ratio is not None]
+def _mean_engagement(engagement_metrics: list[EngagementMetrics]) -> float | None:
+    values = [s.engagement_ratio for s in engagement_metrics if s.engagement_ratio is not None]
     return statistics.mean(values) if values else None
 
 

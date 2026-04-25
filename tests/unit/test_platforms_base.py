@@ -1,4 +1,4 @@
-"""Platform adapter dataclasses + ABC contract."""
+"""Tests for platforms/base.py contracts and domain types."""
 
 from __future__ import annotations
 
@@ -8,10 +8,11 @@ import pytest
 
 from social_research_probe.platforms.base import (
     FetchLimits,
-    PlatformAdapter,
+    FetchClient,
+    PlatformClient,
     RawItem,
-    SignalSet,
-    TrustHints,
+    SearchClient,
+    EngagementMetrics,
 )
 
 
@@ -44,7 +45,7 @@ def test_raw_item_required_fields():
 
 
 def test_signal_set_allows_none_metrics():
-    sig = SignalSet(
+    sig = EngagementMetrics(
         views=None,
         likes=None,
         comments=None,
@@ -58,34 +59,23 @@ def test_signal_set_allows_none_metrics():
     assert sig.views is None
 
 
-def test_trust_hints_defaults_allow_nones():
-    hints = TrustHints(
-        account_age_days=None,
-        verified=None,
-        subscriber_count=None,
-        upload_cadence_days=None,
-        citation_markers=[],
-    )
-    assert hints.citation_markers == []
-
-
-def test_adapter_is_abstract():
+def test_platform_client_is_abstract():
     with pytest.raises(TypeError):
-        PlatformAdapter()
+        PlatformClient()  # type: ignore[abstract]
 
 
-def test_fetch_text_for_claim_extraction_returns_none():
-    """Line 75: default fetch_text_for_claim_extraction returns None."""
-    from datetime import datetime
+def test_search_client_is_abstract():
+    with pytest.raises(TypeError):
+        SearchClient()  # type: ignore[abstract]
 
-    from social_research_probe.platforms.base import (
-        FetchLimits,
-        PlatformAdapter,
-        RawItem,
-        TrustHints,
-    )
 
-    class ConcreteAdapter(PlatformAdapter):
+def test_fetch_client_is_abstract():
+    with pytest.raises(TypeError):
+        FetchClient()  # type: ignore[abstract]
+
+
+def test_search_client_is_platform_client():
+    class ConcreteSearch(SearchClient):
         name = "test"
         default_limits = FetchLimits()
 
@@ -98,27 +88,17 @@ def test_fetch_text_for_claim_extraction_returns_none():
         async def enrich(self, items):
             return items
 
-        def to_signals(self, items):
+    assert issubclass(ConcreteSearch, PlatformClient)
+
+
+def test_fetch_client_is_platform_client():
+    class ConcreteFetch(FetchClient):
+        name = "test"
+
+        def health_check(self) -> bool:
+            return True
+
+        async def fetch(self, url):
             return []
 
-        def trust_hints(self, item):
-            return TrustHints(None, None, None, None, [])
-
-        def url_normalize(self, url):
-            return url
-
-    adapter = ConcreteAdapter()
-    item = RawItem(
-        id="x",
-        url="https://example.com",
-        title="T",
-        author_id="a",
-        author_name="Author",
-        published_at=datetime.now(UTC),
-        metrics={},
-        text_excerpt=None,
-        thumbnail=None,
-        extras={},
-    )
-    result = adapter.fetch_text_for_claim_extraction(item)
-    assert result is None
+    assert issubclass(ConcreteFetch, PlatformClient)

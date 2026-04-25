@@ -20,10 +20,10 @@ class TranscriptService(BaseService):
     service_name: ClassVar[str] = "youtube.enriching.transcript"
     enabled_config_key: ClassVar[str] = "services.youtube.enriching.transcript"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return [YoutubeTranscriptFetch()]
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Fetch transcript for one ScoredItem; try captions then Whisper fallback."""
         url = data.get("url", "") if isinstance(data, dict) else str(data)
 

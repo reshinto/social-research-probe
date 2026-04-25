@@ -17,10 +17,10 @@ class StatisticsService(BaseService):
     service_name: ClassVar[str] = "youtube.analyzing.statistics"
     enabled_config_key: ClassVar[str] = "services.youtube.analyzing.statistics"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Run stats analysis on scored_items from data dict."""
         import asyncio
 

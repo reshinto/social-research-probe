@@ -117,3 +117,20 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     }
     set_json(cache, cache_key, result)
     return result
+
+
+async def corroborate_item(item: dict, backend_names: list[str]) -> dict:
+    """Corroborate a research item using its title as the claim text.
+
+    Wraps Claim construction so callers never need to import from technologies.
+    """
+    from social_research_probe.technologies.validation.claim_extractor import Claim
+
+    title = item.get("title", "")
+    url = item.get("url")
+    claim = Claim(text=title, source_text=title, index=0, source_url=url)
+    try:
+        corr = await corroborate_claim(claim, backend_names)
+        return {**item, "corroboration": corr}
+    except Exception:
+        return dict(item)

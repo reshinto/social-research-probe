@@ -23,16 +23,18 @@ def structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
     return [preferred, *[name for name in candidates if name != preferred]]
 
 
-def run_required_synthesis(packet: dict, cfg: object) -> dict | None:
+def run_required_synthesis(packet: dict) -> dict | None:
     """Run LLM synthesis on packet if enabled; return result or None."""
-    if not stage_flag(cfg, "synthesis", default=True):
+    if not stage_flag("synthesis", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return None
-    if not service_flag(cfg, "llm", default=True):
+    if not service_flag("llm", default=True):
         log(
             "[srp] synthesis: disabled (services.llm = false). Enable the LLM service to allow synthesis."
         )
         return None
+    from social_research_probe.config import load_active_config
+    cfg = load_active_config()
     preferred = cfg.default_structured_runner
     if preferred == "none":
         log(
@@ -44,7 +46,7 @@ def run_required_synthesis(packet: dict, cfg: object) -> dict | None:
     failures: list[str] = []
     runners = structured_runner_order(preferred)
     for i, runner_name in enumerate(runners, start=1):
-        if hasattr(cfg, "technology_enabled") and not cfg.technology_enabled(runner_name):
+        if not cfg.technology_enabled(runner_name):
             log(f"[srp] synthesis: runner={runner_name} outcome=disabled_by_config")
             failures.append(f"{runner_name}: disabled by technologies.{runner_name}")
             continue
@@ -76,31 +78,32 @@ def run_required_synthesis(packet: dict, cfg: object) -> dict | None:
     return None
 
 
-def attach_synthesis(packet: dict, cfg: object) -> None:
+def attach_synthesis(packet: dict) -> None:
     """Attach synthesis results to packet (single or multi-packet)."""
     children = packet.get("multi")
     if isinstance(children, list):
         for child in children:
-            synthesis = run_required_synthesis(child, cfg)
+            synthesis = run_required_synthesis(child)
             if synthesis is not None:
                 child.update(synthesis)
         return
-    synthesis = run_required_synthesis(packet, cfg)
+    synthesis = run_required_synthesis(packet)
     if synthesis is not None:
         packet.update(synthesis)
 
 
-def log_synthesis_runner_status(cfg: object) -> None:
+def log_synthesis_runner_status() -> None:
     """Log synthesis runner availability status."""
-    if not stage_flag(cfg, "synthesis", default=True):
+    if not stage_flag("synthesis", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return
-    if not service_flag(cfg, "llm", default=True):
+    if not service_flag("llm", default=True):
         log(
             "[srp] synthesis: disabled (services.llm = false). Enable the LLM service to allow synthesis."
         )
         return
-    preferred = cfg.default_structured_runner
+    from social_research_probe.config import load_active_config
+    preferred = load_active_config().default_structured_runner
     if preferred == "none":
         log(
             "[srp] synthesis: disabled (llm.runner = 'none'). Set via 'srp config set llm.runner claude|gemini|codex|local'."

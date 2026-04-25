@@ -117,14 +117,14 @@ def test_build_synthesis_prompt_contains_synthesis_context_fields():
             "commentary": 0,
             "notes": "cross-checked",
         },
-        "platform_signals_summary": "watch time is rising; comments remain strong",
+        "platform_engagement_summary": "watch time is rising; comments remain strong",
         "evidence_summary": "multiple creators converge on tutorials",
         "chart_takeaways": ["Overall distribution: n=5"],
         "warnings": ["sparse fetch"],
     }
     prompt = build_synthesis_prompt(packet)
     assert "source_validation_summary" in prompt
-    assert "platform_signals_summary" in prompt
+    assert "platform_engagement_summary" in prompt
     assert "evidence_summary" in prompt
     assert "stats_highlights" in prompt
     assert "chart_takeaways" in prompt

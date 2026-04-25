@@ -11,7 +11,7 @@ shaped strings in response bodies are redacted too.
 
 Example:
 
-    python scripts/record_golden.py \\
+    python tests/record_golden.py \\
         --service brave \\
         --url 'https://api.search.brave.com/res/v1/web/search?q=GPT-4+release+date' \\
         --auth-env SRP_BRAVE_API_KEY \\
@@ -29,6 +29,7 @@ import sys
 from pathlib import Path
 
 import httpx
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN_ROOT = REPO_ROOT / "tests" / "fixtures" / "golden"

@@ -15,11 +15,13 @@ from unittest.mock import AsyncMock
 import pytest
 
 from social_research_probe.cli import _id_selector, main
-from social_research_probe.commands import Command, ConfigSubcommand, DslCommand
+from social_research_probe.commands import Command, ConfigSubcommand, ResearchCommand
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     serve_report_command,
 )
 from social_research_probe.utils.display.cli_output import _emit
+from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands.install_skill import PackageManagerFlag
 
 _VALID_PACKET = {
     "topic": "ai",
@@ -36,7 +38,7 @@ _VALID_PACKET = {
         "commentary": 0,
         "notes": "",
     },
-    "platform_signals_summary": "0 items",
+    "platform_engagement_summary": "0 items",
     "evidence_summary": "0 items",
     "stats_summary": {"models_run": [], "highlights": [], "low_confidence": False},
     "chart_captions": [],
@@ -102,7 +104,7 @@ class TestNoCommand:
         assert main([]) == 2
 
     def test_version_flag_exits_0(self, capsys):
-        assert main(["--version"]) == 0
+        assert main([Arg.VERSION]) == 0
         out = capsys.readouterr().out
         assert "srp" in out
         assert "social_research_probe" in out
@@ -113,12 +115,12 @@ class TestShowTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.show_topics", lambda d: ["ai", "blockchain"]
         )
-        assert main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.SHOW_TOPICS]) == 0
         assert "ai" in capsys.readouterr().out
 
     def test_show_topics_json(self, monkeypatch, tmp_path, capsys):
         monkeypatch.setattr("social_research_probe.commands.topics.show_topics", lambda d: ["ai"])
-        main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS, "--output", "json"])
+        main([Arg.DATA_DIR, str(tmp_path), Command.SHOW_TOPICS, Arg.OUTPUT, "json"])
         out = json.loads(capsys.readouterr().out)
         assert out["topics"] == ["ai"]
 
@@ -129,7 +131,7 @@ class TestUpdateTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.add_topics", lambda d, v, force: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--add", '"ai"']) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_TOPICS, Arg.ADD, '"ai"']) == 0
         assert len(calls) == 1
 
     def test_remove_topic(self, monkeypatch, tmp_path):
@@ -137,7 +139,7 @@ class TestUpdateTopics:
         monkeypatch.setattr(
             "social_research_probe.commands.topics.remove_topics", lambda d, v: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--remove", '"ai"']) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_TOPICS, Arg.REMOVE, '"ai"']) == 0
 
     def test_rename_topic(self, monkeypatch, tmp_path):
         calls = []
@@ -146,13 +148,13 @@ class TestUpdateTopics:
             lambda d, o, n: calls.append((o, n)),
         )
         assert (
-            main(["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--rename", '"old"->"new"'])
+            main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_TOPICS, Arg.RENAME, '"old"->"new"'])
             == 0
         )
 
     def test_rename_bad_format_raises(self, monkeypatch, tmp_path):
         result = main(
-            ["--data-dir", str(tmp_path), Command.UPDATE_TOPICS, "--rename", '"bad"-->"worse"']
+            [Arg.DATA_DIR, str(tmp_path), Command.UPDATE_TOPICS, Arg.RENAME, '"bad"-->"worse"']
         )
         assert result != 0
 
@@ -163,7 +165,7 @@ class TestShowPurposes:
             "social_research_probe.commands.purposes.show_purposes",
             lambda d: {"p1": {"method": "m1"}},
         )
-        assert main(["--data-dir", str(tmp_path), Command.SHOW_PURPOSES]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.SHOW_PURPOSES]) == 0
         assert "p1" in capsys.readouterr().out
 
 
@@ -177,10 +179,10 @@ class TestUpdatePurposes:
         assert (
             main(
                 [
-                    "--data-dir",
+                    Arg.DATA_DIR,
                     str(tmp_path),
                     Command.UPDATE_PURPOSES,
-                    "--add",
+                    Arg.ADD,
                     '"name"="method desc"',
                 ]
             )
@@ -188,7 +190,7 @@ class TestUpdatePurposes:
         )
 
     def test_add_purpose_bad_format_raises(self, monkeypatch, tmp_path):
-        result = main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--add", '"bad"'])
+        result = main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_PURPOSES, Arg.ADD, '"bad"'])
         assert result != 0
 
     def test_remove_purpose(self, monkeypatch, tmp_path):
@@ -196,7 +198,7 @@ class TestUpdatePurposes:
         monkeypatch.setattr(
             "social_research_probe.commands.purposes.remove_purposes", lambda d, v: calls.append(v)
         )
-        assert main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--remove", '"p1"']) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_PURPOSES, Arg.REMOVE, '"p1"']) == 0
 
     def test_rename_purpose(self, monkeypatch, tmp_path):
         calls = []
@@ -205,13 +207,13 @@ class TestUpdatePurposes:
             lambda d, o, n: calls.append((o, n)),
         )
         assert (
-            main(["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--rename", '"old"->"new"'])
+            main([Arg.DATA_DIR, str(tmp_path), Command.UPDATE_PURPOSES, Arg.RENAME, '"old"->"new"'])
             == 0
         )
 
     def test_rename_purpose_bad_format_raises(self, monkeypatch, tmp_path):
         result = main(
-            ["--data-dir", str(tmp_path), Command.UPDATE_PURPOSES, "--rename", '"bad"--"worse"']
+            [Arg.DATA_DIR, str(tmp_path), Command.UPDATE_PURPOSES, Arg.RENAME, '"bad"--"worse"']
         )
         assert result != 0
 
@@ -226,7 +228,7 @@ class TestSuggestTopics:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), DslCommand.SUGGEST_TOPICS]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), ResearchCommand.SUGGEST_TOPICS]) == 0
 
 
 class TestSuggestPurposes:
@@ -239,7 +241,7 @@ class TestSuggestPurposes:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), DslCommand.SUGGEST_PURPOSES]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), ResearchCommand.SUGGEST_PURPOSES]) == 0
 
 
 class TestPending:
@@ -248,7 +250,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.show_pending",
             lambda d: {"topic_candidates": [], "purpose_candidates": []},
         )
-        assert main(["--data-dir", str(tmp_path), Command.SHOW_PENDING]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.SHOW_PENDING]) == 0
 
     def test_apply_pending(self, monkeypatch, tmp_path):
         calls = []
@@ -256,7 +258,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.apply_pending",
             lambda d, topic_ids, purpose_ids: calls.append(1),
         )
-        assert main(["--data-dir", str(tmp_path), Command.APPLY_PENDING, "--topics", "all"]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.APPLY_PENDING, Arg.TOPICS, "all"]) == 0
 
     def test_discard_pending(self, monkeypatch, tmp_path):
         calls = []
@@ -264,7 +266,7 @@ class TestPending:
             "social_research_probe.commands.suggestions.discard_pending",
             lambda d, topic_ids, purpose_ids: calls.append(1),
         )
-        assert main(["--data-dir", str(tmp_path), Command.DISCARD_PENDING, "--topics", "1,2"]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.DISCARD_PENDING, Arg.TOPICS, "1,2"]) == 0
 
 
 class TestStageSuggestions:
@@ -275,15 +277,15 @@ class TestStageSuggestions:
             "social_research_probe.commands.suggestions.stage_suggestions",
             lambda d, topic_candidates, purpose_candidates: None,
         )
-        assert main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS, "--from-stdin"]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.STAGE_SUGGESTIONS, Arg.FROM_STDIN]) == 0
 
     def test_stage_without_from_stdin_raises(self, monkeypatch, tmp_path):
-        result = main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS])
+        result = main([Arg.DATA_DIR, str(tmp_path), Command.STAGE_SUGGESTIONS])
         assert result != 0
 
     def test_stage_invalid_json_raises(self, monkeypatch, tmp_path):
         monkeypatch.setattr("sys.stdin", io.StringIO("not json"))
-        result = main(["--data-dir", str(tmp_path), Command.STAGE_SUGGESTIONS, "--from-stdin"])
+        result = main([Arg.DATA_DIR, str(tmp_path), Command.STAGE_SUGGESTIONS, Arg.FROM_STDIN])
         assert result != 0
 
 
@@ -302,7 +304,7 @@ class TestResearchCommand:
         assert (
             main(
                 [
-                    "--data-dir",
+                    Arg.DATA_DIR,
                     str(tmp_path),
                     "research",
                     "youtube",
@@ -332,16 +334,16 @@ class TestServeReportCommand:
 
         result = main(
             [
-                "--data-dir",
+                Arg.DATA_DIR,
                 str(tmp_path),
                 "serve-report",
-                "--report",
+                Arg.REPORT,
                 str(report),
-                "--host",
+                Arg.HOST,
                 "127.0.0.1",
-                "--port",
+                Arg.PORT,
                 "9001",
-                "--voicebox-base",
+                Arg.VOICEBOX_BASE,
                 "http://127.0.0.1:17493",
             ]
         )
@@ -354,7 +356,7 @@ class TestInstallSkillTargetValidation:
     def test_install_skill_target_outside_home_raises(self, monkeypatch, tmp_path):
         """install-skill rejects --target paths outside ~/.claude/."""
         monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
-        result = main(["install-skill", "--target", "/tmp/dangerous"])
+        result = main(["install-skill", Arg.TARGET, "/tmp/dangerous"])
         assert result != 0
 
 
@@ -374,7 +376,7 @@ class TestSetup:
             "social_research_probe.commands.setup._prompt_for_secrets",
             lambda d: calls.append("secrets"),
         )
-        result = main(["--data-dir", str(tmp_path), "setup"])
+        result = main([Arg.DATA_DIR, str(tmp_path), "setup"])
         assert result == 0
         assert calls == ["secrets", "config", "runner"]
 
@@ -397,7 +399,7 @@ class TestInstallSkill:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
         )
-        result = main(["install-skill", "--target", str(target)])
+        result = main(["install-skill", Arg.TARGET, str(target)])
         assert result == 0
 
 
@@ -406,11 +408,11 @@ class TestConfig:
         monkeypatch.setattr(
             "social_research_probe.commands.config.show_config", lambda d: "config output"
         )
-        assert main(["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SHOW]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.CONFIG, ConfigSubcommand.SHOW]) == 0
         assert "config output" in capsys.readouterr().out
 
     def test_config_path(self, monkeypatch, tmp_path, capsys):
-        assert main(["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.PATH]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), Command.CONFIG, ConfigSubcommand.PATH]) == 0
         out = capsys.readouterr().out
         assert "config" in out
 
@@ -422,7 +424,7 @@ class TestConfig:
         )
         assert (
             main(
-                ["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SET, "key", "value"]
+                [Arg.DATA_DIR, str(tmp_path), Command.CONFIG, ConfigSubcommand.SET, "key", "value"]
             )
             == 0
         )
@@ -436,12 +438,12 @@ class TestConfig:
         assert (
             main(
                 [
-                    "--data-dir",
+                    Arg.DATA_DIR,
                     str(tmp_path),
                     Command.CONFIG,
                     ConfigSubcommand.SET_SECRET,
                     "my_key",
-                    "--from-stdin",
+                    Arg.FROM_STDIN,
                 ]
             )
             == 0
@@ -450,7 +452,7 @@ class TestConfig:
     def test_config_set_secret_empty_raises(self, monkeypatch, tmp_path):
         monkeypatch.setattr("sys.stdin", io.StringIO(""))
         result = main(
-            ["--data-dir", str(tmp_path), "config", "set-secret", "my_key", "--from-stdin"]
+            [Arg.DATA_DIR, str(tmp_path), "config", "set-secret", "my_key", Arg.FROM_STDIN]
         )
         assert result != 0
 
@@ -469,7 +471,7 @@ class TestConfig:
         monkeypatch.setitem(sys.modules, "getpass", fake_getpass_mod)
 
         result = main(
-            ["--data-dir", str(tmp_path), Command.CONFIG, ConfigSubcommand.SET_SECRET, "my_key"]
+            [Arg.DATA_DIR, str(tmp_path), Command.CONFIG, ConfigSubcommand.SET_SECRET, "my_key"]
         )
         assert result == 0
         assert calls == ["secret-from-tty"]
@@ -482,7 +484,7 @@ class TestConfig:
         assert (
             main(
                 [
-                    "--data-dir",
+                    Arg.DATA_DIR,
                     str(tmp_path),
                     Command.CONFIG,
                     ConfigSubcommand.UNSET_SECRET,
@@ -500,11 +502,11 @@ class TestConfig:
         assert (
             main(
                 [
-                    "--data-dir",
+                    Arg.DATA_DIR,
                     str(tmp_path),
                     Command.CONFIG,
                     ConfigSubcommand.CHECK_SECRETS,
-                    "--output",
+                    Arg.OUTPUT,
                     "json",
                 ]
             )
@@ -513,7 +515,7 @@ class TestConfig:
 
     def test_config_unknown_subcommand_returns_2(self, monkeypatch, tmp_path):
         # config with no subcommand → returns 2
-        result = main(["--data-dir", str(tmp_path), Command.CONFIG])
+        result = main([Arg.DATA_DIR, str(tmp_path), Command.CONFIG])
         assert result == 2
 
 
@@ -528,7 +530,7 @@ class TestCorroborateClaims:
             AsyncMock(return_value={"claim_text": "AI is growing.", "results": []}),
         )
         assert (
-            main(["--data-dir", str(tmp_path), "corroborate-claims", "--input", str(claims_file)])
+            main([Arg.DATA_DIR, str(tmp_path), "corroborate-claims", Arg.INPUT, str(claims_file)])
             == 0
         )
 
@@ -548,7 +550,7 @@ class TestRender:
             "social_research_probe.commands.render.select_and_render",
             lambda d, label, output_dir: ChartResult("/tmp/x.png", "cap"),
         )
-        assert main(["--data-dir", str(tmp_path), "render", "--packet", str(packet_file)]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), "render", Arg.PACKET, str(packet_file)]) == 0
 
 
 class TestSrpErrorHandling:
@@ -559,7 +561,7 @@ class TestSrpErrorHandling:
             "social_research_probe.commands.topics.show_topics",
             lambda d: (_ for _ in ()).throw(ValidationError("bad")),
         )
-        result = main(["--data-dir", str(tmp_path), Command.SHOW_TOPICS])
+        result = main([Arg.DATA_DIR, str(tmp_path), Command.SHOW_TOPICS])
         assert result == 2
 
 
@@ -589,15 +591,15 @@ class TestInstallSkillWithUvOrPipx:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
         )
-        result = main(["install-skill", "--target", str(target)])
+        result = main(["install-skill", Arg.TARGET, str(target)])
         assert result == 0
         assert calls == [
             [
                 "uv",
                 "tool",
                 "install",
-                "--force",
-                "--reinstall",
+                Arg.FORCE,
+                PackageManagerFlag.REINSTALL,
                 "git+https://github.com/reshinto/social-research-probe",
             ]
         ]
@@ -629,7 +631,7 @@ class TestInstallSkillWithUvOrPipx:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
         )
-        result = main(["install-skill", "--target", str(target)])
+        result = main(["install-skill", Arg.TARGET, str(target)])
         assert result == 0
         assert any("pipx" in str(c) for c in calls)
         out = capsys.readouterr().out
@@ -655,7 +657,7 @@ class TestInstallSkillDestExists:
         monkeypatch.setattr(
             "social_research_probe.commands.install_skill._prompt_for_runner", lambda d: None
         )
-        result = main(["install-skill", "--target", str(target)])
+        result = main(["install-skill", Arg.TARGET, str(target)])
         assert result == 0
         assert len(rmtree_calls) == 1
 
@@ -684,7 +686,7 @@ class TestSimpleResearch:
     def test_default_platform_is_youtube(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        assert main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"]) == 0
+        assert main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news"]) == 0
         cmd, cfg = captured[0]
         assert cmd.platform == "youtube"
         assert cmd.topics == [("ai", ["latest-news"])]
@@ -693,21 +695,21 @@ class TestSimpleResearch:
     def test_explicit_platform_positional(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        main(["--data-dir", str(tmp_path), "research", "youtube", "ai", "latest-news"])
+        main([Arg.DATA_DIR, str(tmp_path), "research", "youtube", "ai", "latest-news"])
         cmd, _cfg = captured[0]
         assert cmd.platform == "youtube"
 
     def test_multiple_purposes_comma_separated(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news,trends"])
+        main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news,trends"])
         cmd, _cfg = captured[0]
         assert cmd.topics == [("ai", ["latest-news", "trends"])]
 
     def test_no_shorts_flag_disables_shorts(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-shorts"])
+        main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news", Arg.NO_SHORTS])
         _cmd, cfg = captured[0]
         assert cfg == {"include_shorts": False, "fetch_transcripts": True}
 
@@ -719,7 +721,7 @@ class TestSimpleResearch:
 
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        assert main(["--data-dir", str(tmp_path), "research", "ai"]) == ValidationError.exit_code
+        assert main([Arg.DATA_DIR, str(tmp_path), "research", "ai"]) == ValidationError.exit_code
 
     def test_empty_purpose_arg_returns_validation_exit_code(self, monkeypatch, tmp_path):
         from social_research_probe.errors import ValidationError
@@ -727,7 +729,7 @@ class TestSimpleResearch:
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         assert (
-            main(["--data-dir", str(tmp_path), "research", "ai", ","]) == ValidationError.exit_code
+            main([Arg.DATA_DIR, str(tmp_path), "research", "ai", ","]) == ValidationError.exit_code
         )
 
     def test_nl_query_dispatches_classify_then_run_research(self, monkeypatch, tmp_path):
@@ -750,7 +752,7 @@ class TestSimpleResearch:
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         rc = main(
-            ["--data-dir", str(tmp_path), "research", "youtube", "i want to know about quant jobs"]
+            [Arg.DATA_DIR, str(tmp_path), "research", "youtube", "i want to know about quant jobs"]
         )
         assert rc == 0
         cmd, _cfg = captured[0]
@@ -775,7 +777,7 @@ class TestSimpleResearch:
         )
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        rc = main(["--data-dir", str(tmp_path), "research", "i want to know about ai trends"])
+        rc = main([Arg.DATA_DIR, str(tmp_path), "research", "i want to know about ai trends"])
         assert rc == 0
         cmd, _cfg = captured[0]
         assert cmd.platform == "youtube"
@@ -789,7 +791,7 @@ class TestSimpleResearch:
         captured = []
         self._patch_pipeline(monkeypatch, captured)
         assert (
-            main(["--data-dir", str(tmp_path), "research", "youtube"]) == ValidationError.exit_code
+            main([Arg.DATA_DIR, str(tmp_path), "research", "youtube"]) == ValidationError.exit_code
         )
 
 
@@ -805,7 +807,7 @@ class TestSimpleResearchTranscripts:
     def test_no_transcripts_flag_disables_transcripts(self, monkeypatch, tmp_path):
         captured = []
         self._patch_pipeline(monkeypatch, captured)
-        main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-transcripts"])
+        main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news", Arg.NO_TRANSCRIPTS])
         _cmd, cfg = captured[0]
         assert cfg["fetch_transcripts"] is False
 
@@ -1215,7 +1217,7 @@ class TestRequiredSynthesis:
                 }
             ),
         )
-        main(["--data-dir", str(tmp_path), "research", "youtube", "AI", "latest-news"])
+        main([Arg.DATA_DIR, str(tmp_path), "research", "youtube", "AI", "latest-news"])
         out = capsys.readouterr().out.strip()
         reports = list((tmp_path / "reports").glob("*.html"))
         assert len(reports) == 1
@@ -1238,13 +1240,13 @@ class TestRequiredSynthesis:
         )
         main(
             [
-                "--data-dir",
+                Arg.DATA_DIR,
                 str(tmp_path),
                 "research",
                 "youtube",
                 "AI",
                 "latest-news",
-                "--no-html",
+                Arg.NO_HTML,
             ]
         )
         out = capsys.readouterr().out.strip()
@@ -1259,13 +1261,13 @@ class TestRequiredSynthesis:
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
         main(
             [
-                "--data-dir",
+                Arg.DATA_DIR,
                 str(tmp_path),
                 "research",
                 "youtube",
                 "AI",
                 "latest-news",
-                "--no-html",
+                Arg.NO_HTML,
             ]
         )
         out = capsys.readouterr().out.strip()
@@ -1292,7 +1294,7 @@ class TestResearchPreflightWarning:
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
-        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        result = main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news", Arg.NO_HTML])
         assert result == 0
 
     def test_llm_service_disabled_skips_runner_preflight(self, monkeypatch, tmp_path):
@@ -1308,7 +1310,7 @@ class TestResearchPreflightWarning:
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
-        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        result = main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news", Arg.NO_HTML])
         assert result == 0
 
     def test_runner_binary_found_no_warning(self, monkeypatch, tmp_path):
@@ -1328,7 +1330,7 @@ class TestResearchPreflightWarning:
             AsyncMock(return_value=copy.deepcopy(_VALID_PACKET)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
-        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news", "--no-html"])
+        result = main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news", Arg.NO_HTML])
         assert result == 0
 
     def test_multi_packet_html_falls_back_to_markdown(self, monkeypatch, tmp_path, capsys):
@@ -1339,7 +1341,7 @@ class TestResearchPreflightWarning:
             AsyncMock(return_value=copy.deepcopy(multi)),
         )
         monkeypatch.setattr("social_research_probe.cli._attach_synthesis", lambda pkt: None)
-        result = main(["--data-dir", str(tmp_path), "research", "ai", "latest-news"])
+        result = main([Arg.DATA_DIR, str(tmp_path), "research", "ai", "latest-news"])
         assert result == 0
         out = capsys.readouterr().out.strip()
         assert out.endswith(".md")

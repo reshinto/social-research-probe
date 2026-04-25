@@ -18,6 +18,13 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
+from enum import StrEnum
+
+
+class CodexCliFlag(StrEnum):
+    OUTPUT_LAST_MESSAGE = "--output-last-message"
+    OUTPUT_SCHEMA = "--output-schema"
+    SEARCH = "--search"
 
 
 @register
@@ -40,11 +47,11 @@ class CodexRunner(JsonCliRunner):
         with TemporaryDirectory(prefix="srp-codex-") as tmpdir:
             tmp = Path(tmpdir)
             output_path = tmp / "last-message.json"
-            argv = [*self._build_argv(None), "--output-last-message", str(output_path)]
+            argv = [*self._build_argv(None), CodexCliFlag.OUTPUT_LAST_MESSAGE, str(output_path)]
             if schema:
                 schema_path = tmp / "schema.json"
                 schema_path.write_text(json.dumps(schema), encoding="utf-8")
-                argv += ["--output-schema", str(schema_path)]
+                argv += [CodexCliFlag.OUTPUT_SCHEMA, str(schema_path)]
             result = sp_run([*argv, prompt], input=None, timeout=timeout)
             text = (
                 output_path.read_text(encoding="utf-8") if output_path.exists() else result.stdout
@@ -69,8 +76,8 @@ class CodexRunner(JsonCliRunner):
             output_path = Path(tmpdir) / "last-message.json"
             argv = [
                 *self._build_argv(None),
-                "--search",
-                "--output-last-message",
+                CodexCliFlag.SEARCH,
+                CodexCliFlag.OUTPUT_LAST_MESSAGE,
                 str(output_path),
                 prompt,
             ]

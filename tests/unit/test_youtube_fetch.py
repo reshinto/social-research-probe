@@ -1,20 +1,18 @@
-"""Tests for social_research_probe.platforms.youtube.fetch.
+"""Tests for social_research_probe.technologies.media_fetch.youtube_api.
 
-Covers build_client, search_videos, hydrate_videos, hydrate_channels using
+Covers _build_client, _search_videos, _fetch_video_details, _fetch_channel_details using
 mock API clients — no live network calls.
 """
 
 from __future__ import annotations
 
 import pytest
-from social_research_probe.errors import AdapterError
+from social_research_probe.utils.core.errors import AdapterError
 
-from social_research_probe.platforms.youtube import fetch
+import social_research_probe.technologies.media_fetch.youtube_api as fetch
 
 
 class _MockExecute:
-    """Callable that returns a fixed response dict."""
-
     def __init__(self, response: dict) -> None:
         self._response = response
 
@@ -47,7 +45,7 @@ class _MockClient:
 
 
 def test_build_client_calls_discovery(monkeypatch):
-    """build_client delegates to googleapiclient.discovery.build."""
+    """_build_client delegates to googleapiclient.discovery.build."""
     import sys
     import types
 
@@ -59,69 +57,72 @@ def test_build_client_calls_discovery(monkeypatch):
     monkeypatch.setitem(sys.modules, "googleapiclient", fake_gac)
     monkeypatch.setitem(sys.modules, "googleapiclient.discovery", fake_discovery)
 
-    result = fetch.build_client("test-api-key")
+    result = fetch._build_client("test-api-key")
     assert result is sentinel
 
 
-def test_search_videos_returns_items():
-    """search_videos returns the items list from the API response."""
+def test_search_videos_returns_items(monkeypatch):
+    """_search_videos returns the items list from the API response."""
     items = [{"id": {"videoId": "abc"}}]
-    client = _MockClient(search_resp={"items": items})
-    result = fetch.search_videos(client, topic="ai", max_items=5, published_after=None)
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(search_resp={"items": items}))
+    result = fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
     assert result == items
 
 
-def test_search_videos_handles_non_list_items():
-    """search_videos returns an empty list when the API payload is malformed."""
-    client = _MockClient(search_resp={"items": "not-a-list"})
-    result = fetch.search_videos(client, topic="ai", max_items=5, published_after=None)
+def test_search_videos_handles_non_list_items(monkeypatch):
+    """_search_videos returns an empty list when the API payload is malformed."""
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(search_resp={"items": "not-a-list"}))
+    result = fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
     assert result == []
 
 
-def test_search_videos_raises_adapter_error_on_exception():
-    """search_videos wraps API exceptions in AdapterError."""
+def test_search_videos_raises_adapter_error_on_exception(monkeypatch):
+    """_search_videos wraps API exceptions in AdapterError."""
 
     class _FailingClient:
         def search(self):
             raise RuntimeError("network error")
 
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _FailingClient())
     with pytest.raises(AdapterError, match="youtube search failed"):
-        fetch.search_videos(_FailingClient(), topic="ai", max_items=5, published_after=None)
+        fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
 
 
-def test_hydrate_videos_returns_items():
-    """hydrate_videos returns the items list from the videos.list response."""
+def test_fetch_video_details_returns_items(monkeypatch):
+    """_fetch_video_details returns the items list from the videos.list response."""
     items = [{"id": "abc"}]
-    client = _MockClient(videos_resp={"items": items})
-    result = fetch.hydrate_videos(client, video_ids=["abc"])
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(videos_resp={"items": items}))
+    result = fetch._fetch_video_details("fake-key", video_ids=["abc"])
     assert result == items
 
 
-def test_hydrate_videos_raises_adapter_error_on_exception():
-    """hydrate_videos wraps API exceptions in AdapterError."""
+def test_fetch_video_details_raises_adapter_error_on_exception(monkeypatch):
+    """_fetch_video_details wraps API exceptions in AdapterError."""
 
     class _FailingClient:
         def videos(self):
             raise RuntimeError("api error")
 
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _FailingClient())
     with pytest.raises(AdapterError, match=r"youtube videos\.list failed"):
-        fetch.hydrate_videos(_FailingClient(), video_ids=["x"])
+        fetch._fetch_video_details("fake-key", video_ids=["x"])
 
 
-def test_hydrate_channels_returns_items():
-    """hydrate_channels returns the items list from the channels.list response."""
+def test_fetch_channel_details_returns_items(monkeypatch):
+    """_fetch_channel_details returns the items list from the channels.list response."""
     items = [{"id": "UC123"}]
-    client = _MockClient(channels_resp={"items": items})
-    result = fetch.hydrate_channels(client, channel_ids=["UC123"])
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(channels_resp={"items": items}))
+    result = fetch._fetch_channel_details("fake-key", channel_ids=["UC123"])
     assert result == items
 
 
-def test_hydrate_channels_raises_adapter_error_on_exception():
-    """hydrate_channels wraps API exceptions in AdapterError."""
+def test_fetch_channel_details_raises_adapter_error_on_exception(monkeypatch):
+    """_fetch_channel_details wraps API exceptions in AdapterError."""
 
     class _FailingClient:
         def channels(self):
             raise RuntimeError("api error")
 
+    monkeypatch.setattr(fetch, "_build_client", lambda key: _FailingClient())
     with pytest.raises(AdapterError, match=r"youtube channels\.list failed"):
-        fetch.hydrate_channels(_FailingClient(), channel_ids=["UC123"])
+        fetch._fetch_channel_details("fake-key", channel_ids=["UC123"])

@@ -17,10 +17,10 @@ class SummaryService(BaseService):
     service_name: ClassVar[str] = "youtube.enriching.summary"
     enabled_config_key: ClassVar[str] = "services.youtube.enriching.summary"
 
-    def _get_technologies(self, cfg):
+    def _get_technologies(self):
         return []
 
-    async def execute_one(self, data: object, *, cfg) -> ServiceResult:
+    async def execute_one(self, data: object) -> ServiceResult:
         """Generate summary for one ScoredItem via LLM ensemble."""
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
 
