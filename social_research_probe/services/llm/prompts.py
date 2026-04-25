@@ -15,7 +15,7 @@ SYNTHESIS_PROMPT = """\
 You are a research analyst. Given the following evidence packet, write a concise synthesis.
 
 Rules:
-- Ground claims in items, source_validation_summary, platform_signals_summary,
+- Ground claims in items, source_validation_summary, platform_engagement_summary,
   evidence_summary, stats_highlights, or chart_takeaways. Acknowledge mixed or weak evidence.
 - Stats and charts cover coverage.fetched; item-level detail covers only coverage.enriched.
 - Return three distinct fields:
@@ -63,6 +63,38 @@ Transcript-based summary:
 
 URL-based summary:
 {url_summary}
+"""
+
+# Used by suggest-topics: given existing topics, ask the LLM to propose new ones.
+SUGGEST_TOPICS_PROMPT = """\
+You are helping expand a research topic registry.
+
+Existing topics: {existing_topics}
+
+Suggest {count} NEW research topic labels that are meaningfully different from the existing ones.
+
+Rules:
+- 1-4 word lowercase hyphenated label (e.g. "ai", "quantitative-finance", "climate-change")
+- Must NOT duplicate or closely paraphrase any existing topic
+- Include a brief reason for each suggestion
+
+Output JSON only: {{"suggestions": [{{"value": "...", "reason": "..."}}]}}
+"""
+
+# Used by suggest-purposes: given existing purposes, ask the LLM to propose new ones.
+SUGGEST_PURPOSES_PROMPT = """\
+You are helping expand a research purpose registry.
+
+Existing purposes: {existing_purposes}
+
+Suggest {count} NEW research purposes that are meaningfully different from the existing ones.
+
+Rules:
+- name: 1-4 word lowercase hyphenated label (e.g. "latest-news", "job-opportunities")
+- method: 3-8 word phrase describing how to research this
+- Must NOT duplicate or closely paraphrase any existing purpose
+
+Output JSON only: {{"suggestions": [{{"name": "...", "method": "..."}}]}}
 """
 
 # Used by the classification service: given a free-form research query,

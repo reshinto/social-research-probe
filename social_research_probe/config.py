@@ -96,21 +96,23 @@ DEFAULT_CONFIG: AppConfig = {
     },
     "voicebox": {
         "default_profile_name": "Jarvis",
+        "api_base": "http://127.0.0.1:17493",
     },
 }
 
 
-def resolve_data_dir(flag: str | None, cwd: Path | None = None) -> Path:
-    """Resolve data dir in precedence: flag > env > cwd/.skill-data > ~/.social-research-probe."""
+def resolve_data_dir(flag: str | None, cwd: Path | None = None) -> None:
+    """Resolve data dir, set SRP_DATA_DIR, and warm the config singleton."""
     if flag:
-        return Path(flag).expanduser().resolve()
-    if env := os.environ.get("SRP_DATA_DIR"):
-        return Path(env).expanduser().resolve()
-    cwd = cwd or Path.cwd()
-    local = cwd / ".skill-data"
-    if local.is_dir():
-        return local.resolve()
-    return (Path.home() / ".social-research-probe").resolve()
+        resolved = Path(flag).expanduser().resolve()
+    elif env := os.environ.get("SRP_DATA_DIR"):
+        resolved = Path(env).expanduser().resolve()
+    else:
+        cwd = cwd or Path.cwd()
+        local = cwd / ".skill-data"
+        resolved = local.resolve() if local.is_dir() else (Path.home() / ".social-research-probe").resolve()
+    os.environ["SRP_DATA_DIR"] = str(resolved)
+    load_active_config(resolved)
 
 
 def _deep_merge(base: JSONObject, override: JSONObject) -> JSONObject:
@@ -189,6 +191,12 @@ class Config:
         """Return a copy of the per-platform defaults used to build adapter config."""
         return dict(self.raw["platforms"].get(name, {}))
 
+    def apply_platform_overrides(self, overrides: dict) -> None:
+        """Merge CLI overrides into all platform defaults in-place."""
+        for platform_data in self.raw["platforms"].values():
+            if isinstance(platform_data, dict):
+                platform_data.update(overrides)
+
     @property
     def stages(self) -> StagesConfigSection:
         """Return the stage-level gates."""
@@ -222,7 +230,7 @@ class Config:
     def stage_enabled(self, name: str) -> bool:
         """Return True iff the named stage is enabled."""
         flag = self.stages.get(name)
-        return bool(flag) if flag is not None else False
+        return bool(flag) if flag is not None else True
 
     def service_enabled(self, name: str) -> bool:
         """Return True iff the named service gate is enabled."""
@@ -256,6 +264,23 @@ class Config:
         return technology is None or self.technology_enabled(technology)
 
 
-def load_active_config() -> Config:
-    """Load config for the currently active data dir resolution chain."""
-    return Config.load(resolve_data_dir(None))
+_config_cache: dict[Path, "Config"] = {}
+
+
+def _active_data_dir() -> Path:
+    if env := os.environ.get("SRP_DATA_DIR"):
+        return Path(env).expanduser().resolve()
+    return (Path.home() / ".social-research-probe").resolve()
+
+
+def load_active_config(data_dir: Path | None = None) -> "Config":
+    """Return a cached Config for data_dir (or the active dir from SRP_DATA_DIR)."""
+    resolved = data_dir if data_dir is not None else _active_data_dir()
+    if resolved not in _config_cache:
+        _config_cache[resolved] = Config.load(resolved)
+    return _config_cache[resolved]
+
+
+def reset_config_cache() -> None:
+    """Clear the config cache — for use in tests only."""
+    _config_cache.clear()

@@ -9,8 +9,8 @@ import stat
 import tomllib
 from pathlib import Path
 
-from social_research_probe.commands import DslCommand
-from social_research_probe.config import DEFAULT_CONFIG, Config
+from social_research_probe.utils.core.research_command_parser import ResearchCommand
+from social_research_probe.config import DEFAULT_CONFIG
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import JSONObject, JSONScalar
 
@@ -27,15 +27,30 @@ _CORROBORATION_SECRETS: dict[str, list[str]] = {
     "tavily": ["tavily_api_key"],
 }
 
+# File permissions constants
+_SECRETS_FILE_PERMS = 0o600
+_INSECURE_PERMS_MASK = 0o077
+_RESTRICTIVE_UMASK = 0o077
+
+# Secret masking constants
+_MIN_SECRET_LENGTH_FOR_MASKING = 8
+_MASKED_CHARS_TO_SHOW = 4
+_MASKED_PLACEHOLDER = "***"
+
+# Exit codes
+_EXIT_SUCCESS = 0
+_EXIT_ERROR = 2
+
 
 def _env_key(name: str) -> str:
     """Map a logical secret name to its environment-variable override name."""
     return f"SRP_{name.upper()}"
 
 
-def _read_secrets_file(data_dir: Path) -> dict[str, str]:
+def _read_secrets_file() -> dict[str, str]:
     """Read secrets.toml when it exists and return a plain string mapping."""
-    path = data_dir / SECRET_FILENAME
+    from social_research_probe.config import load_active_config
+    path = load_active_config().data_dir / SECRET_FILENAME
     if not path.exists():
         return {}
     _check_perms(path)
@@ -48,69 +63,76 @@ def _read_secrets_file(data_dir: Path) -> dict[str, str]:
 def _check_perms(path: Path) -> None:
     """Warn when the secrets file is group- or world-readable."""
     mode = stat.S_IMODE(path.stat().st_mode)
-    if mode & 0o077:
+    if mode & _INSECURE_PERMS_MASK:
         import sys
 
         print(
-            f"warning: {path} has permissions {oct(mode)}; should be 0600",
+            f"warning: {path} has permissions {oct(mode)}; should be {oct(_SECRETS_FILE_PERMS)}",
             file=sys.stderr,
         )
 
 
-def _write_secrets_file(data_dir: Path, secrets: dict[str, str]) -> None:
+def _format_secrets_toml(secrets: dict[str, str]) -> str:
+    """Format secrets dict as TOML content."""
+    lines = ["[secrets]"]
+    for key, val in sorted(secrets.items()):
+        escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+        lines.append(f'{key} = "{escaped}"')
+    return "\n".join(lines) + "\n"
+
+
+def _write_secrets_file(secrets: dict[str, str]) -> None:
     """Persist secrets.toml with restrictive permissions."""
+    from social_research_probe.config import load_active_config
+    data_dir = load_active_config().data_dir
     path = data_dir / SECRET_FILENAME
     data_dir.mkdir(parents=True, exist_ok=True)
-    prev_umask = os.umask(0o077)
+
+    content = _format_secrets_toml(secrets)
+    prev_umask = os.umask(_RESTRICTIVE_UMASK)
     try:
-        lines = ["[secrets]"]
-        for key, val in sorted(secrets.items()):
-            escaped = val.replace("\\", "\\\\").replace('"', '\\"')
-            lines.append(f'{key} = "{escaped}"')
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        os.chmod(path, 0o600)
+        path.write_text(content, encoding="utf-8")
+        os.chmod(path, _SECRETS_FILE_PERMS)
     finally:
         os.umask(prev_umask)
 
 
-def read_secret(data_dir: Path, name: str) -> str | None:
+def read_secret(name: str) -> str | None:
     """Read a secret, preferring an environment override when present."""
     env_val = os.environ.get(_env_key(name))
     if env_val:
         return env_val
-    secrets = _read_secrets_file(data_dir)
+    secrets = _read_secrets_file()
     return secrets.get(name)
 
 
-def write_secret(data_dir: Path, name: str, value: str) -> None:
+def write_secret(name: str, value: str) -> None:
     """Set or replace one secret value in secrets.toml."""
-    secrets = _read_secrets_file(data_dir)
+    secrets = _read_secrets_file()
     secrets[name] = value
-    _write_secrets_file(data_dir, secrets)
+    _write_secrets_file(secrets)
 
 
-def unset_secret(data_dir: Path, name: str) -> None:
+def unset_secret(name: str) -> None:
     """Remove one secret from secrets.toml if present."""
-    secrets = _read_secrets_file(data_dir)
+    secrets = _read_secrets_file()
     secrets.pop(name, None)
-    _write_secrets_file(data_dir, secrets)
+    _write_secrets_file(secrets)
 
 
 def mask_secret(value: str) -> str:
     """Mask a secret so operators can confirm presence without leaking it."""
-    if len(value) < 8:
-        return "***"
-    return f"{value[:4]}...{value[-4:]}"
+    if len(value) < _MIN_SECRET_LENGTH_FOR_MASKING:
+        return _MASKED_PLACEHOLDER
+    return f"{value[:_MASKED_CHARS_TO_SHOW]}...{value[-_MASKED_CHARS_TO_SHOW:]}"
 
 
-def show_config(data_dir: Path) -> str:
-    """Render the merged config plus masked secret status for CLI display."""
-    cfg = Config.load(data_dir)
+def _format_config_section(data_dir: Path, raw_config: dict) -> list[str]:
+    """Format config section for display."""
     display_config = {
-        key: value for key, value in cfg.raw.items() if key not in {"features", "logging"}
+        key: value for key, value in raw_config.items() if key not in {"features", "logging"}
     }
-    secrets = _read_secrets_file(data_dir)
-    lines = [
+    return [
         f"data_dir: {data_dir}",
         f"config_file: {data_dir / CONFIG_FILENAME}",
         f"secrets_file: {data_dir / SECRET_FILENAME}",
@@ -118,14 +140,27 @@ def show_config(data_dir: Path) -> str:
         "[config]",
         json.dumps(display_config, indent=2),
         "",
-        "[secrets]",
     ]
+
+
+def _format_secrets_section(secrets: dict[str, str]) -> list[str]:
+    """Format secrets section for display with masking."""
+    lines = ["[secrets]"]
     for name, val in sorted(secrets.items()):
         env = os.environ.get(_env_key(name))
         if env:
             lines.append(f"  {name}: {mask_secret(env)}  (from env)")
         else:
             lines.append(f"  {name}: {mask_secret(val)}  (from file)")
+    return lines
+
+
+def show_config() -> str:
+    """Render the merged config plus masked secret status for CLI display."""
+    from social_research_probe.config import load_active_config
+    cfg = load_active_config()
+    secrets = _read_secrets_file()
+    lines = _format_config_section(cfg.data_dir, cfg.raw) + _format_secrets_section(secrets)
     return "\n".join(lines)
 
 
@@ -207,34 +242,44 @@ def _set_nested_value(config: JSONObject, parts: list[str], value: JSONScalar) -
     current[parts[-1]] = value
 
 
-def write_config_value(data_dir: Path, dotted_key: str, value: str) -> None:
-    """Write one config value, supporting nested dotted keys like llm.codex.model."""
+def _prepare_config_update(dotted_key: str, value: str, existing: JSONObject) -> JSONObject:
+    """Validate key, parse value, update config, and order like template."""
     parts = dotted_key.split(".")
     if len(parts) < 2 or any(not part for part in parts):
         raise ValidationError(
             f"config key must be dotted path like section.key, got {dotted_key!r}"
         )
-
-    data_dir.mkdir(parents=True, exist_ok=True)
-    path = data_dir / CONFIG_FILENAME
-    existing: JSONObject = {}
-    if path.exists():
-        with path.open("rb") as f:
-            existing = tomllib.load(f)
-
     _set_nested_value(existing, parts, _parse_scalar_value(value))
-    ordered = _order_like_template(existing, DEFAULT_CONFIG)
+    return _order_like_template(existing, DEFAULT_CONFIG)
 
+
+def _write_config_to_file(config: JSONObject, path: Path) -> None:
+    """Emit config to TOML format and write to file."""
     lines: list[str] = []
-    for sec, entries in ordered.items():
+    for sec, entries in config.items():
         if not isinstance(entries, dict):
             raise ValidationError(f"top-level config section {sec!r} must be a table")
         _emit_table(sec, entries, lines)
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def write_config_value(dotted_key: str, value: str) -> None:
+    """Write one config value, supporting nested dotted keys like llm.codex.model."""
+    from social_research_probe.config import load_active_config
+    data_dir = load_active_config().data_dir
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    path = data_dir / CONFIG_FILENAME
+    existing: JSONObject = {}
+    if path.exists():
+        with path.open("rb") as f:
+            existing = tomllib.load(f)
+
+    prepared = _prepare_config_update(dotted_key, value, existing)
+    _write_config_to_file(prepared, path)
+
+
 def check_secrets(
-    data_dir: Path,
     *,
     needed_for: str | None,
     platform: str | None,
@@ -243,7 +288,7 @@ def check_secrets(
     """Report which secrets are required, optional, present, and missing."""
     required: list[str] = []
 
-    if needed_for == DslCommand.RESEARCH and platform:
+    if needed_for == ResearchCommand.RESEARCH and platform:
         required.extend(_PLATFORM_SECRETS.get(platform, []))
     if corroboration:
         required.extend(_CORROBORATION_SECRETS.get(corroboration, []))
@@ -253,8 +298,8 @@ def check_secrets(
     }
     optional = sorted(all_known - set(required))
 
-    present = [name for name in (required + optional) if read_secret(data_dir, name) is not None]
-    missing = [name for name in required if read_secret(data_dir, name) is None]
+    present = [name for name in (required + optional) if read_secret(name) is not None]
+    missing = [name for name in required if read_secret(name) is None]
 
     return {
         "required": sorted(set(required)),
@@ -264,7 +309,7 @@ def check_secrets(
     }
 
 
-def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
+def run_set_secret(args: argparse.Namespace) -> int:
     import getpass
     import sys
 
@@ -273,36 +318,38 @@ def run_set_secret(args: argparse.Namespace, data_dir: Path) -> int:
     value = sys.stdin.read().rstrip("\n") if args.from_stdin else getpass.getpass(f"{args.name}: ")
     if not value:
         raise ValidationError("empty secret value")
-    write_secret(data_dir, args.name, value)
-    return 0
+    write_secret(args.name, value)
+    return _EXIT_SUCCESS
 
 
-def run(args: argparse.Namespace, data_dir: Path) -> int:
+def run(args: argparse.Namespace) -> int:
+    from social_research_probe.config import load_active_config
+
     from social_research_probe.commands import ConfigSubcommand
-    from social_research_probe.utils.display.cli_output import _emit
+    from social_research_probe.utils.display.cli_output import emit
 
     if args.config_cmd == ConfigSubcommand.SHOW:
-        print(show_config(data_dir))
-        return 0
+        print(show_config())
+        return _EXIT_SUCCESS
     if args.config_cmd == ConfigSubcommand.PATH:
+        data_dir = load_active_config().data_dir
         print(f"config: {data_dir / 'config.toml'}")
         print(f"secrets: {data_dir / 'secrets.toml'}")
-        return 0
+        return _EXIT_SUCCESS
     if args.config_cmd == ConfigSubcommand.SET:
-        write_config_value(data_dir, args.key, args.value)
-        return 0
+        write_config_value(args.key, args.value)
+        return _EXIT_SUCCESS
     if args.config_cmd == ConfigSubcommand.SET_SECRET:
-        return run_set_secret(args, data_dir)
+        return run_set_secret(args)
     if args.config_cmd == ConfigSubcommand.UNSET_SECRET:
-        unset_secret(data_dir, args.name)
-        return 0
+        unset_secret(args.name)
+        return _EXIT_SUCCESS
     if args.config_cmd == ConfigSubcommand.CHECK_SECRETS:
         result = check_secrets(
-            data_dir,
             needed_for=args.needed_for,
             platform=args.platform,
             corroboration=args.corroboration,
         )
-        _emit(result, args.output)
-        return 0
-    return 2
+        emit(result, args.output)
+        return _EXIT_SUCCESS
+    return _EXIT_ERROR

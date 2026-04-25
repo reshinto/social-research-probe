@@ -6,16 +6,10 @@ import argparse
 import asyncio
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 
-from social_research_probe.config import load_active_config
-from social_research_probe.services.reporting.writer import write_final_report
-from social_research_probe.services.synthesizing.runner import (
-    attach_synthesis,
-    log_synthesis_runner_status,
-)
 from social_research_probe.utils.core.errors import ValidationError
-from social_research_probe.utils.core.flags import stage_flag
+from social_research_probe.utils.core.exit_codes import ExitCode
+from social_research_probe.utils.display.progress import log_with_time
 
 
 @dataclass(frozen=True)
@@ -35,27 +29,24 @@ class _ResearchArgs:
     query: str
 
 
+def _classify_query_to_topic_purposes(query: str) -> tuple[str, tuple[str, ...]]:
+    """Classify a natural-language query into topic and purpose."""
+    from social_research_probe.services.llm.classify_query import classify_query
+
+    classified = classify_query(query)
+    return classified.topic, (classified.purpose_name,)
+
+
 def _normalize_to_topic_and_purposes(
     research_args: _ResearchArgs,
-    data_dir: Path,
-    cfg: object,
 ) -> tuple[str, tuple[str, ...]]:
     """Ensure research_args has topic and purposes.
 
     If a natural-language query was provided, classify it into topic and purpose.
     Otherwise, return topic and purposes as-is.
     """
-    from social_research_probe.services.llm.classify_query import classify_query
-    from social_research_probe.utils.display.progress import log
-
     if research_args.query:
-        classified = classify_query(research_args.query, data_dir=data_dir, cfg=cfg)
-        log(
-            f'[srp] query mapped to topic="{classified.topic}" purpose="{classified.purpose_name}"'
-            f" (new topic: {'yes' if classified.topic_created else 'no'},"
-            f" new purpose: {'yes' if classified.purpose_created else 'no'})"
-        )
-        return classified.topic, (classified.purpose_name,)
+        return _classify_query_to_topic_purposes(research_args.query)
     return research_args.topic, research_args.purposes
 
 
@@ -76,7 +67,7 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     Important limitations:
         - Extra arguments after topic and purposes are silently ignored.
         - Unknown platform-looking values are not rejected; they are treated as
-        topics unless they match REGISTRY.
+        topics unless they match CLIENTS.
         - The default platform is hard-coded as "all".
 
     Examples:
@@ -93,46 +84,26 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
             -> platform="all", topic="wrongPlatformName", purposes=("quant",)
             and "job-opportunity" is ignored
     """
-    from social_research_probe.platforms.registry import REGISTRY
+    from social_research_probe.platforms.registry import CLIENTS
 
-    # A research command needs at least one positional argument.
-    # That single argument can be either:
-    #   - a natural-language query, or
-    #   - a platform name, although platform-only later fails because no
-    #     query/topic remains.
     if len(positional) == 0:
-        raise ValidationError("research needs TOPIC and PURPOSES (or a natural-language query)")
+        raise ValidationError(
+            "research needs TOPIC and PURPOSES (or a natural-language query)"
+        )
 
-    # If the first argument is a registered platform, consume it as the platform.
-    # Everything after it becomes the actual research input.
     first_arg = positional[0]
-    if first_arg in REGISTRY:
+    if first_arg in CLIENTS:
         platform = first_arg
         rest = positional[1:]
-
-    # Otherwise, treat the first argument as part of the research input and
-    # silently default to "all" platforms.
-    #
-    # Note: this means an invalid platform name is not rejected here.
-    # For example:
-    #   ["wrongPlatformName", "quant", "job-opportunity"]
-    # becomes:
-    #   platform="all", rest=["wrongPlatformName", "quant", "job-opportunity"]
     else:
         platform = "all"
         rest = positional
 
-    # This happens when the user provided only a platform, for example:
-    #   ["youtube"]
-    #
-    # Since there is no query/topic after the platform, the command is invalid.
     if len(rest) == 0:
         raise ValidationError(
             "research needs at least TOPIC and PURPOSES (or a natural-language query)"
         )
 
-    # If exactly one research argument remains, treat it as a natural-language
-    # query rather than classic topic/purpose input.
     if len(rest) == 1:
         return _ResearchArgs(platform=platform, topic="", purposes=(), query=rest[0])
 
@@ -143,27 +114,36 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     return _ResearchArgs(platform=platform, topic=topic, purposes=purposes, query="")
 
 
-def run(args: argparse.Namespace, data_dir: Path) -> int:
-    """Execute the research pipeline for the 'research' subcommand."""
-    from social_research_probe.commands import DslCommand, parse
-    from social_research_probe.pipeline import run_pipeline
+def _apply_cli_overrides(args: argparse.Namespace) -> None:
+    """Apply CLI flags to platform config overrides."""
+    from social_research_probe.config import load_active_config
 
-    research_args = _parse_research_input(args.args)
-    config_extras = {
-        "include_shorts": not args.no_shorts,
-        "fetch_transcripts": not args.no_transcripts,
-    }
-    cfg = load_active_config()
-    topic, purposes = _normalize_to_topic_and_purposes(research_args, data_dir, cfg)
-    platform = research_args.platform
-    raw = f'{DslCommand.RESEARCH} platform:{platform} "{topic}"->{"+".join(purposes)}'
-    log_synthesis_runner_status(cfg)
-    packet = asyncio.run(run_pipeline(parse(raw), data_dir, adapter_config=config_extras))
-    if stage_flag(cfg, "synthesis", default=True):
-        attach_synthesis(packet, cfg)
-    report_path = write_final_report(
-        packet, data_dir, cfg, allow_html=not getattr(args, "no_html", False)
+    load_active_config().apply_platform_overrides(
+        {
+            "include_shorts": not args.no_shorts,
+            "fetch_transcripts": not args.no_transcripts,
+            "allow_html": not getattr(args, "no_html", False),
+        }
     )
+
+
+def _execute_research_pipeline(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
+    """Build and execute research pipeline, return packet."""
+    from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
+    from social_research_probe.platforms.orchestrator import run_pipeline
+
+    cmd = ParsedRunResearch(platform=platform, topics=[(topic, list(purposes))])
+    return asyncio.run(run_pipeline(cmd))
+
+
+@log_with_time("[srp] research: platform={research_args.platform}")
+def run(args: argparse.Namespace) -> int:
+    """Execute the research pipeline for the 'research' subcommand."""
+    research_args = _parse_research_input(args.args)
+    _apply_cli_overrides(args)
+    topic, purposes = _normalize_to_topic_and_purposes(research_args)
+    packet = _execute_research_pipeline(research_args.platform, topic, purposes)
+    report_path = packet.get("report_path", "")
     sys.stdout.write(f"{report_path}\n")
     sys.stdout.flush()
-    return 0
+    return ExitCode.SUCCESS

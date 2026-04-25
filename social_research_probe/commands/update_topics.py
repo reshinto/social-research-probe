@@ -3,28 +3,20 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+
+from social_research_probe.utils.core.exit_codes import ExitCode
 
 
-def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.cli.dsl_parser import _parse_quoted_list, _take_quoted
-    from social_research_probe.utils.command_models.topics import (
-        add_topics,
-        remove_topics,
-        rename_topic,
-    )
-    from social_research_probe.utils.core.errors import ValidationError
-    from social_research_probe.utils.display.cli_output import _emit
+def run(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import add_topics, remove_topics, rename_topic
+    from social_research_probe.utils.display.cli_output import emit
 
     if args.add:
-        add_topics(data_dir, _parse_quoted_list(args.add), force=args.force)
+        add_topics(args.add, force=args.force)
     elif args.remove:
-        remove_topics(data_dir, _parse_quoted_list(args.remove))
+        remove_topics(args.remove)
     else:
-        old, pos = _take_quoted(args.rename, 0)
-        if args.rename[pos : pos + 2] != "->":
-            raise ValidationError("rename expects old->new")
-        new, _ = _take_quoted(args.rename, pos + 2)
-        rename_topic(data_dir, old, new)
-    _emit({"ok": True}, args.output)
-    return 0
+        old, new = args.rename
+        rename_topic(old, new)
+    emit({"ok": True}, args.output)
+    return ExitCode.SUCCESS

@@ -11,10 +11,17 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tomllib
+from enum import StrEnum
 from pathlib import Path
 
-from social_research_probe.config import resolve_data_dir
+from social_research_probe.cli.parsers import Arg
 from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.exit_codes import ExitCode
+
+
+class PackageManagerFlag(StrEnum):
+    FORCE = "--force"
+    REINSTALL = "--reinstall"
 
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
 _BUNDLED_CONFIG = Path(__file__).resolve().parents[2] / "config.toml.example"
@@ -87,35 +94,34 @@ def run(target: str | None) -> int:
     shutil.copytree(src, dest)
     print(f"Skill installed to {dest}")
     _install_cli()
-    data_dir = resolve_data_dir(None)
-    _copy_config_example(data_dir)
-    _prompt_for_secrets(data_dir)
-    _ensure_voicebox_secrets(data_dir)
-    _prompt_for_runner(data_dir)
-    return 0
+    _copy_config_example()
+    _prompt_for_secrets()
+    _ensure_voicebox_secrets()
+    _prompt_for_runner()
+    return ExitCode.SUCCESS
 
 
 def _validate_target(dest: Path) -> None:
     allowed_root = Path.home() / ".claude"
     if not str(dest).startswith(str(allowed_root)):
-        raise ValidationError(f"--target must be inside {allowed_root}")
+        raise ValidationError(f"{Arg.TARGET} must be inside {allowed_root}")
 
 
 def _install_cli() -> None:
     if shutil.which("uv"):
         subprocess.run(
-            ["uv", "tool", "install", "--force", "--reinstall", _PACKAGE_REPO], check=True
+            ["uv", "tool", "install", PackageManagerFlag.FORCE, PackageManagerFlag.REINSTALL, _PACKAGE_REPO], check=True
         )
         print("srp CLI installed via uv tool")
     elif shutil.which("pipx"):
-        subprocess.run(["pipx", "install", "--force", _PACKAGE_REPO], check=True)
+        subprocess.run(["pipx", "install", PackageManagerFlag.FORCE, _PACKAGE_REPO], check=True)
         print("srp CLI installed via pipx")
     else:
         print("warning: neither uv nor pipx found — srp CLI not permanently installed")
         print(f'  run: pipx install "{_PACKAGE_REPO}"')
 
 
-def _copy_config_example(data_dir: Path) -> None:
+def _copy_config_example() -> None:
     """Seed data_dir/config.toml from the bundled example, or merge missing keys.
 
     Fresh install: copy the example verbatim.
@@ -123,7 +129,9 @@ def _copy_config_example(data_dir: Path) -> None:
     existing config lacks. Existing user values are never overwritten.
     """
     from social_research_probe.commands.config import CONFIG_FILENAME
+    from social_research_probe.config import load_active_config
 
+    data_dir = load_active_config().data_dir
     dest = data_dir / CONFIG_FILENAME
     if not dest.exists():
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -133,11 +141,8 @@ def _copy_config_example(data_dir: Path) -> None:
     _merge_missing_config_keys(dest)
 
 
-def _merge_missing_config_keys(dest: Path) -> None:
-    """Add keys/sections from the bundled example that are missing in *dest*."""
-    from social_research_probe.commands.config import _emit_table, _order_like_template
-    from social_research_probe.config import DEFAULT_CONFIG
-
+def _load_and_merge_configs(dest: Path) -> tuple[dict, list[str]]:
+    """Load existing and bundled configs, merge missing keys, return merged and list of added keys."""
     with dest.open("rb") as f:
         existing = tomllib.load(f)
     with _BUNDLED_CONFIG.open("rb") as f:
@@ -145,14 +150,27 @@ def _merge_missing_config_keys(dest: Path) -> None:
 
     added: list[str] = []
     _deep_merge_missing(existing, bundled, (), added)
-    if not added:
-        return
+    return existing, added
 
-    ordered = _order_like_template(existing, DEFAULT_CONFIG)
+
+def _write_merged_config(dest: Path, config: dict) -> None:
+    """Write merged config to file in TOML format."""
+    from social_research_probe.commands.config import _emit_table, _order_like_template
+    from social_research_probe.config import DEFAULT_CONFIG
+
+    ordered = _order_like_template(config, DEFAULT_CONFIG)
     lines: list[str] = []
     for sec, entries in ordered.items():
         _emit_table(sec, entries, lines)
     dest.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
+def _merge_missing_config_keys(dest: Path) -> None:
+    """Add keys/sections from the bundled example that are missing in *dest*."""
+    config, added = _load_and_merge_configs(dest)
+    if not added:
+        return
+    _write_merged_config(dest, config)
     print(f"Added {len(added)} new config key(s) to {dest}:")
     for key in added:
         print(f"  + {key}")
@@ -172,15 +190,8 @@ def _deep_merge_missing(
             _deep_merge_missing(target[key], value, (*path, key), added)
 
 
-def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
-    """Prompt the user to choose a default LLM runner and persist it to config.toml.
-
-    Shows numbered choices and writes the selection via write_config_value so
-    the runner setting is stored in the resolved data dir's config.toml.
-    Exits early on EOFError or KeyboardInterrupt for non-interactive installs.
-    """
-    from social_research_probe.commands.config import write_config_value
-
+def _get_runner_choice(*, _input: object = input) -> str | None:
+    """Prompt for runner choice, validate input, return chosen name or None."""
     print("\nDefault LLM runner — choose which AI backend srp should use:")
     for i, (name, description, url) in enumerate(_RUNNER_CHOICES, start=1):
         print(f"  {i}. {name:8}  {description}")
@@ -190,57 +201,84 @@ def _prompt_for_runner(data_dir: Path, *, _input: object = input) -> None:
         raw = str(_input("  Enter number (or press Enter to skip): ")).strip()
     except (EOFError, KeyboardInterrupt):
         print()
-        return
+        return None
     if not raw:
-        return
+        return None
     try:
         index = int(raw) - 1
         if index < 0 or index >= len(_RUNNER_CHOICES):
             raise ValueError
     except ValueError:
         print(f"  invalid choice '{raw}' — skipping runner configuration")
-        return
-    chosen, _, _url = _RUNNER_CHOICES[index]
-    write_config_value(data_dir, "llm.runner", chosen)
-    print(f"  runner set to '{chosen}'.")
-    if chosen != "none":
-        write_config_value(data_dir, f"technologies.{chosen}", "true")
-        print(f"  technologies.{chosen} set to true.")
+        return None
+    return _RUNNER_CHOICES[index][0]
 
 
-def _prompt_for_secrets(data_dir: Path, *, _input: object = input) -> None:
-    """Interactively prompt for API keys and save non-blank answers to secrets.toml.
+def _write_runner_config(runner: str) -> None:
+    """Write runner choice and enable corresponding technology gate."""
+    from social_research_probe.commands.config import write_config_value
 
-    Iterates over every known key, shows the description and masked current
-    value if one already exists, then reads a line from the terminal. A blank
-    or whitespace-only response skips that key without modifying anything.
-    Any non-blank value is written via write_secret so it persists across runs.
+    write_config_value("llm.runner", runner)
+    print(f"  runner set to '{runner}'.")
+    if runner != "none":
+        write_config_value(f"technologies.{runner}", "true")
+        print(f"  technologies.{runner} set to true.")
 
-    Exits the loop early on EOFError or KeyboardInterrupt so piped or
-    non-interactive installs are never blocked.
+
+def _prompt_for_runner(*, _input: object = input) -> None:
+    """Prompt the user to choose a default LLM runner and persist it to config.toml."""
+    chosen = _get_runner_choice(_input=_input)
+    if chosen:
+        _write_runner_config(chosen)
+
+
+def _prompt_for_single_secret(name: str, description: str, url: str, *, _input: object = input) -> tuple[str | None, bool]:
+    """Prompt user for a single API key. Return (value, should_continue).
+
+    Returns:
+        (value, True) if user entered value
+        (None, True) if user skipped (blank)
+        (None, False) if EOFError/KeyboardInterrupt occurred
     """
-    from social_research_probe.commands.config import mask_secret, read_secret, write_secret
+    from social_research_probe.commands.config import mask_secret, read_secret
+
+    existing = read_secret(name)
+    suffix = f"  [current: {mask_secret(existing)}]" if existing else ""
+    if url:
+        print(f"  Register: {url}")
+    try:
+        value = str(_input(f"  {description}{suffix}:\n  > ")).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None, False
+    return value if value else None, True
+
+
+def _prompt_for_secrets(*, _input: object = input) -> None:
+    """Interactively prompt for API keys and save non-blank answers to secrets.toml."""
+    from social_research_probe.commands.config import write_secret
 
     print("\nAPI key setup — press Enter to skip any key:")
     for name, description, url in _KEY_PROMPTS:
-        existing = read_secret(data_dir, name)
-        suffix = f"  [current: {mask_secret(existing)}]" if existing else ""
-        if url:
-            print(f"  Register: {url}")
-        try:
-            value = str(_input(f"  {description}{suffix}:\n  > ")).strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
+        value, should_continue = _prompt_for_single_secret(name, description, url, _input=_input)
         if value:
-            write_secret(data_dir, name, value)
+            write_secret(name, value)
             print("    saved.")
+        if not should_continue:
+            break
 
 
-def _ensure_voicebox_secrets(data_dir: Path) -> None:
+def _get_voicebox_default_url() -> str:
+    """Load Voicebox API base URL from config."""
+    from social_research_probe.config import load_active_config
+    return load_active_config().voicebox["api_base"]
+
+
+def _ensure_voicebox_secrets() -> None:
     """Auto-write default tts_voicebox_server_url secret if missing."""
     from social_research_probe.commands.config import read_secret, write_secret
 
-    if not read_secret(data_dir, "tts_voicebox_server_url"):
-        write_secret(data_dir, "tts_voicebox_server_url", "http://127.0.0.1:17493")
-        print("  tts_voicebox_server_url defaulted to http://127.0.0.1:17493")
+    if not read_secret("tts_voicebox_server_url"):
+        default_url = _get_voicebox_default_url()
+        write_secret("tts_voicebox_server_url", default_url)
+        print(f"  tts_voicebox_server_url defaulted to {default_url}")

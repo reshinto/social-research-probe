@@ -5,13 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from pathlib import Path
+
+from social_research_probe.utils.core.exit_codes import ExitCode
 
 
-def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.utils.command_models.suggestions import stage_suggestions
+def run(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import stage_suggestions
     from social_research_probe.utils.core.errors import ValidationError
-    from social_research_probe.utils.display.cli_output import _emit
+    from social_research_probe.utils.display.cli_output import emit
 
     if not args.from_stdin:
         raise ValidationError("stage-suggestions requires --from-stdin")
@@ -20,9 +21,8 @@ def run(args: argparse.Namespace, data_dir: Path) -> int:
     except json.JSONDecodeError as exc:
         raise ValidationError(f"invalid JSON from stdin: {exc}") from exc
     stage_suggestions(
-        data_dir,
         topic_candidates=payload.get("topic_candidates", []),
         purpose_candidates=payload.get("purpose_candidates", []),
     )
-    _emit({"ok": True}, args.output)
-    return 0
+    emit({"ok": True}, args.output)
+    return ExitCode.SUCCESS

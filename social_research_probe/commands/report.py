@@ -15,36 +15,15 @@ import json
 import sys
 from pathlib import Path
 
-from social_research_probe.config import Config, resolve_data_dir
+from social_research_probe.config import load_active_config
 from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.exit_codes import ExitCode
 from social_research_probe.utils.core.packet import unwrap_packet
 from social_research_probe.utils.display.service_log import service_log_sync
 
 
-def run(
-    packet_path: str,
-    compiled_synthesis_path: str | None,
-    opportunity_analysis_path: str | None,
-    final_summary_path: str | None,
-    out_path: str | None,
-    *,
-    data_dir: Path | None = None,
-) -> int:
-    """Read a packet JSON file and write (or rewrite) its HTML report.
-
-    Args:
-        packet_path: Path to the packet JSON file.
-        compiled_synthesis_path: Optional path to a file containing Compiled Synthesis text.
-        opportunity_analysis_path: Optional path to a file containing Opportunity Analysis text.
-        final_summary_path: Optional path to a file containing Final Summary text.
-        out_path: Destination HTML path. If None, prints to stdout.
-
-    Returns:
-        Exit code (0 on success).
-
-    Raises:
-        ValidationError: If the packet file cannot be read or is invalid JSON.
-    """
+def _load_and_validate_packet(packet_path: str) -> dict:
+    """Load packet JSON and validate structure."""
     try:
         payload = json.loads(Path(packet_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -52,76 +31,82 @@ def run(
     packet = unwrap_packet(payload)
     if not isinstance(packet, dict):
         raise ValidationError("packet file must contain a JSON object")
+    return packet
 
-    compiled_synthesis = _read_text_file(compiled_synthesis_path)
-    opportunity_analysis = _read_text_file(opportunity_analysis_path)
-    final_summary = _read_text_file(final_summary_path)
 
+def _apply_text_overrides(packet: dict, compiled_synthesis_path: str | None,
+                         opportunity_analysis_path: str | None,
+                         final_summary_path: str | None) -> dict:
+    """Apply text file overrides to packet."""
+    rendered_packet = dict(packet)
+    for key, path in (
+        ("compiled_synthesis", compiled_synthesis_path),
+        ("opportunity_analysis", opportunity_analysis_path),
+        ("report_summary", final_summary_path),
+    ):
+        text = _read_text_file(path)
+        if text is not None:
+            rendered_packet[key] = text
+    return rendered_packet
+
+
+def _prepare_tts_setup(packet: dict, out_path: str | None, cfg_logs: bool) -> tuple[list, str | None, dict]:
+    """Fetch voicebox profiles and prepare audio if enabled. Returns (profiles, profile_name, audio_sources)."""
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
+        _audio_report_enabled,
         _fetch_voicebox_profiles,
         _prepare_voiceover_audios,
         _select_voicebox_profile,
         _voicebox_api_base,
         _voicebox_default_profile_name,
         _write_discovered_voicebox_profile_names,
+    )
+
+    cfg = load_active_config()
+    api_base = _voicebox_api_base()
+    tts_profiles: list[dict[str, str]] = []
+    selected_profile_name = None
+    prepared_audio_sources: dict[str, str] = {}
+
+    if cfg.technology_enabled("voicebox"):
+        with service_log_sync("voicebox_profiles", packet=packet, cfg_logs_enabled=cfg_logs):
+            tts_profiles = _fetch_voicebox_profiles(api_base)
+        _write_discovered_voicebox_profile_names(tts_profiles)
+        selected_profile = _select_voicebox_profile(
+            tts_profiles,
+            tts_profile_name=_voicebox_default_profile_name(),
+        )
+        selected_profile_name = selected_profile["name"] if selected_profile is not None else None
+
+        if out_path and _audio_report_enabled():
+            with service_log_sync("voicebox_audio", packet=packet, cfg_logs_enabled=cfg_logs):
+                prepared_audio_sources = _prepare_voiceover_audios(
+                    packet,
+                    Path(out_path),
+                    tts_api_base=api_base,
+                    tts_profiles=tts_profiles,
+                    tts_profile_name=selected_profile_name,
+                )
+
+    return tts_profiles, selected_profile_name, prepared_audio_sources
+
+
+def _render_and_output_html(packet: dict, charts_dir: Path | None, out_path: str | None,
+                           tts_profiles: list, selected_profile_name: str | None,
+                           prepared_audio_sources: dict, tts_api_base: str) -> None:
+    """Render HTML and write to file or stdout."""
+    from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         render_html,
         serve_report_command,
     )
 
-    data_dir = data_dir or resolve_data_dir(None)
-    cfg = Config.load(data_dir)
-    if out_path and (not cfg.stage_enabled("report") or not cfg.service_enabled("html_report")):
-        raise ValidationError("HTML report generation is disabled by config")
-
-    # Resolve charts_dir relative to the packet file's parent directory if
-    # the standard layout is present (packet file next to a charts/ sibling).
-    packet_parent = Path(packet_path).parent
-    charts_dir = packet_parent / "charts"
-    charts_dir_arg = charts_dir if charts_dir.is_dir() else None
-
-    rendered_packet = dict(packet)
-    if compiled_synthesis is not None:
-        rendered_packet["compiled_synthesis"] = compiled_synthesis
-    if opportunity_analysis is not None:
-        rendered_packet["opportunity_analysis"] = opportunity_analysis
-    if final_summary is not None:
-        rendered_packet["report_summary"] = final_summary
-
-    cfg_logs = _technology_logs_enabled(data_dir)
-    api_base = _voicebox_api_base()
-    tts_profiles: list[dict[str, str]] = []
-    selected_profile = None
-    if cfg.technology_enabled("voicebox"):
-        with service_log_sync(
-            "voicebox_profiles", packet=rendered_packet, cfg_logs_enabled=cfg_logs
-        ):
-            tts_profiles = _fetch_voicebox_profiles(api_base)
-        _write_discovered_voicebox_profile_names(data_dir, tts_profiles)
-        selected_profile = _select_voicebox_profile(
-            tts_profiles,
-            tts_profile_name=_voicebox_default_profile_name(data_dir),
-        )
-    selected_profile_name = selected_profile["name"] if selected_profile is not None else None
-    prepared_audio_src = None
-    prepared_audio_profile_name = None
-    prepared_audio_sources: dict[str, str] = {}
-    if out_path and _audio_report_enabled(data_dir) and cfg.technology_enabled("voicebox"):
-        with service_log_sync("voicebox_audio", packet=rendered_packet, cfg_logs_enabled=cfg_logs):
-            prepared_audio_sources = _prepare_voiceover_audios(
-                rendered_packet,
-                Path(out_path),
-                tts_api_base=api_base,
-                tts_profiles=tts_profiles,
-                tts_profile_name=selected_profile_name,
-            )
-        prepared_audio_src = prepared_audio_sources.get(selected_profile_name or "", None)
-        prepared_audio_profile_name = selected_profile_name if prepared_audio_src else None
+    prepared_audio_src = prepared_audio_sources.get(selected_profile_name or "", None)
+    prepared_audio_profile_name = selected_profile_name if prepared_audio_src else None
 
     html_content = render_html(
-        rendered_packet,
-        charts_dir=charts_dir_arg,
-        data_dir=data_dir,
-        tts_api_base=api_base,
+        packet,
+        charts_dir=charts_dir,
+        tts_api_base=tts_api_base,
         tts_profile_name=selected_profile_name,
         tts_profiles=tts_profiles,
         prepared_audio_src=prepared_audio_src,
@@ -136,28 +121,53 @@ def run(
         print(f"[srp] Serve report: {serve_report_command(dest)}", file=sys.stderr)
     else:
         sys.stdout.write(html_content)
-    return 0
 
 
-def _audio_report_enabled(data_dir: Path | None = None) -> bool:
-    """Return whether pre-rendered Voicebox audio is enabled in active config."""
-    try:
-        cfg = Config.load(data_dir or resolve_data_dir(None))
-        return cfg.stage_enabled("report") and cfg.service_enabled("audio_report")
-    except Exception:
-        return True
+def run(
+    packet_path: str,
+    compiled_synthesis_path: str | None,
+    opportunity_analysis_path: str | None,
+    final_summary_path: str | None,
+    out_path: str | None,
+) -> int:
+    """Read a packet JSON file and write (or rewrite) its HTML report."""
+    from social_research_probe.technologies.report_render.html.raw_html.youtube import (
+        _technology_logs_enabled,
+        _voicebox_api_base,
+    )
 
+    packet = _load_and_validate_packet(packet_path)
+    cfg = load_active_config()
+    if out_path and (not cfg.stage_enabled("report") or not cfg.service_enabled("html_report")):
+        raise ValidationError("HTML report generation is disabled by config")
 
-def _technology_logs_enabled(data_dir: Path | None = None) -> bool:
-    """Return whether technology lifecycle logs are enabled in active config."""
-    try:
-        return bool(
-            Config.load(data_dir or resolve_data_dir(None)).debug.get(
-                "technology_logs_enabled", False
-            )
-        )
-    except Exception:
-        return False
+    rendered_packet = _apply_text_overrides(
+        packet,
+        compiled_synthesis_path,
+        opportunity_analysis_path,
+        final_summary_path,
+    )
+
+    packet_parent = Path(packet_path).parent
+    charts_dir = packet_parent / "charts"
+    charts_dir_arg = charts_dir if charts_dir.is_dir() else None
+
+    cfg_logs = _technology_logs_enabled()
+    tts_api_base = _voicebox_api_base()
+    tts_profiles, selected_profile_name, prepared_audio_sources = _prepare_tts_setup(
+        rendered_packet, out_path, cfg_logs
+    )
+
+    _render_and_output_html(
+        rendered_packet,
+        charts_dir_arg,
+        out_path,
+        tts_profiles,
+        selected_profile_name,
+        prepared_audio_sources,
+        tts_api_base,
+    )
+    return ExitCode.SUCCESS
 
 
 def _read_text_file(path: str | None) -> str | None:

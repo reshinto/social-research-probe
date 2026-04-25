@@ -25,6 +25,7 @@ from pathlib import Path
 from social_research_probe.config import load_active_config
 from social_research_probe.services.corroborating.host import corroborate_claim
 from social_research_probe.technologies.validation.claim_extractor import Claim
+from social_research_probe.utils.core.exit_codes import ExitCode
 
 
 def run(
@@ -98,4 +99,4 @@ def run(
         Path(output_path).write_text(out)
     else:
         sys.stdout.write(out + "\n")
-    return 0
+    return ExitCode.SUCCESS

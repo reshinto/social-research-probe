@@ -17,7 +17,37 @@ import sys
 
 from social_research_probe.technologies.charts.selector import select_and_render
 from social_research_probe.technologies.statistics.selector import select_and_run
+from social_research_probe.utils.core.exit_codes import ExitCode
 from social_research_probe.utils.core.packet import unwrap_packet
+
+
+def _load_packet(packet_path: str) -> dict:
+    """Load and validate packet JSON file."""
+    from social_research_probe.utils.core.errors import ValidationError
+
+    try:
+        with open(packet_path) as f:
+            payload = json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValidationError(f"cannot read packet file: {exc}") from exc
+    packet = unwrap_packet(payload)
+    if not isinstance(packet, dict):
+        raise ValidationError("packet file must contain a JSON object")
+    return packet
+
+
+def _extract_overall_scores(packet: dict) -> list[float]:
+    """Extract overall scores from items in packet."""
+    items = packet.get("items_top_n", [])
+    return [it.get("scores", {}).get("overall", 0.0) for it in items]
+
+
+def _format_report(stat_results, chart) -> dict:
+    """Format stats and chart into report structure."""
+    return {
+        "stats": [{"name": r.name, "value": r.value, "caption": r.caption} for r in stat_results],
+        "chart": {"path": chart.path, "caption": chart.caption},
+    }
 
 
 def run(packet_path: str, output_dir: str | None = None) -> int:
@@ -39,28 +69,10 @@ def run(packet_path: str, output_dir: str | None = None) -> int:
         ValidationError: If packet_path does not exist, cannot be opened, or
             is not valid JSON.
     """
-    from social_research_probe.utils.core.errors import ValidationError
-
-    try:
-        with open(packet_path) as f:
-            payload = json.load(f)
-    except (json.JSONDecodeError, OSError) as exc:
-        raise ValidationError(f"cannot read packet file: {exc}") from exc
-    packet = unwrap_packet(payload)
-    if not isinstance(packet, dict):
-        raise ValidationError("packet file must contain a JSON object")
-
-    items = packet.get("items_top_n", [])
-    # Extract the "overall" composite score from each item's scores dict.
-    # Items that lack the key default to 0.0 so the lists stay aligned.
-    overall_scores = [it.get("scores", {}).get("overall", 0.0) for it in items]
-
+    packet = _load_packet(packet_path)
+    overall_scores = _extract_overall_scores(packet)
     stat_results = select_and_run(overall_scores, label="overall_score")
     chart = select_and_render(overall_scores, label="overall_score", output_dir=output_dir)
-
-    report = {
-        "stats": [{"name": r.name, "value": r.value, "caption": r.caption} for r in stat_results],
-        "chart": {"path": chart.path, "caption": chart.caption},
-    }
+    report = _format_report(stat_results, chart)
     sys.stdout.write(json.dumps(report, indent=2) + "\n")
-    return 0
+    return ExitCode.SUCCESS

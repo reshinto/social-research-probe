@@ -3,18 +3,24 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+
+from social_research_probe.utils.core.exit_codes import ExitCode
 
 
-def run(args: argparse.Namespace, data_dir: Path) -> int:
-    from social_research_probe.utils.cli import _id_selector
-    from social_research_probe.utils.command_models.suggestions import discard_pending
-    from social_research_probe.utils.display.cli_output import _emit
+def run(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import load_pending, save_pending, select_pending
+    from social_research_probe.utils.cli.parsing import _id_selector
+    from social_research_probe.utils.display.cli_output import emit
 
-    discard_pending(
-        data_dir,
-        topic_ids=_id_selector(args.topics),
-        purpose_ids=_id_selector(args.purposes),
+    pending = load_pending()
+    _, remaining_topics = select_pending(
+        pending["pending_topic_suggestions"], _id_selector(args.topics)
     )
-    _emit({"ok": True}, args.output)
-    return 0
+    _, remaining_purposes = select_pending(
+        pending["pending_purpose_suggestions"], _id_selector(args.purposes)
+    )
+    pending["pending_topic_suggestions"] = remaining_topics
+    pending["pending_purpose_suggestions"] = remaining_purposes
+    save_pending(pending)
+    emit({"ok": True}, args.output)
+    return ExitCode.SUCCESS
