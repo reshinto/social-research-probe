@@ -20,7 +20,7 @@ def write_final_report(packet: dict, *, allow_html: bool) -> str:
     data_dir = load_active_config().data_dir
     html_on = (
         allow_html
-        and stage_flag("report", default=True)
+        and stage_flag("report", platform="youtube", default=True)
         and service_flag("html_report", default=True)
         and "multi" not in packet
     )

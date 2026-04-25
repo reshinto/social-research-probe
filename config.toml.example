@@ -46,14 +46,21 @@ enrich_top_n = 5          # number of top-scored videos that get transcripts + L
 cache_ttl_search_hours = 6
 cache_ttl_channel_hours = 24
 
-[stages]
+[stages.youtube]
 # Highest priority. If a stage is false, everything inside that stage is skipped.
 # Stage names map directly to the YouTubePipeline stage execution order.
-fetch = true              # Fetch and enrich YouTube search results.
-score = true              # Score and rank items by trust/trend/opportunity.
-enrich = true             # Enrich top-N items with transcripts and LLM summaries.
-corroborate = true        # Corroborate claims via configured search backends.
-analyze = true            # Run statistics, charts, and synthesis on results.
+fetch = true                 # Fetch YouTube search results.
+score = true                 # Score and rank items by trust/trend/opportunity.
+transcript = true            # Fetch transcripts for top-N items.
+summary = true               # LLM per-item summaries for top-N items.
+corroborate = true           # Corroborate claims via configured search backends.
+stats = true                 # Statistical analysis on engagement and scores.
+charts = true                # Chart generation from statistical results.
+synthesis = true             # Final LLM research synthesis.
+assemble = true              # Assemble research packet from stage outputs.
+structured_synthesis = true  # Structured-JSON synthesis for report sections.
+report = true                # HTML report generation.
+narration = true             # Audio narration via Voicebox (or macOS TTS fallback).
 
 [services.youtube.sourcing]
 youtube = true            # YouTube Data API v3 search and metadata fetch.

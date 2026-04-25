@@ -48,7 +48,7 @@ def test_config_load_returns_defaults_when_missing(tmp_data_dir: Path):
     assert cfg.corroboration_backend == "auto"
     assert cfg.platform_defaults("youtube")["max_items"] == 20
     assert cfg.llm_settings("codex")["binary"] == "codex"
-    assert cfg.stage_enabled("fetch") is True
+    assert cfg.stage_enabled("youtube", "fetch") is True
     assert cfg.service_enabled("llm") is True
     assert cfg.technology_enabled("claude") is False
     assert cfg.debug_enabled("technology_logs_enabled") is False
@@ -143,11 +143,11 @@ def test_corroboration_backend_reads_current_value_verbatim(tmp_data_dir: Path):
 
 def test_config_allows_applies_stage_then_service_then_technology(tmp_data_dir: Path):
     (tmp_data_dir / "config.toml").write_text(
-        "[stages]\ncorroborate = false\n\n[services.corroborate]\ncorroboration = true\n\n[technologies]\nexa = true\n",
+        "[stages.youtube]\ncorroborate = false\n\n[services.corroborate]\ncorroboration = true\n\n[technologies]\nexa = true\n",
         encoding="utf-8",
     )
     cfg = Config.load(tmp_data_dir)
-    assert cfg.allows(stage="corroborate", service="corroboration", technology="exa") is False
+    assert cfg.allows(platform="youtube", stage="corroborate", service="corroboration", technology="exa") is False
     assert cfg.allows(service="corroboration", technology="exa") is True
 
 

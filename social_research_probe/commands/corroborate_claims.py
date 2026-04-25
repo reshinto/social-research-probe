@@ -33,11 +33,6 @@ def _validate_corroboration_config() -> None:
     from social_research_probe.utils.core.errors import ValidationError
 
     cfg = load_active_config()
-    if hasattr(cfg, "stage_enabled") and not cfg.stage_enabled("corroborate"):
-        raise ValidationError(
-            "cannot corroborate claims: stages.corroborate is false. "
-            "Enable the corroborate stage to use corroboration backends."
-        )
     if hasattr(cfg, "service_enabled") and not cfg.service_enabled("corroboration"):
         raise ValidationError(
             "cannot corroborate claims: services.corroboration is false. "

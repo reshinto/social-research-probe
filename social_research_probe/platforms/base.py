@@ -92,7 +92,7 @@ class BaseStage(ABC):
 
     def _is_enabled(self, state: PipelineState) -> bool:
         from social_research_probe.config import load_active_config
-        return load_active_config().stage_enabled(self.stage_name())
+        return load_active_config().stage_enabled(state.platform_type, self.stage_name())
 
 
 class BaseResearchPlatform(ABC):

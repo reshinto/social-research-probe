@@ -657,7 +657,7 @@ def test_available_backends_returns_empty_when_stage_disables_corroboration(monk
     class _Cfg:
         corroboration_backend = "auto"
 
-        def stage_enabled(self, name: str) -> bool:
+        def stage_enabled(self, platform: str, name: str) -> bool:
             return name != "corroborate"
 
     monkeypatch.setattr(

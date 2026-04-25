@@ -1039,7 +1039,7 @@ class TestRequiredSynthesis:
         class _Cfg:
             default_structured_runner = "claude"
 
-            def stage_enabled(self, name: str) -> bool:
+            def stage_enabled(self, platform: str, name: str) -> bool:
                 return name != "synthesis"
 
         monkeypatch.setattr("social_research_probe.cli.load_active_config", lambda: _Cfg())

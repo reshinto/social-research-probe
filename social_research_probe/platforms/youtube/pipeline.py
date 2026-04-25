@@ -16,24 +16,29 @@ class YouTubeFetchStage(BaseStage):
     def stage_name(self) -> str:
         return "fetch"
 
-    async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.sourcing.youtube import YouTubeConnector
-
-        empty: dict = {"items": [], "engagement_metrics": []}
-        if not self._is_enabled(state):
-            state.set_stage_output("fetch", empty)
-            return state
+    def _resolve_search_topic(self, state: PipelineState) -> str:
         topic = state.inputs.get("topic", "")
         merged = state.inputs.get("merged_purpose")
         if merged is not None:
             from social_research_probe.utils.search.query import enrich_query
-            search_topic = enrich_query(topic, merged.method)
-        else:
-            search_topic = topic
-        connector = YouTubeConnector(state.platform_config)
+            return enrich_query(topic, merged.method)
+        return topic
+
+    async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
+        from social_research_probe.services.sourcing.youtube import YouTubeConnector
+        connector = YouTubeConnector(config)
         raw = await asyncio.to_thread(connector.find_by_topic, search_topic, connector.default_limits)
         items = await connector.fetch_item_details(raw)
         engagement_metrics = compute_engagement_metrics(items)
+        return items, engagement_metrics
+
+    async def execute(self, state: PipelineState) -> PipelineState:
+        empty: dict = {"items": [], "engagement_metrics": []}
+        if not self._is_enabled(state):
+            state.set_stage_output("fetch", empty)
+            return state
+        search_topic = self._resolve_search_topic(state)
+        items, engagement_metrics = await self._fetch_items(search_topic, state.platform_config)
         state.set_stage_output("fetch", {"items": items, "engagement_metrics": engagement_metrics})
         return state
 
@@ -48,25 +53,20 @@ class YouTubeScoreStage(BaseStage):
     def _top_n_limit(state: PipelineState) -> int:
         return int(state.platform_config.get("enrich_top_n", 5))
 
-    async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.technologies.scoring.combine import overall_score
-
-        fetch = state.get_stage_output("fetch")
-        items = fetch.get("items", [])
-        limit = self._top_n_limit(state)
-        fallback: dict = {"all_scored": items, "top_n": items[:limit]}
-        if not self._is_enabled(state) or not items:
-            state.set_stage_output("score", fallback)
-            return state
+    @staticmethod
+    def _resolve_purpose_scoring_weights(state: PipelineState):
         merged = state.inputs.get("merged_purpose")
-        if merged is not None:
-            from social_research_probe.config import load_active_config
-            from social_research_probe.services.scoring.weights import resolve_scoring_weights
-            weights = resolve_scoring_weights(load_active_config(), merged)
-        else:
-            weights = None
+        if merged is None:
+            return None
+        from social_research_probe.config import load_active_config
+        from social_research_probe.services.scoring.weights import resolve_scoring_weights
+        return resolve_scoring_weights(load_active_config(), merged)
+
+    @staticmethod
+    def _score_items(items: list, weights) -> list:
+        from social_research_probe.technologies.scoring.combine import overall_score
         try:
-            scored = [
+            return [
                 {
                     **item,
                     "overall_score": overall_score(
@@ -80,9 +80,19 @@ class YouTubeScoreStage(BaseStage):
                 if isinstance(item, dict)
             ]
         except Exception:
-            scored = items
-        top_n = scored[:limit]
-        state.set_stage_output("score", {"all_scored": scored, "top_n": top_n})
+            return items
+
+    async def execute(self, state: PipelineState) -> PipelineState:
+        fetch = state.get_stage_output("fetch")
+        items = fetch.get("items", [])
+        limit = self._top_n_limit(state)
+        fallback: dict = {"all_scored": items, "top_n": items[:limit]}
+        if not self._is_enabled(state) or not items:
+            state.set_stage_output("score", fallback)
+            return state
+        weights = self._resolve_purpose_scoring_weights(state)
+        scored = self._score_items(items, weights)
+        state.set_stage_output("score", {"all_scored": scored, "top_n": scored[:limit]})
         return state
 
 
@@ -92,6 +102,16 @@ class YouTubeTranscriptStage(BaseStage):
     def stage_name(self) -> str:
         return "transcript"
 
+    @staticmethod
+    def _merge_transcripts(top_n: list, results: list) -> list:
+        return [
+            {**item, "transcript": t}
+            if (t := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
+            else dict(item)
+            for item, r in zip(top_n, results, strict=True)
+            if isinstance(item, dict)
+        ]
+
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.transcript import TranscriptService
 
@@ -99,15 +119,8 @@ class YouTubeTranscriptStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("transcript", {"top_n": top_n})
             return state
-
         results = await TranscriptService().execute_batch(top_n)
-        enriched = [
-            {**item, "transcript": t}
-            if (t := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
-            else dict(item)
-            for item, r in zip(top_n, results, strict=True)
-            if isinstance(item, dict)
-        ]
+        enriched = self._merge_transcripts(top_n, results)
         state.set_stage_output("transcript", {"top_n": enriched})
         return state
 
@@ -118,6 +131,15 @@ class YouTubeSummaryStage(BaseStage):
     def stage_name(self) -> str:
         return "summary"
 
+    @staticmethod
+    def _merge_summaries(top_n: list, results: list) -> list:
+        return [
+            {**item, "summary": s}
+            if (s := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
+            else dict(item)
+            for item, r in zip(top_n, results, strict=True)
+        ]
+
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.summary import SummaryService
 
@@ -125,14 +147,8 @@ class YouTubeSummaryStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
-
         results = await SummaryService().execute_batch(top_n)
-        final = [
-            {**item, "summary": s}
-            if (s := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
-            else dict(item)
-            for item, r in zip(top_n, results, strict=True)
-        ]
+        final = self._merge_summaries(top_n, results)
         state.set_stage_output("summary", {"top_n": final})
         return state
 
@@ -143,13 +159,58 @@ class YouTubeCorroborateStage(BaseStage):
     def stage_name(self) -> str:
         return "corroborate"
 
+    @staticmethod
+    def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
+        from social_research_probe.services.corroborating.backends import auto_mode_backends
+        return auto_mode_backends(cfg) if configured == "auto" else (configured,)
+
+    @staticmethod
+    def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
+        from social_research_probe.services.corroborating.registry import get_backend
+        from social_research_probe.utils.core.errors import ValidationError
+        providers: list[str] = []
+        for name in candidates:
+            if not cfg.technology_enabled(name):
+                continue
+            if name == "llm_search" and not cfg.service_enabled("llm"):
+                continue
+            try:
+                if get_backend(name).health_check():
+                    providers.append(name)
+            except ValidationError:
+                pass
+        return providers
+
+    @staticmethod
+    def _cap_corroboration_providers_in_fast_mode(providers: list[str]) -> list[str]:
+        from social_research_probe.utils.display.fast_mode import FAST_MODE_MAX_BACKENDS, fast_mode_enabled
+        return providers[:FAST_MODE_MAX_BACKENDS] if fast_mode_enabled() else providers
+
+    def _select_corroboration_providers(self) -> list[str]:
+        from social_research_probe.config import load_active_config
+        from social_research_probe.utils.display.progress import log
+
+        cfg = load_active_config()
+        configured = cfg.corroboration_backend
+        if not cfg.service_enabled("corroboration") or configured == "none":
+            return []
+        candidates = self._list_corroboration_provider_candidates(cfg, configured)
+        providers = self._select_healthy_corroboration_providers(candidates, cfg)
+        if not providers:
+            checked = ", ".join(candidates)
+            log(
+                f"[srp] corroboration: backend '{configured}' configured but no provider usable"
+                f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
+            )
+        return self._cap_corroboration_providers_in_fast_mode(providers)
+
     async def execute(self, state: PipelineState) -> PipelineState:
         top_n = list(state.get_stage_output("summary").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
-        backends = self._resolve_backends()
-        if not backends:
+        providers = self._select_corroboration_providers()
+        if not providers:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
 
@@ -159,46 +220,11 @@ class YouTubeCorroborateStage(BaseStage):
 
         async def _run_one(item: dict) -> dict:
             async with sem:
-                return await corroborate_item(item, backends)
+                return await corroborate_item(item, providers)
 
         corroborated = list(await asyncio.gather(*(_run_one(item) for item in top_n)))
         state.set_stage_output("corroborate", {"top_n": corroborated})
         return state
-
-    def _resolve_backends(self) -> list[str]:
-        from social_research_probe.config import load_active_config
-        from social_research_probe.services.corroborating.backends import auto_mode_backends
-        from social_research_probe.services.corroborating.registry import get_backend
-        from social_research_probe.utils.core.errors import ValidationError
-        from social_research_probe.utils.display.fast_mode import (
-            FAST_MODE_MAX_BACKENDS,
-            fast_mode_enabled,
-        )
-        from social_research_probe.utils.display.progress import log
-
-        cfg = load_active_config()
-        configured = cfg.corroboration_backend
-        if not cfg.service_enabled("corroboration") or configured == "none":
-            return []
-        candidates = auto_mode_backends(cfg) if configured == "auto" else (configured,)
-        backends: list[str] = []
-        for name in candidates:
-            if not cfg.technology_enabled(name):
-                continue
-            if name == "llm_search" and not cfg.service_enabled("llm"):
-                continue
-            try:
-                if get_backend(name).health_check():
-                    backends.append(name)
-            except ValidationError:
-                pass
-        if not backends:
-            checked = ", ".join(candidates)
-            log(
-                f"[srp] corroboration: backend '{configured}' configured but no provider usable"
-                f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
-            )
-        return backends[:FAST_MODE_MAX_BACKENDS] if fast_mode_enabled() else backends
 
 
 class YouTubeStatsStage(BaseStage):
@@ -253,22 +279,15 @@ class YouTubeSynthesisStage(BaseStage):
     def stage_name(self) -> str:
         return "synthesis"
 
-    async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.llm.ensemble import multi_llm_prompt
-        from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
-
-        if not self._is_enabled(state):
-            state.set_stage_output("synthesis", {"synthesis": ""})
-            return state
-
+    @staticmethod
+    def _build_synthesis_context(state: PipelineState) -> dict:
         corroborate = state.get_stage_output("corroborate")
         score = state.get_stage_output("score")
         fetch = state.get_stage_output("fetch")
         stats = state.get_stage_output("stats")
         charts = state.get_stage_output("charts")
         top_n = list(corroborate.get("top_n") or score.get("top_n", []))
-
-        synthesis_context: dict = {
+        return {
             "top_n": top_n,
             "stats_results": stats.get("stats_summary", {}),
             "chart_results": charts.get("chart_output"),
@@ -276,11 +295,22 @@ class YouTubeSynthesisStage(BaseStage):
             "engagement_metrics": fetch.get("engagement_metrics", []),
             "topic": state.inputs.get("topic", ""),
         }
-        try:
-            synthesis_text = await multi_llm_prompt(build_synthesis_prompt(synthesis_context)) or ""
-        except Exception:
-            synthesis_text = ""
 
+    @staticmethod
+    async def _run_synthesis(context: dict) -> str:
+        from social_research_probe.services.llm.ensemble import multi_llm_prompt
+        from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
+        try:
+            return await multi_llm_prompt(build_synthesis_prompt(context)) or ""
+        except Exception:
+            return ""
+
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            state.set_stage_output("synthesis", {"synthesis": ""})
+            return state
+        context = self._build_synthesis_context(state)
+        synthesis_text = await self._run_synthesis(context)
         state.set_stage_output("synthesis", {"synthesis": synthesis_text})
         return state
 
@@ -291,13 +321,49 @@ class YouTubeAssembleStage(BaseStage):
     def stage_name(self) -> str:
         return "assemble"
 
-    async def execute(self, state: PipelineState) -> PipelineState:
-        if not self._is_enabled(state):
-            return state
+    @staticmethod
+    def _collect_divergence_warnings(top_n: list, threshold: float) -> list[str]:
+        warnings: list[str] = []
+        for item in top_n:
+            divergence = item.get("summary_divergence") if isinstance(item, dict) else None
+            if divergence is not None and divergence > threshold:
+                title = (item.get("title") or "untitled")[:80]
+                warnings.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
+        return warnings
 
+    @staticmethod
+    def _compose_research_report_data(
+        topic: str,
+        platform: str,
+        purpose_names: list,
+        top_n: list,
+        items: list,
+        engagement_metrics: list,
+        stats_summary: dict,
+        chart_captions: list,
+        chart_takeaways: list,
+        warnings: list[str],
+    ) -> dict:
         from social_research_probe.services.synthesizing.evidence import summarize as summarize_evidence
         from social_research_probe.services.synthesizing.evidence import summarize_engagement_metrics
         from social_research_probe.services.synthesizing.formatter import build_packet
+        return build_packet(
+            topic=topic,
+            platform=platform,
+            purpose_set=list(purpose_names),
+            items_top_n=top_n,
+            source_validation_summary={},
+            platform_engagement_summary=summarize_engagement_metrics(engagement_metrics),
+            evidence_summary=summarize_evidence(items, engagement_metrics, top_n),
+            stats_summary=stats_summary,
+            chart_captions=chart_captions,
+            chart_takeaways=chart_takeaways,
+            warnings=warnings,
+        )
+
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            return state
 
         fetch = state.get_stage_output("fetch")
         corroborate = state.get_stage_output("corroborate")
@@ -314,23 +380,17 @@ class YouTubeAssembleStage(BaseStage):
         platform = getattr(cmd, "platform", "youtube")
         purpose_names = state.inputs.get("purpose_names", [])
 
-        warnings: list[str] = []
         from social_research_probe.config import load_active_config
         threshold = float(load_active_config().tunables.get("summary_divergence_threshold", 0.4))
-        for item in top_n:
-            divergence = item.get("summary_divergence") if isinstance(item, dict) else None
-            if divergence is not None and divergence > threshold:
-                title = (item.get("title") or "untitled")[:80]
-                warnings.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
+        warnings = self._collect_divergence_warnings(top_n, threshold)
 
-        packet = build_packet(
+        packet = self._compose_research_report_data(
             topic=topic,
             platform=platform,
-            purpose_set=list(purpose_names),
-            items_top_n=top_n,
-            source_validation_summary={},
-            platform_engagement_summary=summarize_engagement_metrics(engagement_metrics),
-            evidence_summary=summarize_evidence(items, engagement_metrics, top_n),
+            purpose_names=purpose_names,
+            top_n=top_n,
+            items=items,
+            engagement_metrics=engagement_metrics,
             stats_summary=stats.get("stats_summary", {}),
             chart_captions=charts.get("chart_captions", []),
             chart_takeaways=charts.get("chart_takeaways", []),
@@ -365,17 +425,24 @@ class YouTubeReportStage(BaseStage):
     def stage_name(self) -> str:
         return "report"
 
-    async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.reporting.html import HtmlReportService
+    @staticmethod
+    def _write_text_report(packet: dict, allow_html: bool) -> str:
+        return write_final_report(packet, allow_html=allow_html)
 
+    @staticmethod
+    async def _write_html_report(packet: dict) -> None:
+        from social_research_probe.services.reporting.html import HtmlReportService
+        await HtmlReportService().execute_one({"packet": packet})
+
+    async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             return state
 
         packet = state.outputs.get("packet", {})
         allow_html = bool(state.platform_config.get("allow_html", True))
-        report_path = write_final_report(packet, allow_html=allow_html)
+        report_path = self._write_text_report(packet, allow_html)
         packet["report_path"] = report_path
-        await HtmlReportService().execute_one({"packet": packet})
+        await self._write_html_report(packet)
         state.outputs["packet"] = packet
         return state
 

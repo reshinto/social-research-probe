@@ -28,7 +28,7 @@ class _Cfg:
     def __init__(self, *, stages: dict[str, bool] | None = None) -> None:
         self._stages = stages or {}
 
-    def stage_enabled(self, name: str) -> bool:
+    def stage_enabled(self, platform: str, name: str) -> bool:
         return self._stages.get(name, True)
 
     def service_enabled(self, name: str) -> bool:

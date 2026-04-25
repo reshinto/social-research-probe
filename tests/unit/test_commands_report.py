@@ -35,7 +35,7 @@ def test_run_raises_when_html_report_generation_is_disabled(monkeypatch, tmp_pat
     packet_path.write_text(json.dumps({"topic": "AI"}), encoding="utf-8")
 
     class _Cfg:
-        def stage_enabled(self, name: str) -> bool:
+        def stage_enabled(self, platform: str, name: str) -> bool:
             return True
 
         def service_enabled(self, name: str) -> bool:
@@ -67,7 +67,7 @@ def test_run_skips_voicebox_profile_loading_when_voicebox_technology_disabled(
     captured: dict[str, object] = {}
 
     class _Cfg:
-        def stage_enabled(self, name: str) -> bool:
+        def stage_enabled(self, platform: str, name: str) -> bool:
             return True
 
         def service_enabled(self, name: str) -> bool:

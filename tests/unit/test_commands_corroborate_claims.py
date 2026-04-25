@@ -113,7 +113,7 @@ def test_run_raises_when_corroboration_service_disabled(monkeypatch, tmp_path):
             "Cfg",
             (),
             {
-                "stage_enabled": staticmethod(lambda name: True),
+                "stage_enabled": staticmethod(lambda platform, name: True),
                 "service_enabled": staticmethod(lambda name: name != "corroboration"),
             },
         )(),
@@ -122,19 +122,3 @@ def test_run_raises_when_corroboration_service_disabled(monkeypatch, tmp_path):
         cc_cmd.run(str(input_path), backends=["llm_search"])
 
 
-def test_run_raises_when_corroborate_stage_disabled(monkeypatch, tmp_path):
-    input_path = _write_claims(tmp_path, _CLAIMS_DATA)
-    monkeypatch.setattr(
-        cc_cmd,
-        "load_active_config",
-        lambda: type(
-            "Cfg",
-            (),
-            {
-                "stage_enabled": staticmethod(lambda name: name != "corroborate"),
-                "service_enabled": staticmethod(lambda name: True),
-            },
-        )(),
-    )
-    with pytest.raises(ValidationError, match=r"stages\.corroborate is false"):
-        cc_cmd.run(str(input_path), backends=["llm_search"])

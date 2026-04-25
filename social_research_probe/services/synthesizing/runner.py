@@ -25,7 +25,7 @@ def structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
 
 def run_required_synthesis(packet: dict) -> dict | None:
     """Run LLM synthesis on packet if enabled; return result or None."""
-    if not stage_flag("synthesis", default=True):
+    if not stage_flag("synthesis", platform="youtube", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return None
     if not service_flag("llm", default=True):
@@ -94,7 +94,7 @@ def attach_synthesis(packet: dict) -> None:
 
 def log_synthesis_runner_status() -> None:
     """Log synthesis runner availability status."""
-    if not stage_flag("synthesis", default=True):
+    if not stage_flag("synthesis", platform="youtube", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return
     if not service_flag("llm", default=True):

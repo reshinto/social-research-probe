@@ -15,11 +15,16 @@ from social_research_probe.platforms.orchestrator import _auto_mode_backends, _a
 _ALL_STAGE_FLAGS = (
     "fetch",
     "score",
-    "enrich",
+    "transcript",
+    "summary",
     "corroborate",
-    "analyze",
+    "stats",
+    "charts",
     "synthesis",
+    "assemble",
+    "structured_synthesis",
     "report",
+    "narration",
 )
 
 _ALL_SERVICE_FLAGS = (
@@ -41,8 +46,8 @@ _ALL_SERVICE_FLAGS = (
 @pytest.mark.parametrize("stage", _ALL_STAGE_FLAGS)
 def test_each_stage_flag_can_be_disabled_individually(tmp_path, stage):
     cfg = Config.load(tmp_path)
-    cfg.raw["stages"][stage] = False
-    assert cfg.stage_enabled(stage) is False
+    cfg.raw["stages"]["youtube"][stage] = False
+    assert cfg.stage_enabled("youtube", stage) is False
 
 
 @pytest.mark.parametrize(("section", "service"), _ALL_SERVICE_FLAGS)

@@ -52,11 +52,20 @@ DEFAULT_CONFIG: AppConfig = {
     },
     "scoring": {"weights": {}},
     "stages": {
-        "fetch": True,
-        "score": True,
-        "enrich": True,
-        "corroborate": True,
-        "analyze": True,
+        "youtube": {
+            "fetch": True,
+            "score": True,
+            "transcript": True,
+            "summary": True,
+            "corroborate": True,
+            "stats": True,
+            "charts": True,
+            "synthesis": True,
+            "assemble": True,
+            "structured_synthesis": True,
+            "report": True,
+            "narration": True,
+        },
     },
     "services": {
         "youtube": {
@@ -227,9 +236,12 @@ class Config:
         """Return the Voicebox renderer defaults."""
         return self.raw["voicebox"]
 
-    def stage_enabled(self, name: str) -> bool:
-        """Return True iff the named stage is enabled."""
-        flag = self.stages.get(name)
+    def stage_enabled(self, platform: str, name: str) -> bool:
+        """Return True iff the named stage is enabled for the given platform."""
+        platform_stages = self.stages.get(platform)
+        if not isinstance(platform_stages, dict):
+            return True
+        flag = platform_stages.get(name)
         return bool(flag) if flag is not None else True
 
     def service_enabled(self, name: str) -> bool:
@@ -252,13 +264,17 @@ class Config:
     def allows(
         self,
         *,
+        platform: str | None = None,
         stage: str | None = None,
         service: str | None = None,
         technology: str | None = None,
     ) -> bool:
         """Return True when the stage/service/technology chain permits execution."""
-        if stage is not None and not self.stage_enabled(stage):
-            return False
+        if stage is not None:
+            if platform is None:
+                return False
+            if not self.stage_enabled(platform, stage):
+                return False
         if service is not None and not self.service_enabled(service):
             return False
         return technology is None or self.technology_enabled(technology)

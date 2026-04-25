@@ -138,7 +138,8 @@ def run(
 
     packet = _load_and_validate_packet(packet_path)
     cfg = load_active_config()
-    if out_path and (not cfg.stage_enabled("report") or not cfg.service_enabled("html_report")):
+    platform = str(packet.get("platform", "youtube"))
+    if out_path and (not cfg.stage_enabled(platform, "report") or not cfg.service_enabled("html_report")):
         raise ValidationError("HTML report generation is disabled by config")
 
     rendered_packet = _apply_text_overrides(

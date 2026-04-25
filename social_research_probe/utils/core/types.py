@@ -72,16 +72,7 @@ class ScoringConfigSection(TypedDict):
     weights: dict[str, float]
 
 
-class StagesConfigSection(TypedDict):
-    """Top-level stage on/off switches. Highest-priority execution gates."""
-
-    fetch: bool
-    score: bool
-    enrich: bool
-    corroborate: bool
-    analyze: bool
-    synthesis: bool
-    report: bool
+StagesConfigSection = dict[str, dict[str, bool]]
 
 
 class FetchServices(TypedDict, total=False):
