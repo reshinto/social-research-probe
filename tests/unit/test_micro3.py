@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from social_research_probe.commands import install_skill
@@ -96,6 +95,7 @@ def test_install_skill_load_and_merge(monkeypatch, tmp_path):
 
 
 def test_install_skill_run_writes_skill(monkeypatch, tmp_path):
+    monkeypatch.setattr(install_skill.Path, "home", lambda: tmp_path)
     monkeypatch.setattr(install_skill, "_install_cli", lambda: None)
     monkeypatch.setattr(install_skill, "_copy_config_example", lambda: None)
     monkeypatch.setattr(install_skill, "_prompt_for_secrets", lambda: None)
@@ -104,7 +104,7 @@ def test_install_skill_run_writes_skill(monkeypatch, tmp_path):
     src = tmp_path / "src_skill"
     src.mkdir()
     (src / "x.md").write_text("y")
-    target = Path.home() / ".claude" / "skills" / "srp_unique_test_2"
+    target = tmp_path / ".claude" / "skills" / "srp_unique_test_2"
     monkeypatch.setattr(
         install_skill.shutil, "copytree", lambda s, d: d.mkdir(parents=True, exist_ok=True)
     )

@@ -5,11 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult, TechResult
-from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.services.base import BaseService, ServiceResult
+from social_research_probe.technologies.base import BaseTechnology
 
 _TECH_NAME = "charts_suite"
 _INPUT_KEY = "scored_items"
+
+
+class ChartsTech(BaseTechnology[object, list]):
+    """Technology wrapper for generating the full chart suite."""
+
+    name: ClassVar[str] = _TECH_NAME
+
+    async def _execute(self, input_data: object) -> list:
+        items = ChartsService._items_from(input_data)
+        out_dir = ChartsService._ensure_charts_dir()
+        return await ChartsService._render_with_cache(items, out_dir)
 
 
 class ChartsService(BaseService):
@@ -23,7 +34,7 @@ class ChartsService(BaseService):
     enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
 
     def _get_technologies(self):
-        return []
+        return [ChartsTech()]
 
     @staticmethod
     def _data_charts_dir() -> Path:
@@ -104,29 +115,7 @@ class ChartsService(BaseService):
         set_json(cache, key, cls._serialise_results(charts, charts_dir))
         return charts
 
-    @staticmethod
-    def _success_result(data: object, charts: list) -> TechResult:
-        return TechResult(tech_name=_TECH_NAME, input=data, output=charts, success=True)
-
-    @staticmethod
-    def _failure_result(data: object, exc: Exception) -> TechResult:
-        return TechResult(
-            tech_name=_TECH_NAME, input=data, output=[], success=False, error=str(exc)
-        )
-
-    async def _render_safely(self, data: object) -> TechResult:
-        try:
-            charts = await self._render_with_cache(
-                self._items_from(data), self._ensure_charts_dir()
-            )
-            return self._success_result(data, charts)
-        except Exception as exc:
-            return self._failure_result(data, exc)
-
-    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
-        """Render the full chart suite from scored_items in data dict."""
-        tr = await self._render_safely(data)
-        return ServiceResult(
-            service_name=self.service_name, input_key=_INPUT_KEY, tech_results=[tr]
-        )
+        result = await super().execute_one(data)
+        result.input_key = _INPUT_KEY
+        return result

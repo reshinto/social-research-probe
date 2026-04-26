@@ -126,24 +126,3 @@ class TestCorroborateClaim:
             claim.text = "x"
             out = asyncio.run(host.corroborate_claim(claim, ["fakefail"]))
             assert out["results"] == []
-
-
-class TestCorroborateItem:
-    def test_attaches_corroboration(self, monkeypatch):
-        async def fake(claim, names):
-            return {"verdict": "x"}
-
-        monkeypatch.setattr(host, "corroborate_claim", fake)
-        item = {"title": "t", "url": "https://x"}
-        out = asyncio.run(host.corroborate_item(item, ["x"]))
-        assert out["corroboration"] == {"verdict": "x"}
-
-    def test_failure_returns_item_copy(self, monkeypatch):
-        async def fake(claim, names):
-            raise RuntimeError("nope")
-
-        monkeypatch.setattr(host, "corroborate_claim", fake)
-        item = {"title": "t"}
-        out = asyncio.run(host.corroborate_item(item, ["x"]))
-        assert "corroboration" not in out
-        assert out["title"] == "t"

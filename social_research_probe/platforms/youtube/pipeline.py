@@ -76,19 +76,6 @@ class YouTubeScoreStage(BaseStage):
     def _empty_score_output(items: list, limit: int) -> dict:
         return {"all_scored": items, "top_n": items[:limit]}
 
-    @staticmethod
-    def _safe_score(items: list, metrics: list, weights) -> list:
-        from social_research_probe.services.scoring.compute import score_items
-
-        try:
-            return score_items(items, metrics, weights)
-        except Exception:
-            return []
-
-    @staticmethod
-    def _build_score_output(scored: list, limit: int) -> dict:
-        return {"all_scored": scored, "top_n": scored[:limit]}
-
     @log_with_time("[srp] youtube/score: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         fetch = state.get_stage_output("fetch")
@@ -98,8 +85,23 @@ class YouTubeScoreStage(BaseStage):
             state.set_stage_output("score", self._empty_score_output(items, limit))
             return state
         weights = self._resolve_purpose_scoring_weights(state)
-        scored = self._safe_score(items, fetch.get("engagement_metrics", []), weights)
-        state.set_stage_output("score", self._build_score_output(scored, limit))
+
+        from social_research_probe.services.scoring.score import ScoringService
+
+        data = {
+            "items": items,
+            "engagement_metrics": fetch.get("engagement_metrics", []),
+            "weights": weights,
+        }
+        result = await ScoringService().execute_one(data)
+
+        scored = []
+        for tr in result.tech_results:
+            if tr.success and isinstance(tr.output, list):
+                scored = tr.output
+                break
+
+        state.set_stage_output("score", {"all_scored": scored, "top_n": scored[:limit]})
         return state
 
 
@@ -219,6 +221,18 @@ class YouTubeCorroborateStage(BaseStage):
             )
         return self._cap_corroboration_providers_in_fast_mode(providers)
 
+    @staticmethod
+    def _merge_corroborations(top_n: list, results: list) -> list:
+        return [
+            {**item, "corroboration": corr}
+            if (
+                corr := next((tr.output for tr in r.tech_results if tr.success and tr.output), None)
+            )
+            else dict(item)
+            for item, r in zip(top_n, results, strict=True)
+            if isinstance(item, dict)
+        ]
+
     @log_with_time("[srp] youtube/corroborate: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         top_n = list(state.get_stage_output("summary").get("top_n", []))
@@ -230,15 +244,11 @@ class YouTubeCorroborateStage(BaseStage):
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
 
-        from social_research_probe.services.corroborating.host import corroborate_item
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
 
-        sem = asyncio.Semaphore(3)
+        results = await CorroborationService(providers).execute_batch(top_n)
+        corroborated = self._merge_corroborations(top_n, results)
 
-        async def _run_one(item: dict) -> dict:
-            async with sem:
-                return await corroborate_item(item, providers)
-
-        corroborated = list(await asyncio.gather(*(_run_one(item) for item in top_n)))
         state.set_stage_output("corroborate", {"top_n": corroborated})
         return state
 

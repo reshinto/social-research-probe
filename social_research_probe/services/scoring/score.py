@@ -4,46 +4,32 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult, TechResult
-from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.services.base import BaseService
+from social_research_probe.technologies.base import BaseTechnology
+
+
+class ScoringComputeTech(BaseTechnology[object, list]):
+    """Technology wrapper for computing full scores for a batch of items."""
+
+    name: ClassVar[str] = "scoring.compute"
+
+    async def _execute(self, input_data: object) -> list:
+        from social_research_probe.services.scoring.compute import score_items
+
+        items = input_data.get("items", []) if isinstance(input_data, dict) else []
+        metrics = input_data.get("engagement_metrics", []) if isinstance(input_data, dict) else []
+        weights = input_data.get("weights", {}) if isinstance(input_data, dict) else None
+        return score_items(items, metrics, weights)
 
 
 class ScoringService(BaseService):
     """Score and rank research items using trust/trend/opportunity signals.
 
-    Pure computation — no I/O technologies. Delegates to scoring/combine.py.
+    Delegates to scoring/compute.py via ScoringComputeTech.
     """
 
     service_name: ClassVar[str] = "youtube.scoring.score"
     enabled_config_key: ClassVar[str] = "services.youtube.scoring.score"
 
     def _get_technologies(self):
-        return []
-
-    @log_with_time("[srp] {self.service_name}: execute_one")
-    async def execute_one(self, data: object) -> ServiceResult:
-        """Score a list of raw items; data is dict with 'items' and 'weights' keys."""
-        from social_research_probe.technologies.scoring.combine import overall_score
-
-        items = data.get("items", []) if isinstance(data, dict) else []
-        weights = data.get("weights", {}) if isinstance(data, dict) else {}
-        try:
-            scored = [
-                {
-                    **item,
-                    "overall_score": overall_score(
-                        trust=item.get("trust", 0.0),
-                        trend=item.get("trend", 0.0),
-                        opportunity=item.get("opportunity", 0.0),
-                        weights=weights or None,
-                    ),
-                }
-                for item in items
-                if isinstance(item, dict)
-            ]
-            tr = TechResult(tech_name="scoring.combine", input=data, output=scored, success=True)
-        except Exception as exc:
-            tr = TechResult(
-                tech_name="scoring.combine", input=data, output=None, success=False, error=str(exc)
-            )
-        return ServiceResult(service_name=self.service_name, input_key="items", tech_results=[tr])
+        return [ScoringComputeTech()]

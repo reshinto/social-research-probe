@@ -55,10 +55,24 @@ class TestFetchStage:
 class TestScoreStage:
     def test_enabled_with_items(self, enabled_state, monkeypatch):
         enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
+        from social_research_probe.services.base import ServiceResult, TechResult
+
+        async def fake_one(self, data):
+            return ServiceResult(
+                service_name="scoring",
+                input_key="items",
+                tech_results=[
+                    TechResult(
+                        tech_name="t",
+                        input=None,
+                        output=[{"id": "1", "overall_score": 0.5}],
+                        success=True,
+                    )
+                ],
+            )
+
         monkeypatch.setattr(
-            yt.YouTubeScoreStage,
-            "_safe_score",
-            staticmethod(lambda items, em, w: [{"id": "1", "overall_score": 0.5}]),
+            "social_research_probe.services.scoring.score.ScoringService.execute_one", fake_one
         )
         out = asyncio.run(yt.YouTubeScoreStage().execute(enabled_state))
         assert out.get_stage_output("score")["all_scored"]
@@ -80,14 +94,6 @@ class TestScoreStage:
         )
         out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
         assert out["trust"] == 0.5
-
-    def test_safe_score_runs(self, monkeypatch):
-        monkeypatch.setattr(
-            "social_research_probe.services.scoring.compute.score_items",
-            lambda items, em, w: [{"id": "1"}],
-        )
-        out = yt.YouTubeScoreStage._safe_score([{"id": "1"}], [], None)
-        assert out == [{"id": "1"}]
 
 
 class TestTranscriptStage:
@@ -244,11 +250,20 @@ class TestCorroborateStage:
             lambda self: ["exa"],
         )
 
-        async def fake_corr(item, providers):
-            return {**item, "corroboration": "ok"}
+        from social_research_probe.services.base import ServiceResult, TechResult
+
+        async def fake_batch(self, items):
+            return [
+                ServiceResult(
+                    service_name="test",
+                    input_key="x",
+                    tech_results=[TechResult(tech_name="t", input="i", output="ok", success=True)],
+                )
+            ]
 
         monkeypatch.setattr(
-            "social_research_probe.services.corroborating.host.corroborate_item", fake_corr
+            "social_research_probe.services.corroborating.corroborate.CorroborationService.execute_batch",
+            fake_batch,
         )
         out = asyncio.run(yt.YouTubeCorroborateStage().execute(enabled_state))
         assert out.get_stage_output("corroborate")["top_n"][0]["corroboration"] == "ok"

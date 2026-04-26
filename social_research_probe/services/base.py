@@ -89,3 +89,47 @@ class BaseService(ABC, Generic[TInput, TOutput]):
     @abstractmethod
     def _get_technologies(self) -> list[BaseTechnology]:
         """Return technology instances to run for one input."""
+
+
+class FallbackService(BaseService[TInput, TOutput]):
+    """Runs a batch of inputs through technologies sequentially.
+
+    Tries each technology in order. If one succeeds, returns immediately
+    without executing the remaining technologies.
+    """
+
+    @log_with_time("[srp] {self.service_name}: execute_one (fallback)")
+    async def execute_one(self, data: TInput) -> ServiceResult:
+        """Run technologies sequentially until one succeeds."""
+        techs = self._get_technologies()
+        tech_results = []
+
+        for tech in techs:
+            tech.caller_service = self.service_name
+            try:
+                output = await tech.execute(data)
+                tr = TechResult(
+                    tech_name=tech.name,
+                    input=data,
+                    output=output,
+                    success=output is not None,
+                )
+                tech_results.append(tr)
+                if tr.success:
+                    break
+            except Exception as exc:
+                tech_results.append(
+                    TechResult(
+                        tech_name=tech.name,
+                        input=data,
+                        output=None,
+                        success=False,
+                        error=str(exc),
+                    )
+                )
+
+        return ServiceResult(
+            service_name=self.service_name,
+            input_key=repr(data),
+            tech_results=tech_results,
+        )

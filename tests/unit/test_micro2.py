@@ -128,10 +128,10 @@ def test_explain_tests_normality_normal():
 
 class TestScoringServiceFailure:
     def test_failure_path(self, monkeypatch):
-        # Force overall_score to raise → exception branch
+        # Force score_items to raise → exception branch
         monkeypatch.setattr(
-            "social_research_probe.technologies.scoring.combine.overall_score",
-            lambda **kw: (_ for _ in ()).throw(RuntimeError("nope")),
+            "social_research_probe.services.scoring.compute.score_items",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("nope")),
         )
         out = asyncio.run(
             scoring_svc.ScoringService().execute_one(

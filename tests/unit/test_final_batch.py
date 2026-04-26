@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import socket
-import threading
-import time
 import urllib.request
 from unittest.mock import MagicMock, patch
 
@@ -99,6 +97,29 @@ def test_yt_score_full_path(enabled_state, monkeypatch):
     assert out.get_stage_output("score")["all_scored"]
 
 
+def test_yt_score_full_path_failure(enabled_state, monkeypatch):
+    enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
+    from social_research_probe.services.base import ServiceResult, TechResult
+
+    async def fake_execute_one(self, data):
+        return ServiceResult(
+            service_name="scoring",
+            input_key="data",
+            tech_results=[
+                TechResult(tech_name="dummy", input=None, success=False, error="err", output=None),
+                TechResult(
+                    tech_name="dummy", input=None, success=True, error=None, output="not-a-list"
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(
+        "social_research_probe.services.scoring.score.ScoringService.execute_one", fake_execute_one
+    )
+    out = asyncio.run(yt.YouTubeScoreStage().execute(enabled_state))
+    assert out.get_stage_output("score")["all_scored"] == []
+
+
 def test_yt_assemble_disabled(enabled_state, monkeypatch):
     monkeypatch.setattr(yt.YouTubeAssembleStage, "_is_enabled", lambda self, state: False)
     out = asyncio.run(yt.YouTubeAssembleStage().execute(enabled_state))
@@ -145,16 +166,9 @@ def test_serve_report_proxy_target_construction():
 def test_serve_report_post_unknown(tmp_path):
     f = tmp_path / "r.html"
     f.write_text("<x/>")
-    port = _free_port()
-    proxy_port = _free_port()
-    server = serve_report._build_server(f, "127.0.0.1", port, f"http://127.0.0.1:{proxy_port}/")
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        time.sleep(0.05)
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/somewhere", data=b"x", method="POST")
-        with pytest.raises(urllib.error.HTTPError):
-            urllib.request.urlopen(req)
-    finally:
-        server.shutdown()
-        server.server_close()
+    handler_class = serve_report._make_handler(f, "http://nope")
+    handler = handler_class.__new__(handler_class)
+    handler.path = "/somewhere"
+    handler.send_error = MagicMock()
+    handler.do_POST()
+    handler.send_error.assert_called_with(404, "Not Found")

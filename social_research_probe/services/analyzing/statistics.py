@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult, TechResult
-from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.services.base import BaseService, ServiceResult
+from social_research_probe.technologies.base import BaseTechnology
 
 _NUMERIC_TARGETS: tuple[str, ...] = (
     "overall",
@@ -31,7 +31,7 @@ class StatisticsService(BaseService):
     enabled_config_key: ClassVar[str] = "services.youtube.analyzing.statistics"
 
     def _get_technologies(self):
-        return []
+        return [StatisticsTech()]
 
     @staticmethod
     def _items(data: object) -> list[dict]:
@@ -126,25 +126,16 @@ class StatisticsService(BaseService):
 
         return await asyncio.to_thread(StatisticsService._cached_or_compute, items)
 
-    def _success(self, data: object, output: dict) -> TechResult:
-        return TechResult(tech_name="stats_per_target", input=data, output=output, success=True)
-
-    def _failure(self, data: object, exc: Exception) -> TechResult:
-        return TechResult(
-            tech_name="stats_per_target", input=data, output=None, success=False, error=str(exc)
-        )
-
-    async def _run_safely(self, data: object) -> TechResult:
-        try:
-            output = await self._compute_async(self._items(data))
-            return self._success(data, output)
-        except Exception as exc:
-            return self._failure(data, exc)
-
-    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
-        """Run stats analysis on scored_items, keyed by derived-target label."""
-        tr = await self._run_safely(data)
-        return ServiceResult(
-            service_name=self.service_name, input_key="scored_items", tech_results=[tr]
-        )
+        result = await super().execute_one(data)
+        result.input_key = "scored_items"
+        return result
+
+
+class StatisticsTech(BaseTechnology[object, dict]):
+    """Technology wrapper for computing statistics across all targets."""
+
+    name: ClassVar[str] = "stats_per_target"
+
+    async def _execute(self, input_data: object) -> dict:
+        return await StatisticsService._compute_async(StatisticsService._items(input_data))

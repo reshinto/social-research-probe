@@ -105,15 +105,6 @@ def test_score_resolve_weights_none(disabled_state):
     assert yt.YouTubeScoreStage._resolve_purpose_scoring_weights(disabled_state) is None
 
 
-def test_score_safe_score_handles_failure(monkeypatch):
-    def boom(items, em, weights):
-        raise RuntimeError("err")
-
-    monkeypatch.setattr("social_research_probe.services.scoring.compute.score_items", boom)
-    out = yt.YouTubeScoreStage._safe_score([{"x": 1}], [], None)
-    assert isinstance(out, list)
-
-
 def test_pipeline_construct():
     p = yt.YouTubePipeline()
     assert hasattr(p, "stages")

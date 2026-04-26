@@ -292,7 +292,7 @@ class TestHistogramRender:
 
 
 class TestChartsServiceFailures:
-    def test_render_safely_failure(self, monkeypatch):
+    def test_render_failure(self, monkeypatch):
         async def boom(items, charts_dir):
             raise RuntimeError("nope")
 
@@ -304,10 +304,8 @@ class TestChartsServiceFailures:
         cfg = MagicMock()
         cfg.data_dir = Path("/tmp/test-charts-failures")
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            out = asyncio.run(
-                charts_svc.ChartsService()._render_safely({"scored_items": [{"x": 1}]})
-            )
-        assert out.success is False
+            out = asyncio.run(charts_svc.ChartsService().execute_one({"scored_items": [{"x": 1}]}))
+        assert out.tech_results[0].success is False
 
 
 class TestReportCmdHTMLOut:

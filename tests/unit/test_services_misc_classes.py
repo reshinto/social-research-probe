@@ -8,23 +8,29 @@ from social_research_probe.services.scoring.score import ScoringService
 
 
 class TestScoringService:
-    def test_no_techs(self):
-        assert ScoringService()._get_technologies() == []
+    def test_techs(self):
+        techs = ScoringService()._get_technologies()
+        assert techs[0].name == "scoring.compute"
 
-    def test_execute_one_basic(self):
+    def test_execute_one_basic(self, monkeypatch):
+        monkeypatch.setattr(
+            "social_research_probe.services.scoring.compute.score_items",
+            lambda i, m, w: [{"overall_score": 1.0}, {"overall_score": 0.5}],
+        )
         svc = ScoringService()
-        items = [
-            {"id": "1", "trust": 0.8, "trend": 0.5, "opportunity": 0.4},
-            {"id": "2", "trust": 0.3, "trend": 0.2, "opportunity": 0.1},
-        ]
+        items = [{"id": "1"}, {"id": "2"}]
         out = asyncio.run(svc.execute_one({"items": items}))
         scored = out.tech_results[0].output
         assert len(scored) == 2
         assert all("overall_score" in d for d in scored)
 
-    def test_execute_one_with_weights(self):
+    def test_execute_one_with_weights(self, monkeypatch):
+        monkeypatch.setattr(
+            "social_research_probe.services.scoring.compute.score_items",
+            lambda i, m, w: [{"overall_score": w.get("trust", 0.0)}],
+        )
         svc = ScoringService()
-        items = [{"id": "1", "trust": 1.0, "trend": 0.0, "opportunity": 0.0}]
+        items = [{"id": "1"}]
         out = asyncio.run(svc.execute_one({"items": items, "weights": {"trust": 1.0}}))
         scored = out.tech_results[0].output
         assert scored[0]["overall_score"] == 1.0

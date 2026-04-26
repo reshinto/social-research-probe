@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult, TechResult
-from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.services.base import FallbackService, ServiceResult
 
 
-class AudioReportService(BaseService):
+class AudioReportService(FallbackService):
     """Generate audio narration for the research report.
 
     Synchronous — runs after HTML report is complete.
@@ -20,25 +19,13 @@ class AudioReportService(BaseService):
     enabled_config_key: ClassVar[str] = "services.youtube.reporting.audio"
 
     def _get_technologies(self):
+        from social_research_probe.technologies.tts.mac_tts import MacTTS
         from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
 
-        return [VoiceboxTTS()]
+        return [VoiceboxTTS(), MacTTS()]
 
-    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
-        """Synthesize narration audio; try Voicebox then MacTTS fallback."""
-        from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
-
         text = data.get("text", "") if isinstance(data, dict) else str(data)
-        tech = VoiceboxTTS()
-        tech.caller_service = self.service_name
-        try:
-            output = await tech.execute(text)
-            tr = TechResult(
-                tech_name=tech.name, input=data, output=output, success=output is not None
-            )
-        except Exception as exc:
-            tr = TechResult(
-                tech_name=tech.name, input=data, output=None, success=False, error=str(exc)
-            )
-        return ServiceResult(service_name=self.service_name, input_key="text", tech_results=[tr])
+        result = await super().execute_one(text)
+        result.input_key = "text"
+        return result

@@ -23,8 +23,9 @@ def test_schemas_present():
 
 
 class TestChartsService:
-    def test_no_techs(self):
-        assert ChartsService()._get_technologies() == []
+    def test_techs(self):
+        techs = ChartsService()._get_technologies()
+        assert techs[0].name == "charts_suite"
 
     def test_items_from_non_dict(self):
         assert ChartsService._items_from(None) == []
@@ -63,8 +64,9 @@ class TestChartsService:
 
 
 class TestStatisticsService:
-    def test_no_techs(self):
-        assert StatisticsService()._get_technologies() == []
+    def test_techs(self):
+        techs = StatisticsService()._get_technologies()
+        assert techs[0].name == "stats_per_target"
 
     def test_items_filter(self):
         assert StatisticsService._items({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
@@ -106,17 +108,26 @@ class TestStatisticsService:
 
 
 class TestSynthesisService:
-    def test_no_techs(self):
-        assert SynthesisService()._get_technologies() == []
+    def test_techs(self):
+        techs = SynthesisService()._get_technologies()
+        assert techs[0].name == "llm_synthesis"
 
-    def test_execute_failure(self):
+    def test_execute_failure(self, monkeypatch):
+        async def boom(prompt, task="generating response"):
+            raise RuntimeError("nope")
+
+        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", boom)
         out = asyncio.run(SynthesisService().execute_one("not a dict"))
-        assert out.tech_results
+        assert out.tech_results[0].success is False
 
 
 class TestCorroborationService:
-    def test_no_techs(self):
-        assert CorroborationService()._get_technologies() == []
+    def test_techs(self):
+        cfg = MagicMock()
+        cfg.corroboration_provider = "exa"
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            techs = CorroborationService()._get_technologies()
+        assert techs[0].name == "corroboration_host"
 
     def test_execute_failure(self, monkeypatch):
         async def boom(claim, providers):
@@ -133,8 +144,9 @@ class TestCorroborationService:
 
 
 class TestSummaryService:
-    def test_no_techs(self):
-        assert SummaryService()._get_technologies() == []
+    def test_techs(self):
+        techs = SummaryService()._get_technologies()
+        assert techs[0].name == "llm_ensemble"
 
     def test_execute(self, monkeypatch):
         async def fake(prompt, task="generating response"):
@@ -200,8 +212,9 @@ class TestAudioReportService:
 
 
 class TestHtmlReportService:
-    def test_no_techs(self):
-        assert HtmlReportService()._get_technologies() == []
+    def test_techs(self):
+        techs = HtmlReportService()._get_technologies()
+        assert techs[0].name == "html_render"
 
     def test_execute_failure(self, monkeypatch):
         def boom(report):

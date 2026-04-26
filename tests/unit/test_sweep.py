@@ -32,7 +32,8 @@ from social_research_probe.technologies.validation.ai_slop_detector import score
 
 def test_install_skill_run_existing_dest(monkeypatch, tmp_path):
     """Cover the `if dest.exists(): rmtree` branch."""
-    dest = Path.home() / ".claude" / "skills" / "srp_existing_test"
+    monkeypatch.setattr(install_skill.Path, "home", lambda: tmp_path)
+    dest = tmp_path / ".claude" / "skills" / "srp_existing_test"
     dest.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(install_skill, "_install_cli", lambda: None)
     monkeypatch.setattr(install_skill, "_copy_config_example", lambda: None)

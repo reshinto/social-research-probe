@@ -193,7 +193,6 @@ def test_summary_cache_hit_branch(tmp_path, monkeypatch):
     """services/enriching/summary.py 46->49 — cache hit branch."""
     from social_research_probe.services.enriching import summary as smod
 
-    monkeypatch.setattr(smod, "log_with_time", lambda *a, **k: lambda f: f)
     cache_called = []
 
     def fake_get_str(*a, **kw):

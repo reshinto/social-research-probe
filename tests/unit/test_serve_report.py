@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import socket
-import threading
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -98,25 +94,42 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def test_build_server(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "social_research_probe.commands.serve_report.ThreadingHTTPServer", MagicMock()
+    )
+    f = tmp_path / "x.html"
+    server = serve_report._build_server(f, "127.0.0.1", 8000, "http://x")
+    assert server is not None
+
+
 def test_make_handler_serves_html(tmp_path):
     f = tmp_path / "r.html"
     f.write_text('<div data-api-base="http://orig"></div>')
-    port = _free_port()
-    server = serve_report._build_server(f, "127.0.0.1", port, "http://nope")
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        time.sleep(0.05)
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp:
-            body = resp.read().decode()
-        assert "/voicebox/" in body
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/r.html") as resp:
-            assert resp.status == 200
-        with pytest.raises(urllib.error.HTTPError):
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/missing")
-    finally:
-        server.shutdown()
-        server.server_close()
+
+    handler_class = serve_report._make_handler(f, "http://nope")
+    handler = handler_class.__new__(handler_class)
+    handler.path = "/"
+    handler.wfile = MagicMock()
+    handler.send_response = MagicMock()
+    handler.send_header = MagicMock()
+    handler.end_headers = MagicMock()
+
+    handler.do_GET()
+
+    handler.wfile.write.assert_called()
+    written = b"".join(call.args[0] for call in handler.wfile.write.mock_calls).decode()
+    assert "/voicebox/" in written
+
+    handler.path = "/r.html"
+    handler.wfile.write.reset_mock()
+    handler.do_GET()
+    handler.send_response.assert_called_with(200)
+
+    handler.path = "/missing"
+    handler.send_error = MagicMock()
+    handler.do_GET()
+    handler.send_error.assert_called_with(404, "Not Found")
 
 
 def test_run_oserror(tmp_path, monkeypatch):
