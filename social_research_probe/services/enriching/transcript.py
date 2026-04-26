@@ -8,6 +8,7 @@ from social_research_probe.services.base import BaseService, ServiceResult, Tech
 from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (
     YoutubeTranscriptFetch,
 )
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class TranscriptService(BaseService):
@@ -23,6 +24,7 @@ class TranscriptService(BaseService):
     def _get_technologies(self):
         return [YoutubeTranscriptFetch()]
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
         """Fetch transcript for one ScoredItem; try captions then Whisper fallback."""
         url = data.get("url", "") if isinstance(data, dict) else str(data)

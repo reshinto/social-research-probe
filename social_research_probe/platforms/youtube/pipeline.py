@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
+from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage, RawItem
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting.writer import write_final_report
 from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
@@ -68,21 +68,47 @@ class YouTubeScoreStage(BaseStage):
     def _score_items(items: list, weights) -> list:
         from social_research_probe.technologies.scoring.combine import overall_score
         try:
-            return [
-                {
-                    **item,
-                    "overall_score": overall_score(
-                        trust=item.get("trust", 0.0),
-                        trend=item.get("trend", 0.0),
-                        opportunity=item.get("opportunity", 0.0),
-                        weights=weights,
-                    ),
-                }
-                for item in items
-                if isinstance(item, dict)
-            ]
+            scored = []
+            for item in items:
+                normalized = YouTubeScoreStage._normalize_item(item)
+                if normalized is None:
+                    continue
+                scored.append(
+                    {
+                        **normalized,
+                        "overall_score": overall_score(
+                            trust=float(normalized.get("trust", 0.0)),
+                            trend=float(normalized.get("trend", 0.0)),
+                            opportunity=float(normalized.get("opportunity", 0.0)),
+                            weights=weights,
+                        ),
+                    }
+                )
+            return scored
         except Exception:
             return items
+
+    @staticmethod
+    def _normalize_item(item: object) -> dict[str, object] | None:
+        if isinstance(item, dict):
+            return item
+        if not isinstance(item, RawItem):
+            return None
+        return {
+            "id": item.id,
+            "url": item.url,
+            "title": item.title,
+            "author_id": item.author_id,
+            "author_name": item.author_name,
+            "published_at": item.published_at,
+            "metrics": dict(item.metrics),
+            "text_excerpt": item.text_excerpt,
+            "thumbnail": item.thumbnail,
+            "extras": dict(item.extras),
+            "trust": 0.0,
+            "trend": 0.0,
+            "opportunity": 0.0,
+        }
 
     @log_with_time("[srp] youtube/score: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
@@ -188,7 +214,11 @@ class YouTubeCorroborateStage(BaseStage):
 
     @staticmethod
     def _cap_corroboration_providers_in_fast_mode(providers: list[str]) -> list[str]:
-        from social_research_probe.utils.display.fast_mode import FAST_MODE_MAX_PROVIDERS, fast_mode_enabled
+        from social_research_probe.utils.display.fast_mode import (
+            FAST_MODE_MAX_PROVIDERS,
+            fast_mode_enabled,
+        )
+
         return providers[:FAST_MODE_MAX_PROVIDERS] if fast_mode_enabled() else providers
 
     def _select_corroboration_providers(self) -> list[str]:
@@ -274,9 +304,10 @@ class YouTubeChartsStage(BaseStage):
         top_n = list(state.get_stage_output("score").get("top_n", []))
         result = await ChartsService().execute_one({"scored_items": top_n})
         chart_output = next((tr.output for tr in result.tech_results if tr.success), None)
+        chart_captions = [chart_output.caption] if chart_output is not None else []
         state.set_stage_output(
             "charts",
-            {"chart_output": chart_output, "chart_captions": [], "chart_takeaways": []},
+            {"chart_output": chart_output, "chart_captions": chart_captions, "chart_takeaways": []},
         )
         return state
 
@@ -353,9 +384,14 @@ class YouTubeAssembleStage(BaseStage):
         chart_takeaways: list,
         warnings: list[str],
     ) -> dict:
-        from social_research_probe.services.synthesizing.evidence import summarize as summarize_evidence
-        from social_research_probe.services.synthesizing.evidence import summarize_engagement_metrics
+        from social_research_probe.services.synthesizing.evidence import (
+            summarize as summarize_evidence,
+        )
+        from social_research_probe.services.synthesizing.evidence import (
+            summarize_engagement_metrics,
+        )
         from social_research_probe.services.synthesizing.formatter import build_report
+
         return build_report(
             topic=topic,
             platform=platform,

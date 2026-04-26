@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services.base import BaseService, ServiceResult, TechResult
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class HtmlReportService(BaseService):
@@ -20,6 +21,7 @@ class HtmlReportService(BaseService):
     def _get_technologies(self):
         return []
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
         """Write HTML report; data must have a 'report' key."""
         import asyncio

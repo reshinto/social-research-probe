@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
 from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.utils.display.progress import log_with_time
 
 TInput = TypeVar("TInput")
 TOutput = TypeVar("TOutput")
@@ -51,6 +52,7 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         )
         return list(results)
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(
         self,
         data: TInput,

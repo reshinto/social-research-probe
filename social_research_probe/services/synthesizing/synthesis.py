@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services.base import BaseService, ServiceResult, TechResult
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class SynthesisService(BaseService):
@@ -20,6 +21,7 @@ class SynthesisService(BaseService):
     def _get_technologies(self):
         return []
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
         """Generate synthesis from the research context in data."""
         from social_research_probe.services.llm.ensemble import multi_llm_prompt

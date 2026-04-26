@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -162,6 +163,22 @@ async def test_score_stage_scores_items(monkeypatch):
     assert len(score["top_n"]) == 1
 
 
+@pytest.mark.asyncio
+async def test_score_stage_preserves_raw_items_as_scored_dicts(monkeypatch):
+    from social_research_probe.technologies.scoring import combine as combine_mod
+
+    monkeypatch.setattr(combine_mod, "overall_score", lambda **kw: 0.5)
+
+    state = _state(stage_outputs={"fetch": {"items": [_raw_item()], "engagement_metrics": []}})
+    await YouTubeScoreStage().execute(state)
+
+    score = state.get_stage_output("score")
+    assert len(score["top_n"]) == 1
+    assert score["top_n"][0]["id"] == "item-1"
+    assert score["top_n"][0]["title"] == "Video 1"
+    assert score["top_n"][0]["overall_score"] == 0.5
+
+
 # ---------------------------------------------------------------------------
 # YouTubeTranscriptStage
 # ---------------------------------------------------------------------------
@@ -253,6 +270,35 @@ async def test_charts_stage_disabled_returns_empty(monkeypatch):
     out = state.get_stage_output("charts")
     assert out["chart_captions"] == []
     assert out["chart_takeaways"] == []
+
+
+@pytest.mark.asyncio
+async def test_charts_stage_carries_chart_caption(monkeypatch):
+    @dataclass
+    class _Chart:
+        path: str
+        caption: str
+
+    class _ChartsService:
+        async def execute_one(self, data):
+            return SimpleNamespace(
+                tech_results=[
+                    SimpleNamespace(
+                        success=True,
+                        output=_Chart(path="/tmp/overall_score_bar.png", caption="Bar chart"),
+                    )
+                ]
+            )
+
+    import social_research_probe.services.analyzing.charts as charts_mod
+
+    monkeypatch.setattr(charts_mod, "ChartsService", _ChartsService)
+    state = _state(stage_outputs={"score": {"top_n": [{"overall_score": 0.5}]}})
+    await YouTubeChartsStage().execute(state)
+
+    out = state.get_stage_output("charts")
+    assert out["chart_output"].path == "/tmp/overall_score_bar.png"
+    assert out["chart_captions"] == ["Bar chart"]
 
 
 # ---------------------------------------------------------------------------

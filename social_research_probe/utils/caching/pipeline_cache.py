@@ -30,6 +30,8 @@ TTL_CORROBORATION = 6 * 3600
 TTL_CLASSIFICATION = 24 * 3600
 _STAGE_TTLS = {
     "fetch": 6 * 3600,
+    "youtube_search": 6 * 3600,
+    "youtube_hydrate": 24 * 3600,
     "score": 24 * 3600,
     "enrich": 24 * 3600,
     "corroborate": 6 * 3600,

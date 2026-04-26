@@ -54,21 +54,15 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     """Parse positional CLI arguments into structured research arguments.
 
     Current behavior:
-        - If the first positional argument matches a registered platform,
-        it is used as the platform.
-        - If the first positional argument does not match a registered platform,
-        the platform defaults to "all".
+        - If the first positional argument matches a registered pipeline
+        platform, it is used as the platform.
+        - If the first positional argument does not match a registered
+        platform, the platform defaults to "all".
         - If one argument remains after platform detection, it is treated as a
         natural-language query.
         - If two or more arguments remain after platform detection, the first is
         treated as the topic and the second is treated as the comma-separated
         purposes.
-
-    Important limitations:
-        - Extra arguments after topic and purposes are silently ignored.
-        - Unknown platform-looking values are not rejected; they are treated as
-        topics unless they match CLIENTS.
-        - The default platform is hard-coded as "all".
 
     Examples:
         ["youtube", "quant", "job-opportunity"]
@@ -79,12 +73,8 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
 
         ["quant", "job-opportunity"]
             -> platform="all", topic="quant", purposes=("job-opportunity",)
-
-        ["wrongPlatformName", "quant", "job-opportunity"]
-            -> platform="all", topic="wrongPlatformName", purposes=("quant",)
-            and "job-opportunity" is ignored
     """
-    from social_research_probe.platforms.registry import CLIENTS
+    from social_research_probe.platforms import PIPELINES
 
     if len(positional) == 0:
         raise ValidationError(
@@ -92,7 +82,7 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
         )
 
     first_arg = positional[0]
-    if first_arg in CLIENTS:
+    if first_arg in PIPELINES:
         platform = first_arg
         rest = positional[1:]
     else:
@@ -106,6 +96,11 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
 
     if len(rest) == 1:
         return _ResearchArgs(platform=platform, topic="", purposes=(), query=rest[0])
+
+    if len(rest) > 2:
+        raise ValidationError(
+            "research accepts [PLATFORM] TOPIC PURPOSES, where PURPOSES is comma-separated"
+        )
 
     topic, purpose_arg = rest[0], rest[1]
     purposes = tuple(p.strip() for p in purpose_arg.split(",") if p.strip())
@@ -129,14 +124,14 @@ def _apply_cli_overrides(args: argparse.Namespace) -> None:
 
 def _execute_research_pipeline(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
     """Build and execute research pipeline, return report."""
-    from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
     from social_research_probe.platforms.orchestrator import run_pipeline
+    from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
 
     cmd = ParsedRunResearch(platform=platform, topics=[(topic, list(purposes))])
     return asyncio.run(run_pipeline(cmd))
 
 
-@log_with_time("[srp] research: input={args.args}")
+@log_with_time("[srp] research")
 def run(args: argparse.Namespace) -> int:
     """Execute the research pipeline for the 'research' subcommand."""
     research_args = _parse_research_input(args.args)

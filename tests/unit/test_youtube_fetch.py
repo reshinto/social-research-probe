@@ -7,9 +7,9 @@ mock API clients — no live network calls.
 from __future__ import annotations
 
 import pytest
-from social_research_probe.utils.core.errors import AdapterError
 
 import social_research_probe.technologies.media_fetch.youtube_api as fetch
+from social_research_probe.utils.core.errors import AdapterError
 
 
 class _MockExecute:
@@ -88,6 +88,28 @@ def test_search_videos_raises_adapter_error_on_exception(monkeypatch):
         fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
 
 
+def test_search_youtube_uses_cache_on_second_call(tmp_path, monkeypatch):
+    """search_youtube writes and reuses the YouTube search cache."""
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+    monkeypatch.setattr(fetch, "resolve_youtube_api_key", lambda: "fake-key")
+    calls = 0
+
+    def fake_search(api_key, *, topic, max_items, published_after):
+        nonlocal calls
+        calls += 1
+        return [{"id": {"videoId": "abc"}}]
+
+    monkeypatch.setattr(fetch, "_search_videos", fake_search)
+
+    first = fetch.search_youtube("ai", max_items=5, published_after=None)
+    second = fetch.search_youtube("ai", max_items=5, published_after=None)
+
+    assert calls == 1
+    assert first == second == [{"id": {"videoId": "abc"}}]
+    assert list((tmp_path / "cache" / "stages" / "youtube_search").glob("*.json"))
+
+
 def test_fetch_video_details_returns_items(monkeypatch):
     """_fetch_video_details returns the items list from the videos.list response."""
     items = [{"id": "abc"}]
@@ -126,3 +148,30 @@ def test_fetch_channel_details_raises_adapter_error_on_exception(monkeypatch):
     monkeypatch.setattr(fetch, "_build_client", lambda key: _FailingClient())
     with pytest.raises(AdapterError, match=r"youtube channels\.list failed"):
         fetch._fetch_channel_details("fake-key", channel_ids=["UC123"])
+
+
+@pytest.mark.asyncio
+async def test_hydrate_youtube_uses_cache_on_second_call(tmp_path, monkeypatch):
+    """hydrate_youtube writes and reuses the YouTube hydrate cache."""
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+    monkeypatch.setattr(fetch, "resolve_youtube_api_key", lambda: "fake-key")
+    calls = {"videos": 0, "channels": 0}
+
+    def fake_videos(api_key, *, video_ids):
+        calls["videos"] += 1
+        return [{"id": video_ids[0]}]
+
+    def fake_channels(api_key, *, channel_ids):
+        calls["channels"] += 1
+        return [{"id": channel_ids[0]}]
+
+    monkeypatch.setattr(fetch, "_fetch_video_details", fake_videos)
+    monkeypatch.setattr(fetch, "_fetch_channel_details", fake_channels)
+
+    first = await fetch.hydrate_youtube(["abc"], ["UC123"])
+    second = await fetch.hydrate_youtube(["abc"], ["UC123"])
+
+    assert calls == {"videos": 1, "channels": 1}
+    assert first == second == ([{"id": "abc"}], [{"id": "UC123"}])
+    assert list((tmp_path / "cache" / "stages" / "youtube_hydrate").glob("*.json"))

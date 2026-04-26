@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services.base import BaseService, ServiceResult, TechResult
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class CorroborationService(BaseService):
@@ -20,11 +21,14 @@ class CorroborationService(BaseService):
     def _get_technologies(self):
         return []
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
         """Corroborate one ScoredItem via its title as the claim text."""
+        from social_research_probe.config import load_active_config
         from social_research_probe.services.corroborating.host import corroborate_claim
         from social_research_probe.technologies.validation.claim_extractor import Claim
 
+        cfg = load_active_config()
         title = data.get("title", "") if isinstance(data, dict) else str(data)
         url = data.get("url") if isinstance(data, dict) else None
         claim = Claim(text=title, source_text=title, index=0, source_url=url)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services.base import BaseService, ServiceResult, TechResult
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class AudioReportService(BaseService):
@@ -23,6 +24,7 @@ class AudioReportService(BaseService):
 
         return [VoiceboxTTS()]
 
+    @log_with_time("[srp] {self.service_name}: execute_one")
     async def execute_one(self, data: object) -> ServiceResult:
         """Synthesize narration audio; try Voicebox then MacTTS fallback."""
         from social_research_probe.technologies.tts.voicebox import VoiceboxTTS
