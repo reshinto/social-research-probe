@@ -32,10 +32,10 @@ class Default:
 
     These constants define fallback values for arguments that are optional at
     the command line, such as server host, server port, suggestion count, and
-    default corroboration backends.
+    default corroboration providers.
     """
 
-    BACKENDS: str = "llm_search"
+    PROVIDERS: str = "llm_search"
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     SUGGESTION_COUNT: int = 5
@@ -77,7 +77,7 @@ class Arg(StrEnum):
     NO_HTML = "--no-html"
     # Corroborate flags
     INPUT = "--input"
-    BACKENDS = "--backends"
+    PROVIDERS = "--providers"
     # Render flags
     PACKET = "--packet"
     OUTPUT_DIR = "--output-dir"
@@ -230,7 +230,7 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     )
     cc.add_argument(Arg.INPUT, required=True, help="Path to claims JSON file")
     cc.add_argument(
-        Arg.BACKENDS, default=Default.BACKENDS, help="Comma-separated backend names"
+        Arg.PROVIDERS, default=Default.PROVIDERS, help="Comma-separated provider names"
     )
     cc.add_argument(Arg.OUTPUT, default=None, help="Output file path (default: stdout)")
     rend = sub.add_parser(

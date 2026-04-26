@@ -4,12 +4,12 @@ import json
 import sys
 from typing import Literal
 
-from social_research_probe.utils.core.packet import wrap_packet
+from social_research_probe.utils.core.report import wrap_report
 
-PacketKind = Literal["synthesis", "suggestions", "corroboration"]
+ReportKind = Literal["synthesis", "suggestions", "corroboration"]
 
 
-def emit_packet(packet: dict, kind: PacketKind) -> None:
-    json.dump(wrap_packet(packet, kind), sys.stdout, ensure_ascii=False)
+def emit_report(report: dict, kind: ReportKind) -> None:
+    json.dump(wrap_report(report, kind), sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     sys.stdout.flush()

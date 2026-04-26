@@ -37,7 +37,7 @@ DEFAULT_CONFIG: AppConfig = {
         "local": {"binary": "ollama", "model": "llama3.1:8b", "extra_flags": []},
     },
     "corroboration": {
-        "backend": "auto",
+        "provider": "auto",
         "max_claims_per_item": 5,
         "max_claims_per_session": 15,
     },
@@ -163,9 +163,9 @@ class Config:
         return int(self.raw["llm"]["timeout_seconds"])
 
     @property
-    def corroboration_backend(self) -> str:
-        """Return the configured corroboration backend name."""
-        return self.raw["corroboration"]["backend"]
+    def corroboration_provider(self) -> str:
+        """Return the configured corroboration provider name."""
+        return self.raw["corroboration"]["provider"]
 
     def llm_settings(self, name: RunnerName) -> RunnerSettings:
         """Return the nested settings block for one runner.

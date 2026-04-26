@@ -12,7 +12,7 @@ from __future__ import annotations
 # Used by the synthesis step: given collected evidence for a topic on a
 # platform, ask the LLM to produce a structured summary.
 SYNTHESIS_PROMPT = """\
-You are a research analyst. Given the following evidence packet, write a concise synthesis.
+You are a research analyst. Given the following evidence report, write a concise synthesis.
 
 Rules:
 - Ground claims in items, source_validation_summary, platform_engagement_summary,

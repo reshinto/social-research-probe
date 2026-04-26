@@ -237,7 +237,7 @@ class AgenticSearchResult:
     Runner implementations wrap their native search feature (Gemini google-search,
     Claude web_search tool, Codex ``--search``) so callers can treat them
     uniformly. The shape is intentionally narrow — enough for corroboration
-    backends to apply source-quality filtering and compute a verdict.
+    providers to apply source-quality filtering and compute a verdict.
 
     Attributes:
         answer: Natural-language answer synthesised by the runner.
@@ -245,7 +245,7 @@ class AgenticSearchResult:
             produced an answer without citations; caller decides how to treat.
         runner_name: Identifier of the runner that produced the result
             (``"gemini"``, ``"claude"``, ``"codex"``). Useful for debugging and
-            for logging which backend actually ran.
+            for logging which runner actually ran.
     """
 
     answer: str

@@ -1,8 +1,8 @@
 """services/synthesizing/llm_contract.py — Prompt building and response parsing for LLM synthesis.
 
-The pipeline produces a raw evidence packet (via services.synthesizing.formatter.build_packet).
+The pipeline produces a raw evidence report (via services.synthesizing.formatter.build_report).
 This module's job is to:
-  1. Turn that packet into a prompt the LLM can respond to (build_synthesis_prompt).
+  1. Turn that report into a prompt the LLM can respond to (build_synthesis_prompt).
   2. Parse and validate the LLM's JSON response (parse_synthesis_response).
 
 Called by: CLI and report-generation paths that request structured synthesis.
@@ -42,24 +42,24 @@ SYNTHESIS_JSON_SCHEMA: Final[dict] = {
 }
 
 
-def build_synthesis_prompt(packet: dict) -> str:
-    """Build the LLM prompt for synthesising an evidence packet.
+def build_synthesis_prompt(report: dict) -> str:
+    """Build the LLM prompt for synthesising an evidence report.
 
     Formats SYNTHESIS_PROMPT with topic, platform, a JSON summary of the
     top-N items as evidence, and the structured JSON schema expected back from
     the runner.
 
     Args:
-        packet: A dict produced by services.synthesizing.formatter.build_packet.
+        report: A dict produced by services.synthesizing.formatter.build_report.
 
     Returns:
         A formatted prompt string ready to send to an LLMRunner.
 
     Example:
-        prompt = build_synthesis_prompt(packet)
+        prompt = build_synthesis_prompt(report)
         result = runner.run(prompt, schema=RESPONSE_SCHEMA)
     """
-    context = build_synthesis_context(packet)
+    context = build_synthesis_context(report)
     # Pass the compact synthesis context as the evidence body. It already
     # contains items, stats highlights, chart takeaways, coverage, warnings —
     # everything the LLM should ground its synthesis in.

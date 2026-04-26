@@ -1,7 +1,7 @@
 """commands/corroborate_claims.py — CLI command to corroborate a list of claims.
 
 Takes a JSON file containing claim texts, extracts Claim objects, runs each
-through one or more corroboration backends, and writes the aggregated results
+through one or more corroboration providers, and writes the aggregated results
 to stdout or an output file.
 
 Input JSON format::
@@ -36,7 +36,7 @@ def _validate_corroboration_config() -> None:
     if hasattr(cfg, "service_enabled") and not cfg.service_enabled("corroboration"):
         raise ValidationError(
             "cannot corroborate claims: services.corroboration is false. "
-            "Enable the corroboration service to use corroboration backends."
+            "Enable the corroboration service to use corroboration providers."
         )
 
 
@@ -52,7 +52,7 @@ def _load_claims(input_path: str) -> list[dict]:
     return data.get("claims", [])
 
 
-def _run_corroboration(raw_claims: list[dict], backends: list[str]) -> list[dict]:
+def _run_corroboration(raw_claims: list[dict], providers: list[str]) -> list[dict]:
     """Corroborate all claims concurrently and return results."""
     sem = asyncio.Semaphore(5)
 
@@ -61,7 +61,7 @@ def _run_corroboration(raw_claims: list[dict], backends: list[str]) -> list[dict
         source = rc.get("source_text", text)
         claim = Claim(text=text, source_text=source, index=i)
         async with sem:
-            return await corroborate_claim(claim, backends)
+            return await corroborate_claim(claim, providers)
 
     async def _gather_all() -> list[dict]:
         return await asyncio.gather(
@@ -82,12 +82,12 @@ def _write_output(results: list[dict], output_path: str | None) -> None:
 
 def run(
     input_path: str,
-    backends: list[str],
+    providers: list[str],
     output_path: str | None = None,
 ) -> int:
     """Load claims from a JSON file, corroborate each, and write results."""
     _validate_corroboration_config()
     raw_claims = _load_claims(input_path)
-    results = _run_corroboration(raw_claims, backends)
+    results = _run_corroboration(raw_claims, providers)
     _write_output(results, output_path)
     return ExitCode.SUCCESS

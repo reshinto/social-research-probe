@@ -1,4 +1,4 @@
-"""Detect packet-level warnings about result quality.
+"""Detect report-level warnings about result quality.
 
 The pipeline previously hard-coded ``warnings=[]``, which always rendered as
 "_(none)_" even when results had real quality concerns (low channel
@@ -35,7 +35,7 @@ def detect(
     Includes a corroboration reminder only when the pipeline skipped the
     corroboration stage, so users do not mistake the heuristic trust score for
     a verified source check. Pass ``corroboration_skip_reason`` to make the
-    HTML report self-explanatory (e.g. "backend disabled in config").
+    HTML report self-explanatory (e.g. "provider disabled in config").
     """
     reference_now = now or datetime.now(UTC)
     notes: list[str] = []

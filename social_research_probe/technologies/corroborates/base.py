@@ -1,14 +1,14 @@
-"""Abstract base class and result dataclass for corroboration backends.
+"""Abstract base class and result dataclass for corroboration providers.
 
-What: Defines the contract (CorroborationBackend) that every backend must fulfil
-and the data structure (CorroborationResult) that all backends return.
+What: Defines the contract (CorroborationProvider) that every provider must fulfil
+and the data structure (CorroborationResult) that all providers return.
 
-Why: A single ABC ensures the host (host.py) can call any backend interchangeably
+Why: A single ABC ensures the host (host.py) can call any provider interchangeably
 without knowing its implementation details.
 
 Who calls it: corroboration/registry.py (for type-checking), corroboration/host.py
-(consumes CorroborationResult), and individual backend modules (inherit from
-CorroborationBackend).
+(consumes CorroborationResult), and individual provider modules (inherit from
+CorroborationProvider).
 """
 
 from __future__ import annotations
@@ -20,33 +20,33 @@ from typing import ClassVar
 
 @dataclass
 class CorroborationResult:
-    """Result of running a single claim through one corroboration backend.
+    """Result of running a single claim through one corroboration provider.
 
-    Lifecycle: created by a backend's corroborate() call and consumed by
+    Lifecycle: created by a provider's corroborate() call and consumed by
     the host's aggregate_verdict() helper and corroborate_claim() function.
 
     Attributes:
         verdict: One of 'supported', 'refuted', or 'inconclusive'.
-        confidence: Float in [0.0, 1.0] — how confident the backend is in the verdict.
+        confidence: Float in [0.0, 1.0] — how confident the provider is in the verdict.
         reasoning: Human-readable explanation of the verdict.
         sources: List of source URLs or text snippets used as evidence.
-        backend_name: Name of the backend that produced this result.
+        provider_name: Name of the provider that produced this result.
     """
 
     verdict: str  # 'supported' | 'refuted' | 'inconclusive'
     confidence: float
     reasoning: str
     sources: list[str] = field(default_factory=list)
-    backend_name: str = ""
+    provider_name: str = ""
 
 
-class CorroborationBackend(ABC):
-    """Abstract base class that all corroboration backends must implement.
+class CorroborationProvider(ABC):
+    """Abstract base class that all corroboration providers must implement.
 
-    Purpose: Provides a uniform interface so the host can run any backend
+    Purpose: Provides a uniform interface so the host can run any provider
     without coupling to its internals.
 
-    Lifecycle: Subclasses are instantiated by get_backend() in registry.py and
+    Lifecycle: Subclasses are instantiated by get_provider() in registry.py and
     passed to corroborate_claim() in host.py.
 
     ABC contract: subclasses MUST implement health_check() and corroborate().
@@ -56,10 +56,10 @@ class CorroborationBackend(ABC):
 
     @abstractmethod
     def health_check(self) -> bool:
-        """Return True if this backend is configured and reachable.
+        """Return True if this provider is configured and reachable.
 
         Returns:
-            True when the backend has everything it needs (API key, network,
+            True when the provider has everything it needs (API key, network,
             subprocess) to accept corroborate() calls; False otherwise.
         """
         ...
@@ -70,15 +70,15 @@ class CorroborationBackend(ABC):
 
         Args:
             claim: A Claim dataclass instance (from validation/claims.py)
-                to corroborate. The backend reads claim.text and optionally
+                to corroborate. The provider reads claim.text and optionally
                 claim.source_text.
 
         Returns:
             A CorroborationResult with verdict, confidence, and reasoning
-            filled in by the backend.
+            filled in by the provider.
 
         Raises:
-            AdapterError: if the backend encounters a transient failure
+            AdapterError: if the provider encounters a transient failure
                 (network error, bad API response, etc.).
         """
         ...

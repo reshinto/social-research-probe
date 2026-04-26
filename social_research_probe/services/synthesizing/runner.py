@@ -23,8 +23,8 @@ def structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
     return [preferred, *[name for name in candidates if name != preferred]]
 
 
-def run_required_synthesis(packet: dict) -> dict | None:
-    """Run LLM synthesis on packet if enabled; return result or None."""
+def run_required_synthesis(report: dict) -> dict | None:
+    """Run LLM synthesis on report if enabled; return result or None."""
     if not stage_flag("synthesis", platform="youtube", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return None
@@ -42,7 +42,7 @@ def run_required_synthesis(packet: dict) -> dict | None:
         )
         return None
 
-    prompt = build_synthesis_prompt(packet)
+    prompt = build_synthesis_prompt(report)
     failures: list[str] = []
     runners = structured_runner_order(preferred)
     for i, runner_name in enumerate(runners, start=1):
@@ -78,18 +78,18 @@ def run_required_synthesis(packet: dict) -> dict | None:
     return None
 
 
-def attach_synthesis(packet: dict) -> None:
-    """Attach synthesis results to packet (single or multi-packet)."""
-    children = packet.get("multi")
+def attach_synthesis(report: dict) -> None:
+    """Attach synthesis results to report (single or multi-report)."""
+    children = report.get("multi")
     if isinstance(children, list):
         for child in children:
             synthesis = run_required_synthesis(child)
             if synthesis is not None:
                 child.update(synthesis)
         return
-    synthesis = run_required_synthesis(packet)
+    synthesis = run_required_synthesis(report)
     if synthesis is not None:
-        packet.update(synthesis)
+        report.update(synthesis)
 
 
 def log_synthesis_runner_status() -> None:

@@ -116,3 +116,11 @@ def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
     raise ValidationError(
         "unable to run LLM: all runners are unhealthy or failed. Check runner health and try again."
     )
+
+
+def ensure_runners_registered() -> None:
+    """Import concrete LLM runner modules so their @register decorators run."""
+    import importlib
+
+    for module in ("claude_cli", "codex_cli", "gemini_cli"):
+        importlib.import_module(f"social_research_probe.technologies.llms.{module}")

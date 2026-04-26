@@ -3,7 +3,7 @@
 ``run_research`` hands raw items, computed engagement_metrics, and the scored top-N list
 to ``summarize()`` and receives a single human-readable sentence that
 captures channel diversity, freshness, engagement, and source-class mix.
-The pipeline stores this as ``packet["evidence_summary"]`` so downstream
+The pipeline stores this as ``report["evidence_summary"]`` so downstream
 consumers (skill output, rendered reports) see real narrative instead of a
 placeholder string.
 """
@@ -69,7 +69,7 @@ def summarize(
 def summarize_engagement_metrics(engagement_metrics: list[EngagementMetrics]) -> str:
     """Build a compact metric summary of platform engagement_metrics.
 
-    Used for ``packet["platform_engagement_summary"]``. Focuses on raw numbers
+    Used for ``report["platform_engagement_summary"]``. Focuses on raw numbers
     (counts, velocities, engagement) rather than the narrative view from
     :func:`summarize`.
     """

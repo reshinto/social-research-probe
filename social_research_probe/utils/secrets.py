@@ -1,6 +1,6 @@
 """Helpers for resolving corroboration secrets at runtime.
 
-Corroboration backends should behave like the platform adapters: prefer an
+Corroboration providers should behave like the platform adapters: prefer an
 explicit environment override, but also work when operators stored secrets via
 ``srp config set-secret`` in the active data dir.
 """

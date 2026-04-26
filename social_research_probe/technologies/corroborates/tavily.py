@@ -1,6 +1,6 @@
-"""Tavily search corroboration backend.
+"""Tavily search corroboration provider.
 
-What: Implements CorroborationBackend by querying the Tavily search API to find
+What: Implements CorroborationProvider by querying the Tavily search API to find
 sources relevant to the claim text. Tavily is optimised for AI agent use-cases
 and returns clean, structured results.
 
@@ -21,7 +21,7 @@ from social_research_probe.services.corroborating.registry import register
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
-    CorroborationBackend,
+    CorroborationProvider,
     CorroborationResult,
 )
 from social_research_probe.utils.core.errors import AdapterError
@@ -30,13 +30,13 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class TavilyBackend(CorroborationBackend, BaseTechnology):
-    """Corroboration backend using the Tavily search API.
+class TavilyProvider(CorroborationProvider, BaseTechnology):
+    """Corroboration provider using the Tavily search API.
 
     Purpose: Issues a POST search query to Tavily and uses the returned URLs as
     evidence that the claim text appears in publicly reachable sources.
 
-    Lifecycle: Instantiated by get_backend("tavily"); no constructor arguments
+    Lifecycle: Instantiated by get_provider("tavily"); no constructor arguments
     required — API key is read from the environment at call time.
 
     ABC contract: implements health_check() and corroborate().
@@ -107,7 +107,7 @@ class TavilyBackend(CorroborationBackend, BaseTechnology):
 
         Args:
             claim: The original Claim dataclass (not used directly here but
-                kept for consistency with other backends).
+                kept for consistency with other providers).
             raw_results: List of result dicts from the Tavily API response.
 
         Returns:
@@ -129,7 +129,7 @@ class TavilyBackend(CorroborationBackend, BaseTechnology):
             confidence=min(1.0, len(sources) * 0.2),
             reasoning=f"Found {len(sources)} relevant source(s) via Tavily search.",
             sources=sources,
-            backend_name=self.name,
+            provider_name=self.name,
         )
 
     async def corroborate(self, claim) -> CorroborationResult:

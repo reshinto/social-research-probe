@@ -1,4 +1,4 @@
-"""Shared typed dicts and aliases used across configuration, state, and packets.
+"""Shared typed dicts and aliases used across configuration, state, and reports.
 
 This module exists to keep the codebase on one vocabulary for the major nested
 payloads that move between config loading, state storage, pipeline processing,
@@ -45,7 +45,7 @@ class LLMConfigSection(TypedDict):
 class CorroborationConfigSection(TypedDict):
     """Top-level corroboration settings."""
 
-    backend: str
+    provider: str
     max_claims_per_item: int
     max_claims_per_session: int
 
@@ -250,7 +250,7 @@ class PurposeSuggestionCandidate(TypedDict, total=False):
 
 
 class ScoreBreakdown(TypedDict):
-    """Per-item score breakdown used by the packet renderer."""
+    """Per-item score breakdown used by the report renderer."""
 
     trust: float
     trend: float
@@ -268,7 +268,7 @@ class ItemFeatures(TypedDict):
 
 
 class ScoredItem(TypedDict, total=False):
-    """One ranked item stored in the research packet."""
+    """One ranked item stored in the research report."""
 
     title: str
     channel: str
@@ -286,7 +286,7 @@ class ScoredItem(TypedDict, total=False):
 
 
 class SourceValidationSummary(TypedDict):
-    """Aggregate source-validation counts stored in the packet."""
+    """Aggregate source-validation counts stored in the report."""
 
     validated: int
     partially: int
@@ -299,7 +299,7 @@ class SourceValidationSummary(TypedDict):
 
 
 class StatsSummary(TypedDict):
-    """Top-level statistical summary attached to the packet."""
+    """Top-level statistical summary attached to the report."""
 
     models_run: list[str]
     highlights: list[str]
@@ -333,7 +333,7 @@ class SynthesisItem(TypedDict, total=False):
 class SynthesisContext(TypedDict):
     """The exact shape passed to the synthesis prompt.
 
-    Pure pass-through from ``ResearchPacket`` — no LLM work, no recomputation,
+    Pure pass-through from ``ResearchReport`` — no LLM work, no recomputation,
     just the already-derived digests. Tolerates every optional upstream field
     being absent/empty so disabled features silently produce empty sections.
     """
@@ -350,8 +350,8 @@ class SynthesisContext(TypedDict):
     warnings: list[str]
 
 
-class ResearchPacket(TypedDict, total=False):
-    """Canonical single-topic research packet emitted by the pipeline."""
+class ResearchReport(TypedDict, total=False):
+    """Canonical single-topic research report emitted by the pipeline."""
 
     topic: str
     platform: str
@@ -371,11 +371,11 @@ class ResearchPacket(TypedDict, total=False):
     html_report_path: str
 
 
-class MultiResearchPacket(TypedDict, total=False):
-    """Packet wrapper used when one request produces multiple topic packets."""
+class MultiResearchReport(TypedDict, total=False):
+    """Report wrapper used when one request produces multiple topic reports."""
 
-    multi: list[ResearchPacket]
+    multi: list[ResearchReport]
     html_report_path: str
 
 
-PacketPayload: TypeAlias = ResearchPacket | MultiResearchPacket
+ReportPayload: TypeAlias = ResearchReport | MultiResearchReport

@@ -1,4 +1,4 @@
-"""Top-level research orchestrator: topic loop and packet assembly."""
+"""Top-level research orchestrator: topic loop and report assembly."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from social_research_probe.platforms import PIPELINES
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.utils.core.types import (
     AdapterConfig,
-    MultiResearchPacket,
-    ResearchPacket,
+    MultiResearchReport,
+    ResearchReport,
 )
 from social_research_probe.utils.display.fast_mode import (
     FAST_MODE_TOP_N,
@@ -68,18 +68,18 @@ def _build_state(
 
 async def run_pipeline(
     cmd: ParsedRunResearch,
-) -> ResearchPacket | MultiResearchPacket:
+) -> ResearchReport | MultiResearchReport:
     _maybe_register_fake()
 
     purposes = purpose_registry.load()["purposes"]
     platform_config = _build_platform_config(cmd)
 
-    packets = []
+    reports = []
     for topic, purpose_names in cmd.topics:
         merged = _resolve_purposes(purpose_names, purposes)
         state = _build_state(topic, merged, cmd, platform_config)
         state = await PIPELINES[cmd.platform]().run(state)
-        packet = state.outputs.get("packet", {})
-        packets.append(packet)
+        report = state.outputs.get("report", {})
+        reports.append(report)
 
-    return packets[0] if len(packets) == 1 else {"multi": packets}
+    return reports[0] if len(reports) == 1 else {"multi": reports}

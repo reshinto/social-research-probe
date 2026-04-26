@@ -35,7 +35,7 @@ extra_flags = []
 # opportunity = 0.2
 
 [corroboration]
-backend = "auto"          # auto | llm_search | exa | brave | tavily | none
+provider = "auto"         # auto | llm_search | exa | brave | tavily | none
 max_claims_per_item = 5
 max_claims_per_session = 15
 
@@ -53,11 +53,11 @@ fetch = true                 # Fetch YouTube search results.
 score = true                 # Score and rank items by trust/trend/opportunity.
 transcript = true            # Fetch transcripts for top-N items.
 summary = true               # LLM per-item summaries for top-N items.
-corroborate = true           # Corroborate claims via configured search backends.
+corroborate = true           # Corroborate claims via configured search providers.
 stats = true                 # Statistical analysis on engagement and scores.
 charts = true                # Chart generation from statistical results.
 synthesis = true             # Final LLM research synthesis.
-assemble = true              # Assemble research packet from stage outputs.
+assemble = true              # Assemble research report from stage outputs.
 structured_synthesis = true  # Structured-JSON synthesis for report sections.
 report = true                # HTML report generation.
 narration = true             # Audio narration via Voicebox (or macOS TTS fallback).
@@ -73,7 +73,7 @@ transcript = true         # Transcript fetch: YouTube captions API, then yt-dlp 
 summary = true            # LLM summary generation for each enriched item.
 
 [services.youtube.corroborating]
-corroborate = true        # Multi-backend web search to fact-check extracted claims.
+corroborate = true        # Multi-provider web search to fact-check extracted claims.
 
 [services.youtube.analyzing]
 statistics = true         # Statistical analysis on engagement and scores.
@@ -88,7 +88,7 @@ audio = true              # Audio narration via Voicebox (or macOS TTS fallback)
 
 # Legacy service gates used internally — do not remove.
 [services.corroborate]
-corroboration = true      # Enables corroboration backend health checks.
+corroboration = true      # Enables corroboration provider health checks.
 
 [services.enrich]
 llm = true                # Enables LLM-based enrichment runner resolution.
@@ -101,7 +101,7 @@ youtube_transcript_api = true
 whisper = true
 yt_dlp = true             # yt-dlp audio download for Whisper fallback transcription.
 voicebox = true
-llm_search = true         # Runner-agnostic agentic-search corroboration backend.
+llm_search = true         # Runner-agnostic agentic-search corroboration provider.
 exa = true
 brave = true
 tavily = true

@@ -1,10 +1,10 @@
-"""Orchestrates multiple corroboration backends for a single claim.
+"""Orchestrates multiple corroboration providers for a single claim.
 
-What: Provides corroborate_claim(), which fans out to each named backend,
+What: Provides corroborate_claim(), which fans out to each named provider,
 collects CorroborationResults, and aggregates them into a single verdict.
 
 Why: Keeps aggregation logic (majority vote, weighted confidence) separate
-from backend HTTP/subprocess details so each piece is unit-testable in isolation.
+from provider HTTP/subprocess details so each piece is unit-testable in isolation.
 
 Who calls it: pipeline steps and CLI commands that need to check a claim against
 one or more external sources.
@@ -16,7 +16,7 @@ import asyncio
 import sys
 from collections import Counter
 
-from social_research_probe.services.corroborating.registry import get_backend
+from social_research_probe.services.corroborating.registry import get_provider
 from social_research_probe.technologies.corroborates.base import CorroborationResult
 from social_research_probe.utils.caching.pipeline_cache import (
     corroboration_cache,
@@ -27,17 +27,17 @@ from social_research_probe.utils.caching.pipeline_cache import (
 
 
 def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
-    """Compute a combined verdict and confidence from a list of backend results.
+    """Compute a combined verdict and confidence from a list of provider results.
 
     Algorithm:
     - Majority vote across the verdicts in ``results``.
     - Ties (no single verdict has a strict majority) resolve to 'inconclusive'.
     - Aggregate confidence is the weighted average of individual confidences,
-      where each weight equals the backend's own confidence value.
+      where each weight equals the provider's own confidence value.
 
     Args:
         results: Non-empty list of CorroborationResult objects from one or more
-            backends. Empty list returns ('inconclusive', 0.0).
+            providers. Empty list returns ('inconclusive', 0.0).
 
     Returns:
         A 2-tuple (verdict: str, confidence: float) where verdict is one of
@@ -65,21 +65,21 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
     return (winner, avg_confidence)
 
 
-async def corroborate_claim(claim, backend_names: list[str]) -> dict:
-    """Run a claim through multiple backends concurrently and aggregate results.
+async def corroborate_claim(claim, provider_names: list[str]) -> dict:
+    """Run a claim through multiple providers concurrently and aggregate results.
 
-    Each backend is fetched from the registry and awaited directly — backends
+    Each provider is fetched from the registry and awaited directly — providers
     expose async corroborate() so no thread wrapping is needed.
 
-    Backends that raise any exception are skipped with a warning printed to
+    Providers that raise any exception are skipped with a warning printed to
     stderr so the pipeline can continue with partial data.
 
-    Results are cached on disk by ``(claim_text, sorted_backends)`` with a
+    Results are cached on disk by ``(claim_text, sorted_providers)`` with a
     short TTL so repeat research runs within the hour skip external API calls.
 
     Args:
         claim: A Claim dataclass instance (from validation/claims.py).
-        backend_names: Ordered list of backend name strings, e.g.
+        provider_names: Ordered list of provider name strings, e.g.
             ["exa", "brave", "llm_search"].
 
     Returns:
@@ -87,23 +87,23 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     """
     import dataclasses
 
-    normalized_backends = list(dict.fromkeys(backend_names))
+    normalized_providers = list(dict.fromkeys(provider_names))
     cache = corroboration_cache()
-    cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_backends)))
+    cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_providers)))
     cached = get_json(cache, cache_key)
     if cached is not None:
         return cached
 
-    async def _call_backend(backend_name: str) -> CorroborationResult | None:
+    async def _call_provider(provider_name: str) -> CorroborationResult | None:
         try:
-            backend = get_backend(backend_name)
-            return await backend.corroborate(claim)
+            provider = get_provider(provider_name)
+            return await provider.corroborate(claim)
         except Exception as exc:
-            print(f"[corroboration] backend {backend_name!r} failed: {exc}", file=sys.stderr)
+            print(f"[corroboration] provider {provider_name!r} failed: {exc}", file=sys.stderr)
             return None
 
     outcomes = await asyncio.gather(
-        *[_call_backend(name) for name in normalized_backends],
+        *[_call_provider(name) for name in normalized_providers],
         return_exceptions=False,
     )
     collected = [r for r in outcomes if r is not None]
@@ -119,7 +119,7 @@ async def corroborate_claim(claim, backend_names: list[str]) -> dict:
     return result
 
 
-async def corroborate_item(item: dict, backend_names: list[str]) -> dict:
+async def corroborate_item(item: dict, provider_names: list[str]) -> dict:
     """Corroborate a research item using its title as the claim text.
 
     Wraps Claim construction so callers never need to import from technologies.
@@ -130,7 +130,7 @@ async def corroborate_item(item: dict, backend_names: list[str]) -> dict:
     url = item.get("url")
     claim = Claim(text=title, source_text=title, index=0, source_url=url)
     try:
-        corr = await corroborate_claim(claim, backend_names)
+        corr = await corroborate_claim(claim, provider_names)
         return {**item, "corroboration": corr}
     except Exception:
         return dict(item)

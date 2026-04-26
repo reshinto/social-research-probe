@@ -1,6 +1,6 @@
 """HTML section builders for the research report.
 
-Each public function takes packet data and returns an HTML string fragment
+Each public function takes report data and returns an HTML string fragment
 for one numbered section. Mirrors the section structure in
 services/synthesizing/formatter.py but produces HTML instead of Markdown.
 """
@@ -16,7 +16,7 @@ from social_research_probe.services.synthesizing.formatter import (
     _contextual_explanation,
     _infer_model,
 )
-from social_research_probe.utils.core.types import ResearchPacket, ScoredItem
+from social_research_probe.utils.core.types import ResearchReport, ScoredItem
 
 
 def _esc(text: str) -> str:
@@ -24,25 +24,25 @@ def _esc(text: str) -> str:
     return html.escape(str(text), quote=False)
 
 
-def section_1_topic_purpose(packet: ResearchPacket) -> str:
+def section_1_topic_purpose(report: ResearchReport) -> str:
     """Section 1: Topic and purpose set."""
-    purposes = _esc(", ".join(packet["purpose_set"]))
+    purposes = _esc(", ".join(report["purpose_set"]))
     return (
         "<ul>"
-        f"<li><strong>Topic:</strong> {_esc(packet['topic'])}</li>"
+        f"<li><strong>Topic:</strong> {_esc(report['topic'])}</li>"
         f"<li><strong>Purposes:</strong> {purposes}</li>"
         "</ul>"
     )
 
 
-def section_2_platform(packet: ResearchPacket) -> str:
+def section_2_platform(report: ResearchReport) -> str:
     """Section 2: Platform."""
-    return f"<ul><li><strong>Platform:</strong> {_esc(packet['platform'])}</li></ul>"
+    return f"<ul><li><strong>Platform:</strong> {_esc(report['platform'])}</li></ul>"
 
 
-def section_3_top_items(packet: ResearchPacket) -> str:
+def section_3_top_items(report: ResearchReport) -> str:
     """Section 3: Scored top-N items with table and per-item links."""
-    items = packet.get("items_top_n", [])
+    items = report.get("items_top_n", [])
     if not items:
         return "<p><em>(no items returned)</em></p>"
     return _items_score_table(items) + "\n" + _items_links(items)
@@ -96,14 +96,14 @@ def _items_links(items: list[ScoredItem]) -> str:
     return f"<ul>{''.join(lis)}</ul>"
 
 
-def section_4_platform_engagement(packet: ResearchPacket) -> str:
+def section_4_platform_engagement(report: ResearchReport) -> str:
     """Section 4: Platform signals as bullet list."""
-    return _bulletise(packet.get("platform_engagement_summary", ""))
+    return _bulletise(report.get("platform_engagement_summary", ""))
 
 
-def section_5_source_validation(packet: ResearchPacket) -> str:
+def section_5_source_validation(report: ResearchReport) -> str:
     """Section 5: Source validation counts."""
-    svs = packet["source_validation_summary"]
+    svs = report["source_validation_summary"]
     lines = [
         f"<li>Validated: {svs['validated']}, Partial: {svs['partially']}, "
         f"Unverified: {svs['unverified']}, Low-trust: {svs['low_trust']}</li>",
@@ -115,14 +115,14 @@ def section_5_source_validation(packet: ResearchPacket) -> str:
     return f"<ul>{''.join(lines)}</ul>"
 
 
-def section_6_evidence(packet: ResearchPacket) -> str:
+def section_6_evidence(report: ResearchReport) -> str:
     """Section 6: Evidence summary as bullet list."""
-    return _bulletise(packet.get("evidence_summary", ""))
+    return _bulletise(report.get("evidence_summary", ""))
 
 
-def section_7_statistics(packet: ResearchPacket) -> str:
+def section_7_statistics(report: ResearchReport) -> str:
     """Section 7: Statistics highlights table."""
-    stats = packet.get("stats_summary", {})
+    stats = report.get("stats_summary", {})
     highlights = stats.get("highlights", [])
     low_confidence = stats.get("low_confidence", False)
     result = "<p><em>(no highlights)</em></p>" if not highlights else _highlights_table(highlights)
@@ -155,9 +155,9 @@ def _highlights_table(highlights: list[str]) -> str:
     return f'<div class="table-wrap"><table>{"".join(rows)}</table></div>'
 
 
-def section_8_charts(packet: ResearchPacket, charts_dir: Path | None) -> str:
+def section_8_charts(report: ResearchReport, charts_dir: Path | None) -> str:
     """Section 8: Embedded chart images and captions."""
-    captions = packet.get("chart_captions", [])
+    captions = report.get("chart_captions", [])
     if not captions:
         return "<p><em>(no charts rendered)</em></p>"
     blocks = []
@@ -214,9 +214,9 @@ def _find_chart_path(caption: str, charts_dir: Path | None) -> str | None:
     return None
 
 
-def section_9_warnings(packet: ResearchPacket) -> str:
+def section_9_warnings(report: ResearchReport) -> str:
     """Section 9: Research warnings."""
-    warnings = packet.get("warnings", [])
+    warnings = report.get("warnings", [])
     if not warnings:
         return "<p><em>(none)</em></p>"
     lis = "".join(f"<li>{_esc(w)}</li>" for w in warnings)

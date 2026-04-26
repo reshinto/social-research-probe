@@ -1,7 +1,7 @@
 """Minimal service lifecycle logging + timing.
 
 Each service call emits exactly two events (start, end) when logs are enabled.
-Timings are always recorded into ``packet["stage_timings"]`` so a Markdown
+Timings are always recorded into ``report["stage_timings"]`` so a Markdown
 footer can render them later. Logs go to stderr; the CLI reserves stdout for
 the final report path.
 """
@@ -19,7 +19,7 @@ _TRUTHY = {"1", "true", "yes", "on"}
 
 
 class StageTiming(TypedDict):
-    """One entry in ``packet["stage_timings"]``."""
+    """One entry in ``report["stage_timings"]``."""
 
     stage: str
     elapsed_s: float
@@ -46,18 +46,18 @@ def _emit(line: str) -> None:
 async def service_log(
     name: str,
     *,
-    packet: dict,
+    report: dict,
     cfg_logs_enabled: bool = False,
 ) -> AsyncIterator[None]:
     """Bracket an async service call with start/end events + timing capture.
 
-    Always appends one ``StageTiming`` entry to ``packet["stage_timings"]``.
+    Always appends one ``StageTiming`` entry to ``report["stage_timings"]``.
     Emits ``start`` / ``end`` lines to stderr only when ``logs_enabled``.
     On exception: records ``status="error"`` with the exception string, emits
     a failure line, then re-raises so callers can decide how to handle it.
     """
     enabled = logs_enabled(cfg_logs_enabled)
-    timings = packet.setdefault("stage_timings", [])
+    timings = report.setdefault("stage_timings", [])
     if enabled:
         _emit(f"▶ {name} started")
     start = time.perf_counter()
@@ -87,12 +87,12 @@ async def service_log(
 def service_log_sync(
     name: str,
     *,
-    packet: dict,
+    report: dict,
     cfg_logs_enabled: bool = False,
 ):
     """Bracket a sync service call with start/end events + timing capture."""
     enabled = logs_enabled(cfg_logs_enabled)
-    timings = packet.setdefault("stage_timings", [])
+    timings = report.setdefault("stage_timings", [])
     if enabled:
         _emit(f"▶ {name} started")
     start = time.perf_counter()

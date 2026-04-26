@@ -1,7 +1,7 @@
-"""Pass-through transformer: ResearchPacket → SynthesisContext for the LLM.
+"""Pass-through transformer: ResearchReport → SynthesisContext for the LLM.
 
 The final synthesis LLM only sees this compact, normalised shape. It contains
-nothing the packet didn't already have — all interpretation work (stats
+nothing the report didn't already have — all interpretation work (stats
 highlights, chart takeaways, corroboration verdicts, divergence warnings) has
 already been computed deterministically upstream. Every field tolerates being
 missing so disabled features silently produce empty sections.
@@ -11,22 +11,22 @@ from __future__ import annotations
 
 from social_research_probe.utils.core.types import (
     Coverage,
-    ResearchPacket,
+    ResearchReport,
     ScoredItem,
     SynthesisContext,
     SynthesisItem,
 )
 
 
-def build_synthesis_context(packet: ResearchPacket) -> SynthesisContext:
-    """Return the compact packet shape shown to the final synthesis LLM."""
-    items_top_n = list(packet.get("items_top_n", []))
+def build_synthesis_context(report: ResearchReport) -> SynthesisContext:
+    """Return the compact report shape shown to the final synthesis LLM."""
+    items_top_n = list(report.get("items_top_n", []))
     return SynthesisContext(
-        topic=str(packet.get("topic", "")),
-        platform=str(packet.get("platform", "")),
-        coverage=_build_coverage(packet, items_top_n),
+        topic=str(report.get("topic", "")),
+        platform=str(report.get("platform", "")),
+        coverage=_build_coverage(report, items_top_n),
         items=[_build_item(i, item) for i, item in enumerate(items_top_n)],
-        source_validation_summary=packet.get(
+        source_validation_summary=report.get(
             "source_validation_summary",
             {
                 "validated": 0,
@@ -39,18 +39,18 @@ def build_synthesis_context(packet: ResearchPacket) -> SynthesisContext:
                 "notes": "",
             },
         ),
-        platform_engagement_summary=str(packet.get("platform_engagement_summary", "") or ""),
-        evidence_summary=str(packet.get("evidence_summary", "") or ""),
-        stats_highlights=list(packet.get("stats_summary", {}).get("highlights", []) or []),
-        chart_takeaways=list(packet.get("chart_takeaways", []) or []),
-        warnings=list(packet.get("warnings", []) or []),
+        platform_engagement_summary=str(report.get("platform_engagement_summary", "") or ""),
+        evidence_summary=str(report.get("evidence_summary", "") or ""),
+        stats_highlights=list(report.get("stats_summary", {}).get("highlights", []) or []),
+        chart_takeaways=list(report.get("chart_takeaways", []) or []),
+        warnings=list(report.get("warnings", []) or []),
     )
 
 
-def _build_coverage(packet: ResearchPacket, items_top_n: list[ScoredItem]) -> Coverage:
+def _build_coverage(report: ResearchReport, items_top_n: list[ScoredItem]) -> Coverage:
     """Coverage block — fetched vs. deeply enriched counts and platform list."""
-    platforms = [p for p in [str(packet.get("platform", ""))] if p]
-    stats = packet.get("stats_summary", {})
+    platforms = [p for p in [str(report.get("platform", ""))] if p]
+    stats = report.get("stats_summary", {})
     fetched_hint = _fetched_from_highlights(list(stats.get("highlights", []) or []))
     return Coverage(
         fetched=fetched_hint if fetched_hint is not None else len(items_top_n),

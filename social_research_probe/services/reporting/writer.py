@@ -10,7 +10,7 @@ from social_research_probe.technologies.report_render.html.raw_html.youtube impo
 from social_research_probe.utils.core.flags import service_flag, stage_flag
 
 
-def write_final_report(packet: dict, *, allow_html: bool) -> str:
+def write_final_report(report: dict, *, allow_html: bool) -> str:
     """Write final report and return access path or command.
 
     Produces both HTML and Markdown. Markdown is fallback when HTML
@@ -22,26 +22,26 @@ def write_final_report(packet: dict, *, allow_html: bool) -> str:
         allow_html
         and stage_flag("report", platform="youtube", default=True)
         and service_flag("html_report", default=True)
-        and "multi" not in packet
+        and "multi" not in report
     )
     if html_on:
         try:
             path = write_html_report(
-                packet,
+                report,
                 data_dir,
                 prepare_voicebox_audio=service_flag("audio_report", default=True),
             )
             uri = path.resolve().as_uri()
-            packet["html_report_path"] = uri
+            report["html_report_path"] = uri
             command = serve_report_command(path)
-            packet["html_report_command"] = command
+            report["html_report_command"] = command
             return command
         except Exception:
             pass
     md_path = data_dir / "report.md"
     md_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        body = render_full(packet) if "multi" not in packet else "# Report\n\n_(no content)_\n"
+        body = render_full(report) if "multi" not in report else "# Report\n\n_(no content)_\n"
     except Exception:
         body = "# Report\n\n_(no content — every feature disabled or pipeline empty)_\n"
     md_path.write_text(body, encoding="utf-8")

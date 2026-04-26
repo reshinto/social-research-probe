@@ -83,7 +83,7 @@ def stage_cache(stage_name: str) -> FilesystemCache:
 def hash_key(*parts: str) -> str:
     """Build a stable cache key from arbitrary strings via SHA-256 digest.
 
-    Short raw strings (video IDs, backend names) pass through unchanged; long
+    Short raw strings (video IDs, provider names) pass through unchanged; long
     or special-character inputs (full URLs, prompts) are hashed so the
     sanitised filename stays bounded. Mixing both is safe.
     """

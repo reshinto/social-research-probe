@@ -1,10 +1,10 @@
-"""Brave Search corroboration backend.
+"""Brave Search corroboration provider.
 
-What: Implements CorroborationBackend by querying the Brave Search web API to
+What: Implements CorroborationProvider by querying the Brave Search web API to
 find pages that match the claim text.
 
 Why: Brave Search returns traditional web index results (not AI-generated),
-giving a complementary signal to semantic-search backends like Exa.
+giving a complementary signal to semantic-search providers like Exa.
 
 Who calls it: corroboration/host.py via the registry. Credentials may come from
 SRP_BRAVE_API_KEY or the active ``secrets.toml``.
@@ -20,7 +20,7 @@ from social_research_probe.services.corroborating.registry import register
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
-    CorroborationBackend,
+    CorroborationProvider,
     CorroborationResult,
 )
 from social_research_probe.utils.core.errors import AdapterError
@@ -29,13 +29,13 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class BraveBackend(CorroborationBackend, BaseTechnology):
-    """Corroboration backend using the Brave Search web API.
+class BraveProvider(CorroborationProvider, BaseTechnology):
+    """Corroboration provider using the Brave Search web API.
 
     Purpose: Issues a standard web search query and uses the resulting URLs as
     evidence that the claim text appears in publicly indexed sources.
 
-    Lifecycle: Instantiated by get_backend("brave"); no constructor arguments
+    Lifecycle: Instantiated by get_provider("brave"); no constructor arguments
     required — API key is read from the environment at call time.
 
     ABC contract: implements health_check() and corroborate().
@@ -108,7 +108,7 @@ class BraveBackend(CorroborationBackend, BaseTechnology):
 
         Args:
             claim: The original Claim dataclass (not used directly here but
-                kept for consistency with other backends).
+                kept for consistency with other providers).
             raw_results: List of result dicts from the Brave API's web.results.
 
         Returns:
@@ -130,7 +130,7 @@ class BraveBackend(CorroborationBackend, BaseTechnology):
             confidence=min(1.0, len(sources) * 0.2),
             reasoning=f"Found {len(sources)} relevant source(s) via Brave Search.",
             sources=sources,
-            backend_name=self.name,
+            provider_name=self.name,
         )
 
     async def corroborate(self, claim) -> CorroborationResult:

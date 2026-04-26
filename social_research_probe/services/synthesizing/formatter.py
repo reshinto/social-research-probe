@@ -1,11 +1,11 @@
-"""Packet formatting and Markdown rendering for srp research output.
+"""Report formatting and Markdown rendering for srp research output.
 
-Transforms a raw research packet (produced by the pipeline) into a
-human-readable Markdown report. Also builds the canonical research packet dict.
+Transforms a raw research report (produced by the pipeline) into a
+human-readable Markdown report. Also builds the canonical research report dict.
 
-The deterministic report body comes from packet data. Compiled Synthesis,
-Opportunity Analysis, and Final Summary come from the packet when available;
-Final Summary falls back to a deterministic summary built from existing packet
+The deterministic report body comes from report data. Compiled Synthesis,
+Opportunity Analysis, and Final Summary come from the report when available;
+Final Summary falls back to a deterministic summary built from existing report
 data when synthesis is disabled.
 """
 
@@ -15,7 +15,7 @@ import re
 from functools import lru_cache
 
 from social_research_probe.utils.core.types import (
-    ResearchPacket,
+    ResearchReport,
     ScoredItem,
     SourceValidationSummary,
     StatsSummary,
@@ -26,7 +26,7 @@ from .explanations import infer_model as _infer_model
 
 __all__ = [
     "build_fallback_report_summary",
-    "build_packet",
+    "build_report",
     "render_full",
     "render_sections_1_9",
     "resolve_report_summary",
@@ -38,7 +38,7 @@ _UNAVAILABLE_SUMMARY_MARKERS = (
 )
 
 
-def build_packet(
+def build_report(
     *,
     topic: str,
     platform: str,
@@ -51,8 +51,8 @@ def build_packet(
     chart_captions: list[str],
     warnings: list[str],
     chart_takeaways: list[str] | None = None,
-) -> ResearchPacket:
-    """Assemble the canonical packet dict passed between pipeline and renderer."""
+) -> ResearchReport:
+    """Assemble the canonical report dict passed between pipeline and renderer."""
     return {
         "topic": topic,
         "platform": platform,
@@ -137,26 +137,26 @@ _bulletise = _to_bullets
 
 
 def render_full(
-    packet: ResearchPacket,
+    report: ResearchReport,
 ) -> str:
-    """Render the full Markdown report from packet data and synthesis text."""
-    body = render_sections_1_9(packet)
+    """Render the full Markdown report from report data and synthesis text."""
+    body = render_sections_1_9(report)
     compiled_synthesis_text = (
-        packet.get("compiled_synthesis")
+        report.get("compiled_synthesis")
         or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
     )
     opportunity_analysis_text = (
-        packet.get("opportunity_analysis")
+        report.get("opportunity_analysis")
         or "_(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)_"
     )
     final_summary_text = (
-        resolve_report_summary(packet)
+        resolve_report_summary(report)
         or "_(LLM summary unavailable — runner disabled or all runners failed; see terminal logs)_"
     )
     body += f"\n## 10. Compiled Synthesis\n\n{compiled_synthesis_text}\n"
     body += f"\n## 11. Opportunity Analysis\n\n{opportunity_analysis_text}\n"
     body += f"\n## 12. Final Summary\n\n{final_summary_text}\n"
-    footer = _render_timing_footer(packet.get("stage_timings", []))
+    footer = _render_timing_footer(report.get("stage_timings", []))
     if footer:
         body += f"\n{footer}\n"
     return body
@@ -180,24 +180,24 @@ def _render_timing_footer(timings: list) -> str:
     return "_Timing: " + " • ".join(parts) + f" • total {total:.1f}s_"
 
 
-def render_sections_1_9(packet: ResearchPacket) -> str:
-    """Render sections 1-9 deterministically from packet data.
+def render_sections_1_9(report: ResearchReport) -> str:
+    """Render sections 1-9 deterministically from report data.
 
-    Each section maps directly to a field in the packet. This function is
+    Each section maps directly to a field in the report. This function is
     also called by render_full and by tests that verify section formatting
     without requiring LLM synthesis.
     """
-    svs = packet["source_validation_summary"]
-    items = packet["items_top_n"]
-    stats = packet["stats_summary"]
-    warnings = packet.get("warnings", [])
+    svs = report["source_validation_summary"]
+    items = report["items_top_n"]
+    stats = report["stats_summary"]
+    warnings = report.get("warnings", [])
     parts: list[str] = []
     parts.append(
         "## 1. Topic & Purpose\n\n"
-        f"- **Topic:** {packet['topic']}\n"
-        f"- **Purposes:** {', '.join(packet['purpose_set'])}"
+        f"- **Topic:** {report['topic']}\n"
+        f"- **Purposes:** {', '.join(report['purpose_set'])}"
     )
-    parts.append(f"## 2. Platform\n\n- **Platform:** {packet['platform']}")
+    parts.append(f"## 2. Platform\n\n- **Platform:** {report['platform']}")
     if items:
         parts.append(
             "## 3. Top Items\n\n"
@@ -207,7 +207,7 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
         )
     else:
         parts.append("## 3. Top Items\n\n_(no items returned)_")
-    parts.append("## 4. Platform Signals\n\n" + _to_bullets(packet["platform_engagement_summary"]))
+    parts.append("## 4. Platform Signals\n\n" + _to_bullets(report["platform_engagement_summary"]))
     parts.append(
         "## 5. Source Validation\n\n"
         f"- validated: {svs['validated']}, partial: {svs['partially']}, "
@@ -215,11 +215,11 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
         f"- primary/secondary/commentary: {svs['primary']}/{svs['secondary']}/{svs['commentary']}"
         + (f"\n- notes: {svs['notes']}" if svs.get("notes") else "")
     )
-    parts.append("## 6. Evidence\n\n" + _to_bullets(packet["evidence_summary"]))
+    parts.append("## 6. Evidence\n\n" + _to_bullets(report["evidence_summary"]))
     lc = "\n\n_low confidence — interpret with caution_" if stats.get("low_confidence") else ""
     highlights = stats.get("highlights", [])
     parts.append(f"## 7. Statistics\n\n{_highlights_table(highlights)}{lc}")
-    caps = packet.get("chart_captions", [])
+    caps = report.get("chart_captions", [])
     parts.append("## 8. Charts\n\n" + ("\n\n".join(caps) if caps else "_(no charts rendered)_"))
     parts.append(
         "## 9. Warnings\n\n" + ("\n".join(f"- {w}" for w in warnings) if warnings else "_(none)_")
@@ -227,25 +227,25 @@ def render_sections_1_9(packet: ResearchPacket) -> str:
     return "\n\n".join(parts) + "\n"
 
 
-def resolve_report_summary(packet: ResearchPacket) -> str | None:
-    """Return the best available section-12 summary for *packet*."""
-    report_summary = _usable_summary_text(packet.get("report_summary"))
+def resolve_report_summary(report: ResearchReport) -> str | None:
+    """Return the best available section-12 summary for *report*."""
+    report_summary = _usable_summary_text(report.get("report_summary"))
     if report_summary:
         return report_summary
-    return build_fallback_report_summary(packet)
+    return build_fallback_report_summary(report)
 
 
-def build_fallback_report_summary(packet: ResearchPacket) -> str | None:
-    """Build a non-LLM final summary from existing packet data."""
+def build_fallback_report_summary(report: ResearchReport) -> str | None:
+    """Build a non-LLM final summary from existing report data."""
     sentences: list[str] = []
-    topic = str(packet.get("topic", "") or "").strip()
-    platform = str(packet.get("platform", "") or "").strip()
+    topic = str(report.get("topic", "") or "").strip()
+    platform = str(report.get("platform", "") or "").strip()
     if topic and platform:
         sentences.append(f"This report covers {topic} on {platform}.")
     elif topic:
         sentences.append(f"This report covers {topic}.")
 
-    source_validation = packet.get("source_validation_summary", {})
+    source_validation = report.get("source_validation_summary", {})
     if isinstance(source_validation, dict):
         validated = int(source_validation.get("validated", 0) or 0)
         partially = int(source_validation.get("partially", 0) or 0)
@@ -258,34 +258,34 @@ def build_fallback_report_summary(packet: ResearchPacket) -> str | None:
                 f"{unverified} unverified, and {low_trust} low-trust sources."
             )
 
-    compiled = _plain_sentences(packet.get("compiled_synthesis"), limit=1)
+    compiled = _plain_sentences(report.get("compiled_synthesis"), limit=1)
     if compiled:
         sentences.append("Compiled synthesis: " + " ".join(compiled))
 
-    opportunity = _plain_sentences(packet.get("opportunity_analysis"), limit=1)
+    opportunity = _plain_sentences(report.get("opportunity_analysis"), limit=1)
     if opportunity:
         sentences.append("Opportunity analysis: " + " ".join(opportunity))
 
-    stats_summary = packet.get("stats_summary", {})
+    stats_summary = report.get("stats_summary", {})
     highlights = _plain_list_sentences(list(stats_summary.get("highlights", []) or []), limit=2)
     if highlights:
         sentences.append("Statistics highlights: " + " ".join(highlights))
     elif stats_summary.get("low_confidence"):
         sentences.append("Statistics are low confidence because the sample is small.")
 
-    chart_takeaways = _plain_list_sentences(list(packet.get("chart_takeaways", []) or []), limit=2)
+    chart_takeaways = _plain_list_sentences(list(report.get("chart_takeaways", []) or []), limit=2)
     if chart_takeaways:
         sentences.append("Chart signals: " + " ".join(chart_takeaways))
 
-    signal_summary = _summary_sentences(packet.get("platform_engagement_summary", ""), limit=2)
+    signal_summary = _summary_sentences(report.get("platform_engagement_summary", ""), limit=2)
     if signal_summary:
         sentences.append("Platform engagement: " + " ".join(signal_summary))
 
-    evidence_summary = _summary_sentences(packet.get("evidence_summary", ""), limit=2)
+    evidence_summary = _summary_sentences(report.get("evidence_summary", ""), limit=2)
     if evidence_summary:
         sentences.append("Evidence summary: " + " ".join(evidence_summary))
 
-    warnings = _plain_list_sentences(list(packet.get("warnings", []) or []), limit=1)
+    warnings = _plain_list_sentences(list(report.get("warnings", []) or []), limit=1)
     if warnings:
         sentences.append("Cautions: " + " ".join(warnings))
 
@@ -345,7 +345,7 @@ def _plain_list_sentences(values: list[object], *, limit: int) -> list[str]:
 
 
 def _summary_sentences(text: str | None, *, limit: int) -> list[str]:
-    """Return up to *limit* sentences from a semicolon-separated packet summary."""
+    """Return up to *limit* sentences from a semicolon-separated report summary."""
     raw = _usable_summary_text(text)
     if not raw:
         return []

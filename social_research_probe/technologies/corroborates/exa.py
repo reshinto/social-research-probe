@@ -1,6 +1,6 @@
-"""Exa AI search corroboration backend.
+"""Exa AI search corroboration provider.
 
-What: Implements CorroborationBackend by querying the Exa AI semantic search API
+What: Implements CorroborationProvider by querying the Exa AI semantic search API
 (exa.ai) to find published sources that match the claim text.
 
 Why: Exa specialises in finding semantically similar content, making it effective
@@ -21,7 +21,7 @@ from social_research_probe.services.corroborating.registry import register
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
-    CorroborationBackend,
+    CorroborationProvider,
     CorroborationResult,
 )
 from social_research_probe.utils.core.errors import AdapterError
@@ -30,13 +30,13 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class ExaBackend(CorroborationBackend, BaseTechnology):
-    """Corroboration backend using the Exa AI search API (exa.ai).
+class ExaProvider(CorroborationProvider, BaseTechnology):
+    """Corroboration provider using the Exa AI search API (exa.ai).
 
     Purpose: Searches for semantically similar content to the claim text and
     returns the URLs of matching sources as evidence.
 
-    Lifecycle: Instantiated by get_backend("exa"); no constructor arguments
+    Lifecycle: Instantiated by get_provider("exa"); no constructor arguments
     required — API key is read from the environment at call time.
 
     ABC contract: implements health_check() and corroborate().
@@ -111,7 +111,7 @@ class ExaBackend(CorroborationBackend, BaseTechnology):
 
         Args:
             claim: The original Claim dataclass (not used directly here but
-                kept for consistency with other backends).
+                kept for consistency with other providers).
             raw_results: List of result dicts from the Exa API response.
 
         Returns:
@@ -133,7 +133,7 @@ class ExaBackend(CorroborationBackend, BaseTechnology):
             confidence=min(1.0, len(sources) * 0.2),
             reasoning=f"Found {len(sources)} relevant source(s) via Exa search.",
             sources=sources,
-            backend_name=self.name,
+            provider_name=self.name,
         )
 
     async def corroborate(self, claim) -> CorroborationResult:

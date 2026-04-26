@@ -1,4 +1,4 @@
-"""Corroboration service: concurrent fact-checking via search backends."""
+"""Corroboration service: concurrent fact-checking via search providers."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from social_research_probe.services.base import BaseService, ServiceResult, Tech
 
 
 class CorroborationService(BaseService):
-    """Corroborate claims concurrently via configured search backends.
+    """Corroborate claims concurrently via configured search providers.
 
-    Uses asyncio.Semaphore(3) to respect backend rate limits.
+    Uses asyncio.Semaphore(3) to respect provider rate limits.
     Input per item: a ScoredItem dict.
     """
 
@@ -28,11 +28,11 @@ class CorroborationService(BaseService):
         title = data.get("title", "") if isinstance(data, dict) else str(data)
         url = data.get("url") if isinstance(data, dict) else None
         claim = Claim(text=title, source_text=title, index=0, source_url=url)
-        backends = cfg.corroboration_backend if hasattr(cfg, "corroboration_backend") else []
-        if isinstance(backends, str):
-            backends = [backends]
+        providers = cfg.corroboration_provider if hasattr(cfg, "corroboration_provider") else []
+        if isinstance(providers, str):
+            providers = [providers]
         try:
-            result = await corroborate_claim(claim, backends)
+            result = await corroborate_claim(claim, providers)
             tr = TechResult(tech_name="corroboration_host", input=data, output=result, success=True)
         except Exception as exc:
             tr = TechResult(

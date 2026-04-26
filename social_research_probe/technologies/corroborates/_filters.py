@@ -1,13 +1,13 @@
 """Source-quality filters for corroboration search results.
 
-Two categories of evidence are stripped before any backend computes a verdict:
+Two categories of evidence are stripped before any provider computes a verdict:
 
 1. **Self-source.** The claim's own URL (exact match OR same host) must not be
    used to verify itself. Without this filter, a claim extracted from a YouTube
    video can be "supported" by the same video appearing in the Brave/Exa/Tavily
    search results — circular and invalid.
 
-2. **Video-hosting domains.** Search backends return only ``{url, title,
+2. **Video-hosting domains.** Search providers return only ``{url, title,
    snippet}`` — they never fetch video content or transcripts. A video URL in
    the result list is at best a keyword match against the author-authored
    title/description, not verifiable evidence. Until a transcript-fetch-verify
@@ -88,10 +88,10 @@ def filter_results(
     *,
     url_key: str = "url",
 ) -> tuple[list[dict], int, int]:
-    """Drop self-source and video-hosting-domain results from a backend payload.
+    """Drop self-source and video-hosting-domain results from a provider payload.
 
     Args:
-        raw_results: List of backend result dicts; each expected to carry a URL
+        raw_results: List of provider result dicts; each expected to carry a URL
             under ``url_key``. Items with a missing/empty URL are kept as-is so
             non-URL metadata passes through.
         source_url: The URL the claim was extracted from. May be ``None`` when

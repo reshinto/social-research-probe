@@ -70,7 +70,7 @@ def _handle_corroborate_claims(args: argparse.Namespace) -> int:
 
     return corroborate_claims.run(
         args.input,
-        [b.strip() for b in args.backends.split(",") if b.strip()],
+        [p.strip() for p in args.providers.split(",") if p.strip()],
         output_path=args.output,
     )
 

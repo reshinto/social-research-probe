@@ -128,7 +128,7 @@ def _apply_cli_overrides(args: argparse.Namespace) -> None:
 
 
 def _execute_research_pipeline(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
-    """Build and execute research pipeline, return packet."""
+    """Build and execute research pipeline, return report."""
     from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
     from social_research_probe.platforms.orchestrator import run_pipeline
 
@@ -136,14 +136,14 @@ def _execute_research_pipeline(platform: str, topic: str, purposes: tuple[str, .
     return asyncio.run(run_pipeline(cmd))
 
 
-@log_with_time("[srp] research: platform={research_args.platform}")
+@log_with_time("[srp] research: input={args.args}")
 def run(args: argparse.Namespace) -> int:
     """Execute the research pipeline for the 'research' subcommand."""
     research_args = _parse_research_input(args.args)
     _apply_cli_overrides(args)
     topic, purposes = _normalize_to_topic_and_purposes(research_args)
-    packet = _execute_research_pipeline(research_args.platform, topic, purposes)
-    report_path = packet.get("report_path", "")
+    report = _execute_research_pipeline(research_args.platform, topic, purposes)
+    report_path = report.get("report_path", "")
     sys.stdout.write(f"{report_path}\n")
     sys.stdout.flush()
     return ExitCode.SUCCESS

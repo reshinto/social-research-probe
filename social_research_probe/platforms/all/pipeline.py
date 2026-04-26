@@ -18,11 +18,11 @@ async def _run_one(
     platform_inputs = {**state.inputs, "adapter": adapter}
     platform_state = replace(state, platform_type=name, inputs=platform_inputs, outputs={})
     result = await pipeline_cls().run(platform_state)
-    return name, result.outputs.get("packet", {})
+    return name, result.outputs.get("report", {})
 
 
 class AllPlatformsPipeline:
-    """Runs all concrete platform pipelines concurrently and aggregates their packets."""
+    """Runs all concrete platform pipelines concurrently and aggregates their reports."""
 
     async def run(self, state: PipelineState) -> PipelineState:
         from social_research_probe.platforms import PIPELINES
@@ -31,5 +31,5 @@ class AllPlatformsPipeline:
         results = await asyncio.gather(
             *(_run_one(name, pipeline_cls, state) for name, pipeline_cls in concrete.items())
         )
-        state.outputs["packet"] = {"platforms": dict(results)}
+        state.outputs["report"] = {"platforms": dict(results)}
         return state

@@ -1,1 +1,1 @@
-"""Corroboration backend technology adapters."""
+"""Corroboration provider technology adapters."""

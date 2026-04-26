@@ -1,11 +1,11 @@
-"""HTML report renderer for srp research packets.
+"""HTML report renderer for srp research reports.
 
 Produces a single self-contained HTML file with embedded chart images
 (base64 PNG), a sticky TOC, and text-to-speech controls that prefer
 Voicebox while falling back to the browser's system voices.
 The output is identical regardless of whether research was triggered by
 the skill or the CLI — both call write_html_report() after obtaining a
-ResearchPacket.
+ResearchReport.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ from social_research_probe.technologies.report_render.html.raw_html._sections im
     section_11_opportunity,
     section_12_summary,
 )
-from social_research_probe.utils.core.types import ResearchPacket
+from social_research_probe.utils.core.types import ResearchReport
 from social_research_probe.utils.display.service_log import service_log_sync
 
 _SECTIONS = [
@@ -70,7 +70,7 @@ _VOICEBOX_PROFILE_NAMES_FILENAME = "voicebox_profiles.json"
 
 
 def render_html(
-    packet: ResearchPacket,
+    report: ResearchReport,
     charts_dir: Path | None = None,
     *,
     tts_api_base: str | None = None,
@@ -81,10 +81,10 @@ def render_html(
     prepared_audio_profile_name: str | None = None,
     prepared_audio_sources: dict[str, str] | None = None,
 ) -> str:
-    """Render a complete self-contained HTML report for a research packet.
+    """Render a complete self-contained HTML report for a research report.
 
     Args:
-        packet: The research packet produced by pipeline.run_research().
+        report: The research report produced by pipeline.run_research().
         charts_dir: Directory containing chart PNGs to embed. None → skip images.
         tts_api_base: Voicebox HTTP origin exposed to the browser.
         tts_profile_name: Preferred Voicebox profile name to preselect.
@@ -108,23 +108,23 @@ def render_html(
     if selected_profile is not None:
         selected_profile_name = selected_profile["name"]
     section_bodies = [
-        section_1_topic_purpose(packet),
-        section_2_platform(packet),
-        section_3_top_items(packet),
-        section_4_platform_engagement(packet),
-        section_5_source_validation(packet),
-        section_6_evidence(packet),
-        section_7_statistics(packet),
-        section_8_charts(packet, charts_dir),
-        section_9_warnings(packet),
-        section_10_synthesis(packet.get("compiled_synthesis")),
-        section_11_opportunity(packet.get("opportunity_analysis")),
-        section_12_summary(resolve_report_summary(packet)),
+        section_1_topic_purpose(report),
+        section_2_platform(report),
+        section_3_top_items(report),
+        section_4_platform_engagement(report),
+        section_5_source_validation(report),
+        section_6_evidence(report),
+        section_7_statistics(report),
+        section_8_charts(report, charts_dir),
+        section_9_warnings(report),
+        section_10_synthesis(report.get("compiled_synthesis")),
+        section_11_opportunity(report.get("opportunity_analysis")),
+        section_12_summary(resolve_report_summary(report)),
     ]
-    body_html = _build_body(packet, section_bodies)
+    body_html = _build_body(report, section_bodies)
     toc_html = _build_toc()
     return _page_shell(
-        packet,
+        report,
         toc_html,
         body_html,
         tts_api_base=api_base,
@@ -137,7 +137,7 @@ def render_html(
 
 
 def write_html_report(
-    packet: ResearchPacket,
+    report: ResearchReport,
     *,
     prepare_voicebox_audio: bool | None = None,
 ) -> Path:
@@ -150,8 +150,8 @@ def write_html_report(
     reports_dir = data_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    slug = re.sub(r"[^\w-]", "-", packet["topic"].lower())[:40].strip("-")
-    platform = packet.get("platform", "unknown")
+    slug = re.sub(r"[^\w-]", "-", report["topic"].lower())[:40].strip("-")
+    platform = report.get("platform", "unknown")
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     out_path = reports_dir / f"{slug}-{platform}-{ts}.html"
 
@@ -160,7 +160,7 @@ def write_html_report(
     tts_profiles: list[dict[str, str]] = []
     selected_profile = None
     if cfg.technology_enabled("voicebox"):
-        with service_log_sync("voicebox_profiles", packet=packet, cfg_logs_enabled=cfg_logs):
+        with service_log_sync("voicebox_profiles", report=report, cfg_logs_enabled=cfg_logs):
             tts_profiles = _fetch_voicebox_profiles(api_base)
         _write_discovered_voicebox_profile_names(tts_profiles)
         selected_profile = _select_voicebox_profile(
@@ -175,9 +175,9 @@ def write_html_report(
     )
     prepared_audio_sources: dict[str, str] = {}
     if audio_enabled and cfg.technology_enabled("voicebox"):
-        with service_log_sync("voicebox_audio", packet=packet, cfg_logs_enabled=cfg_logs):
+        with service_log_sync("voicebox_audio", report=report, cfg_logs_enabled=cfg_logs):
             prepared_audio_sources = _prepare_voiceover_audios(
-                packet,
+                report,
                 out_path,
                 tts_api_base=api_base,
                 tts_profiles=tts_profiles,
@@ -186,7 +186,7 @@ def write_html_report(
     prepared_audio_src = prepared_audio_sources.get(selected_profile_name or "", None)
     prepared_audio_profile_name = selected_profile_name if prepared_audio_src else None
     html_content = render_html(
-        packet,
+        report,
         charts_dir=data_dir / "charts",
         tts_api_base=api_base,
         tts_profile_name=selected_profile_name,
@@ -206,10 +206,10 @@ def _build_toc() -> str:
     return f"<h2>Contents</h2>{links}"
 
 
-def _build_body(packet: ResearchPacket, section_bodies: list[str]) -> str:
+def _build_body(report: ResearchReport, section_bodies: list[str]) -> str:
     """Build the <main> report body from section bodies."""
-    topic_esc = html.escape(packet["topic"])
-    platform_esc = html.escape(packet.get("platform", ""))
+    topic_esc = html.escape(report["topic"])
+    platform_esc = html.escape(report.get("platform", ""))
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     parts = [
         f'<h1 class="report-title">{topic_esc}</h1>',
@@ -402,20 +402,20 @@ def _markdown_to_voiceover_text(text: str) -> str:
     return cleaned
 
 
-def build_voiceover_text(packet: ResearchPacket) -> str | None:
+def build_voiceover_text(report: ResearchReport) -> str | None:
     """Return the summary-only narration text used for prepared audio."""
     sections: list[str] = []
     for label, key in (
         ("Compiled synthesis", "compiled_synthesis"),
         ("Opportunity analysis", "opportunity_analysis"),
     ):
-        raw = str(packet.get(key, "") or "").strip()
+        raw = str(report.get(key, "") or "").strip()
         if not raw:
             continue
         plain = _markdown_to_voiceover_text(raw)
         if plain:
             sections.append(f"{label}. {plain}")
-    final_summary = resolve_report_summary(packet) or ""
+    final_summary = resolve_report_summary(report) or ""
     final_summary_plain = _markdown_to_voiceover_text(final_summary) if final_summary else ""
     if final_summary_plain:
         sections.append(f"Final summary. {final_summary_plain}")
@@ -425,16 +425,16 @@ def build_voiceover_text(packet: ResearchPacket) -> str | None:
 
 
 def _prepare_voiceover_audio(
-    packet: ResearchPacket,
+    report: ResearchReport,
     report_path: Path,
     *,
     tts_api_base: str,
     tts_profile: dict[str, str] | None,
 ) -> tuple[str | None, str | None]:
-    """Pre-render summary audio for *packet* and return (filename, profile_name)."""
+    """Pre-render summary audio for *report* and return (filename, profile_name)."""
     if not tts_profile:
         return None, None
-    text = build_voiceover_text(packet)
+    text = build_voiceover_text(report)
     if not text:
         return None, None
 
@@ -455,7 +455,7 @@ def _prepare_voiceover_audio(
 
 
 def _prepare_voiceover_audios(
-    packet: ResearchPacket,
+    report: ResearchReport,
     report_path: Path,
     *,
     tts_api_base: str,
@@ -463,7 +463,7 @@ def _prepare_voiceover_audios(
     tts_profile_name: str | None,
 ) -> dict[str, str]:
     """Pre-render summary audio for all known Voicebox profiles concurrently."""
-    text = build_voiceover_text(packet)
+    text = build_voiceover_text(report)
     if not text or not tts_profiles:
         return {}
 
@@ -506,7 +506,7 @@ def _prepared_audio_base(report_path: Path, profile_name: str) -> Path:
 
 
 def _page_shell(
-    packet: ResearchPacket,
+    report: ResearchReport,
     toc_html: str,
     body_html: str,
     *,
@@ -518,7 +518,7 @@ def _page_shell(
     prepared_audio_sources: dict[str, str],
 ) -> str:
     """Assemble the complete HTML document from its parts."""
-    title = html.escape(f"Research Report: {packet['topic']}")
+    title = html.escape(f"Research Report: {report['topic']}")
     voice_options = _build_tts_voice_options(tts_profiles, tts_profile_name)
     default_profile_attr = html.escape(tts_profile_name or "", quote=True)
     api_base_attr = html.escape(tts_api_base, quote=True)

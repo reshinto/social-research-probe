@@ -8,6 +8,7 @@ from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting.writer import write_final_report
 from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class YouTubeFetchStage(BaseStage):
@@ -32,6 +33,7 @@ class YouTubeFetchStage(BaseStage):
         engagement_metrics = compute_engagement_metrics(items)
         return items, engagement_metrics
 
+    @log_with_time("[srp] youtube/fetch: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         empty: dict = {"items": [], "engagement_metrics": []}
         if not self._is_enabled(state):
@@ -82,6 +84,7 @@ class YouTubeScoreStage(BaseStage):
         except Exception:
             return items
 
+    @log_with_time("[srp] youtube/score: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         fetch = state.get_stage_output("fetch")
         items = fetch.get("items", [])
@@ -112,6 +115,7 @@ class YouTubeTranscriptStage(BaseStage):
             if isinstance(item, dict)
         ]
 
+    @log_with_time("[srp] youtube/transcript: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.transcript import TranscriptService
 
@@ -140,6 +144,7 @@ class YouTubeSummaryStage(BaseStage):
             for item, r in zip(top_n, results, strict=True)
         ]
 
+    @log_with_time("[srp] youtube/summary: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.summary import SummaryService
 
@@ -154,19 +159,19 @@ class YouTubeSummaryStage(BaseStage):
 
 
 class YouTubeCorroborateStage(BaseStage):
-    """Corroborate claims in top-N items via configured search backends."""
+    """Corroborate claims in top-N items via configured search providers."""
 
     def stage_name(self) -> str:
         return "corroborate"
 
     @staticmethod
     def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
-        from social_research_probe.services.corroborating.backends import auto_mode_backends
-        return auto_mode_backends(cfg) if configured == "auto" else (configured,)
+        from social_research_probe.services.corroborating.providers import auto_mode_providers
+        return auto_mode_providers(cfg) if configured == "auto" else (configured,)
 
     @staticmethod
     def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
-        from social_research_probe.services.corroborating.registry import get_backend
+        from social_research_probe.services.corroborating.registry import get_provider
         from social_research_probe.utils.core.errors import ValidationError
         providers: list[str] = []
         for name in candidates:
@@ -175,7 +180,7 @@ class YouTubeCorroborateStage(BaseStage):
             if name == "llm_search" and not cfg.service_enabled("llm"):
                 continue
             try:
-                if get_backend(name).health_check():
+                if get_provider(name).health_check():
                     providers.append(name)
             except ValidationError:
                 pass
@@ -183,15 +188,15 @@ class YouTubeCorroborateStage(BaseStage):
 
     @staticmethod
     def _cap_corroboration_providers_in_fast_mode(providers: list[str]) -> list[str]:
-        from social_research_probe.utils.display.fast_mode import FAST_MODE_MAX_BACKENDS, fast_mode_enabled
-        return providers[:FAST_MODE_MAX_BACKENDS] if fast_mode_enabled() else providers
+        from social_research_probe.utils.display.fast_mode import FAST_MODE_MAX_PROVIDERS, fast_mode_enabled
+        return providers[:FAST_MODE_MAX_PROVIDERS] if fast_mode_enabled() else providers
 
     def _select_corroboration_providers(self) -> list[str]:
         from social_research_probe.config import load_active_config
         from social_research_probe.utils.display.progress import log
 
         cfg = load_active_config()
-        configured = cfg.corroboration_backend
+        configured = cfg.corroboration_provider
         if not cfg.service_enabled("corroboration") or configured == "none":
             return []
         candidates = self._list_corroboration_provider_candidates(cfg, configured)
@@ -199,11 +204,12 @@ class YouTubeCorroborateStage(BaseStage):
         if not providers:
             checked = ", ".join(candidates)
             log(
-                f"[srp] corroboration: backend '{configured}' configured but no provider usable"
+                f"[srp] corroboration: provider '{configured}' configured but no provider usable"
                 f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
             )
         return self._cap_corroboration_providers_in_fast_mode(providers)
 
+    @log_with_time("[srp] youtube/corroborate: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         top_n = list(state.get_stage_output("summary").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
@@ -233,6 +239,7 @@ class YouTubeStatsStage(BaseStage):
     def stage_name(self) -> str:
         return "stats"
 
+    @log_with_time("[srp] youtube/stats: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.analyzing.statistics import StatisticsService
 
@@ -256,6 +263,7 @@ class YouTubeChartsStage(BaseStage):
     def stage_name(self) -> str:
         return "charts"
 
+    @log_with_time("[srp] youtube/charts: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.analyzing.charts import ChartsService
 
@@ -305,6 +313,7 @@ class YouTubeSynthesisStage(BaseStage):
         except Exception:
             return ""
 
+    @log_with_time("[srp] youtube/synthesis: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             state.set_stage_output("synthesis", {"synthesis": ""})
@@ -316,7 +325,7 @@ class YouTubeSynthesisStage(BaseStage):
 
 
 class YouTubeAssembleStage(BaseStage):
-    """Assemble all stage outputs into the final research packet."""
+    """Assemble all stage outputs into the final research report."""
 
     def stage_name(self) -> str:
         return "assemble"
@@ -346,8 +355,8 @@ class YouTubeAssembleStage(BaseStage):
     ) -> dict:
         from social_research_probe.services.synthesizing.evidence import summarize as summarize_evidence
         from social_research_probe.services.synthesizing.evidence import summarize_engagement_metrics
-        from social_research_probe.services.synthesizing.formatter import build_packet
-        return build_packet(
+        from social_research_probe.services.synthesizing.formatter import build_report
+        return build_report(
             topic=topic,
             platform=platform,
             purpose_set=list(purpose_names),
@@ -361,6 +370,7 @@ class YouTubeAssembleStage(BaseStage):
             warnings=warnings,
         )
 
+    @log_with_time("[srp] youtube/assemble: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             return state
@@ -384,7 +394,7 @@ class YouTubeAssembleStage(BaseStage):
         threshold = float(load_active_config().tunables.get("summary_divergence_threshold", 0.4))
         warnings = self._collect_divergence_warnings(top_n, threshold)
 
-        packet = self._compose_research_report_data(
+        report = self._compose_research_report_data(
             topic=topic,
             platform=platform,
             purpose_names=purpose_names,
@@ -397,25 +407,26 @@ class YouTubeAssembleStage(BaseStage):
             warnings=warnings,
         )
 
-        state.set_stage_output("assemble", {"packet": packet})
-        state.outputs["packet"] = packet
+        state.set_stage_output("assemble", {"report": report})
+        state.outputs["report"] = report
         return state
 
 
 class YouTubeStructuredSynthesisStage(BaseStage):
-    """Run structured LLM synthesis on the assembled packet and attach results."""
+    """Run structured LLM synthesis on the assembled report and attach results."""
 
     def stage_name(self) -> str:
         return "structured_synthesis"
 
+    @log_with_time("[srp] youtube/structured_synthesis: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             return state
 
         from social_research_probe.services.synthesizing.runner import attach_synthesis
-        packet = state.outputs.get("packet", {})
-        await asyncio.to_thread(attach_synthesis, packet)
-        state.outputs["packet"] = packet
+        report = state.outputs.get("report", {})
+        await asyncio.to_thread(attach_synthesis, report)
+        state.outputs["report"] = report
         return state
 
 
@@ -426,24 +437,25 @@ class YouTubeReportStage(BaseStage):
         return "report"
 
     @staticmethod
-    def _write_text_report(packet: dict, allow_html: bool) -> str:
-        return write_final_report(packet, allow_html=allow_html)
+    def _write_text_report(report: dict, allow_html: bool) -> str:
+        return write_final_report(report, allow_html=allow_html)
 
     @staticmethod
-    async def _write_html_report(packet: dict) -> None:
+    async def _write_html_report(report: dict) -> None:
         from social_research_probe.services.reporting.html import HtmlReportService
-        await HtmlReportService().execute_one({"packet": packet})
+        await HtmlReportService().execute_one({"report": report})
 
+    @log_with_time("[srp] youtube/report: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             return state
 
-        packet = state.outputs.get("packet", {})
+        report = state.outputs.get("report", {})
         allow_html = bool(state.platform_config.get("allow_html", True))
-        report_path = self._write_text_report(packet, allow_html)
-        packet["report_path"] = report_path
-        await self._write_html_report(packet)
-        state.outputs["packet"] = packet
+        report_path = self._write_text_report(report, allow_html)
+        report["report_path"] = report_path
+        await self._write_html_report(report)
+        state.outputs["report"] = report
         return state
 
 
@@ -453,13 +465,14 @@ class YouTubeNarrationStage(BaseStage):
     def stage_name(self) -> str:
         return "narration"
 
+    @log_with_time("[srp] youtube/narration: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.reporting.audio import AudioReportService
 
         if not self._is_enabled(state):
             return state
 
-        narration = str(state.outputs.get("packet", {}).get("evidence_summary", ""))
+        narration = str(state.outputs.get("report", {}).get("evidence_summary", ""))
         if narration:
             await AudioReportService().execute_one({"text": narration})
         return state
@@ -481,6 +494,7 @@ class YouTubePipeline(BaseResearchPlatform):
             [YouTubeReportStage(), YouTubeNarrationStage()],
         ]
 
+    @log_with_time("[srp] youtube/pipeline: run")
     async def run(self, state: PipelineState) -> PipelineState:
         for group in self.stages():
             if len(group) == 1:
