@@ -1,15 +1,25 @@
-graph TD
-    A["Top-N scored videos\n(with transcripts)"] --> B["Claim extraction\nLLM reads transcript\nand identifies factual claims"]
-    B --> C["Query backends\nllm_search · tavily · brave ·\nexa\nmax_claims_per_item checked"]
-    C --> D["Collect evidence\ncount supporting search results\nper claim"]
-    D --> E["Score corroboration\n0 = no support found\n1–3 = partial support\n4+ = strong support"]
-    E --> F["Attach to item\npacket.items_topN[i].evidence"]
-    F --> G["Section 6 of report\nthe Evidence table with\ncorroboration score per claim"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Item["top-N item"] --> Extract["claim extraction"]
+  Extract --> Select["provider auto selection"]
+  Select --> Exa["exa"]
+  Select --> Brave["brave"]
+  Select --> Tavily["tavily"]
+  Select --> LLM["llm_search via active runner"]
+  Exa --> Evidence["citations + verdicts"]
+  Brave --> Evidence
+  Tavily --> Evidence
+  LLM --> Evidence
+  Evidence --> Item2["item with corroboration"]
 
-    style A fill:#e3f2fd,stroke:#1976d2
-    style B fill:#e8f5e9,stroke:#388e3c
-    style C fill:#fff3e0,stroke:#f57c00
-    style D fill:#fce4ec,stroke:#c62828
-    style E fill:#f3e5f5,stroke:#7b1fa2
-    style F fill:#e8eaf6,stroke:#3949ab
-    style G fill:#e0f2f1,stroke:#00796b
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Item input;
+  class Extract,Select,Evidence process;
+  class Exa,Brave,Tavily,LLM external;
+  class Item2 output;

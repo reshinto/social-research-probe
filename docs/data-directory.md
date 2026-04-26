@@ -1,165 +1,69 @@
-# `~/.social-research-probe/` — Data & Storage Reference
+[Back to docs index](README.md)
 
-[← Documentation hub](README.md)
+# Data Directory
 
-This is the canonical reference for every artefact `srp` writes to your
-home directory. When you want to know _what_ a file is, _when_ it's written,
-_where_ it's read, _who_ writes it, and _why_ it exists — this page is the
-single source of truth.
+![Data and cache layout](diagrams/cache-layout.svg)
 
-The directory is overridable via the `SRP_DATA_DIR` environment variable,
-which every pipeline stage honours (useful in tests, CI, sandboxed runs).
-Cache lookups can be bypassed with `SRP_DISABLE_CACHE=1`.
+The data directory is the local home for config, secrets, state, cache, charts, and reports. Resolve it with `srp config path` or set it with `--data-dir`.
 
-## Layout at a glance
+Understanding this directory is important because the project is local-first. Most behavior that feels "persistent" is stored here: saved topics, saved purposes, cached provider outputs, rendered charts, and generated reports.
 
-```
+## Files and folders
+
+| Path | Purpose |
+| --- | --- |
+| `config.toml` | Non-secret user configuration. |
+| `secrets.toml` | Secret values, written with `0600` permissions. |
+| `topics.json` | Saved topic names. |
+| `purposes.json` | Saved purpose definitions. |
+| `pending_suggestions.json` | Staged topic and purpose suggestions. |
+| `cache/transcripts` | Transcript cache. |
+| `cache/whisper` | Whisper fallback cache. |
+| `cache/summaries` | LLM summary cache. |
+| `cache/corroboration` | Provider evidence cache. |
+| `cache/classification` | Query classification cache. |
+| `cache/stages/*` | Stage-level cached outputs. |
+| `charts/*.png` | Rendered chart PNGs. |
+| `report.md` and `reports/*.html` | Report outputs. |
+
+## Best practice
+
+Use a project-local `.skill-data` for experiments you want to keep with a workspace. Use the default home directory for personal long-lived settings.
+
+Do not commit the data directory unless you intentionally want to publish its contents. It can contain research topics, cached transcripts, summaries, external evidence, and generated reports. For open-source examples, prefer small hand-written fixtures instead of real cache output.
+
+## When to delete data
+
+Delete cache entries when you need a fresh provider response or when a cached output was created with a bad configuration. Delete generated reports when they contain sensitive research. Keep `config.toml`, `topics.json`, and `purposes.json` if you want to preserve your workflow settings.
+
+If behavior differs between two machines, compare `srp config path`, `config.toml`, `secrets.toml`, and environment variables first. Most "it works here but not there" issues come from a different data directory or missing provider secret.
+
+## Example layouts
+
+Personal default:
+
+```text
 ~/.social-research-probe/
-├── config.toml                 # merged runtime configuration
-├── secrets.toml                # API keys (never share)
-├── topics.json                 # saved research topics
-├── purposes.json               # reusable research profiles
-├── pending_suggestions.json    # queued follow-up items
-├── cache/                      # per-query cache shards (hashed)
-│   ├── fetch/
-│   ├── transcript/
-│   ├── summary/
-│   └── corroboration/
-├── charts/                     # generated PNGs per research run
-└── reports/                    # generated HTML reports per run
+  config.toml
+  secrets.toml
+  topics.json
+  purposes.json
+  cache/
+  charts/
+  reports/
 ```
 
-## Per-artefact reference
+Project-local experiment:
 
-### `config.toml`
-| Aspect | Value |
-| --- | --- |
-| **What** | The resolved, merged active configuration (defaults + user overrides). |
-| **When written** | First `srp` run, or any time you execute `srp config set …`. |
-| **Where read** | Every pipeline stage via `load_active_config()`. |
-| **Who writes** | The CLI / setup command. |
-| **Why** | Single source of truth for runtime settings so no module has to redo TOML parsing. |
-| **Format** | TOML. Commented; regenerates on upgrade but never overwrites user keys. |
-| **Footprint** | ~2–10 KB. |
-| **Retention** | Persistent; never rotated. |
-| **Safe to delete** | Yes — regenerated on next run from embedded defaults. You lose customizations. |
+```text
+my-research-project/
+  .skill-data/
+    config.toml
+    topics.json
+    purposes.json
+    cache/
+    charts/
+    reports/
+```
 
-### `secrets.toml`
-| Aspect | Value |
-| --- | --- |
-| **What** | API keys for providers: YouTube Data API, Brave, Exa, Tavily, Claude, Gemini, Codex, TTS. |
-| **When written** | User edits directly, or via `srp config set-secret <name>`. |
-| **Where read** | Backend `health_check()` and client init, via `read_runtime_secret(name)`. |
-| **Who writes** | User or `srp config set-secret`. |
-| **Why** | Separates secrets from `config.toml` so configuration is safely shareable. |
-| **Format** | TOML, `0600` permissions recommended. |
-| **Footprint** | < 1 KB. |
-| **Retention** | Persistent. |
-| **Safe to delete** | Yes — you lose access to paid backends until re-populated. |
-
-### `topics.json`
-| Aspect | Value |
-| --- | --- |
-| **What** | User-saved research topics (list of `{name, topic, purpose_set, …}`). |
-| **When written** | `srp topic add` / `srp topic remove`. |
-| **Where read** | The `srp research` topic picker. |
-| **Who writes** | The user, via CLI. |
-| **Why** | Persists named queries across sessions. |
-| **Format** | JSON array. |
-| **Footprint** | KBs. |
-| **Safe to delete** | Yes — only loses saved topic names, not research artefacts. |
-
-### `purposes.json`
-| Aspect | Value |
-| --- | --- |
-| **What** | Reusable research profiles: scoring weights, cutoffs, selected backends. |
-| **When written** | Setup wizard or manual edit. |
-| **Where read** | `srp research --purpose <name>`. |
-| **Who writes** | User / setup. |
-| **Why** | Lets one user run different research modes without flag gymnastics. |
-| **Format** | JSON. |
-| **Safe to delete** | Yes — falls back to embedded defaults. |
-
-### `pending_suggestions.json`
-| Aspect | Value |
-| --- | --- |
-| **What** | Queued suggestion items awaiting user review after a run. |
-| **When written** | Orchestrator at end of each research run. |
-| **Where read** | `srp suggestions review`. |
-| **Who writes** | The pipeline. |
-| **Why** | A backlog between sessions so actionable items aren't lost. |
-| **Format** | JSON array. |
-| **Safe to delete** | Yes — you forfeit the backlog, not core research data. |
-
-### `cache/`
-| Aspect | Value |
-| --- | --- |
-| **What** | Per-query cached payloads from fetch, hydrate, transcript, summary, and corroboration stages. |
-| **When written** | On first computation of each cache key within TTL. |
-| **Where read** | Every stage re-runs: skips the external call on a cache hit. |
-| **Who writes** | Pipeline stages via `pipeline_cache.get_json` / `set_json`. |
-| **Why** | Massive cost + latency win for re-runs. |
-| **Format** | JSON shards keyed by `hash_key(topic, inputs)`. |
-| **Footprint** | Can grow to GBs on heavy use. |
-| **Retention** | TTL-bounded per sub-cache (see `utils/pipeline_cache.py`). |
-| **Safe to delete** | Yes — next run re-fetches, you pay the external API bill again. |
-| **Env overrides** | `SRP_DISABLE_CACHE=1` bypasses read + write entirely; useful in tests. |
-
-### `charts/`
-| Aspect | Value |
-| --- | --- |
-| **What** | PNG artefacts produced by every viz renderer during a run (bar, line, scatter, histogram, regression, residuals, heatmap). |
-| **When written** | Viz step of the pipeline (`pipeline/charts.py`). |
-| **Where read** | Embedded in the HTML report; also openable directly. |
-| **Who writes** | The viz renderers. |
-| **Why** | Deliverable artefacts + source for HTML report `<img>` tags. |
-| **Format** | PNG. |
-| **Footprint** | ~10–30 KB each; ~10 files per run. |
-| **Safe to delete** | Yes — rendered again on the next run. |
-
-### `reports/`
-| Aspect | Value |
-| --- | --- |
-| **What** | Generated HTML research reports, one per run. |
-| **When written** | [render/html.py](../social_research_probe/services/reporting/html.py) `write_html_report`. |
-| **Where read** | User browser. |
-| **Who writes** | The render step. |
-| **Why** | The user-facing deliverable. |
-| **Format** | Self-contained HTML, UTF-8. |
-| **Footprint** | 50–200 KB per report. |
-| **Safe to delete** | Yes — you lose historical reports. |
-
-## Cache key schema
-
-Cache keys are deterministic `SHA-256` hashes of:
-
-1. A **stage tag** (`fetch`, `hydrate`, `transcript`, `summary`, `corroboration`).
-2. The **canonical input** for that stage (topic string, URL, claim text + sorted backend list).
-
-This lets cache hits survive minor orchestration changes as long as the
-semantic inputs are unchanged. TTLs are defined per sub-cache in
-[utils/pipeline_cache.py](../social_research_probe/utils/caching/pipeline_cache.py).
-
-## `SRP_DATA_DIR` override
-
-Every reader and writer resolves the data-dir via this env var first,
-falling back to `~/.social-research-probe/`. Tests use this to redirect
-everything to a `tmp_path` (`tests/conftest.py:tmp_data_dir`).
-
-## `SRP_DISABLE_CACHE` semantics
-
-Setting this to `"1"` makes every `pipeline_cache.get_json` return `None`
-(simulating a cache miss) and every `set_json` no-op. This is the safe
-way to force a fresh run without touching the on-disk cache state.
-
-## `.gitignore` implications
-
-If you symlink this directory inside a repo (e.g. for sharing a cache
-snapshot), make sure the following are git-ignored:
-
-- `secrets.toml` — API keys, never commit.
-- `cache/` — can leak internal queries.
-- `reports/` — may include titles/transcripts you didn't mean to share.
-
-`charts/`, `topics.json`, `purposes.json`, and `config.toml` are
-generally safe to commit, but double-check before pushing.
+Use the project-local layout when the research context should stay with a workspace. Use the home layout when you want one personal setup reused across many topics.

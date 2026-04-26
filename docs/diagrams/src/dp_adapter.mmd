@@ -1,9 +1,15 @@
-graph LR
-    A["YouTube Data API v3\n(dict response)"] -->|raw dict| B["YouTubeAdapter\n(platforms/youtube/adapter.py)"]
-    B -->|normalised items| C["PlatformAdapter interface\n(platforms/base.py)"]
-    C -->|Item list| D["Pipeline\n(pipeline.py)"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Vendor["vendor CLI/API shape"] --> Adapter["technology adapter"] --> Internal["internal result type"] --> Service["service orchestration"]
 
-    style A fill:#f9f9f9,stroke:#999
-    style B fill:#dce8f7,stroke:#4a90d9
-    style C fill:#e8f5e9,stroke:#43a047
-    style D fill:#f9f9f9,stroke:#999
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Vendor external;
+  class Adapter process;
+  class Internal config;
+  class Service output;

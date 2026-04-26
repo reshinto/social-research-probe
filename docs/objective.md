@@ -1,88 +1,51 @@
-# Objective & Roadmap
+[Back to docs index](README.md)
 
-[Home](README.md) → Objective
+# Objective
 
-## What this project is
+Social Research Probe is a local-first research CLI for turning platform search results into ranked evidence, statistics, corroboration, charts, and a report. The project goal is broad social and web research across many sources. YouTube is only the first implemented platform adapter; the rest of the pipeline is designed to stay platform-neutral.
 
-`srp` is an **evidence-first research CLI** that does most of its work on your own computer and only reaches for an LLM when no cheaper tool will do the job. You give it a topic and a purpose; it fetches real content from a social platform, scores it with transparent formulas, runs 20+ statistical models on it, cross-checks the top results against other sources, and hands you a Markdown + HTML report.
+![System context](diagrams/context.svg)
 
-It is **not** a chatbot wrapper. It is not "ask GPT about YouTube" — it actually fetches the data, runs the maths, and cites its sources.
+## Why this was built
 
-## Target audience
+Online platforms contain useful signals, but raw feeds are hard to audit. A researcher usually has to search, copy links, compare creators or sources, fetch transcripts or excerpts, ask an LLM for summaries, check claims, build charts, and write a report. That work is repetitive, easy to do inconsistently, and hard to explain later.
 
-`srp` is for people who need to do real research without burning through LLM credits or trusting a single model's hallucinations:
+This project automates the repeatable parts while keeping the human in charge of the research question and interpretation. The tool can collect, normalize, score, enrich, and summarize evidence, but it does not decide what the final conclusion must be. The report is meant to make the research trail easier to inspect.
 
-- **Independent researchers & journalists** — trace what's actually being said on a topic, with citations.
-- **Content strategists & creators** — find gaps, timing, and positioning backed by numbers, not vibes.
-- **Analysts & consultants** — produce a report you can hand to a client, with every figure traceable.
-- **Indie builders** — run hundreds of queries without watching a meter tick.
+The design goal is not to replace judgment. The goal is to produce a traceable first pass: what was fetched, why it ranked highly, what evidence was available, which claims were checked, and where the final report came from.
 
-If you want a quick answer and you're happy to trust a single model, use a chat interface. `srp` is worth the extra setup when you need the research to be **repeatable, auditable, and cheap at scale**.
+## Who it is for
 
-## Design philosophy — local compute first
+Use it when you need repeatable exploratory research across online platforms: analysts, journalists, builders, content researchers, and developers studying how a topic is moving through social media, video platforms, search results, and public web sources. It is especially useful when you care about cost control and want local scoring, local statistics, and cached outputs before paying for LLM work.
 
-Every stage of the pipeline prefers the cheaper path:
+It is not meant to be a fully managed social listening product. It is a local research assistant for people who want to see the intermediate evidence, control which providers are called, and keep project data in a normal filesystem directory.
 
-| Stage | Where it runs | LLM tokens spent |
-|---|---|---|
-| Fetch (API call) | your machine → YouTube API | 0 |
-| Score (trust / trend / opportunity) | your CPU | 0 |
-| Enrich — transcript fetch | captions first, Whisper locally as fallback | 0 |
-| Enrich — 100-word summary | LLM on top-N only (default 5) | bounded |
-| Stats (20+ models) | your CPU (scipy + Python stdlib) | 0 |
-| Charts (10 types) | your CPU (matplotlib) | 0 |
-| Corroboration | web-search API (Gemini / Tavily / Brave / Exa) | bounded |
-| Report synthesis | LLM on one summary prompt | bounded |
+## What it optimizes for
 
-Translation: an average run spends **tens of kilobytes** of LLM context, not megabytes. If the runner is unavailable, the report still renders — Compiled Synthesis, Opportunity Analysis, and Final Summary are the only fields that become placeholders, while per-item summaries fall back to transcript or description excerpts.
+| Goal | Design choice | Tradeoff |
+| --- | --- | --- |
+| Repeatability | A staged pipeline writes deterministic intermediate data. | The CLI is more structured than an ad-hoc notebook. |
+| Low cost | Only top-N items need transcript, summary, and corroboration work. | A useful result outside top-N can be missed unless you raise `enrich_top_n`. |
+| Vendor flexibility | LLM runners and corroboration providers are adapters. | Every adapter must preserve the internal contract. |
+| Local control | Config, cache, reports, and charts live under the data directory. | Users must manage local dependencies and credentials. |
 
-Because the LLM is behind a swappable runner interface (`llm/registry.py`), the project is not tied to any one model provider. If your preferred LLM becomes expensive, slow, or discontinued, you change `llm.runner` in `config.toml` and keep going.
+## Platform scope
 
-## Status — work in progress
+The current implemented platform is YouTube. That means the active adapter fetches YouTube results, normalizes them into the shared item shape, enriches the top results, and then passes them into the common scoring, statistics, charting, corroboration, synthesis, and reporting pipeline.
 
-`srp` is **pre-1.0**. What this means concretely:
+The long-term direction is to support additional platforms such as TikTok, Instagram, X, web search, RSS, forums, and other public sources. New platforms should reuse the shared scoring, analysis, synthesis, reporting, config, and cache layers instead of rebuilding the whole research pipeline. See [Adding a platform](adding-a-platform.md).
 
-- **Stable:** the 5-stage pipeline, scoring model, statistical suite, caching layer, and CLI command shape.
-- **Changing:** the research-packet JSON schema, new config keys, additional platforms, additional corroboration backends.
-- **Experimental:** the natural-language research mode, the LLM ensemble, the synthesis section templates.
+The important boundary is the normalized item contract. Once a platform can provide item identity, source metadata, timestamps, URLs, text or transcript material, and engagement-style features, the rest of the system can analyze it without needing to know where it came from.
 
-Breaking changes may ship until v1.0. Pin a version in production.
+## What a good run should answer
 
-## Roadmap
+| Question | Where the answer comes from |
+| --- | --- |
+| What did the platform return for this topic? | Fetch output and source item list. |
+| Why did these items rank highest? | Trust, trend, opportunity, and overall scores. |
+| What evidence was available inside the sources? | Transcripts, excerpts, metadata, and item summaries. |
+| Which claims need more confidence? | Corroboration results and missing-evidence notes. |
+| Is the result set stable or skewed? | Statistics and charts. |
+| What should a human inspect next? | Report synthesis, outliers, and top-ranked item details. |
 
-![Supported today vs planned platforms/backends](diagrams/roadmap.svg)
-
-Today `srp` supports **one platform (YouTube), four LLM runners (claude, gemini, codex, local), and four corroboration backends (llm_search, tavily, brave, exa)**. The extension points ([platforms/base.py](../social_research_probe/platforms/base.py), [llm/registry.py](../social_research_probe/services/llm/registry.py), [corroboration/registry.py](../social_research_probe/services/corroborating/registry.py)) are designed so adding any of the below is a matter of implementing one interface and registering it.
-
-Planned platforms:
-
-- **TikTok** — video search, captions, author metadata.
-- **X / Twitter** — tweet search, thread reconstruction, engagement signals.
-- **Facebook** — public page posts.
-- **Reddit** — subreddit and search APIs, comment-tree enrichment.
-- **RSS feeds** — long-tail blogs and small news outlets.
-- **Web search** — a first-class search-engine platform (complementing the corroboration-only usage today).
-- **Web crawling** — depth-limited crawl of a seed URL or sitemap for topical coverage.
-- **Document research** — local files, PDFs, arXiv, Google Drive, and other knowledge sources.
-
-Planned features:
-
-- Per-platform trust calibration (channels vs accounts vs domains).
-- A long-running watch mode that re-runs a query on a schedule.
-- A unified cross-platform report (one topic, many sources).
-
-None of this requires new LLM capabilities. All of it is implementable with tools and APIs that exist today.
-
-## What this project is NOT
-
-- It is **not** real-time. Data freshness is bounded by the source API's indexing lag.
-- It is **not** a crawler for the whole web — corroboration uses search APIs, not bulk scraping.
-- It is **not** a replacement for primary-source research. The report is a starting point, not the final word.
-- It is **not** trying to win on raw LLM capability. It wins on **cost, repeatability, and auditability**.
-
-## See also
-
-- [How It Works](how-it-works.md) — what happens during a `srp research` run, in plain English
-- [Cost Optimization](cost-optimization.md) — every place the design avoids an LLM call
-- [Architecture](architecture.md) — the full system design and extension points
-- [Adding a Platform](adding-a-platform.md) — the contract for shipping a new data source
+This is why the project produces a packet and report instead of only a chat answer. A chat answer is hard to audit after the fact. A packet can preserve the inputs, intermediate outputs, and final interpretation.

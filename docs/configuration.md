@@ -1,218 +1,52 @@
+[Back to docs index](README.md)
+
 # Configuration
 
-[Home](README.md) → Configuration
+![Configuration lifecycle](diagrams/config_lifecycle.svg)
 
-Everything `srp` reads at runtime lives in two files under the data directory (default: `~/.social-research-probe/`):
+Configuration is loaded from `DEFAULT_CONFIG` in `social_research_probe/config.py`, then merged with `config.toml` in the active data directory. Secrets are separate. This split matters because normal configuration can be shown, copied, and committed as examples, while API keys should stay masked and local.
 
-| File | Contents | Permissions |
-|---|---|---|
-| `config.toml` | Non-secret settings: which runner to use, how many items to fetch, and which stages, services, technologies, and debug switches are enabled | user-readable |
-| `secrets.toml` | API keys and anything sensitive | `0600` (user-only) |
+The configuration system is intentionally boring: it is a layered set of TOML values and environment variables. That makes it easy to answer "why did this run behave this way?" by checking the active data directory, the config file, and any environment overrides.
 
-Override the data directory with `--data-dir <path>` or the `SRP_DATA_DIR` environment variable.
+## Data directory resolution
 
----
+Order:
 
-## config.toml — every key
+1. `--data-dir PATH`
+2. `SRP_DATA_DIR`
+3. local `.skill-data` if that directory exists
+4. `~/.social-research-probe`
 
-This is an annotated view of [`config.toml.example`](../config.toml.example). Every key is optional; missing keys fall back to the defaults shown.
+Use `--data-dir` when you want one command to use a specific workspace. Use `SRP_DATA_DIR` when a shell session, CI job, or scripted workflow should consistently use the same directory. Use `.skill-data` when a project should carry its own local state during development. Use the home directory default for personal long-lived settings.
 
-### `[llm]` — LLM runner defaults
+## Main sections
 
-```toml
-[llm]
-runner = "none"          # claude | gemini | codex | local | none
-timeout_seconds = 60
-```
+| Section | Controls |
+| --- | --- |
+| `[llm]` | Runner name, timeout, and runner-specific CLI settings. |
+| `[corroboration]` | Provider selection and claim caps. |
+| `[platforms.youtube]` | Search result count, recency, top-N enrichment, cache TTLs. |
+| `[scoring.weights]` | Optional trust/trend/opportunity weight overrides. |
+| `[stages.youtube]` | Stage-level gates. |
+| `[services.youtube.*]` | Service-level gates. |
+| `[technologies]` | Provider and adapter gates. |
+| `[tunables]` | Summary divergence and summary word limits. |
+| `[voicebox]` | Optional narration defaults. |
 
-| Key | Default | What it controls |
-|---|---|---|
-| `runner` | `none` | The primary LLM runner for CLI summaries, `llm_search` corroboration, and report synthesis. `none` disables runner subprocesses; Compiled Synthesis, Opportunity Analysis, and Final Summary stay placeholders, while the Claude Code skill may still use the host model for skill-only language work. |
-| `timeout_seconds` | `60` | Per-call wall-clock timeout for the runner subprocess. |
+## Gates
 
-Per-runner subsections (`[llm.claude]`, `[llm.gemini]`, `[llm.codex]`, `[llm.local]`) accept `model`, `binary`, and `extra_flags` — see [LLM Runners](llm-runners.md).
-
-### `[scoring.weights]` — trust/trend/opportunity weights
-
-Defaults: `trust = 0.45`, `trend = 0.30`, `opportunity = 0.25`. Uncomment any subset in `config.toml` to override. Per-purpose overrides (in `purposes/*.json`) take precedence.
-
-### `[corroboration]` — claim corroboration
-
-```toml
-[corroboration]
-backend = "auto"         # auto | llm_search | exa | brave | tavily | none
-max_claims_per_item = 5
-max_claims_per_session = 15
-```
-
-| Key | Default | What it controls |
-|---|---|---|
-| `backend` | `auto` | `auto` tries every healthy backend; `none` disables corroboration. |
-| `max_claims_per_item` | `5` | Upper bound on claims extracted per top-N item. |
-| `max_claims_per_session` | `15` | Upper bound across the whole run. |
-
-### `[platforms.youtube]` — YouTube adapter
-
-```toml
-[platforms.youtube]
-recency_days = 90
-max_items = 20
-enrich_top_n = 5
-cache_ttl_search_hours = 6
-cache_ttl_channel_hours = 24
-```
-
-| Key | Default | What it controls |
-|---|---|---|
-| `recency_days` | `90` | Search window upper bound. |
-| `max_items` | `20` | How many videos the search fetches. |
-| `enrich_top_n` | `5` | How many top-scored items get transcripts + LLM summaries (biggest cost lever). |
-| `cache_ttl_search_hours` | `6` | Freshness window for cached search results. |
-| `cache_ttl_channel_hours` | `24` | Freshness window for cached channel metadata. |
-
-### `[stages]` — highest-priority pipeline gates
-
-When a stage is `false`, everything in that stage is skipped.
-
-| Key | Default | Effect when `false` |
-|---|---|---|
-| `fetch` | `true` | Skip platform data retrieval entirely. |
-| `score` | `true` | Skip ranking and score calculation. |
-| `enrich` | `true` | Skip transcripts and enrichment summaries. |
-| `corroborate` | `true` | Skip claim corroboration. |
-| `analyze` | `true` | Skip statistics, charts, and chart takeaways. |
-| `synthesis` | `true` | Skip Compiled Synthesis, Opportunity Analysis, and Final Summary generation. |
-| `report` | `true` | Skip report-writing services entirely. |
-
-### `[services.<stage>]` — service gates inside each stage
-
-Service gates run after stage gates. They let the pipeline continue through a
-stage while selectively disabling one capability inside it.
-
-| Key | Default | Effect when `false` |
-|---|---|---|
-| `services.fetch.platform_api` | `true` | Do not call the platform API during fetch. |
-| `services.score.scoring` | `true` | Skip scoring calculations. |
-| `services.enrich.transcripts` | `true` | Skip transcript retrieval. |
-| `services.enrich.llm` | `true` | Skip LLM-backed enrichment work. |
-| `services.enrich.media_url_summary` | `true` | Skip direct media-URL summarisation. |
-| `services.enrich.merged_summary` | `true` | Skip transcript/URL summary reconciliation. |
-| `services.corroborate.corroboration` | `true` | Skip corroboration calls inside the corroborate stage. |
-| `services.analyze.statistics` | `true` | Skip statistical analysis. |
-| `services.analyze.charts` | `true` | Skip chart generation. |
-| `services.analyze.chart_takeaways` | `true` | Skip deterministic chart takeaways. |
-| `services.youtube.reporting.html` | `true` | Skip HTML report generation. |
-| `services.youtube.reporting.audio` | `true` | Skip pre-rendered report audio generation. |
-
-### `[technologies]` — implementation/provider gates
-
-Technology gates run after stage and service gates. They disable one concrete
-provider without disabling peer providers in the same service category.
-
-### `[debug]`
-
-`technology_logs_enabled` controls the before/after stderr logs around concrete
-technology calls. `SRP_LOGS=1` still overrides it at runtime.
-
-### `[tunables]` — thresholds you rarely need to touch
-
-```toml
-[tunables]
-summary_divergence_threshold = 0.4
-per_item_summary_words = 100
-```
-
-### Full key list
-
-Run `srp config show --output json` to dump the resolved config. `srp config path` prints the file location.
-
----
-
-## Changing config
+A stage runs only if its stage gate allows it. A service or technology also checks its own gate. This gives three levels of control: pipeline step, service family, and concrete provider.
 
 ```bash
 srp config set llm.runner gemini
-srp config set platforms.youtube.max_items 50
-srp config set corroboration.backend none
+srp config set platforms.youtube.enrich_top_n 3
+srp config set technologies.tavily false
 ```
 
-Dotted keys traverse TOML tables. The value type is inferred: `50` becomes an integer, `gemini` a string, `true` a boolean. The write preserves other keys and sections.
+Think of gates as switches at different heights. A stage gate disables a whole part of the pipeline. A service gate disables one service inside that part. A technology gate disables one concrete provider or implementation. Prefer the narrowest gate that solves the problem: turn off `technologies.tavily` if only Tavily should be skipped, but turn off a service when the entire category should be skipped.
 
----
+## Secrets
 
-## secrets.toml — API keys
+Secrets can come from environment variables such as `SRP_YOUTUBE_API_KEY` or from `secrets.toml`. Environment variables win. The secrets file is written with `0600` permissions.
 
-Managed via `srp config set-secret / unset-secret / check-secrets`:
-
-```bash
-srp config set-secret youtube_api_key         # hidden prompt
-srp config check-secrets --needed-for research --platform youtube --output json
-# → {"present": ["youtube_api_key"], "missing": []}
-```
-
-Secrets currently recognised:
-
-| Name | Purpose |
-|---|---|
-| `youtube_api_key` | YouTube Data API v3 (required to run research) |
-| `brave_api_key` | Brave Search corroboration backend |
-| `exa_api_key` | Exa corroboration backend |
-| `tavily_api_key` | Tavily corroboration backend |
-
-Gemini CLI and Claude CLI runners do **not** need API keys — they authenticate through the CLI tool directly (usually a browser login).
-
-### Environment overrides
-
-Any secret can be overridden at runtime:
-
-```bash
-SRP_YOUTUBE_API_KEY=... srp research "AI" "latest-news"
-```
-
-The env var wins over the file. `read_secret()` in [`commands/config.py`](../social_research_probe/commands/config.py) checks `SRP_<NAME_UPCASE>` first and only falls back to `secrets.toml` if unset.
-
----
-
-## What happens when config.toml already exists
-
-![Config & secrets lifecycle on setup / install-skill](diagrams/config_lifecycle.svg)
-
-
-`srp setup` (the interactive wizard) and `srp install-skill` both call `_copy_config_example()` in [`commands/install_skill.py`](../social_research_probe/commands/install_skill.py):
-
-- **Fresh install** — the bundled template is copied verbatim to `~/.social-research-probe/config.toml`.
-- **Reinstall** — the existing file is parsed; any keys or sections that exist in the bundled template but not in your file are **additively merged**. Your existing values are **never overwritten**. The wizard prints the dotted key paths it added, so the diff is visible.
-
-This means you can safely re-run `srp setup` after upgrading `srp` — new config keys light up, your customisations stay.
-
-## What happens when secrets.toml already exists
-
-- The file is **never overwritten by setup**. The wizard reads existing values, shows a masked preview (`abc…xyz`), and prompts; an empty response skips the key.
-- Writes go through `_write_secrets_file()` which:
-  1. Sets `umask 0o077` for the file creation.
-  2. Explicitly `chmod 0600` after the write.
-- On every read, if the file's permissions are wider than `0600`, `srp` prints a stderr warning ("should be 0600"). Tighten them with `chmod 0600 ~/.social-research-probe/secrets.toml`.
-- `SRP_<NAME_UPCASE>` environment variables always win over the file, so secrets.toml can be absent in CI where keys are injected via env.
-
----
-
-## Config recipes for common objectives
-
-| Objective | Key settings |
-|---|---|
-| **Cheapest** — free LLM + free corroboration | `llm.runner = "gemini"`, `corroboration.backend = "llm_search"`, `platforms.youtube.enrich_top_n = 3` |
-| **Deepest** — everything on | `llm.runner = "claude"`, `corroboration.backend = "auto"`, `max_items = 100`, `enrich_top_n = 10` |
-| **Fastest** — iterate quickly | `SRP_FAST_MODE=1`, `max_items = 10`, `enrich_top_n = 3` |
-| **Offline** — no cloud calls | `llm.runner = "local"`, `corroboration.backend = "none"`, Whisper handles transcripts |
-
-See [Cost Optimization](cost-optimization.md) for the reasoning behind each lever.
-
----
-
-## See also
-
-- [Installation](installation.md) — step-by-step first-time setup
-- [LLM Runners](llm-runners.md) — runner comparison and why Gemini CLI is the free default
-- [Corroboration](corroboration.md) — picking backends and their free tiers
-- [Security](security.md) — trust boundaries and secret handling
-- [Cost Optimization](cost-optimization.md) — how each setting affects what you pay
+Use environment variables for CI, temporary shells, and secrets managed by another tool. Use `srp config set-secret` for local development when you want the value stored in the data directory. If a provider is configured but its secret is missing, the provider should be treated as unavailable rather than silently making unauthenticated calls.

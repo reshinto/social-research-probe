@@ -1,23 +1,21 @@
-flowchart LR
-    Claim["Claim<br/>(text, source_url)"] --> Filter["filter_results<br/>drop self-source +<br/>video-hosting domains"]
-    Filter --> Backends
-    subgraph Backends ["Registered backends"]
-        Brave[Brave Web Search]
-        Exa[Exa Search]
-        Tavily[Tavily Search]
-        LLMSearch["llm_search backend<br/>(routes via active runner)"]
-    end
-    LLMSearch -->|active runner| Runner
-    subgraph Runner ["LLM runner.agentic_search"]
-        Gemini["Gemini<br/>--google-search"]
-        Claude["Claude<br/>web_search tool"]
-        Codex["Codex<br/>--search"]
-        Local["Local<br/>CapabilityUnavailable"]
-    end
-    Brave --> Aggregate[aggregate_verdict]
-    Exa --> Aggregate
-    Tavily --> Aggregate
-    Gemini --> Aggregate
-    Claude --> Aggregate
-    Codex --> Aggregate
-    Aggregate --> Result["CorroborationResult<br/>(verdict + confidence + sources)"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TB
+  Config["llm.runner"] --> Registry["LLM runner registry"]
+  Registry --> Claude["Claude CLI web search"]
+  Registry --> Gemini["Gemini CLI grounding"]
+  Registry --> Codex["Codex CLI search"]
+  Claude --> Contract["AgenticSearchResult"]
+  Gemini --> Contract
+  Codex --> Contract
+  Contract --> Corroboration["llm_search provider"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Config config;
+  class Registry,Contract,Corroboration process;
+  class Claude,Gemini,Codex external;

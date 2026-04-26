@@ -1,272 +1,90 @@
+[Back to docs index](README.md)
+
 # Architecture
 
-[Home](README.md) → Architecture
+This page explains the system from the problem it solves down to the runtime pipeline, module boundaries, and tradeoffs that shape the implementation.
 
----
+## Requirements
 
-## What is this system?
+Functional requirements:
 
-`srp` is a **local research pipeline** that turns a topic and intent into an evidence-backed report. You give it a subject (e.g. `"AI safety"`) and a purpose (e.g. `"latest-news"`), and it fetches relevant YouTube content, scores it for credibility and trend signal, enriches the top results with transcripts and LLM summaries, corroborates the top claims with web-search APIs, runs statistical analysis, and outputs a structured Markdown + HTML report.
+| Requirement | Implementation |
+| --- | --- |
+| Run research from a CLI | `srp research` in `cli/parsers.py` and `commands/research.py`. |
+| Support platform-specific fetching | `platforms/youtube/pipeline.py` and registry/client seams. |
+| Rank items | `services/scoring` and `technologies/scoring`. |
+| Enrich top results | transcript and summary services. |
+| Corroborate claims | `services/corroborating` plus Exa, Brave, Tavily, and LLM search providers. |
+| Produce reports | Markdown/HTML renderers, chart PNGs, optional audio. |
 
-**Who is it for?** Researchers, analysts, and content strategists who want a reproducible, evidence-first view of what is being said on a topic — without manually watching dozens of videos or trusting a single search result.
+Non-functional requirements:
 
-**Why does it exist?** Manual social-media research is slow, non-reproducible, and susceptible to recency bias and algorithmic bubbles. `srp` applies a consistent scoring and evidence pipeline so every run on the same topic produces a comparable, auditable result.
+| Requirement | Design response | Tradeoff |
+| --- | --- | --- |
+| Cost control | Cache, top-N enrichment, local stats. | Cached evidence can remain until TTL expiry. |
+| Extensibility | Platform, service, technology, and runner contracts. | More files than a single script. |
+| Testability | Pure functions, fake platform seam, contract tests. | Requires keeping contracts documented and tested. |
+| Local privacy | Config and artifacts remain local unless a provider is called. | Users must understand which optional services call external systems. |
 
----
+![Component map](diagrams/components.svg)
 
-## System Diagram
+## High-level design
 
-![Context diagram](diagrams/context.svg)
+The code is layered:
 
-Both CLI mode and Claude Code skill mode converge on the same `srp` CLI entrypoint. The dotted Claude host-model path is outside the `srp` pipeline: it loops back into the skill wrapper for natural-language mapping and inline narrative output when `llm.runner = none`; it does not become the internal `srp` runner.
+| Layer | Responsibility |
+| --- | --- |
+| CLI | Parse args, resolve data dir, dispatch command handlers. |
+| Commands | User-facing operations such as research, config, topics, reports. |
+| Platforms | Own platform-specific stage order and source adapters. |
+| Services | Coordinate one task across inputs or technologies. |
+| Technologies | Atomic vendor adapters or pure algorithms. |
+| Utils | Cache, state, parsing, display, IO, validation. |
 
----
+![System tradeoffs](diagrams/system-tradeoffs.svg)
 
-## Component Map
+The layers intentionally point downward. Commands may call platform orchestration. Platforms may call services. Services may call technologies and utilities. Technologies should not know about CLI commands or report pages. This keeps a provider integration from becoming tangled with user input parsing or final HTML rendering.
 
-![Component diagram](diagrams/components.svg)
+For example, the research command should not know how to call a transcript provider. It should ask the platform pipeline to run. The platform pipeline should ask the transcript service to enrich selected items. The transcript service should call one or more transcript technologies. That separation makes it possible to test each part and replace one provider without rewriting the whole command.
 
----
+## Data model
 
-## Layered Module Map
+The central runtime object is `PipelineState`. Stages read from `state.inputs` and prior `stage_outputs`, then write their own output. The final assembled report is placed in `state.outputs["report"]`.
 
-| Package | Who uses it | What it does |
-|---|---|---|
-| `cli/` | Operator (shell / Claude Code) | Parses arguments, dispatches subcommands, formats output. Zero pipeline logic. |
-| `commands/` | `cli/` | Typed value objects (e.g. `ParsedRunResearch`) built from raw argparse namespaces. |
-| `pipeline/` | `cli/` | Orchestrates the five-stage research loop. |
-| `platforms/` | `pipeline/orchestrator` | Platform adapter interface + YouTube implementation. Extensible to other platforms. |
-| `corroboration/` | `pipeline/corroboration` | Exa, Brave, Tavily, and runner-backed `llm_search`; `auto` auto-discovery. |
-| `llm/` | `pipeline/enrichment`, `commands/config` | Multi-LLM ensemble (Claude, Gemini, Codex) with first-success fallback. |
-| `stats/` | `pipeline/stats` | 20+ statistical models: regression, Bayesian, bootstrap, clustering, survival. |
-| `viz/` | `pipeline/charts` | Headless PNG chart rendering via matplotlib. |
-| `synthesize/` | `pipeline/orchestrator` | Evidence summaries, warning detection, packet builder, Markdown + HTML formatter. |
-| `scoring/` | `pipeline/orchestrator` | Composite trust / trend / opportunity score; z-score normalisation. |
-| `purposes/` | `pipeline/orchestrator`, `commands/` | Purpose registry, merge semantics, pending-proposal workflow. |
-| `state/` | `commands/` | On-disk persistence for topics, purposes, and pending proposals. |
-| `config.py` | Everywhere | `Config` dataclass loaded from TOML. Single source of truth for all settings. |
+![Pipeline state pattern](diagrams/dp_pipeline.svg)
 
----
+`PipelineState` is the shared notebook for one run. It avoids passing a growing list of positional arguments through every stage. A stage can read the fields it needs, add its result under a named key, and leave unrelated data alone.
 
-## Pipeline Walkthrough
+The tradeoff is discipline. Stage output keys become a contract. If a scoring stage writes `scored_items`, later analysis and report stages expect that shape to stay stable. When changing a stage output, update tests and docs that describe the packet.
 
-The core loop runs in `pipeline/orchestrator.py::run_research`.
+## Key tradeoffs
 
-![Research sequence diagram](diagrams/research-sequence.svg)
+### Local-first vs managed service
 
-### Stage 1 — Fetch
+Local-first keeps costs and artifacts under user control. It also means the user must install runner CLIs and optional tools such as `yt-dlp`, Whisper dependencies, or provider credentials.
 
-**What:** Queries the platform adapter for recent content matching the topic and purpose.
+### Filesystem cache vs database
 
-**Why this design:** The adapter interface (`PlatformAdapter`) decouples the pipeline from any specific platform. Today that is YouTube; adding Twitter/X, Reddit, or a podcast index means implementing one class, not touching the pipeline.
+A filesystem cache is transparent, portable, and simple to delete. It is less powerful for long-term analytics than a relational store. The repository currently favors simple repeat-run speed over historical trend storage.
 
-**Key config:** `platforms.youtube.max_items` (default 20) — how many videos to fetch. `platforms.youtube.recency_days` (default 90) — how far back to search.
+### CLI runner adapters vs SDKs
 
-### Stage 2 — Score
+Runner CLIs let users authenticate with the tools they already use and avoid hard SDK dependencies. The downside is subprocess parsing, timeouts, and CLI availability checks.
 
-**What:** Each item receives a composite score from three sub-scores:
+### Top-N enrichment vs full enrichment
 
-- **Trust** — channel credibility based on subscriber count, verified status, and historic performance.
-- **Trend** — view velocity (views per hour since publish) and cross-channel repetition.
-- **Opportunity** — engagement rate relative to channel size.
+Top-N enrichment controls cost and runtime. The tradeoff is recall: if the scoring model under-ranks a valuable item, that item may not get transcript, summary, or corroboration work.
 
-Scores are z-score normalised across the fetched pool so results are comparable across runs with different pool sizes.
+## How to reason about new features
 
-**Why:** A raw view count favours established channels and viral content. The composite + z-score approach surfaces credible, trending, *and* underexposed material that a simple sort-by-views would miss.
+Ask three questions before placing new code:
 
-### Stage 3 — Enrich
+| Question | Likely home |
+| --- | --- |
+| Is this user-facing command behavior? | `commands` and `cli`. |
+| Is this source-specific fetching or stage order? | `platforms`. |
+| Is this reusable pipeline work such as scoring, charts, or reports? | `services`. |
+| Is this one concrete provider, parser, renderer, or algorithm? | `technologies`. |
+| Is this generic support code with no product decision? | `utils`. |
 
-**What:** The top-N scored items receive:
-
-1. Full transcripts — fetched via yt-dlp captions; Whisper transcription as fallback if captions are unavailable.
-2. A 100-word LLM summary of the transcript, generated by the configured LLM ensemble.
-
-**Why top-N only:** Transcript fetching and LLM calls are expensive (time and API cost). Enriching all 20+ fetched items would make runs impractically slow. The scoring stage acts as a gate.
-
-**Note:** The top-N count is not currently configurable. Increasing `max_items` improves selection quality by giving the scorer more candidates to rank — it does not change the enrichment budget.
-
-### Stage 4 — Analyse
-
-**What:** Runs 20+ statistical models over all scored items (not just top-N):
-
-- Regression: OLS, Bayesian linear, Lasso/Ridge
-- Unsupervised: k-means, PCA, DBSCAN
-- Distribution: bootstrap confidence intervals, KDE
-- Survival: Kaplan–Meier on publish → peak-views time
-- Time-series: trend decomposition, autocorrelation
-
-Renders PNGs for score distribution, trend lines, cluster maps, residual plots.
-
-**Why so many models?** Different research purposes call for different lenses. A `"trends"` purpose benefits from time-series decomposition; `"emerging-research"` benefits from outlier detection. Running all models lets the synthesis layer select which results are most relevant to the stated purpose.
-
-### Stage 5 — Synthesise
-
-**What:** Corroborates the top-N claims with external web-search APIs (Exa / Brave / Tavily), then assembles a `ResearchPacket` containing all scored items, evidence snippets, statistical summaries, and chart paths. The formatter renders Markdown and a self-contained HTML report.
-
-**Why external corroboration:** YouTube video claims are self-reported. Corroboration checks whether independent sources (news articles, papers, other web content) support the same claims, giving a credibility signal that no amount of in-platform analysis can provide.
-
----
-
-## Data Flow
-
-![Data flow](diagrams/data-flow.svg)
-
-```
-topics + purposes
-       │
-       ▼
-  Platform search  ──► raw items (title, channel, views, url)
-       │
-       ▼
-  Score + z-score  ──► ranked list → top-N selected
-       │
-       ▼
-  Transcript enrichment  ──► LLM summary (top-N only)
-       │
-       ▼
-  Corroboration  ──► evidence snippets (top-N only)
-       │
-       ├──► Stats + charts  ──► all scored items
-       │
-       ▼
-  build_packet  ──► ResearchPacket (JSON-serialisable)
-       │
-       ▼
-  HTML + Markdown report
-```
-
----
-
-## Async Model
-
-![Async fan-out](diagrams/async-fanout.svg)
-
-The pipeline uses `asyncio` throughout to keep the I/O-heavy stages from blocking each other:
-
-| Operation | Concurrency mechanism |
-|---|---|
-| Multi-topic research runs | `asyncio.gather` + `Semaphore` on the outer topic loop |
-| Transcript fetch + LLM summary | `asyncio.gather` across top-N items |
-| LLM ensemble (Claude + Gemini + Codex) | `asyncio.gather` fan-out; first-success wins |
-| Corroboration backends | `asyncio.gather` across all available backends per item |
-| LLM synthesis fallback | `asyncio.wait(FIRST_COMPLETED)` race between primary and fallback |
-
-Platform adapters that have not been converted to native async are wrapped with `asyncio.to_thread`. The top-level `main()` entry point is `async def`, wrapped by `asyncio.run`.
-
-**Why asyncio over threading?** The hot path is network I/O (YouTube API, LLM APIs, corroboration APIs). `asyncio` handles many concurrent I/O operations efficiently with a single OS thread. Thread pools add overhead and can cause subtle ordering bugs when coroutines are mixed with blocking calls.
-
----
-
-## Design Tradeoffs
-
-### Local-first vs cloud service
-
-`srp` runs entirely on the operator's machine. All data stays local; nothing is sent to any third party except the APIs you explicitly configure.
-
-**Tradeoff:** No shared state, no caching across users, no horizontal scaling. For a team use case, each analyst runs their own pipeline. A shared service model would need a database, auth, and a job queue — complexity that the current scope does not justify.
-
-### Fixed top-N enrichment budget
-
-Only the top-N items receive transcripts and LLM summaries.
-
-**Tradeoff:** You may miss a high-quality item ranked 6th. The mitigation is to increase `max_items` (more candidates) and tune `recency_days` (tighter recency window improves signal-to-noise). Making the enrichment budget configurable is a planned improvement.
-
-### Synchronous platform adapters wrapped in `asyncio.to_thread`
-
-The YouTube adapter uses the sync Google API client library. Wrapping it in `asyncio.to_thread` is a temporary bridge until a native async adapter exists.
-
-**Tradeoff:** Thread overhead on every YouTube API call. A native async adapter using `httpx` would eliminate this, but requires reimplementing the Google API authentication flow. This is on the roadmap but not yet done.
-
-### Multi-LLM ensemble fan-out
-
-All configured LLM runners are called concurrently; the first successful result wins.
-
-**Tradeoff:** Wastes API calls and cost on the runners that lose the race. The benefit is lower latency and resilience to partial outages. A smarter strategy (prefer cheapest available, fall back on failure) is possible but adds routing complexity.
-
-### Statistical overkill
-
-Running 20+ statistical models on a pool of 20–50 YouTube videos is more than most use cases require.
-
-**Tradeoff:** Adds 0.5–2 s to each run (pure Python, no network). The excess results are ignored by the synthesis layer unless the stated purpose calls for them. Removing models that never fire is a future cleanup task tracked in `docs/model-applicability.md`.
-
----
-
-## Known Limitations
-
-- **YouTube only.** No Twitter/X, Reddit, podcast, or blog adapter exists yet.
-- **Top-N enrichment is global, not per-purpose.** `platforms.youtube.enrich_top_n` is configurable, but every run shares the same enrichment budget.
-- **No deduplication across runs.** Running the same topic twice generates two separate packets; there is no cross-run comparison or trending view.
-- **Runner-backed summaries require a configured runner.** Without one (`llm.runner = none`), enrichment still fetches transcripts and falls back to transcript-derived summaries where possible, but Compiled Synthesis, Opportunity Analysis, and Final Summary show placeholders.
-- **Corroboration is best-effort.** If no API keys are configured and `llm.runner = none`, corroboration is silently skipped.
-
----
-
-## Extension Points
-
-Today's registered surface:
-
-| Registry | File | Registered entries |
-|---|---|---|
-| Platforms | [`platforms/registry.py`](../social_research_probe/platforms/registry.py) | `youtube` |
-| LLM runners | [`llm/registry.py`](../social_research_probe/services/llm/registry.py) | `claude`, `gemini`, `codex`, `local` |
-| Corroboration backends | [`corroboration/registry.py`](../social_research_probe/services/corroborating/registry.py) | `llm_search`, `tavily`, `brave`, `exa` |
-
-None of these runners or backends are bundled — they are thin CLI wrappers. Operators install the matching CLI on their own machine and authenticate it themselves.
-
-### Add a platform adapter
-
-1. Implement `PlatformAdapter` from `platforms/base.py` (`search`, `enrich`, `health_check`, `to_signals`, `trust_hints`, `url_normalize`, `fetch_text_for_claim_extraction`).
-2. Register it in `platforms/registry.py` with `@register`.
-3. Add a fake for tests; register via `SRP_TEST_USE_FAKE_<NAME>=1`.
-
-### Add a corroboration backend
-
-1. Implement `CorroborationBackend` from `corroboration/base.py` (`check_claim`, `check_claims`, `health_check`).
-2. Register it in `corroboration/registry.py` with `@register`.
-3. The backend is auto-discovered when `corroboration.backend = auto` and `health_check()` passes.
-
-### Add a stats model
-
-1. Add a function in the relevant `stats/` module.
-2. Register it in `_stats_models_for` in `pipeline/stats.py`.
-3. Update [model-applicability.md](model-applicability.md) and [statistics.md](statistics.md).
-
-### Add an LLM runner
-
-1. Implement `LLMRunner` from `llm/base.py` (`health_check`, `run`; optionally `summarize_media` when the CLI supports direct URL ingestion).
-2. Register it in `llm/registry.py` with `@register`.
-3. Add a unit test asserting the runner prompt contract.
-4. Document the CLI that operators must install themselves (like the existing four runners).
-
----
-
-## Configuration and Data Directory
-
-`Config.load(data_dir)` reads `<data_dir>/config.toml`. Resolution order: `--data-dir` flag → `$SRP_DATA_DIR` env → `.skill-data/` in current directory → `~/.social-research-probe`.
-
-```
-~/.social-research-probe/
-├── config.toml          # all settings (see docs/commands.md for full key listing)
-├── topics.json          # registered topics
-├── purposes.json        # registered purposes
-├── pending.json         # proposals awaiting apply/discard
-├── charts/              # rendered PNG charts
-└── reports/             # generated HTML reports
-```
-
----
-
-## Release Pipeline
-
-![Release pipeline](diagrams/release-pipeline.svg)
-
-Pushing a `VERSION` file change to `main` triggers `release.yml`: creates a git tag, builds the wheel and sdist, computes SHA-256 checksums, creates a GitHub release with attached artifacts, then publishes to PyPI via OIDC trusted-publishing (no stored `PYPI_API_TOKEN`).
-
----
-
-## See also
-
-- [Design Patterns](design-patterns.md) — adapter, registry, strategy, pipeline patterns in the codebase
-- [Testing](testing.md) — test tiers, TDD workflow, 100% coverage gate
-- [Security](security.md) — trust boundaries, secret storage, network egress
-- [Commands](commands.md) — full configuration key reference
+This keeps the codebase extensible. A future TikTok adapter should add source-specific fetching under `platforms`, but it should not duplicate statistics, report rendering, or LLM runner logic.

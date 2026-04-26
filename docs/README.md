@@ -1,61 +1,81 @@
-# social-research-probe Documentation
+# Documentation
 
-[Home](../README.md)
+Start here if you have never used Social Research Probe before. The docs are organized like a small system design guide: begin with the problem, then the workflow, architecture, tradeoffs, commands, and extension points. The goal is that a reader can understand what the project does, why the code is shaped this way, and how to run or extend it without having to infer missing context from source files.
 
-`srp` is an evidence-first research CLI that does most of its work on your own computer and calls an LLM only when no cheaper tool will do. You give it a topic and a purpose; it fetches content from a social platform, scores it, runs 20+ statistical models, corroborates the top results against the web, and produces a Markdown + HTML report.
+The project is platform-oriented, not YouTube-oriented. YouTube is the first implemented source adapter. The shared pipeline is intentionally written so future adapters can support TikTok, Instagram, X, web search, RSS, forums, and other public sources while reusing scoring, statistics, corroboration, synthesis, reporting, cache, and configuration behavior.
 
----
+## Learning path
 
-## New here? Start with these
+| Step | Read | Purpose |
+| --- | --- | --- |
+| 1 | [Objective](objective.md) | Why the project exists and what problem it solves. |
+| 2 | [How it works](how-it-works.md) | Plain-English walkthrough of one research run. |
+| 3 | [Usage](usage.md) | Commands for daily use. |
+| 4 | [Configuration](configuration.md) | How config, secrets, gates, and data directories work. |
+| 5 | [Architecture](architecture.md) | System design, diagrams, and tradeoffs. |
+| 6 | [Design patterns](design-patterns.md) | The code patterns used in the repository. |
 
-| Document                                  | What it covers                                                    |
-| ----------------------------------------- | ----------------------------------------------------------------- |
-| [Objective & Roadmap](objective.md)       | What the project is, who it's for, philosophy, and what's planned |
-| [How It Works](how-it-works.md)           | Plain-English walkthrough of a `srp research` run                 |
-| [Cost Optimization](cost-optimization.md) | Every place the design avoids an LLM call; recipes by budget      |
-| [Installation](installation.md)           | Step-by-step setup: install, API keys, LLM runner, verification   |
-| [Usage Guide](usage.md)                   | Run your first research, read the output, Claude Code skill flow  |
-| [Corroboration](corroboration.md)         | What claim corroboration is and how to configure it               |
-
----
+After those six pages, read the reference pages only when you need the matching task. For example, read [Commands](commands.md) when you need exact input and output examples, [Charts](charts.md) when you need to interpret PNG outputs, and [Adding a platform](adding-a-platform.md) when you want to add a new source.
 
 ## Reference
 
-| Document                                              | What it covers                                                                            |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Configuration](configuration.md)                     | Every config key, env overrides, config/secrets lifecycle                                 |
-| [LLM Runners](llm-runners.md)                         | Runner comparison, Gemini CLI browser auth, ensemble mode, runner-agnostic agentic search |
-| [Data & Storage](data-directory.md)                   | Canonical reference for every artefact under `~/.social-research-probe/`                  |
-| [LLM Reliability Harness](llm-reliability-harness.md) | Multi-sample judge-LLM eval harness with variance gates                                   |
-| [Runtime Dependencies](runtime-dependencies.md)       | Every third-party library `srp` imports at runtime + where/why                            |
-| [Summary Quality Report](summary-quality-report.md)   | Diagnosis + Phase 9 redesign of the transcript summarizer                                 |
-| [Command Reference](commands.md)                      | Every `srp` subcommand, flag, exit code, environment variable                             |
-| [Statistics](statistics.md)                           | All 20+ statistical models: what they measure and how to interpret                        |
-| [Charts](charts.md)                                   | Every chart: what it shows, how to read it, what to look for                              |
-| [Statistical Model Reference](model-applicability.md) | Model-to-module mapping, minimum dataset sizes                                            |
-| [Synthesis Authoring](synthesis-authoring.md)         | Override Compiled Synthesis, Opportunity Analysis, and Final Summary in the HTML report   |
+| Topic | Document |
+| --- | --- |
+| Install | [Installation](installation.md) |
+| Commands | [Commands](commands.md) |
+| Corroboration | [Corroboration](corroboration.md) |
+| LLM runners | [LLM runners](llm-runners.md) |
+| Data directory | [Data directory](data-directory.md) |
+| Runtime dependencies | [Runtime dependencies](runtime-dependencies.md) |
+| Statistics | [Statistics](statistics.md) |
+| Charts | [Charts](charts.md) |
+| Synthesis | [Synthesis authoring](synthesis-authoring.md) |
+| Summary quality | [Summary quality](summary-quality-report.md) |
+| Reliability harness | [LLM reliability harness](llm-reliability-harness.md) |
+| Model applicability | [Model applicability](model-applicability.md) |
+| Cost optimization | [Cost optimization](cost-optimization.md) |
+| Module map | [Module reference](module-reference.md) |
+| Add a platform | [Adding a platform](adding-a-platform.md) |
+| Python primer | [Python language guide](python-language-guide.md) |
+| Testing | [Testing](testing.md) |
+| Security | [Security](security.md) |
 
----
+## Diagram index
 
-## For contributors
+These SVGs are rendered from `docs/diagrams/src/*.mmd` with a white background for readability in dark-mode viewers.
 
-| Document                                          | What it covers                                                       |
-| ------------------------------------------------- | -------------------------------------------------------------------- |
-| [Architecture](architecture.md)                   | System design, data flow, async model, extension points              |
-| [Module Reference](module-reference.md)           | Every root file and folder: what it is and why it exists             |
-| [Adding a Platform](adding-a-platform.md)         | Walkthrough for adding a new content source (TikTok, Reddit, RSS, …) |
-| [Design Patterns](design-patterns.md)             | Adapter, registry, strategy, pipeline — with code examples           |
-| [Python Language Guide](python-language-guide.md) | All 13 Python idioms used in the codebase                            |
-| [Testing](testing.md)                             | Test tiers, TDD workflow, 100% coverage gate, fake adapters          |
-| [Security](security.md)                           | Secret storage, trust boundaries, hardening checklist                |
-
----
-
-## Project files
-
-| File                                  | What it covers                                    |
-| ------------------------------------- | ------------------------------------------------- |
-| [CHANGELOG.md](../CHANGELOG.md)       | Release history                                   |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Development workflow, TDD rules, file-size limits |
-| [SECURITY.md](../SECURITY.md)         | Responsible disclosure policy                     |
-| [LICENSE](../LICENSE)                 | MIT license                                       |
+| Diagram | Used for |
+| --- | --- |
+| ![System context](diagrams/context.svg) | System boundary |
+| ![Component map](diagrams/components.svg) | Package layout |
+| ![Data flow](diagrams/data-flow.svg) | Research data path |
+| ![Research sequence](diagrams/research-sequence.svg) | Runtime call order |
+| ![Async fan-out](diagrams/async-fanout.svg) | Parallel stage behavior |
+| ![Configuration lifecycle](diagrams/config_lifecycle.svg) | Config and gates |
+| ![Cost control flow](diagrams/cost_flow.svg) | Cache and LLM budget |
+| ![Corroboration flow](diagrams/corroboration_flow.svg) | Claim checks |
+| ![Runner agnostic search](diagrams/corroboration-runner-agnostic.svg) | LLM search contract |
+| ![Runner selection](diagrams/runner_choice.svg) | LLM runner fallback |
+| ![Reliability harness](diagrams/reliability-harness.svg) | Evaluation flow |
+| ![Summary quality flow](diagrams/summary-quality.svg) | Summary generation |
+| ![Testing pyramid](diagrams/testing-pyramid.svg) | Test strategy |
+| ![Release pipeline](diagrams/release-pipeline.svg) | CI/release shape |
+| ![Extension map](diagrams/roadmap.svg) | How new sources fit |
+| ![Platform contract](diagrams/add_platform_contract.svg) | Adapter boundary |
+| ![Add platform flow](diagrams/add_platform_flow.svg) | Extension steps |
+| ![Strategy pattern](diagrams/dp_strategy.svg) | Design pattern |
+| ![Adapter pattern](diagrams/dp_adapter.svg) | Design pattern |
+| ![Registry pattern](diagrams/dp_registry.svg) | Design pattern |
+| ![Pipeline pattern](diagrams/dp_pipeline.svg) | Design pattern |
+| ![Fake seam](diagrams/dp_fake_seam.svg) | Test seam |
+| ![Scoring model](diagrams/scoring-model.svg) | Ranking math |
+| ![Cache layout](diagrams/cache-layout.svg) | Filesystem state |
+| ![Python flow](diagrams/python-flow.svg) | Python primer |
+| ![Service technology](diagrams/service-technology.svg) | Service execution |
+| ![Command surface](diagrams/command-surface.svg) | CLI overview |
+| ![Security boundaries](diagrams/security-boundaries.svg) | Secrets and trust |
+| ![Report outputs](diagrams/report-outputs.svg) | Output artifacts |
+| ![System tradeoffs](diagrams/system-tradeoffs.svg) | Architecture choices |
+| ![Chart suite](diagrams/chart-suite.svg) | Chart-specific data flow |
+| ![Statistics suite](diagrams/statistics-suite.svg) | Statistics data flow |
+| ![Statistics interpretation](diagrams/statistics-interpretation.svg) | Statistics interpretation |

@@ -1,483 +1,936 @@
+[Back to docs index](README.md)
+
 # Python Language Guide
 
-[Home](README.md) → Python Language Guide
+![Python concepts used here](diagrams/python-flow.svg)
 
-This guide explains Python patterns as they are used in this codebase. It is written for contributors who know Python basics but are new to these specific idioms. Every example references an actual file in `social_research_probe/`.
+This guide teaches the Python concepts used in Social Research Probe. It is
+written for someone who has never used Python before but wants enough context to
+read, debug, and extend this project.
 
-**Contents:**
+The goal is not to memorize every Python feature. The goal is to understand the
+language patterns this repository actually uses: modules, imports, functions,
+type hints, dataclasses, classes, async code, filesystem paths, JSON/TOML,
+subprocesses, exceptions, and tests.
 
-1. [TypedDicts](#1-typeddicts)
-2. [Protocols](#2-protocols)
-3. [async/await](#3-asyncawait)
-4. [asyncio.gather](#4-asynciogather)
-5. [`from __future__ import annotations`](#5-from-__future__-import-annotations)
-6. [Type hints](#6-type-hints)
-7. [pytest fixtures](#7-pytest-fixtures)
-8. [f-strings](#8-f-strings)
-9. [List comprehensions](#9-list-comprehensions)
-10. [Context managers](#10-context-managers)
-11. [Dataclasses vs TypedDicts](#11-dataclasses-vs-typeddicts)
-12. [Import order](#12-import-order)
-13. [`__init__.py`](#13-__init__py)
+## How Python code is organized
 
----
+Python source files end in `.py`. One `.py` file is a module. A folder of Python
+modules is a package when Python can import it by name. This project package is
+`social_research_probe`.
 
-## 1. TypedDicts
+Example:
 
-**What it is:** A way to declare the expected keys and value types of a plain Python `dict`, so that type checkers can verify you are not mistyping key names or storing the wrong type.
-
-**Why not a plain `dict`?** A plain `dict[str, Any]` gives no information about what keys exist or what types they hold. A `TypedDict` documents the shape and lets tools like `mypy` or `pyright` catch mistakes at review time rather than at runtime.
-
-**Definition and use — `social_research_probe/types.py`:**
-
-```python
-from typing import TypedDict
-
-class ScoreBreakdown(TypedDict):
-    trust: float
-    trend: float
-    opportunity: float
-    overall: float
+```text
+social_research_probe/
+  config.py
+  commands/
+    research.py
+  services/
+    analyzing/
+      statistics.py
+  technologies/
+    statistics/
+      descriptive.py
 ```
 
-You construct one just like a plain dict:
+You import code from modules instead of copying it:
 
 ```python
-breakdown: ScoreBreakdown = {
-    "trust": 0.82,
-    "trend": 0.61,
-    "opportunity": 0.74,
-    "overall": 0.73,
+from social_research_probe.config import load_active_config
+```
+
+This means: find `social_research_probe/config.py` and import the object named
+`load_active_config`.
+
+Best practice in this repository:
+
+| Practice | Why |
+| --- | --- |
+| Use absolute imports from `social_research_probe...`. | They are clear and work reliably in tests. |
+| Import the narrow thing you need. | Readers can see where names come from. |
+| Avoid `from module import *`. | Wildcard imports hide dependencies. |
+| Keep imports cheap. | Importing a file should not call APIs, run subprocesses, or write files. |
+
+Expensive work should happen inside functions or methods that are called
+deliberately.
+
+## Running Python code
+
+The installed CLI ultimately runs Python functions. A command such as:
+
+```bash
+srp research "AI agents" "latest-news"
+```
+
+enters the CLI parser, creates a command object, and dispatches into command and
+platform code. Python code is executed top to bottom inside the function or
+method being called.
+
+`social_research_probe/__main__.py` and CLI modules exist so the package can be
+run as a command. Most contributors do not need to edit those first; start with
+the command, service, platform, or technology module related to the behavior.
+
+## Values and variables
+
+A variable is a name that points to a value:
+
+```python
+topic = "AI agents"
+max_items = 20
+enabled = True
+```
+
+Python decides the runtime type from the value. Type hints can document what is
+expected, but the assignment itself is still dynamic.
+
+Common value types in this project:
+
+| Type | Example | Used for |
+| --- | --- | --- |
+| `str` | `"AI agents"` | Topics, URLs, config keys, captions. |
+| `int` | `20` | Counts, ranks, limits. |
+| `float` | `0.82` | Scores, ratios, statistics. |
+| `bool` | `True` | Gates and flags. |
+| `None` | `None` | Missing value or no result. |
+| `list` | `[item1, item2]` | Ordered collections. |
+| `dict` | `{"topic": "AI"}` | Structured JSON-like data. |
+| `tuple` | `("overall", "trust")` | Fixed grouped values. |
+| `Path` | `Path("report.html")` | Filesystem paths. |
+
+## Strings
+
+Strings hold text:
+
+```python
+title = "Understanding AI agents"
+```
+
+Use f-strings to insert values into text:
+
+```python
+caption = f"Mean overall score: {mean:.4f}"
+```
+
+`{mean:.4f}` means format the number with four digits after the decimal point.
+This pattern appears in statistics captions and report text.
+
+Use `.strip()` to remove surrounding whitespace and `.replace()` to change text:
+
+```python
+safe_name = name.strip().replace(" ", "-")
+```
+
+## Lists
+
+A list is an ordered collection:
+
+```python
+scores = [0.91, 0.84, 0.52]
+```
+
+Lists are used for fetched items, scored items, service results, chart outputs,
+and statistical series. You can loop over a list:
+
+```python
+for score in scores:
+    print(score)
+```
+
+You can build a new list with a list comprehension:
+
+```python
+titles = [item["title"] for item in items]
+```
+
+This means: for each `item` in `items`, take `item["title"]`, and collect the
+results into a new list.
+
+Use list comprehensions when the transformation is simple. Use a normal `for`
+loop when the logic needs multiple steps, error handling, or comments.
+
+## Dictionaries
+
+A dictionary maps keys to values:
+
+```python
+item = {
+    "title": "Understanding AI agents",
+    "url": "https://example.com/video",
+    "overall_score": 0.84,
 }
 ```
 
-You access fields the same way: `breakdown["trust"]`.
+The project uses dictionaries for JSON-like packets, config fragments, raw API
+responses, and report data.
 
-**`total=False`:** Several TypedDicts in this project use `total=False`, meaning all keys are optional. `ScoredItem` and `AdapterConfig` are examples — useful for structures built up incrementally or where not every field is always populated.
+Access a required key with square brackets:
 
-**Gotcha:** A `TypedDict` is only a type-checker hint — Python does not enforce the shape at runtime. If you construct a dict with wrong keys, Python will not raise an error; only a type checker will catch it.
+```python
+title = item["title"]
+```
 
----
+Access an optional key with `.get()`:
 
-## 2. Protocols
+```python
+features = item.get("features") or {}
+velocity = features.get("view_velocity", 0.0)
+```
 
-**What it is:** A way to define an interface — a set of methods a type must have — without requiring that type to inherit from anything.
+Use `.get()` when missing data is expected. Use square brackets when missing
+data should be treated as a bug.
 
-**Protocols vs abstract base classes:** An abstract base class (ABC) requires every implementation to subclass it. A `Protocol` requires only that the object has the right methods — it does not matter how the class is defined. This is called structural typing, or "duck typing with type-checker support."
+## Tuples and sets
 
-**How the codebase uses ABCs — `social_research_probe/platforms/base.py`:**
+A tuple is an ordered group that is usually treated as fixed:
 
-The codebase uses ABCs for platform adapters because each adapter must also carry class-level metadata (`name`, `default_limits`) enforced at instantiation time:
+```python
+NUMERIC_TARGETS = ("overall", "trust", "trend")
+```
+
+Tuples are useful for constants and small return values.
+
+A set stores unique values:
+
+```python
+seen_urls = set()
+seen_urls.add(url)
+```
+
+Use a set when you need fast membership checks or duplicate removal.
+
+## Conditionals
+
+`if`, `elif`, and `else` choose behavior:
+
+```python
+if not items:
+    return {"highlights": [], "low_confidence": True}
+elif len(items) < 5:
+    return {"low_confidence": True}
+else:
+    return {"low_confidence": False}
+```
+
+Python treats empty strings, empty lists, empty dictionaries, `0`, `False`, and
+`None` as false-like. That is why `if not items:` means "if the list is empty."
+
+Be explicit when the difference matters:
+
+```python
+if value is None:
+    ...
+```
+
+Use `is None` for missing values. Do not use `== None`.
+
+## Loops
+
+Use `for` when iterating over known items:
+
+```python
+for item in scored_items:
+    ...
+```
+
+Use `enumerate` when you need the index and value:
+
+```python
+for rank, item in enumerate(scored_items):
+    item["rank"] = rank
+```
+
+Use `zip` when walking multiple lists together:
+
+```python
+for velocity, age in zip(view_velocity, age_days, strict=True):
+    views.append(velocity * age)
+```
+
+`strict=True` tells Python to raise an error if the lists have different
+lengths. This is useful when arrays must stay aligned by item row.
+
+## Functions
+
+A function packages reusable behavior:
+
+```python
+def overall_score(*, trust: float, trend: float, opportunity: float) -> float:
+    return 0.45 * trust + 0.30 * trend + 0.25 * opportunity
+```
+
+Important parts:
+
+| Part | Meaning |
+| --- | --- |
+| `def` | Defines a function. |
+| `overall_score` | Function name. |
+| `trust: float` | Parameter named `trust`, expected to be a float. |
+| `-> float` | Function should return a float. |
+| `return` | Sends a value back to the caller. |
+| `*` | Forces callers to use keyword arguments. |
+
+The `*` matters:
+
+```python
+overall_score(trust=0.9, trend=0.6, opportunity=0.7)
+```
+
+This is clearer than positional calls because it prevents accidentally swapping
+similar numeric values.
+
+Good functions in this repository are usually small and testable. They take
+inputs, return outputs, and avoid hidden global state.
+
+## Default arguments
+
+Functions can define defaults:
+
+```python
+def run(data: list[float], label: str = "values") -> list[StatResult]:
+    ...
+```
+
+Callers can omit `label`, and the function will use `"values"`.
+
+Avoid mutable defaults such as `items: list = []`. A mutable default can be
+shared across calls. Use `None` and create the list inside the function if you
+need that pattern.
+
+## Type hints
+
+Type hints document expected shapes:
+
+```python
+def score_items(items: list[dict]) -> list[dict]:
+    ...
+```
+
+Python does not enforce all type hints at runtime. They help humans, editors,
+linters, and tests.
+
+Common type hints in this repository:
+
+| Hint | Meaning |
+| --- | --- |
+| `str` | Text. |
+| `int` | Integer. |
+| `float` | Decimal number. |
+| `bool` | True or false. |
+| `Path` | Filesystem path object. |
+| `list[dict]` | List of dictionaries. |
+| `dict[str, list]` | Dictionary with string keys and list values. |
+| `object` | Any Python value, intentionally broad. |
+| `str | None` | String or missing value. |
+| `list[StatResult]` | List containing `StatResult` objects. |
+
+Use a specific type when the function has a specific contract. Use `object` at
+boundaries where the service intentionally validates unknown input.
+
+## `None` and union types
+
+`None` means no value:
+
+```python
+cached = get_json(cache, key)
+if cached is not None:
+    return cached
+```
+
+The type hint `dict | None` means the value may be a dictionary or `None`.
+Always handle the `None` case before using it as a dictionary.
+
+## Dataclasses
+
+Dataclasses are classes designed mainly to hold data:
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass
+class TechResult:
+    tech_name: str
+    output: object
+    success: bool
+```
+
+The `@dataclass` decorator makes Python generate an initializer:
+
+```python
+result = TechResult(tech_name="charts", output={}, success=True)
+```
+
+This is better than a loose dictionary when the fields are part of a contract.
+The repository uses dataclasses for platform items, pipeline state, service
+results, technology results, and evaluation records.
+
+## Frozen dataclasses
+
+Some dataclasses are declared with `frozen=True`:
+
+```python
+@dataclass(frozen=True)
+class FetchLimits:
+    max_items: int = 20
+```
+
+Frozen means fields cannot be changed after creation. Use this for small
+configuration-like records that should not be mutated accidentally.
+
+## Classes
+
+A class defines a kind of object with data and behavior:
+
+```python
+class StatisticsService(BaseService):
+    service_name = "youtube.analyzing.statistics"
+
+    async def execute_one(self, data: object) -> ServiceResult:
+        ...
+```
+
+`StatisticsService(BaseService)` means `StatisticsService` inherits from
+`BaseService`. It gets the base behavior and customizes the parts it needs.
+
+Use classes in this project when there is a stable interface with multiple
+implementations:
+
+| Interface | Implementations |
+| --- | --- |
+| `BaseService` | scoring, transcript, summary, statistics, charts, reporting. |
+| `BaseTechnology` | provider adapters, LLM runners, chart renderers. |
+| `PlatformClient` | platform source adapters. |
+| `BaseStage` | pipeline stages. |
+
+Do not create a class just to group one small function. Use a function for pure
+logic unless shared interface behavior is needed.
+
+## `self`
+
+Instance methods include `self`:
+
+```python
+class Example:
+    def greet(self, name: str) -> str:
+        return f"Hello {name}"
+```
+
+`self` is the current object. You do not pass it manually:
+
+```python
+example = Example()
+example.greet("Ada")
+```
+
+Python passes `example` as `self`.
+
+## Class variables
+
+The repository often uses `ClassVar` for names and config keys:
+
+```python
+from typing import ClassVar
+
+
+class ChartsService(BaseService):
+    service_name: ClassVar[str] = "youtube.analyzing.charts"
+    enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
+```
+
+`ClassVar` means the value belongs to the class, not to one instance. This is
+useful for identifiers shared by all instances of a service or technology.
+
+## Abstract base classes
+
+An abstract base class defines required methods:
 
 ```python
 from abc import ABC, abstractmethod
 
-class PlatformAdapter(ABC):
+
+class BaseTechnology(ABC):
     @abstractmethod
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]: ...
-
-    @abstractmethod
-    async def enrich(self, items: list[RawItem]) -> list[RawItem]: ...
+    async def _execute(self, data):
+        ...
 ```
 
-The benefit: forgetting to implement `search` raises `TypeError` when the class is instantiated — you get an early, clear error rather than a confusing `AttributeError` at the call site.
+A subclass must implement the abstract method. This lets the project define
+contracts such as "every technology must know how to execute."
 
-LLM runners follow the same ABC pattern in `social_research_probe/llm/base.py`.
+Why use this instead of informal conventions: mistakes fail earlier. If a new
+technology forgets `_execute`, Python can reject the incomplete class.
 
-**When to prefer Protocol instead:** Use `Protocol` when you want to accept any object that has a method, without coupling to your class hierarchy. A test fake does not need to subclass `PlatformAdapter` to satisfy a `Protocol`-typed parameter.
+## Decorators
 
-**Gotcha:** You cannot instantiate an ABC or Protocol directly — only concrete subclasses that implement all abstract methods can be instantiated.
-
----
-
-## 3. async/await
-
-**What it is:** A way to write code that can pause while waiting for slow I/O (network calls, subprocess output) and let other work run in the meantime, all in a single thread.
-
-**Why it matters for I/O-bound work:** When your code calls a network API, the CPU sits idle waiting for the response. With `async/await`, Python can switch to running other code during that wait. This is why the pipeline can fetch transcripts, call LLM CLIs, and run corroboration checks concurrently.
-
-**How to read async code — `social_research_probe/services/llm/ensemble.py`:**
+A decorator modifies a function or class:
 
 ```python
-async def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
-    )
-    stdout, _ = await asyncio.wait_for(proc.communicate(stdin_data), timeout=_TIMEOUT)
-    return stdout.decode().strip()
+@dataclass
+class StatResult:
+    name: str
+    value: float
 ```
 
-- `async def` declares a coroutine — a function that can pause.
-- `await` pauses this coroutine until the awaited thing completes. While paused, other coroutines can run.
-- The function returns `str | None`, not a coroutine object. You only see the raw coroutine object if you forget to `await` it.
-
-**Entry point:** The top-level `main()` in the CLI is `async def` and is started with `asyncio.run(main())`. Everything inside the pipeline descends from that single `asyncio.run` call.
-
-**Gotcha:** You can only `await` inside an `async def` function. Calling `async def something()` without `await` gives you a coroutine object, not the result — and Python will warn that it was never awaited.
-
----
-
-## 4. asyncio.gather
-
-**What it is:** A function that runs multiple coroutines at the same time and collects all their results.
-
-**The fan-out pattern — `social_research_probe/services/llm/ensemble.py`:**
-
-```python
-results = await asyncio.gather(
-    *[_run_provider(name, prompt, task) for name in providers],
-    return_exceptions=True,
-)
-```
-
-This launches all `_run_provider` calls concurrently. If there are three providers (claude, gemini, codex), all three subprocess calls start immediately and run in parallel. `asyncio.gather` returns a list of results in the same order as the input coroutines.
-
-**`return_exceptions=True`:** Normally, if one coroutine raises, `gather` cancels the rest and re-raises immediately. With `return_exceptions=True`, exceptions are returned as values in the result list instead of propagating — so one failing LLM call does not prevent the others from finishing.
-
-**Another use — `social_research_probe/services/enriching/summary.py`:**
-
-```python
-await asyncio.gather(
-    *[_enrich_one(item, ...) for item in top_n_items]
-)
-```
-
-All five enrichment tasks (transcript fetch + LLM summary per item) run concurrently, halving the total wall-clock time compared to sequential processing.
-
-**Gotcha:** `asyncio.gather` runs coroutines concurrently in a single thread — it is not parallelism. CPU-bound work does not benefit from it. It is ideal for I/O-bound work (network, subprocess) where the thread spends most of its time waiting.
-
----
-
-## 5. `from __future__ import annotations`
-
-**What it is:** A single import that changes how Python handles type annotations in that file — it defers evaluating them until they are actually needed.
-
-**Why it is at the top of every file:** Without it, Python evaluates annotations eagerly at import time. This means you cannot write `list[str]` as a return type in older Python versions, and you cannot reference a class by name before it is defined. With deferred evaluation, all annotations are treated as strings internally and resolved lazily, so forward references and modern syntax work everywhere.
-
-**Example — `social_research_probe/types.py`:**
-
-```python
-from __future__ import annotations
-
-# JSONValue references itself (a forward reference) — valid because annotations are deferred.
-JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
-```
-
-Without deferred annotations, this self-referential type alias would require workarounds on Python 3.9 and earlier.
-
-**Gotcha:** Because annotations are deferred, `get_type_hints()` (used by some frameworks to read annotations at runtime) requires passing `localns`/`globalns` to resolve them. This is rarely a concern here since annotations are used only for static checking.
-
----
-
-## 6. Type hints
-
-**What it is:** Optional annotations that tell you (and tools) what types a variable, parameter, or return value should be.
-
-**Reading common forms:**
-
-| Annotation | Meaning |
-|---|---|
-| `list[str]` | A list where every element is a string |
-| `dict[str, Any]` | A dict with string keys and values of any type |
-| `str \| None` | Either a string or None (Python 3.10+ union syntax) |
-| `Optional[str]` | Same as `str \| None` (older style from `typing`) |
-| `float \| None` | A float or None — common for computed fields that may be absent |
-
-**Examples — `social_research_probe/technologies/statistics/correlation.py`:**
-
-```python
-def run(
-    series_a: list[float],
-    series_b: list[float],
-    label_a: str = "a",
-    label_b: str = "b",
-) -> list[StatResult]:
-```
-
-- `series_a: list[float]` — the caller must pass a list of floats.
-- `-> list[StatResult]` — the function always returns a list (possibly empty).
-
-**`Any`:** `Any` is an escape hatch that disables type checking for that value. It appears in `JSONValue` (`social_research_probe/types.py`) because JSON can hold any JSON-legal value. Avoid `Any` in new code — it removes the type checker's ability to catch mistakes.
-
-**Gotcha:** Type hints are not enforced at runtime. Passing a string where `float` is expected raises no error at call time — only a type checker will flag it. Think of them as documentation that tools can verify.
-
----
-
-## 7. pytest fixtures
-
-**What it is:** A function decorated with `@pytest.fixture` that sets up (and optionally tears down) shared test state. Test functions declare the fixtures they need as parameters and pytest injects them automatically.
-
-**Defining a fixture — `tests/conftest.py`:**
+`@dataclass` is a decorator. Pytest fixtures and marks also use decorators:
 
 ```python
 @pytest.fixture
-def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect SRP data dir to a per-test temp path."""
-    data_dir = tmp_path / ".skill-data"
-    data_dir.mkdir(exist_ok=True)
-    monkeypatch.setenv("SRP_DATA_DIR", str(data_dir))
-    return data_dir
+def tmp_data_dir(tmp_path):
+    ...
 ```
 
-- `tmp_path` and `monkeypatch` are built-in pytest fixtures injected by pytest itself.
-- `monkeypatch.setenv` sets an environment variable for the duration of the test and automatically undoes it afterwards — no manual cleanup needed.
-- The fixture `return`s the path so the test can write files into it.
+Read decorators as "wrap this object with extra behavior." Do not add decorators
+unless you understand what behavior they add.
 
-**Using a fixture in a test:**
+## Async and await
+
+`async def` defines a coroutine function:
 
 ```python
-async def test_run_research_returns_packet(tmp_data_dir):
-    packet = await run_research(topic="ai", purposes=("latest-news",), data_dir=tmp_data_dir)
-    assert packet["items_top_n"]
+async def execute_one(self, data: object) -> ServiceResult:
+    ...
 ```
 
-pytest sees the parameter name `tmp_data_dir`, finds the matching fixture, calls it, and passes the result in.
-
-**How `conftest.py` works:** pytest automatically discovers `conftest.py` files. Any fixture defined there is available to all tests in the same directory and all subdirectories — no import needed.
-
-**Gotcha:** Fixture scope defaults to `"function"` — the fixture runs fresh for every test. The fixtures in this project use function scope because they modify environment variables, which must not leak between tests.
-
----
-
-## 8. f-strings
-
-**What it is:** A string literal prefixed with `f` that lets you embed Python expressions directly inside `{}` placeholders, evaluated at runtime.
-
-**How to use them — `social_research_probe/utils/progress.py`:**
+Calling it creates a coroutine. `await` runs it and waits for the result:
 
 ```python
-def log(msg: str) -> None:
-    print(msg, file=sys.stderr)
+result = await service.execute_one(item)
 ```
 
-Called throughout the codebase like this (`social_research_probe/services/llm/ensemble.py`):
+Async is used because many tasks wait on IO: platform APIs, transcript fetches,
+LLM runner subprocesses, web search providers, and file rendering. Async lets
+independent waits overlap.
+
+## Running tasks concurrently
+
+`asyncio.gather` runs several awaitable tasks concurrently:
 
 ```python
-log(f"[srp] LLM ({name}): {task}")
-```
-
-The `{name}` and `{task}` are replaced by the values of those variables at the time the string is created. No string concatenation or `.format()` calls needed.
-
-**Format specifiers — `social_research_probe/technologies/statistics/descriptive.py`:**
-
-```python
-caption=f"Mean {label}: {mean_val:,.4g}"
-```
-
-The `:,.4g` after `mean_val` is a format spec: `,` adds thousands separators, `.4g` means 4 significant figures. The result for `mean_val=12345.6789` would be `"12,350"`.
-
-Common format specs:
-
-| Spec | Effect |
-|---|---|
-| `:.2f` | Two decimal places: `0.61` |
-| `:.2%` | Percentage with two decimals: `61.23%` |
-| `:,.4g` | 4 significant figures with thousands separator |
-| `!r` | `repr()` of the value (adds quotes around strings) |
-
-**Gotcha:** f-strings evaluate expressions eagerly when the line runs — you cannot use them as lazy templates stored for later use. If the variable changes after you create the string, the string does not update.
-
----
-
-## 9. List comprehensions
-
-**What it is:** A concise way to build a new list by transforming or filtering items from an existing iterable, in a single expression.
-
-**Basic form:** `[expression for item in iterable if condition]`
-
-**Examples from the codebase — `social_research_probe/synthesize/evidence.py`:**
-
-```python
-ages = [max(0.0, (now - s.upload_date).days) for s in signals if s.upload_date]
-```
-
-Plain-English reading: "For each signal `s` in `signals`, if `s.upload_date` is not None, compute the number of days since upload (clamped to 0) and collect those into a list."
-
-Another example — `social_research_probe/validation/claims.py`:
-
-```python
-sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
-```
-
-This splits text on sentence boundaries, strips whitespace from each piece, and keeps only non-empty results — all in one line.
-
-**Set comprehension:** The same syntax with `{}` instead of `[]` produces a set (deduplicated):
-
-```python
-unique = len({it.author_name for it in items if it.author_name})
-```
-
-(`social_research_probe/synthesize/evidence.py`) — counts distinct author names by building a set of names, discarding `None`/empty values.
-
-**Gotcha:** List comprehensions are for transformation and filtering. If you need to accumulate a running total or carry state between iterations, a regular `for` loop is clearer. Deeply nested comprehensions are hard to read — extract a helper function instead.
-
----
-
-## 10. Context managers
-
-**What it is:** A block introduced with `with` that guarantees setup and teardown happen correctly — even if an exception is raised inside the block.
-
-**Opening files — `social_research_probe/utils/io.py`:**
-
-```python
-with open(path, encoding="utf-8") as fh:
-    return json.load(fh)
-```
-
-When the `with` block exits — whether normally or via an exception — Python automatically calls `fh.close()`. You never risk leaving a file handle open.
-
-**Suppressing specific exceptions — `social_research_probe/utils/cache.py`:**
-
-```python
-with contextlib.suppress(FileNotFoundError):
-    path.unlink()
-```
-
-`contextlib.suppress` is a context manager that swallows the listed exception type if it is raised inside the block. Here it means "delete the file if it exists; ignore silently if it doesn't."
-
-**Why context managers exist:** They encode the "acquire / use / release" pattern in a reusable, composable way. Without them, every caller would need to write `try/finally` blocks manually, and it is easy to forget the `finally` clause.
-
-**Custom context managers:** You can write your own using `contextlib.contextmanager` (a decorator) or by implementing `__enter__` and `__exit__` on a class. This project does not define custom context managers, but uses `contextlib.suppress` from the standard library.
-
-**Gotcha:** The `as fh` part is optional. `with some_lock:` (without `as`) acquires and releases the lock without binding any return value.
-
----
-
-## 11. Dataclasses vs TypedDicts
-
-**The short answer:** TypedDicts are for data that crosses process or serialisation boundaries (JSON in, JSON out). Dataclasses are for internal objects where you want attribute access, defaults, and method support.
-
-**TypedDicts in this project — `social_research_probe/types.py`:**
-
-```python
-class ScoredItem(TypedDict, total=False):
-    title: str
-    channel: str
-    url: str
-    scores: ScoreBreakdown
-```
-
-`ScoredItem` is stored in the research packet, serialised to JSON, and sent to the renderer. Using a `TypedDict` means `json.dumps(item)` works without a custom encoder, and you can construct one with a plain dict literal in tests.
-
-**Dataclasses in this project — `social_research_probe/platforms/base.py`:**
-
-```python
-from dataclasses import dataclass, field
-
-@dataclass(frozen=True)
-class FetchLimits:
-    max_items: int = 20
-    recency_days: int | None = 90
-```
-
-`FetchLimits` is an internal configuration object. `@dataclass` gives it:
-- A generated `__init__` that accepts keyword arguments.
-- A generated `__repr__` for readable debug output.
-- `frozen=True` makes instances immutable (hashable, safe to use as dict keys).
-
-It would be awkward as a `TypedDict` because dataclasses support default values per field, whereas TypedDicts require `total=False` for all-or-nothing optionality.
-
-**Decision rule used in this project:**
-
-| Use | When |
-|---|---|
-| `TypedDict` | Data leaves or enters the process (JSON packets, API responses, state files) |
-| `dataclass` | Internal configuration or value objects that benefit from defaults, methods, or immutability |
-
-**Gotcha:** You cannot add methods to a `TypedDict`. If you find yourself wanting to add helper methods, switch to a dataclass.
-
----
-
-## 12. Import order
-
-**What it is:** A standard ordering for the `import` statements at the top of every Python file, enforced automatically by the `ruff` linter.
-
-**The order — `social_research_probe/config.py`:**
-
-```python
-from __future__ import annotations   # 1. future imports always first
-
-import copy                           # 2. standard library
-import os
-import tomllib
-from dataclasses import dataclass, field
-from pathlib import Path
-
-from social_research_probe.types import (   # 3. local package imports
-    AdapterConfig,
-    AppConfig,
+results = await asyncio.gather(
+    *(service.execute_one(item) for item in items)
 )
 ```
 
-Third-party libraries (e.g. `import rapidfuzz`) would appear between the standard library block and the local package block.
+This does not make CPU-heavy math faster. It helps when tasks spend time waiting
+for external work.
 
-**Why this order matters:**
+## Running blocking code from async code
 
-1. `from __future__ import annotations` must be the very first statement to take effect. If it appears after other imports, Python ignores it.
-2. Standard library first means the reader can immediately see which built-ins are used.
-3. Third-party after standard library separates "what Python ships" from "what you installed."
-4. Local imports last clearly identify which code is in this project.
-
-**Blank lines:** Each group is separated by one blank line. Mixing groups (e.g. a standard library import between two local imports) will cause `ruff check` to fail.
-
-**Enforcement:** Run `ruff check --fix` to auto-sort imports. The CI pipeline blocks merges with unsorted imports.
-
-**Gotcha:** Circular imports — where module A imports B and B imports A — are often discovered when you reorganise imports. The fix is usually to move the shared type to a third module (this project keeps shared types in `types.py`) or to use a local import inside a function to break the cycle.
-
----
-
-## 13. `__init__.py`
-
-**What it is:** A file that marks a directory as a Python package, making it importable. It also controls what is visible to importers of the package.
-
-**Why it is needed:** Without `__init__.py`, Python (in most configurations) will not treat the directory as a package, and `from social_research_probe.stats import descriptive` will fail.
-
-**Minimal `__init__.py` — `social_research_probe/technologies/statistics/__init__.py`:**
+Some libraries are synchronous. `asyncio.to_thread` runs blocking work in a
+thread so the async event loop can keep moving:
 
 ```python
-"""Statistical analysis package for social-media signal data."""
+charts = await asyncio.to_thread(render_all, items, charts_dir)
 ```
 
-This file contains only a docstring. Its presence tells Python that `stats/` is a package. It does not re-export anything — callers import submodules directly (e.g. `from social_research_probe.stats import descriptive`).
+Use this when calling CPU or blocking IO functions from async service code.
 
-**Explicit re-exports — `social_research_probe/platforms/youtube/__init__.py`:**
+## Exceptions
+
+Exceptions represent errors:
 
 ```python
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
-
-__all__ = ["YouTubeAdapter"]
+try:
+    output = await tech.execute(data)
+except Exception as exc:
+    return TechResult(tech_name=tech.name, output=None, success=False, error=str(exc))
 ```
 
-This re-exports `YouTubeAdapter` so callers can write:
+This repository catches exceptions at service and technology boundaries so one
+provider failure does not crash the whole research run.
+
+Guidelines:
+
+| Situation | What to do |
+| --- | --- |
+| Invalid programmer input in a pure helper. | Let it raise or raise a clear exception. |
+| Optional provider fails. | Catch at the adapter/service boundary and return structured failure. |
+| Missing config or secret. | Report unavailable provider rather than making a bad call. |
+| Test expects failure. | Assert the exception or failed result explicitly. |
+
+Avoid broad `except Exception` deep inside pure logic. It can hide real bugs.
+
+## Filesystem paths with `Path`
+
+Use `pathlib.Path` for paths:
 
 ```python
-from social_research_probe.platforms.youtube import YouTubeAdapter
+from pathlib import Path
+
+data_dir = Path("~/.social-research-probe").expanduser()
+report = data_dir / "reports" / "report.html"
 ```
 
-instead of the longer:
+The `/` operator joins paths. This is clearer and safer than string
+concatenation.
+
+Common methods:
+
+| Method | Meaning |
+| --- | --- |
+| `path.exists()` | Does this path exist? |
+| `path.mkdir(parents=True, exist_ok=True)` | Create a directory and missing parents. |
+| `path.read_text(encoding="utf-8")` | Read a text file. |
+| `path.write_text(text, encoding="utf-8")` | Write a text file. |
+| `path.name` | Final filename. |
+| `path.parent` | Parent directory. |
+
+## JSON
+
+JSON is a text format for structured data. Python dictionaries and lists map
+naturally to JSON:
 
 ```python
-from social_research_probe.platforms.youtube.adapter import YouTubeAdapter
+import json
+
+payload = {"topics": ["AI agents"]}
+text = json.dumps(payload, indent=2, sort_keys=True)
+loaded = json.loads(text)
 ```
 
-It also registers the adapter as a side-effect of importing the subpackage.
+This project uses JSON for topics, purposes, pending suggestions, cached values,
+packets, and tests.
 
-**Re-export alias pattern:** When a module re-exports a name without `__all__`, `ruff` flags it as an unused import (F401). The convention in this project is to alias the name to itself to mark the intent explicitly:
+Use `sort_keys=True` when deterministic output matters. Deterministic output is
+easier to diff and test.
+
+## TOML
+
+TOML is used for configuration:
+
+```toml
+[llm]
+runner = "gemini"
+```
+
+Python reads TOML into dictionaries. The project merges default config with the
+user's `config.toml`, then reads secrets separately.
+
+Use config for behavior that should be user controlled. Do not hard-code a value
+inside a service if users need to change it.
+
+## Environment variables
+
+Environment variables are process-level settings:
+
+```bash
+SRP_DATA_DIR=./.skill-data srp config path
+```
+
+Python reads them through `os.environ`. This project uses environment variables
+for data directory overrides, secrets, and test controls such as
+`SRP_DISABLE_CACHE`.
+
+Environment variables are useful for CI and temporary shells because they do not
+require writing a config file.
+
+## Subprocesses
+
+A subprocess runs an external command:
 
 ```python
-from .utils import _emit as _emit
+import subprocess
+
+result = subprocess.run(
+    ["python", "-m", "social_research_probe", "--help"],
+    capture_output=True,
+    text=True,
+    timeout=10,
+)
 ```
 
-The `as _emit` tells `ruff` this is an intentional re-export, not a stale import.
+This repository uses subprocesses for runner CLIs, text-to-speech tools, and
+integration tests of the CLI.
 
-**Gotcha:** Putting too much code in `__init__.py` (initialisation logic, class definitions) makes it hard to reason about import order. Keep `__init__.py` files small — a docstring and explicit re-exports only.
+Best practices:
 
----
+| Practice | Why |
+| --- | --- |
+| Pass argv as a list. | Avoids shell quoting problems. |
+| Use `timeout`. | Prevents hung external commands. |
+| Capture output when testing. | Lets tests assert stdout/stderr. |
+| Handle `FileNotFoundError`. | External binaries may not be installed. |
 
-## See also
+## Generators and comprehensions
 
-- [Design Patterns](design-patterns.md) — how these conventions support the patterns
-- [Testing](testing.md) — fixture conventions and async test setup
-- [Architecture](architecture.md) — where these patterns fit in the system design
+A generator produces values lazily:
+
+```python
+(service.execute_one(item) for item in items)
+```
+
+This is used with `asyncio.gather` and other functions that can consume an
+iterable.
+
+List comprehensions create lists immediately:
+
+```python
+captions = [result.caption for result in results if result.caption]
+```
+
+Use a list comprehension when you need the final list. Use a generator when the
+consumer can iterate without storing everything first.
+
+## Sorting and keys
+
+Python can sort values:
+
+```python
+items = sorted(items, key=lambda item: item["overall_score"], reverse=True)
+```
+
+`lambda item: item["overall_score"]` is a small anonymous function used only for
+sorting.
+
+Use named functions instead of lambdas when the logic is more than one simple
+expression.
+
+## Numeric code
+
+The statistics modules intentionally use plain Python math rather than requiring
+large numeric dependencies for every operation.
+
+Example:
+
+```python
+mean = sum(values) / len(values)
+variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
+```
+
+Important operators:
+
+| Operator | Meaning |
+| --- | --- |
+| `+` | Add. |
+| `-` | Subtract. |
+| `*` | Multiply. |
+| `/` | Divide and return float. |
+| `//` | Floor division. |
+| `%` | Remainder. |
+| `**` | Power. |
+
+Always handle empty lists before dividing by `len(values)`.
+
+## Pure functions vs IO functions
+
+A pure function depends only on its inputs and returns a value:
+
+```python
+def views(velocity: float, age_days: float) -> float:
+    return velocity * age_days
+```
+
+An IO function talks to the outside world:
+
+```python
+def load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+```
+
+Keep pure logic separate from IO. Pure functions are easier to test, cache, and
+reuse. IO functions need more error handling because files, networks, and
+subprocesses can fail.
+
+## Services and technologies
+
+This repository separates orchestration from concrete work.
+
+| Concept | Meaning |
+| --- | --- |
+| Service | Coordinates a task in the pipeline. |
+| Technology | Performs one concrete operation or algorithm. |
+| Platform | Fetches source-specific data and owns source stage order. |
+
+Example:
+
+```python
+class ChartsService(BaseService):
+    async def execute_one(self, data: object) -> ServiceResult:
+        ...
+```
+
+The service decides when and how charting runs. Chart technology modules create
+specific chart outputs.
+
+Why not put everything in one function: one large function is hard to test and
+hard to extend. Services and technologies keep failure boundaries clear.
+
+## Config gates
+
+Many services and technologies have an `enabled_config_key`:
+
+```python
+enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
+```
+
+The base class can check config before running the implementation. This lets
+users disable expensive or unavailable work without editing code.
+
+When adding a provider or service, add a clear config key and document what it
+controls.
+
+## Caching
+
+Caching stores outputs so repeated runs can reuse work:
+
+```python
+cached = get_json(cache, key)
+if cached is not None:
+    return cached
+result = compute()
+set_json(cache, key, result)
+return result
+```
+
+Cache keys must represent the input that affects the output. If the key is too
+broad, stale data can be reused incorrectly. If the key is too narrow, the cache
+will miss too often.
+
+## Testing with pytest
+
+Tests are Python functions whose names usually start with `test_`:
+
+```python
+def test_views_are_derived_from_velocity_and_age():
+    assert views(10.0, 3.0) == 30.0
+```
+
+`assert` checks that something is true. If it is false, the test fails.
+
+Pytest fixtures provide reusable test setup:
+
+```python
+def test_config_path(tmp_path):
+    data_dir = tmp_path / "data"
+    ...
+```
+
+`tmp_path` is a pytest fixture that gives a temporary directory.
+
+## Monkeypatching in tests
+
+`monkeypatch` temporarily changes environment variables, attributes, or paths:
+
+```python
+def test_uses_data_dir_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+```
+
+Use monkeypatch when the code reads global state such as environment variables.
+The change is undone after the test.
+
+## Mocking and fakes
+
+A fake is a small deterministic implementation used for tests. The repository
+uses fake platform and fake corroboration modules so tests do not need live
+network calls.
+
+Prefer fakes when testing pipeline behavior. Use mocks when you need to assert a
+specific function was called. Avoid live APIs in normal tests because they are
+slow, costly, and unstable.
+
+## CLI parsing
+
+The CLI uses parser modules to turn command-line arguments into structured
+command objects. That means command handlers should receive already-parsed data
+instead of manually reading `sys.argv`.
+
+Example command shape:
+
+```bash
+srp research youtube "AI agents" "latest-news,trends"
+```
+
+The parser identifies the command, platform, topic, purposes, and flags. The
+handler should focus on behavior.
+
+## Common repository patterns
+
+| Pattern | What it looks like | Why it is used |
+| --- | --- | --- |
+| Small pure helper | `def _numeric_series(...): ...` | Easy to test and reason about. |
+| Service class | `class StatisticsService(BaseService)` | Shared execution and failure behavior. |
+| Technology adapter | `class GeminiRunner(...)` | Isolates external tool behavior. |
+| Dataclass record | `@dataclass class PipelineState` | Makes structured data explicit. |
+| Config key | `enabled_config_key = "..."` | Lets users disable behavior. |
+| Cache wrapper | `get_json` / `set_json` | Avoids repeated expensive work. |
+| Fake in tests | `tests/fixtures/fake_youtube.py` | Keeps tests deterministic. |
+
+## How to read a new file
+
+Use this process when opening a Python file in this project:
+
+1. Read the imports to see which layer it depends on.
+2. Read module constants near the top.
+3. Find dataclasses or classes to understand the main data shape.
+4. Find public functions or methods that do the work.
+5. Read private helpers after you know who calls them.
+6. Find tests for the same module or behavior.
+
+Private helpers usually start with `_`, such as `_compute`. That is a convention
+meaning "internal to this module or class." Python does not strictly prevent
+other code from calling it, but contributors should treat it as internal.
+
+## How to make a safe change
+
+| Change type | Best first step |
+| --- | --- |
+| Pure calculation | Add or update a unit test around the function. |
+| Service behavior | Test success, disabled config, and failure output. |
+| Provider adapter | Test parsing and unavailable-provider behavior. |
+| CLI output | Test command input and exact expected stdout shape. |
+| Docs or diagrams | Run docs contract tests. |
+
+Keep edits near the behavior being changed. Do not move code across layers just
+because it is convenient for one call site.
+
+## Common beginner mistakes
+
+| Mistake | Why it hurts | Better approach |
+| --- | --- | --- |
+| Using a mutable default like `items=[]`. | The same list can be reused across calls. | Use `items: list | None = None`. |
+| Catching every exception too early. | Real bugs become silent empty output. | Catch at service/provider boundaries. |
+| Building paths with string concatenation. | Breaks across platforms and edge cases. | Use `Path` and `/`. |
+| Calling external APIs during import. | Tests and imports become slow or flaky. | Call APIs inside explicit functions. |
+| Returning inconsistent dictionaries. | Later stages fail or need defensive code everywhere. | Use dataclasses or documented dict shapes. |
+| Adding provider logic to services. | Vendor details leak into orchestration. | Put provider specifics in technologies. |
+
+## Minimal example in project style
+
+```python
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class ChartRequest:
+    title: str
+    values: list[float]
+    output_dir: Path
+
+
+def average(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return sum(values) / len(values)
+
+
+def chart_caption(request: ChartRequest) -> str:
+    mean = average(request.values)
+    return f"{request.title}: mean value {mean:.4f}"
+```
+
+This example uses concepts from the codebase:
+
+| Concept | Where it appears |
+| --- | --- |
+| `dataclass(frozen=True)` | Structured immutable request data. |
+| `Path` | Filesystem output directory. |
+| `list[float]` | Numeric series. |
+| Empty-list guard | Prevents division by zero. |
+| Small pure functions | Easy unit tests. |
+| f-string formatting | Human-readable caption. |
+
+If you can understand this example, you can start reading the service,
+statistics, chart, and reporting modules in this repository.

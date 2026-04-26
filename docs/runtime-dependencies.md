@@ -1,35 +1,41 @@
-# Runtime dependencies
+[Back to docs index](README.md)
 
-[← Documentation hub](README.md)
+# Runtime Dependencies
 
-This page lists every third-party library `srp` imports at runtime, where
-it's used in the codebase, and why it's there. Canonical source of truth
-is [`pyproject.toml`](../pyproject.toml) under `[project].dependencies`
-(mirrored by [`requirements.txt`](../requirements.txt) for direct
-`pip install -r requirements.txt` workflows).
+![Runtime component map](diagrams/components.svg)
 
-> **Dev-only tools** (`pytest`, `pytest-cov`, `pytest-asyncio`,
-> `pytest-xdist`, `hypothesis`, `ruff`, `respx`, `vulture`) are declared
-> separately under `[project.optional-dependencies].dev` and covered in
-> [testing.md](testing.md). This page is only about runtime deps that
-> ship with a user install.
+Runtime dependencies are intentionally small and focused. The project prefers standard-library code, narrow adapters, and external runner CLIs over installing a large SDK for every possible provider.
 
-## Runtime library usage map
+This matters for users because the tool should remain installable in ordinary Python environments. Heavy optional behavior, such as local transcription or external model runners, should not make the core CLI impossible to use.
 
-| Library | Where it's used | Why | Can we drop it? |
-|---|---|---|---|
-| **jsonschema** | [`state/validate.py`](../social_research_probe/utils/state/validate.py) | Validates `topics.json` / `purposes.json` / `pending_suggestions.json` against our schemas on load. Bad state files fail loudly instead of corrupting the pipeline. | Not without losing schema validation. We could switch to `pydantic`, but the migration cost isn't justified for our schema complexity. |
-| **rapidfuzz** | [`dedupe.py`](../social_research_probe/utils/core/dedupe.py) | Fuzzy title matching for deduping near-duplicate YouTube results (e.g. the same video reposted with a slightly different title). Fast C-accelerated Levenshtein / token-set ratio. | Could replace with `difflib.SequenceMatcher` stdlib, but rapidfuzz is 10-100× faster on our typical 20–50 item sets. |
-| **google-api-python-client** | [`platforms/youtube/fetch.py`](../social_research_probe/platforms/youtube/pipeline.py) (via `googleapiclient.discovery.build`) | Calls the YouTube Data API v3 for search, video hydration, and channel hydration. The adapter wraps these calls. | Could hand-roll with `httpx` against the REST endpoints; the client gives us retries, auth, and rate-limit handling for free. |
-| **youtube-transcript-api** | [`platforms/youtube/extract.py`](../social_research_probe/services/sourcing/youtube.py) | Primary transcript fetch path — pulls YouTube's public timedtext captions without needing cookies or an audio download. | This is the only free, no-auth transcript path; alternatives require either API keys (paid) or a full audio download. |
-| **yt-dlp** | [`platforms/youtube/whisper_transcript.py`](../social_research_probe/technologies/transcript_fetch/whisper.py) (invoked as subprocess) + referenced from [`pipeline/enrichment.py`](../social_research_probe/services/enriching/summary.py) | **Whisper fallback** — when a video has no public captions, we download the audio track with `yt-dlp` so Whisper can transcribe locally. | Required for the captions-missing path. Without it, those videos would get an empty transcript. |
-| **openai-whisper** | [`platforms/youtube/whisper_transcript.py`](../social_research_probe/technologies/transcript_fetch/whisper.py) | Local speech-to-text model for the Whisper fallback above. Runs on CPU or GPU; model size is configurable. | Required for the captions-missing path. A cloud Whisper API would work too but incur cost + network. |
-| **matplotlib** | 9 files under [`viz/`](../social_research_probe/technologies/charts/) (`bar.py`, `line.py`, `scatter.py`, `histogram.py`, `regression_scatter.py`, `residuals.py`, `heatmap.py`, `table.py`, plus the module-level lazy import in `_png_writer.py`) | Renders every chart PNG embedded in the HTML report + saved under `~/.social-research-probe/charts/`. Backend is `Agg` (no display required). | We could swap for Plotly/Bokeh but matplotlib's offline rendering and long-term stability are worth the install weight. The ASCII fallback ([`viz/ascii.py`](../social_research_probe/technologies/charts/ascii.py)) works without matplotlib. |
-| **httpx** | [`corroboration/brave.py`](../social_research_probe/technologies/corroborates/brave.py), [`exa.py`](../social_research_probe/technologies/corroborates/exa.py), [`tavily.py`](../social_research_probe/technologies/corroborates/tavily.py) | Async HTTP client for the three web-search corroboration backends. Supports timeouts, retries, streaming, and — crucial for tests — the `respx` mocking library. | Required; `urllib` doesn't give us async support, and our test suite depends on `respx` which targets `httpx` specifically. |
+| Dependency | Why it exists |
+| --- | --- |
+| `jsonschema` | Validates local JSON state files. |
+| `rapidfuzz` | Detects duplicate or near-duplicate topics and purposes. |
+| `google-api-python-client` | Talks to the YouTube Data API. |
+| `yt-dlp` | Fetches media metadata/captions when needed. |
+| `youtube-transcript-api` | Transcript retrieval path. |
+| `matplotlib` | Renders chart PNGs. |
+| `openai-whisper` | Local transcript fallback. |
+| `httpx` | HTTP calls for provider integrations. |
 
-## Related docs
+Optional runner CLIs such as Claude, Gemini, Codex, or Ollama are not Python dependencies. They are external programs called by subprocess adapters.
 
-- [installation.md](installation.md) — installing `srp` and its runtime deps.
-- [cost-optimization.md](cost-optimization.md) — which of these deps are invoked per-research-run and how we keep invocations cheap.
-- [testing.md](testing.md) — dev-only tools (pytest, ruff, respx, xdist).
-- [data-directory.md](data-directory.md) — where on disk each of these writes its outputs (charts, reports, cache).
+## Why not one SDK per provider?
+
+The code prefers narrow adapters and CLI boundaries where possible. That keeps install size lower and avoids coupling the core pipeline to every vendor's Python SDK.
+
+SDKs are useful when a provider needs deep API coverage. This project usually needs a smaller contract: run a search, fetch a transcript, render a chart, or ask a runner for structured text. Keeping those integrations behind small adapters makes it easier to replace or disable one dependency without changing the whole pipeline.
+
+## Dependency categories
+
+| Category | Examples | Failure behavior |
+| --- | --- | --- |
+| Core validation and state | `jsonschema`, `rapidfuzz` | Required for normal CLI behavior. |
+| Platform access | `google-api-python-client`, `yt-dlp`, `youtube-transcript-api` | Platform features may be unavailable if missing or unauthenticated. |
+| Local analysis and rendering | `matplotlib`, pure Python statistics modules | Charts or analysis outputs may be skipped on renderer failure. |
+| Optional local media work | `openai-whisper` | Transcript fallback may be unavailable. |
+| Provider HTTP clients | `httpx` | External evidence providers depend on network and secrets. |
+| Runner CLIs | Claude, Gemini, Codex, Ollama-style tools | Generated text may be absent if the runner is not installed or configured. |
+
+When debugging dependency issues, first identify the category. A missing runner should not be treated like a broken install if the user only wants local scoring and charts.

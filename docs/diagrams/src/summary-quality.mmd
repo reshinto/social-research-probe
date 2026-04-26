@@ -1,7 +1,20 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-    Transcript["Transcript<br/>(fetch_transcript or whisper fallback)"] --> Prompt["Prompt<br/>(Phase 9 redesign: word cap,<br/>anti-hallucination, filler blocklist,<br/>exemplar, sentence-boundary rule)"]
-    Prompt --> Ensemble["Ensemble fan-out<br/>Claude / Gemini / Codex"]
-    Ensemble --> Pick["Coverage-wins merge<br/>(highest keyphrase coverage)"]
-    Pick --> Cache[("~/.social-research-probe/cache/summary/")]
-    Cache --> Harness["Nightly reliability harness<br/>(multi-sample + judge)"]
-    Harness -.->|report| Report[".srp-eval/summary/&lt;ts&gt;.md"]
+  Transcript["transcript or description"] --> Prompt["bounded summary prompt"]
+  Prompt --> Runner["configured runner"]
+  Runner --> Validate["empty/error handling"]
+  Validate --> Cache["cache/summaries"]
+  Cache --> Report["one-line takeaway and summary"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Transcript input;
+  class Prompt,Validate process;
+  class Runner external;
+  class Cache config;
+  class Report output;

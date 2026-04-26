@@ -1,32 +1,18 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","actorBkg":"#dbeafe","actorBorder":"#1d4ed8","actorTextColor":"#111111","activationBkgColor":"#fef3c7","activationBorderColor":"#d97706","noteBkgColor":"#dcfce7","noteBorderColor":"#15803d"}}}%%
 sequenceDiagram
-    participant User
-    participant CLI
-    participant Orchestrator
-    participant Adapter as YouTube Adapter
-    participant Enrichment
-    participant LLM
-    participant Corroboration
-    participant Stats
-    participant Synthesize
-
-    User->>CLI: srp research "topic" "purpose"
-    CLI->>Orchestrator: run_research(topic, purposes)
-    Orchestrator->>Adapter: health_check()
-    Adapter-->>Orchestrator: ok
-    Orchestrator->>Adapter: search(query, limits)
-    Adapter-->>Orchestrator: raw items
-    Orchestrator->>Orchestrator: score + z-score → top-N
-    Orchestrator->>Enrichment: enrich_topN(topN)
-    Enrichment->>Adapter: fetch transcript
-    Adapter-->>Enrichment: transcript text
-    Enrichment->>LLM: summarise(transcript)
-    LLM-->>Enrichment: 100-word summary
-    Enrichment-->>Orchestrator: enriched top-N
-    Orchestrator->>Corroboration: corroborate_topN(topN)
-    Corroboration-->>Orchestrator: evidence snippets
-    Orchestrator->>Stats: build_stats_summary(items)
-    Stats-->>Orchestrator: statistical summaries
-    Orchestrator->>Synthesize: build_packet(...)
-    Synthesize-->>Orchestrator: ResearchPacket
-    Orchestrator-->>CLI: ResearchPacket
-    CLI->>User: Markdown summary + HTML report path
+  participant U as User
+  participant C as CLI
+  participant O as Orchestrator
+  participant P as YouTubePipeline
+  participant S as Services
+  participant T as Technologies
+  U->>C: srp research "topic" "purpose"
+  C->>O: ParsedRunResearch
+  O->>P: PipelineState
+  P->>S: execute stages
+  S->>T: adapter calls
+  T-->>S: results or isolated failures
+  S-->>P: stage outputs
+  P-->>O: report
+  O-->>C: JSON-like report dict
+  C-->>U: path or serve command

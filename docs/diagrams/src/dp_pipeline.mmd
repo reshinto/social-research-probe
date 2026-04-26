@@ -1,11 +1,20 @@
-graph LR
-    A["1 · Fetch\nQuery YouTube\nfor N videos"] --> B["2 · Score\nRank by trust /\ntrend / opportunity"]
-    B --> C["3 · Enrich\nTranscripts + LLM\nsummaries for top-N"]
-    C --> D["4 · Analyse\n20+ statistical\nmodels + charts"]
-    D --> E["5 · Synthesise\nCorroborate claims\n+ write report"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  State["PipelineState"] --> Stage1["fetch"] --> Stage2["score"] --> Stage3["analysis group"] --> Stage4["summary"] --> Stage5["report"]
+  Stage1 --> State
+  Stage2 --> State
+  Stage3 --> State
+  Stage4 --> State
+  Stage5 --> State
 
-    style A fill:#e3f2fd,stroke:#1976d2
-    style B fill:#e8f5e9,stroke:#388e3c
-    style C fill:#fff3e0,stroke:#f57c00
-    style D fill:#fce4ec,stroke:#c62828
-    style E fill:#ede7f6,stroke:#512da8
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class State config;
+  class Stage1,Stage2,Stage4 process;
+  class Stage3 analysis;
+  class Stage5 output;

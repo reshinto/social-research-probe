@@ -1,0 +1,28 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Series["numeric target series"] --> Center["center"]
+  Series --> Spread["spread"]
+  Series --> Shape["shape"]
+  Series --> Order["rank order"]
+  Series --> Pair["paired series"]
+
+  Center --> Mean["mean: quick average"]
+  Center --> Median["median: robust middle"]
+  Spread --> Stdev["stdev: volatility"]
+  Spread --> IQR["IQR: middle 50 percent"]
+  Spread --> Range["range: full distance"]
+  Shape --> Outliers["outliers: unusual items"]
+  Shape --> Growth["growth: adjacent change"]
+  Order --> Slope["slope: direction over rank"]
+  Order --> RSquared["R-squared: line fit quality"]
+  Pair --> Pearson["Pearson r: linear relationship"]
+  Pair --> Spearman["Spearman rho: rank relationship"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+
+  class Series input;
+  class Center,Spread,Shape,Order,Pair process;
+  class Mean,Median,Stdev,IQR,Range,Outliers,Growth,Slope,RSquared,Pearson,Spearman analysis;

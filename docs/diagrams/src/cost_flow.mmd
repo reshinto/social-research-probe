@@ -1,27 +1,21 @@
-graph LR
-    Q["srp research"] --> F["Fetch<br/>YouTube API"]
-    F --> S["Score<br/>(CPU)"]
-    S --> C{{"cache hit?"}}
-    C -->|yes| E1["Transcript<br/>from cache"]
-    C -->|no| T["Captions<br/>(yt-dlp)"]
-    T --> TOK{{"captions found?"}}
-    TOK -->|yes| E1
-    TOK -->|no| W["Whisper<br/>(local + ffmpeg)"]
-    W --> E1
-    E1 --> L["LLM<br/>100-word summary<br/>top-N only"]
-    L --> ST["Stats<br/>20+ models (CPU)"]
-    ST --> CH["Charts<br/>matplotlib (CPU)"]
-    CH --> CR{{"corroborate?"}}
-    CR -->|yes| SR["Search API<br/>bounded"]
-    CR -->|no| SY
-    SR --> SY["Synthesis<br/>one LLM call"]
-    SY --> R["Report"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Cache["cache lookup"] --> Hit{"hit?"}
+  Hit -- yes --> Reuse["reuse JSON/string/PNG path"]
+  Hit -- no --> Cheap["local scoring, stats, charts"]
+  Cheap --> Needed{"LLM needed?"}
+  Needed -- no --> Report["report"]
+  Needed -- yes --> TopN["only top-N items"] --> Runner["runner CLI"] --> Store["write cache"] --> Report
 
-    classDef cpu fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
-    classDef llm fill:#fff3e0,stroke:#fb8c00,color:#e65100;
-    classDef cache fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
-    classDef decide fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
-    class F,S,ST,CH,W,T cpu;
-    class L,SR,SY llm;
-    class E1 cache;
-    class C,TOK,CR decide;
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Cache,Store config;
+  class Hit,Needed analysis;
+  class Reuse,Cheap,TopN process;
+  class Runner external;
+  class Report output;
