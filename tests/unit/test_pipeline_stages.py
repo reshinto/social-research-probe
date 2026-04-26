@@ -21,6 +21,9 @@ from social_research_probe.platforms.youtube.pipeline import (
     YouTubeSynthesisStage,
     YouTubeTranscriptStage,
 )
+from social_research_probe.services.analyzing.charts import ChartsService
+from social_research_probe.technologies.charts import selector as selector_mod
+from social_research_probe.technologies.charts.base import ChartResult
 
 _NOW = datetime(2026, 1, 2, tzinfo=UTC)
 
@@ -299,6 +302,37 @@ async def test_charts_stage_carries_chart_caption(monkeypatch):
     out = state.get_stage_output("charts")
     assert out["chart_output"].path == "/tmp/overall_score_bar.png"
     assert out["chart_captions"] == ["Bar chart"]
+
+
+@pytest.mark.asyncio
+async def test_charts_service_writes_to_persistent_charts_dir(monkeypatch, tmp_data_dir):
+    captured = {}
+
+    def fake_select_and_render(data, label="values", output_dir=None):
+        captured["data"] = data
+        captured["label"] = label
+        captured["output_dir"] = output_dir
+        return ChartResult(
+            path=f"{output_dir}/overall_score_bar.png",
+            caption="Bar chart: overall_score (2 items)",
+        )
+
+    monkeypatch.setattr(selector_mod, "select_and_render", fake_select_and_render)
+
+    result = await ChartsService().execute_one(
+        {"scored_items": [{"overall_score": 0.25}, {"overall_score": 0.75}]}
+    )
+
+    chart = result.tech_results[0].output
+    expected_dir = tmp_data_dir / "charts"
+    assert captured == {
+        "data": [0.25, 0.75],
+        "label": "overall_score",
+        "output_dir": str(expected_dir),
+    }
+    assert expected_dir.is_dir()
+    assert chart.path == str(expected_dir / "overall_score_bar.png")
+    assert f"_(see PNG: {chart.path})_" in chart.caption
 
 
 # ---------------------------------------------------------------------------
