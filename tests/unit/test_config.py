@@ -162,12 +162,28 @@ def test_config_load_reads_voicebox_default_profile_name(tmp_data_dir: Path):
 
 def test_config_load_reads_debug_and_service_tables(tmp_data_dir: Path):
     (tmp_data_dir / "config.toml").write_text(
-        "[debug]\ntechnology_logs_enabled = true\n\n[services.report]\naudio_report = false\n",
+        "[debug]\ntechnology_logs_enabled = true\n\n[services.youtube.reporting]\naudio = false\n",
         encoding="utf-8",
     )
     cfg = Config.load(tmp_data_dir)
     assert cfg.debug_enabled("technology_logs_enabled") is True
-    assert cfg.service_enabled("audio_report") is False
+    assert cfg.service_enabled("audio") is False
+
+
+def test_modular_reporting_service_keys_are_used_directly(tmp_data_dir: Path):
+    cfg = Config.load(tmp_data_dir)
+    assert cfg.service_enabled("html") is True
+    assert cfg.service_enabled("audio") is True
+
+
+def test_modular_reporting_service_keys_can_disable_reporting(tmp_data_dir: Path):
+    (tmp_data_dir / "config.toml").write_text(
+        "[services.youtube.reporting]\nhtml = false\naudio = false\n",
+        encoding="utf-8",
+    )
+    cfg = Config.load(tmp_data_dir)
+    assert cfg.service_enabled("html") is False
+    assert cfg.service_enabled("audio") is False
 
 
 def test_service_enabled_returns_false_for_unknown_service(tmp_data_dir: Path):

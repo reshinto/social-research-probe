@@ -38,8 +38,8 @@ _ALL_SERVICE_FLAGS = (
     ("analyze", "statistics"),
     ("analyze", "charts"),
     ("analyze", "chart_takeaways"),
-    ("report", "html_report"),
-    ("report", "audio_report"),
+    ("youtube", "html"),
+    ("youtube", "audio"),
 )
 
 
@@ -53,7 +53,10 @@ def test_each_stage_flag_can_be_disabled_individually(tmp_path, stage):
 @pytest.mark.parametrize(("section", "service"), _ALL_SERVICE_FLAGS)
 def test_each_service_flag_can_be_disabled_individually(tmp_path, section, service):
     cfg = Config.load(tmp_path)
-    cfg.raw["services"][section][service] = False
+    if section == "youtube":
+        cfg.raw["services"]["youtube"]["reporting"][service] = False
+    else:
+        cfg.raw["services"][section][service] = False
     assert cfg.service_enabled(service) is False
 
 
@@ -95,7 +98,7 @@ async def test_media_url_summary_silent_skip_when_service_off(tmp_path, monkeypa
 
 def test_final_report_always_emits_with_html_disabled(tmp_path):
     cfg = Config.load(tmp_path)
-    cfg.raw["services"]["report"]["html_report"] = False
+    cfg.raw["services"]["youtube"]["reporting"]["html"] = False
     packet = {"topic": "x", "platform": "youtube"}
     path = _write_final_report(packet, tmp_path, cfg, allow_html=True)
     assert Path(path).exists()
@@ -105,7 +108,7 @@ def test_final_report_always_emits_with_html_disabled(tmp_path):
 def test_final_report_renders_for_completely_empty_packet(tmp_path):
     """All-off case: a totally empty packet still produces a valid file + path."""
     cfg = Config.load(tmp_path)
-    cfg.raw["services"]["report"]["html_report"] = False
+    cfg.raw["services"]["youtube"]["reporting"]["html"] = False
     path = _write_final_report({}, tmp_path, cfg, allow_html=True)
     contents = Path(path).read_text()
     assert "Report" in contents
@@ -119,7 +122,7 @@ def test_final_report_obeys_allow_html_false(tmp_path):
 
 def test_final_report_disables_audio_report_independently(tmp_path, monkeypatch):
     cfg = Config.load(tmp_path)
-    cfg.raw["services"]["report"]["audio_report"] = False
+    cfg.raw["services"]["youtube"]["reporting"]["audio"] = False
     captured = {}
 
     def fake_write_html_report(packet, data_dir, *, prepare_voicebox_audio=None):

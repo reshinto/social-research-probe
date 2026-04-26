@@ -101,8 +101,8 @@ class AnalyzeServices(TypedDict, total=False):
 
 
 class ReportServices(TypedDict, total=False):
-    html_report: bool
-    audio_report: bool
+    html: bool
+    audio: bool
 
 
 class ServicesConfigSection(TypedDict, total=False):

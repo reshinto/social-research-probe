@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from social_research_probe.services.enriching.summary import SummaryService
@@ -33,4 +35,8 @@ async def test_summary_service_uses_cache_on_second_call(tmp_path, monkeypatch):
 
     assert calls == 1
     assert first.tech_results[0].output == second.tech_results[0].output
-    assert list((tmp_path / "cache" / "summaries").glob("*.json"))
+    cache_files = list((tmp_path / "cache" / "summaries").glob("*.json"))
+    assert cache_files
+    payload = json.loads(cache_files[0].read_text(encoding="utf-8"))
+    assert list(payload.values()) == [first.tech_results[0].output]
+    assert next(iter(payload)).startswith("Summarise this YouTube video")

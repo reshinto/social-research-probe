@@ -21,15 +21,14 @@ def write_final_report(report: dict, *, allow_html: bool) -> str:
     html_on = (
         allow_html
         and stage_flag("report", platform="youtube", default=True)
-        and service_flag("html_report", default=True)
+        and service_flag("html", default=True)
         and "multi" not in report
     )
     if html_on:
         try:
             path = write_html_report(
                 report,
-                data_dir,
-                prepare_voicebox_audio=service_flag("audio_report", default=True),
+                prepare_voicebox_audio=service_flag("audio", default=True),
             )
             uri = path.resolve().as_uri()
             report["html_report_path"] = uri

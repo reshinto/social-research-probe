@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 
 import pytest
-from social_research_probe.utils.core.errors import ValidationError
 
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     _audio_report_enabled,
     _technology_logs_enabled,
 )
+from social_research_probe.utils.core.errors import ValidationError
 
 
 def test_audio_report_enabled_fallback(monkeypatch):
@@ -39,7 +39,7 @@ def test_run_raises_when_html_report_generation_is_disabled(monkeypatch, tmp_pat
             return True
 
         def service_enabled(self, name: str) -> bool:
-            return name != "html_report"
+            return name != "html"
 
         def technology_enabled(self, name: str) -> bool:
             return True

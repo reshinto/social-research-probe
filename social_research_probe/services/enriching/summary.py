@@ -45,7 +45,7 @@ class SummaryService(BaseService):
             summary = get_str(summary_cache(), cache_key)
             if summary is None:
                 summary = await multi_llm_prompt(prompt) or ""
-                set_str(summary_cache(), cache_key, summary)
+                set_str(summary_cache(), cache_key, summary, input_key=prompt)
             tr = TechResult(
                 tech_name="llm_ensemble", input=data, output=summary, success=bool(summary)
             )

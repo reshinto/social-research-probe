@@ -105,18 +105,23 @@ def get_str(cache: FilesystemCache, key: str) -> str | None:
     entry = cache.get(key)
     if not entry:
         return None
-    value = entry.get("v")
-    return value if isinstance(value, str) else None
+    if "v" in entry:
+        value = entry.get("v")
+        return value if isinstance(value, str) else None
+    if len(entry) == 1:
+        value = next(iter(entry.values()))
+        return value if isinstance(value, str) else None
+    return None
 
 
-def set_str(cache: FilesystemCache, key: str, value: str) -> None:
+def set_str(cache: FilesystemCache, key: str, value: str, *, input_key: str | None = None) -> None:
     """Persist a string value; becomes a no-op when caching is disabled.
 
     Empty strings are not cached since callers treat empty as "no result".
     """
     if cache_disabled() or not value:
         return
-    cache.set(key, {"v": value})
+    cache.set(key, {input_key or key: value})
 
 
 def get_json(cache: FilesystemCache, key: str) -> dict | None:

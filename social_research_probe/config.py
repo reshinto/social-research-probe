@@ -110,6 +110,22 @@ DEFAULT_CONFIG: AppConfig = {
 }
 
 
+def _collect_service_names(node: object) -> set[str]:
+    """Return leaf service flag names declared by the current config schema."""
+    if not isinstance(node, dict):
+        return set()
+    names: set[str] = set()
+    for key, value in node.items():
+        if isinstance(value, dict):
+            names.update(_collect_service_names(value))
+        else:
+            names.add(str(key))
+    return names
+
+
+_KNOWN_SERVICE_NAMES = frozenset(_collect_service_names(DEFAULT_CONFIG["services"]))
+
+
 def resolve_data_dir(flag: str | None, cwd: Path | None = None) -> None:
     """Resolve data dir, set SRP_DATA_DIR, and warm the config singleton."""
     if flag:
@@ -246,10 +262,26 @@ class Config:
 
     def service_enabled(self, name: str) -> bool:
         """Return True iff the named service gate is enabled."""
+        if name not in _KNOWN_SERVICE_NAMES:
+            return False
         for category in self.services.values():
             if isinstance(category, dict) and name in category:
                 return bool(category[name])
+            if isinstance(category, dict):
+                value = self._find_service_value(category, name)
+                if value is not None:
+                    return bool(value)
         return False
+
+    def _find_service_value(self, node: dict, name: str) -> object | None:
+        for key, value in node.items():
+            if key == name:
+                return value
+            if isinstance(value, dict):
+                found = self._find_service_value(value, name)
+                if found is not None:
+                    return found
+        return None
 
     def technology_enabled(self, name: str) -> bool:
         """Return True iff the named technology/provider is enabled."""
@@ -280,7 +312,7 @@ class Config:
         return technology is None or self.technology_enabled(technology)
 
 
-_config_cache: dict[Path, "Config"] = {}
+_config_cache: dict[Path, Config] = {}
 
 
 def _active_data_dir() -> Path:
@@ -289,7 +321,7 @@ def _active_data_dir() -> Path:
     return (Path.home() / ".social-research-probe").resolve()
 
 
-def load_active_config(data_dir: Path | None = None) -> "Config":
+def load_active_config(data_dir: Path | None = None) -> Config:
     """Return a cached Config for data_dir (or the active dir from SRP_DATA_DIR)."""
     resolved = data_dir if data_dir is not None else _active_data_dir()
     if resolved not in _config_cache:

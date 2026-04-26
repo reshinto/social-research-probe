@@ -101,8 +101,8 @@ stage while selectively disabling one capability inside it.
 | `services.analyze.statistics` | `true` | Skip statistical analysis. |
 | `services.analyze.charts` | `true` | Skip chart generation. |
 | `services.analyze.chart_takeaways` | `true` | Skip deterministic chart takeaways. |
-| `services.report.html_report` | `true` | Skip HTML report generation. |
-| `services.report.audio_report` | `true` | Skip pre-rendered report audio generation. |
+| `services.youtube.reporting.html` | `true` | Skip HTML report generation. |
+| `services.youtube.reporting.audio` | `true` | Skip pre-rendered report audio generation. |
 
 ### `[technologies]` — implementation/provider gates
 

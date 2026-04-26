@@ -48,8 +48,8 @@ from social_research_probe.render.html import (
 )
 from social_research_probe.render.markdown_to_html import md_to_html
 
-from social_research_probe.commands import Command
 from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands import Command
 
 _SVS = {
     "validated": 1,
@@ -629,7 +629,7 @@ class TestVoiceoverHelpers:
     def test_audio_report_enabled_reads_data_dir_config(self, tmp_data_dir):
         from social_research_probe.config import reset_config_cache
         cfg_path = tmp_data_dir / "config.toml"
-        cfg_path.write_text("[services.report]\naudio_report = false\n", encoding="utf-8")
+        cfg_path.write_text("[services.youtube.reporting]\naudio = false\n", encoding="utf-8")
         reset_config_cache()
         assert _audio_report_enabled() is False
 
@@ -780,7 +780,7 @@ class TestWriteHtmlReport:
     def test_write_html_report_raises_when_html_report_is_disabled(self):
         from social_research_probe.config import reset_config_cache
         (self.data_dir / "config.toml").write_text(
-            "[services.report]\nhtml_report = false\n",
+            "[services.youtube.reporting]\nhtml = false\n",
             encoding="utf-8",
         )
         reset_config_cache()

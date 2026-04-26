@@ -100,7 +100,7 @@ def _render_and_output_html(report: dict, charts_dir: Path | None, out_path: str
         serve_report_command,
     )
 
-    prepared_audio_src = prepared_audio_sources.get(selected_profile_name or "", None)
+    prepared_audio_src = prepared_audio_sources.get(selected_profile_name or "")
     prepared_audio_profile_name = selected_profile_name if prepared_audio_src else None
 
     html_content = render_html(
@@ -139,7 +139,7 @@ def run(
     report = _load_and_validate_report(report_path)
     cfg = load_active_config()
     platform = str(report.get("platform", "youtube"))
-    if out_path and (not cfg.stage_enabled(platform, "report") or not cfg.service_enabled("html_report")):
+    if out_path and (not cfg.stage_enabled(platform, "report") or not cfg.service_enabled("html")):
         raise ValidationError("HTML report generation is disabled by config")
 
     rendered_report = _apply_text_overrides(

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.utils import pipeline_cache
+from social_research_probe.utils.caching import pipeline_cache
 
 
 @pytest.fixture
@@ -19,15 +19,16 @@ def _cache_dir(tmp_path, monkeypatch) -> Path:
 
 def test_factories_use_configured_data_dir(_cache_dir):
     transcript = pipeline_cache.transcript_cache()
-    transcript.set("abc", {"v": "hello"})
+    pipeline_cache.set_str(transcript, "abc", "hello")
     assert (_cache_dir / "transcripts" / "abc.json").exists()
 
 
 def test_factories_use_home_when_data_dir_missing(tmp_path, monkeypatch):
     monkeypatch.delenv("SRP_DATA_DIR", raising=False)
-    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
     cache = pipeline_cache.transcript_cache()
-    cache.set("abc", {"v": "hi"})
+    pipeline_cache.set_str(cache, "abc", "hi")
     assert (tmp_path / ".cache" / "srp" / "transcripts" / "abc.json").exists()
 
 
@@ -54,14 +55,27 @@ def test_set_str_roundtrips_non_empty(_cache_dir):
     assert pipeline_cache.get_str(cache, "k") == "hello"
 
 
+def test_set_str_uses_input_key_when_provided(_cache_dir):
+    cache = pipeline_cache.summary_cache()
+    pipeline_cache.set_str(cache, "hash", "hello", input_key="prompt text")
+    assert cache.get("hash") == {"prompt text": "hello"}
+    assert pipeline_cache.get_str(cache, "hash") == "hello"
+
+
+def test_get_str_reads_legacy_v_field(_cache_dir):
+    cache = pipeline_cache.summary_cache()
+    cache.set("k", {"v": "hello"})
+    assert pipeline_cache.get_str(cache, "k") == "hello"
+
+
 def test_get_str_returns_none_on_missing(_cache_dir):
     cache = pipeline_cache.summary_cache()
     assert pipeline_cache.get_str(cache, "absent") is None
 
 
-def test_get_str_returns_none_when_entry_lacks_v_field(_cache_dir):
+def test_get_str_returns_none_when_entry_lacks_string_value(_cache_dir):
     cache = pipeline_cache.summary_cache()
-    cache.set("k", {"other": "field"})
+    cache.set("k", {"other": 1})
     assert pipeline_cache.get_str(cache, "k") is None
 
 
@@ -118,5 +132,5 @@ def test_cache_disabled_honors_truthy_values(_cache_dir, monkeypatch):
 
 def test_whisper_cache_writes_under_whisper_dir(_cache_dir):
     cache = pipeline_cache.whisper_cache()
-    cache.set("v1", {"v": "text"})
+    pipeline_cache.set_str(cache, "v1", "text")
     assert (_cache_dir / "whisper" / "v1.json").exists()
