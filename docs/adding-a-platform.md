@@ -78,7 +78,7 @@ import social_research_probe.platforms.tiktok.adapter
 
 ### Step 3 — Implement the adapter
 
-Copy the structure of [`platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py) and adapt. Minimal skeleton:
+Copy the structure of [`platforms/youtube/adapter.py`](../social_research_probe/services/sourcing/youtube.py) and adapt. Minimal skeleton:
 
 ```python
 from __future__ import annotations
@@ -173,7 +173,7 @@ srp config set platforms.tiktok.max_items 100
 
 ### Step 5 — Add a secret (if the API needs a key)
 
-The secret store is shared across all platforms. Follow the pattern from [`platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py)'s `_api_key` method:
+The secret store is shared across all platforms. Follow the pattern from [`platforms/youtube/adapter.py`](../social_research_probe/services/sourcing/youtube.py)'s `_api_key` method:
 
 ```python
 def _api_key(self) -> str:
@@ -237,9 +237,9 @@ srp config set platforms.tiktok.max_items 50
 
 Once the adapter returns `RawItem` and `SignalSet` objects, the rest of the pipeline is fully generic:
 
-- **Scoring** — the trust/trend/opportunity formulas in [`scoring/`](../social_research_probe/scoring/) run against `SignalSet` directly.
-- **Statistics** — all 20 statistical models in [`stats/`](../social_research_probe/stats/) work on any numeric feature set; no platform-specific code needed.
-- **Charts** — the 10 chart renderers in [`viz/`](../social_research_probe/viz/) consume score-and-feature data, not platform data.
+- **Scoring** — the trust/trend/opportunity formulas in [`scoring/`](../social_research_probe/services/scoring/) run against `SignalSet` directly.
+- **Statistics** — all 20 statistical models in [`stats/`](../social_research_probe/technologies/statistics/) work on any numeric feature set; no platform-specific code needed.
+- **Charts** — the 10 chart renderers in [`viz/`](../social_research_probe/technologies/charts/) consume score-and-feature data, not platform data.
 - **Corroboration** — claim extraction runs on `item.text_excerpt` plus your optional `fetch_text_for_claim_extraction` override.
 - **Report generation** — the HTML/Markdown renderers (`render/`, `synthesize/`) consume the packet and do not look at the platform name.
 
@@ -263,7 +263,7 @@ You only own fetching and normalisation. Everything downstream is already platfo
 
 ## Reference implementation
 
-Every method above is demonstrated in [`social_research_probe/platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py). Read it top-to-bottom before writing your own — it handles duration parsing, shorts filtering, concurrent hydration via `asyncio.to_thread` + `asyncio.gather`, and graceful error paths. Your adapter does not need to be as complete as YouTube's, but that file is the canonical blueprint.
+Every method above is demonstrated in [`social_research_probe/services/sourcing/youtube.py`](../social_research_probe/services/sourcing/youtube.py). Read it top-to-bottom before writing your own — it handles duration parsing, shorts filtering, concurrent hydration via `asyncio.to_thread` + `asyncio.gather`, and graceful error paths. Your adapter does not need to be as complete as YouTube's, but that file is the canonical blueprint.
 
 ---
 

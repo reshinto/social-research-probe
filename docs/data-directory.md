@@ -121,7 +121,7 @@ Cache lookups can be bypassed with `SRP_DISABLE_CACHE=1`.
 | Aspect | Value |
 | --- | --- |
 | **What** | Generated HTML research reports, one per run. |
-| **When written** | [render/html.py](../social_research_probe/render/html.py) `write_html_report`. |
+| **When written** | [render/html.py](../social_research_probe/services/reporting/html.py) `write_html_report`. |
 | **Where read** | User browser. |
 | **Who writes** | The render step. |
 | **Why** | The user-facing deliverable. |
@@ -138,7 +138,7 @@ Cache keys are deterministic `SHA-256` hashes of:
 
 This lets cache hits survive minor orchestration changes as long as the
 semantic inputs are unchanged. TTLs are defined per sub-cache in
-[utils/pipeline_cache.py](../social_research_probe/utils/pipeline_cache.py).
+[utils/pipeline_cache.py](../social_research_probe/utils/caching/pipeline_cache.py).
 
 ## `SRP_DATA_DIR` override
 

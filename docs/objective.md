@@ -52,7 +52,7 @@ Breaking changes may ship until v1.0. Pin a version in production.
 
 ![Supported today vs planned platforms/backends](diagrams/roadmap.svg)
 
-Today `srp` supports **one platform (YouTube), four LLM runners (claude, gemini, codex, local), and four corroboration backends (llm_search, tavily, brave, exa)**. The extension points ([platforms/base.py](../social_research_probe/platforms/base.py), [llm/registry.py](../social_research_probe/llm/registry.py), [corroboration/registry.py](../social_research_probe/corroboration/registry.py)) are designed so adding any of the below is a matter of implementing one interface and registering it.
+Today `srp` supports **one platform (YouTube), four LLM runners (claude, gemini, codex, local), and four corroboration backends (llm_search, tavily, brave, exa)**. The extension points ([platforms/base.py](../social_research_probe/platforms/base.py), [llm/registry.py](../social_research_probe/services/llm/registry.py), [corroboration/registry.py](../social_research_probe/services/corroborating/registry.py)) are designed so adding any of the below is a matter of implementing one interface and registering it.
 
 Planned platforms:
 

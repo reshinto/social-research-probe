@@ -121,7 +121,7 @@ The highest-scoring videos get more information fetched. This is the only stage 
 srp config set platforms.youtube.enrich_top_n 10   # enrich the top 10 instead of 5 (default)
 ```
 
-Implementation: see [social_research_probe/pipeline/orchestrator.py](../social_research_probe/pipeline/orchestrator.py) — the line `top_n = all_scored[:enrich_top_n]` reads this config value. The packet field is named `items_top_n`, and its size tracks whatever `enrich_top_n` is set to.
+Implementation: see [social_research_probe/platforms/orchestrator.py](../social_research_probe/platforms/orchestrator.py) — the line `top_n = all_scored[:enrich_top_n]` reads this config value. The packet field is named `items_top_n`, and its size tracks whatever `enrich_top_n` is set to.
 
 **Why this setting matters:** raising `enrich_top_n` is the biggest way to make a run longer and more expensive. Each enriched item triggers:
 - One caption download (fast) or one Whisper audio transcription (slow, CPU-intensive)
@@ -303,7 +303,7 @@ so their quality matters. `srp` protects it two ways:
 
 1. **Redesigned prompt** — explicit anti-hallucination clause, filler
    blocklist, one-shot exemplar, and sentence-boundary truncation
-   ([pipeline/enrichment.py](../social_research_probe/pipeline/enrichment.py)
+   ([pipeline/enrichment.py](../social_research_probe/services/enriching/summary.py)
    `_build_summary_prompt`).
 2. **Nightly reliability harness** — multi-sample runs with an
    independent judge runner enforce both a mean-coverage floor and a

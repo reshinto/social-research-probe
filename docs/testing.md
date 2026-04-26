@@ -196,7 +196,7 @@ full 100% gate runs against `pytest -q` or `pytest tests/unit tests/contract`.
 > If you want the gate, run `pytest -q`. If you want fast feedback on
 > value-tier assertions while iterating, use `make test-evidence`.
 
-See [`tests/unit/evidence/MUTATION_REPORT.md`](../tests/unit/evidence/MUTATION_REPORT.md)
+See [`tests/unit/test_micro2.py`](../tests/unit/test_micro2.py)
 for the register of documented drift drills (deliberate one-line
 mutations paired with the evidence test each one should fail), plus the
 recommended `mutmut` command for the nightly mutation run against the

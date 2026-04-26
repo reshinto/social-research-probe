@@ -16,12 +16,12 @@ A typical run (top-N of 50 items, corroboration enabled, runner configured):
 | Stage | Mechanism | Per-run LLM tokens | CPU cost |
 |---|---|---|---|
 | Fetch | YouTube Data API v3 | 0 | low |
-| Score (trust / trend / opportunity) | [`scoring/`](../social_research_probe/scoring/) — pure Python | 0 | low |
+| Score (trust / trend / opportunity) | [`scoring/`](../social_research_probe/services/scoring/) — pure Python | 0 | low |
 | Transcript — captions | `youtube-transcript-api` / `yt-dlp` | 0 | low |
-| Transcript — Whisper fallback | [`platforms/youtube/whisper_transcript.py`](../social_research_probe/platforms/youtube/whisper_transcript.py) — local inference | 0 | high (one-off per video, cached 30 days) |
+| Transcript — Whisper fallback | [`platforms/youtube/whisper_transcript.py`](../social_research_probe/technologies/transcript_fetch/whisper.py) — local inference | 0 | high (one-off per video, cached 30 days) |
 | Enrichment — 100-word summary | LLM runner | ~1–3 KB × 5 items | negligible |
-| Stats (20+ models) | [`stats/`](../social_research_probe/stats/) — scipy + stdlib | 0 | medium |
-| Charts (10 types) | [`viz/`](../social_research_probe/viz/) — matplotlib | 0 | low |
+| Stats (20+ models) | [`stats/`](../social_research_probe/technologies/statistics/) — scipy + stdlib | 0 | medium |
+| Charts (10 types) | [`viz/`](../social_research_probe/technologies/charts/) — matplotlib | 0 | low |
 | Corroboration | search-API call per top item | 0 on `none`, bounded on host | low |
 | Report synthesis | LLM runner, single call | ~2–5 KB | negligible |
 
@@ -35,7 +35,7 @@ Translation: LLM usage is **bounded by top-N items** (default 5), not by the 50+
 
 Only the top N scored items are enriched (transcript + summary) and corroborated. Everything below the cutoff is scored, charted, and counted — but costs nothing extra.
 
-Code: [`pipeline/orchestrator.py`](../social_research_probe/pipeline/orchestrator.py) — `enrich_top_n = int(platform_config.get("enrich_top_n", 5))`.
+Code: [`pipeline/orchestrator.py`](../social_research_probe/platforms/orchestrator.py) — `enrich_top_n = int(platform_config.get("enrich_top_n", 5))`.
 
 Tune it via `config.toml`:
 
@@ -54,13 +54,13 @@ Transcript enrichment tries free sources first:
 2. `yt-dlp --write-auto-sub` (free, community-maintained).
 3. Whisper, **only if both fail** (local inference — no cloud cost, but takes seconds to minutes per video).
 
-Code: [`pipeline/enrichment.py`](../social_research_probe/pipeline/enrichment.py) — `_fetch_transcript_with_fallback`.
+Code: [`pipeline/enrichment.py`](../social_research_probe/services/enriching/summary.py) — `_fetch_transcript_with_fallback`.
 
 The Whisper path uses `yt-dlp` to download only the audio track, then feeds it to OpenAI Whisper for transcription. **Whisper decodes that audio via `ffmpeg`**, so `ffmpeg` must be on `$PATH`. The whole chain runs on your machine — no audio is uploaded anywhere. Output is cached for 30 days so the same video is never transcribed twice.
 
 ### 3. Aggressive caching with real TTLs
 
-[`utils/pipeline_cache.py`](../social_research_probe/utils/pipeline_cache.py) pins TTLs so expensive work is deduplicated across runs:
+[`utils/pipeline_cache.py`](../social_research_probe/utils/caching/pipeline_cache.py) pins TTLs so expensive work is deduplicated across runs:
 
 | Artifact | TTL | Rationale |
 |---|---|---|
@@ -81,11 +81,11 @@ If you added one LLM call per chart or per statistic, a single report would run 
 
 Every optional integration (corroboration backend, LLM runner, Whisper) can fail without aborting the run. The failure is logged into the report's warnings section; the rest of the pipeline continues. This avoids the "retry storm" pattern where a rate-limit or transient outage fans out into repeated LLM calls.
 
-Code: [`synthesize/warnings.py`](../social_research_probe/synthesize/warnings.py) + the `try/except` guards in [`pipeline/orchestrator.py`](../social_research_probe/pipeline/orchestrator.py).
+Code: [`synthesize/warnings.py`](../social_research_probe/services/synthesizing/warnings.py) + the `try/except` guards in [`pipeline/orchestrator.py`](../social_research_probe/platforms/orchestrator.py).
 
 ### 6. Ensemble returns first success
 
-When multiple LLM runners are configured, [`llm/ensemble.py`](../social_research_probe/llm/ensemble.py) fans them out concurrently via `asyncio.gather(..., return_exceptions=True)` and returns as soon as one succeeds. The winner is "whichever worked first," which in practice is **the cheapest configured runner that is healthy right now**.
+When multiple LLM runners are configured, [`llm/ensemble.py`](../social_research_probe/services/llm/ensemble.py) fans them out concurrently via `asyncio.gather(..., return_exceptions=True)` and returns as soon as one succeeds. The winner is "whichever worked first," which in practice is **the cheapest configured runner that is healthy right now**.
 
 This means you can list Gemini (free) first, Claude second, and only pay for Claude when Gemini rate-limits you.
 
@@ -138,7 +138,7 @@ max_items = 10
 enrich_top_n = 3
 ```
 
-[`utils/fast_mode.py`](../social_research_probe/utils/fast_mode.py) clamps the top-N and narrows the backend list.
+[`utils/fast_mode.py`](../social_research_probe/utils/display/fast_mode.py) clamps the top-N and narrows the backend list.
 
 ### Fully offline
 

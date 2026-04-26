@@ -42,14 +42,14 @@ def _extract_drafts(result: dict) -> list[dict]:
 
 
 def run(args: argparse.Namespace) -> int:
-    from social_research_probe.commands import show_purposes, stage_suggestions
+    from social_research_probe.commands import add_pending_suggestions, list_purposes
     from social_research_probe.utils.display.cli_output import emit
 
     runner = _validate_llm_runner()
-    existing = list(show_purposes().keys())
+    existing = list(list_purposes().keys())
     prompt = _build_prompt(existing, args.count)
     result = _call_llm(prompt, runner)
     drafts = _extract_drafts(result)
-    stage_suggestions(topic_candidates=[], purpose_candidates=drafts)
+    add_pending_suggestions(topic_candidates=[], purpose_candidates=drafts)
     emit({"staged_purpose_suggestions": drafts}, args.output)
     return ExitCode.SUCCESS

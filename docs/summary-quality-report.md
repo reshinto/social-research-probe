@@ -64,7 +64,7 @@ surfaced five recurring patterns:
 
 ## Changes shipped
 
-### Prompt redesign — [pipeline/enrichment.py](../social_research_probe/pipeline/enrichment.py) `_build_summary_prompt`
+### Prompt redesign — [pipeline/enrichment.py](../social_research_probe/services/enriching/summary.py) `_build_summary_prompt`
 
 The new prompt is structured rather than conversational:
 
@@ -152,7 +152,7 @@ reliability report for live data.
 
 Two complementary guards:
 
-- **Deterministic CI** — [tests/unit/evidence/test_summary_quality.py](../tests/unit/evidence/test_summary_quality.py)
+- **Deterministic CI** — [tests/unit/test_services_llm.py](../tests/unit/test_services_llm.py)
   verifies prompt structure, truncation behaviour, and coverage/hallucination
   scoring logic using canned runner responses. Runs on every commit.
 - **Nightly real-LLM eval** — `make eval-summary-quality` runs the

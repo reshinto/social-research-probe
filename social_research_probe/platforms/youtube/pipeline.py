@@ -27,9 +27,12 @@ class YouTubeFetchStage(BaseStage):
         return topic
 
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
-        from social_research_probe.services.sourcing.youtube import YouTubeConnector
+        from importlib import import_module
 
-        connector = YouTubeConnector(config)
+        from social_research_probe.platforms.registry import get_client
+
+        import_module("social_research_probe.services.sourcing.youtube")
+        connector = get_client("youtube", config)
         raw = await asyncio.to_thread(
             connector.find_by_topic, search_topic, connector.default_limits
         )
@@ -139,7 +142,7 @@ class YouTubeSummaryStage(BaseStage):
     @staticmethod
     def _merge_summaries(top_n: list, results: list) -> list:
         return [
-            {**item, "summary": s}
+            {**item, "summary": s, "one_line_takeaway": s}
             if (s := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
             else dict(item)
             for item, r in zip(top_n, results, strict=True)

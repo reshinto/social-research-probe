@@ -9,7 +9,7 @@ This guide walks you through installing `srp`, storing your API keys, choosing a
 ## Requirements
 
 - **Python 3.11+**
-- **ffmpeg** on `$PATH` — required only for the Whisper transcript fallback. When a video has no captions (roughly 5–10% of the time), [`platforms/youtube/whisper_transcript.py`](../social_research_probe/platforms/youtube/whisper_transcript.py) uses `yt-dlp` to download the audio track and hands it to OpenAI Whisper for on-device transcription. **Whisper decodes audio through `ffmpeg`** — if `ffmpeg` is not installed, Whisper fails and the pipeline falls back to the video description. Install with `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux). No cloud service is contacted for this step; audio and transcript stay on your machine.
+- **ffmpeg** on `$PATH` — required only for the Whisper transcript fallback. When a video has no captions (roughly 5–10% of the time), [`platforms/youtube/whisper_transcript.py`](../social_research_probe/technologies/transcript_fetch/whisper.py) uses `yt-dlp` to download the audio track and hands it to OpenAI Whisper for on-device transcription. **Whisper decodes audio through `ffmpeg`** — if `ffmpeg` is not installed, Whisper fails and the pipeline falls back to the video description. Install with `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux). No cloud service is contacted for this step; audio and transcript stay on your machine.
 
 ---
 

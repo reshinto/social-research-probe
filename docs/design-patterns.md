@@ -43,7 +43,7 @@ class PlatformAdapter(ABC):
     @abstractmethod
     def health_check(self) -> bool: ...
 
-# social_research_probe/platforms/youtube/adapter.py
+# social_research_probe/services/sourcing/youtube.py
 @register
 class YouTubeAdapter(PlatformAdapter):
     name = "youtube"
@@ -82,7 +82,7 @@ Registries hide which implementations are available — you can't see them by re
 ### In code
 
 ```python
-# social_research_probe/llm/registry.py
+# social_research_probe/services/llm/registry.py
 _REGISTRY: dict[str, type[LLMRunner]] = {}
 
 def register(cls: type[LLMRunner]) -> type[LLMRunner]:
@@ -102,7 +102,7 @@ class GeminiRunner(LLMRunner):
     ...
 ```
 
-The same pattern is used by [`platforms/registry.py`](../social_research_probe/platforms/registry.py), [`corroboration/registry.py`](../social_research_probe/corroboration/registry.py), and [`purposes/registry.py`](../social_research_probe/purposes/registry.py).
+The same pattern is used by [`platforms/registry.py`](../social_research_probe/platforms/registry.py), [`corroboration/registry.py`](../social_research_probe/services/corroborating/registry.py), and [`purposes/registry.py`](../social_research_probe/utils/purposes/registry.py).
 
 ![Registry pattern diagram](diagrams/dp_registry.svg)
 
@@ -134,7 +134,7 @@ Strategy selection adds a runtime dispatch step and makes it harder to trace "wh
 ### In code
 
 ```python
-# social_research_probe/pipeline/orchestrator.py — simplified
+# social_research_probe/platforms/orchestrator.py — simplified
 def _available_backends(config: Config) -> list[CorroborationBackend]:
     choice = config.corroboration_backend
     if choice == "none":
@@ -175,7 +175,7 @@ The fixed sequence is inflexible. If a future use case needs to run corroboratio
 ### In code
 
 ```python
-# social_research_probe/pipeline/orchestrator.py — stage chain
+# social_research_probe/platforms/orchestrator.py — stage chain
 async def run_research(cmd: ParsedRunResearch, config: Config) -> ResearchPacket:
     adapter = get_adapter(cmd.platform, config)
     raw     = adapter.search(cmd.topic, adapter.default_limits)
@@ -317,7 +317,7 @@ The env-based seam is invisible in the code — there is no import statement to 
 ### In code
 
 ```python
-# social_research_probe/pipeline/orchestrator.py
+# social_research_probe/platforms/orchestrator.py
 def _maybe_register_fake() -> None:
     if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") == "1":
         from tests.fixtures.fake_youtube import FakeYouTubeAdapter
@@ -358,7 +358,7 @@ Soft failures can hide configuration problems. An operator who has not set up co
 ### In code
 
 ```python
-# social_research_probe/pipeline/orchestrator.py — corroboration step
+# social_research_probe/platforms/orchestrator.py — corroboration step
 async def _corroborate_top_n(items, backends, warnings):
     for backend in backends:
         try:

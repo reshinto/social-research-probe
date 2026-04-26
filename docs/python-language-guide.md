@@ -96,7 +96,7 @@ LLM runners follow the same ABC pattern in `social_research_probe/llm/base.py`.
 
 **Why it matters for I/O-bound work:** When your code calls a network API, the CPU sits idle waiting for the response. With `async/await`, Python can switch to running other code during that wait. This is why the pipeline can fetch transcripts, call LLM CLIs, and run corroboration checks concurrently.
 
-**How to read async code — `social_research_probe/llm/ensemble.py`:**
+**How to read async code — `social_research_probe/services/llm/ensemble.py`:**
 
 ```python
 async def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
@@ -123,7 +123,7 @@ async def _run_provider(name: str, prompt: str, task: str = "generating response
 
 **What it is:** A function that runs multiple coroutines at the same time and collects all their results.
 
-**The fan-out pattern — `social_research_probe/llm/ensemble.py`:**
+**The fan-out pattern — `social_research_probe/services/llm/ensemble.py`:**
 
 ```python
 results = await asyncio.gather(
@@ -136,7 +136,7 @@ This launches all `_run_provider` calls concurrently. If there are three provide
 
 **`return_exceptions=True`:** Normally, if one coroutine raises, `gather` cancels the rest and re-raises immediately. With `return_exceptions=True`, exceptions are returned as values in the result list instead of propagating — so one failing LLM call does not prevent the others from finishing.
 
-**Another use — `social_research_probe/pipeline/enrichment.py`:**
+**Another use — `social_research_probe/services/enriching/summary.py`:**
 
 ```python
 await asyncio.gather(
@@ -185,7 +185,7 @@ Without deferred annotations, this self-referential type alias would require wor
 | `Optional[str]` | Same as `str \| None` (older style from `typing`) |
 | `float \| None` | A float or None — common for computed fields that may be absent |
 
-**Examples — `social_research_probe/stats/correlation.py`:**
+**Examples — `social_research_probe/technologies/statistics/correlation.py`:**
 
 ```python
 def run(
@@ -252,7 +252,7 @@ def log(msg: str) -> None:
     print(msg, file=sys.stderr)
 ```
 
-Called throughout the codebase like this (`social_research_probe/llm/ensemble.py`):
+Called throughout the codebase like this (`social_research_probe/services/llm/ensemble.py`):
 
 ```python
 log(f"[srp] LLM ({name}): {task}")
@@ -260,7 +260,7 @@ log(f"[srp] LLM ({name}): {task}")
 
 The `{name}` and `{task}` are replaced by the values of those variables at the time the string is created. No string concatenation or `.format()` calls needed.
 
-**Format specifiers — `social_research_probe/stats/descriptive.py`:**
+**Format specifiers — `social_research_probe/technologies/statistics/descriptive.py`:**
 
 ```python
 caption=f"Mean {label}: {mean_val:,.4g}"
@@ -434,7 +434,7 @@ Third-party libraries (e.g. `import rapidfuzz`) would appear between the standar
 
 **Why it is needed:** Without `__init__.py`, Python (in most configurations) will not treat the directory as a package, and `from social_research_probe.stats import descriptive` will fail.
 
-**Minimal `__init__.py` — `social_research_probe/stats/__init__.py`:**
+**Minimal `__init__.py` — `social_research_probe/technologies/statistics/__init__.py`:**
 
 ```python
 """Statistical analysis package for social-media signal data."""

@@ -208,8 +208,8 @@ Today's registered surface:
 | Registry | File | Registered entries |
 |---|---|---|
 | Platforms | [`platforms/registry.py`](../social_research_probe/platforms/registry.py) | `youtube` |
-| LLM runners | [`llm/registry.py`](../social_research_probe/llm/registry.py) | `claude`, `gemini`, `codex`, `local` |
-| Corroboration backends | [`corroboration/registry.py`](../social_research_probe/corroboration/registry.py) | `llm_search`, `tavily`, `brave`, `exa` |
+| LLM runners | [`llm/registry.py`](../social_research_probe/services/llm/registry.py) | `claude`, `gemini`, `codex`, `local` |
+| Corroboration backends | [`corroboration/registry.py`](../social_research_probe/services/corroborating/registry.py) | `llm_search`, `tavily`, `brave`, `exa` |
 
 None of these runners or backends are bundled — they are thin CLI wrappers. Operators install the matching CLI on their own machine and authenticate it themselves.
 

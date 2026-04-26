@@ -10,7 +10,7 @@ from social_research_probe.utils.core.exit_codes import ExitCode
 
 
 def run(args: argparse.Namespace) -> int:
-    from social_research_probe.commands import stage_suggestions
+    from social_research_probe.commands import add_pending_suggestions
     from social_research_probe.utils.core.errors import ValidationError
     from social_research_probe.utils.display.cli_output import emit
 
@@ -20,7 +20,7 @@ def run(args: argparse.Namespace) -> int:
         payload = json.loads(sys.stdin.read())
     except json.JSONDecodeError as exc:
         raise ValidationError(f"invalid JSON from stdin: {exc}") from exc
-    stage_suggestions(
+    add_pending_suggestions(
         topic_candidates=payload.get("topic_candidates", []),
         purpose_candidates=payload.get("purpose_candidates", []),
     )

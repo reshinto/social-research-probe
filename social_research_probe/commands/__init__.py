@@ -115,7 +115,7 @@ def _save_topics(data: dict) -> None:
     atomic_write_json(data_dir / _TOPICS_FILENAME, data)
 
 
-def show_topics() -> list[str]:
+def list_topics() -> list[str]:
     """Return the current list of topics from state."""
     return list(_load_topics()["topics"])
 
@@ -183,7 +183,7 @@ def rename_topic(old: str, new: str) -> None:
     _save_topics(data)
 
 
-def show_purposes() -> dict:
+def list_purposes() -> dict:
     """Return the current purposes registry as a plain dict."""
     from social_research_probe.utils.purposes import registry
 
@@ -342,15 +342,15 @@ def _stage_purpose_suggestions(
         next_id += 1
 
 
-def stage_suggestions(
+def add_pending_suggestions(
     *,
     topic_candidates: list[TopicSuggestionCandidate],
     purpose_candidates: list[PurposeSuggestionCandidate],
 ) -> PendingSuggestionsState:
     """Stage topic and purpose candidates into pending_suggestions.json."""
     pending = load_pending()
-    existing_topics = show_topics()
-    existing_purposes = list(show_purposes().keys())
+    existing_topics = list_topics()
+    existing_purposes = list(list_purposes().keys())
 
     _stage_topic_suggestions(pending, topic_candidates, existing_topics)
     _stage_purpose_suggestions(pending, purpose_candidates, existing_purposes)
@@ -366,8 +366,11 @@ __all__ = [
     "PendingEntry",
     "ResearchCommand",
     "SpecialCommand",
+    "add_pending_suggestions",
     "add_purpose",
     "add_topics",
+    "list_purposes",
+    "list_topics",
     "load_pending",
     "remove_purposes",
     "remove_topics",
@@ -375,7 +378,4 @@ __all__ = [
     "rename_topic",
     "save_pending",
     "select_pending",
-    "show_purposes",
-    "show_topics",
-    "stage_suggestions",
 ]

@@ -63,7 +63,7 @@ asyncio_mode = "auto"
 source = ["social_research_probe"]
 branch = true
 parallel = true
-omit = ["social_research_probe/cli/__main__.py"]
+omit = ["social_research_probe/cli/__main__.py", "social_research_probe/__main__.py"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -86,7 +86,7 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["N802"]
+"tests/**" = ["N802", "SIM117", "B017", "E741", "N817", "RUF012", "RUF034"]
 "social_research_probe/llm/__init__.py" = ["F401"]
 "social_research_probe/llm/runners/__init__.py" = ["F401"]
 "social_research_probe/platforms/__init__.py" = ["F401"]

@@ -87,11 +87,11 @@ output_path = None
 i = 0
 while i < len(args) and args[i].startswith("--"):
     flag = args[i]
-    if flag in (CodexCliFlag.OUTPUT_LAST_MESSAGE, CodexCliFlag.OUTPUT_SCHEMA):
+    if flag in ("--output-last-message", "--output-schema"):
         if i + 1 >= len(args):
             sys.stderr.write(f"missing value for {{flag}}\\n")
             sys.exit(2)
-        if flag == CodexCliFlag.OUTPUT_LAST_MESSAGE:
+        if flag == "--output-last-message":
             output_path = Path(args[i + 1])
         i += 2
         continue

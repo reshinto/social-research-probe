@@ -8,13 +8,14 @@ from social_research_probe.utils.core.exit_codes import ExitCode
 
 
 def run(args: argparse.Namespace) -> int:
+    from social_research_probe.cli.dsl import parse_topic_values
     from social_research_probe.commands import add_topics, remove_topics, rename_topic
     from social_research_probe.utils.display.cli_output import emit
 
     if args.add:
-        add_topics(args.add, force=args.force)
+        add_topics(parse_topic_values(args.add), force=args.force)
     elif args.remove:
-        remove_topics(args.remove)
+        remove_topics(parse_topic_values(args.remove))
     else:
         old, new = args.rename
         rename_topic(old, new)
