@@ -4,6 +4,14 @@
 
 This page explains the system from the problem it solves down to the runtime pipeline, module boundaries, and tradeoffs that shape the implementation.
 
+![Architecture tree](images/architecture/architecture-tree.svg)
+
+The diagram above is a top-down system tree. The person shape is the human
+researcher. The document shape is command handling. The cloud shape is external
+platform sources. The database cylinder is the local data directory. Rounded
+process boxes represent pipeline and service work. This keeps the hierarchy
+clear while making each kind of component visually distinct.
+
 ## Requirements
 
 Functional requirements:

@@ -12,7 +12,7 @@ by the pipeline for summarization and any other unstructured LLM tasks.
 Supported CLIs (must be installed and authenticated separately):
   - Claude Code CLI: ``claude -p "<prompt>"``
   - Gemini CLI:      ``gemini -p "<prompt>"``
-  - Codex CLI:       ``codex "<prompt>"``
+  - Codex CLI:       ``codex exec "<prompt>"``
 """
 
 from __future__ import annotations

@@ -36,7 +36,7 @@ _KEY_PROMPTS: list[tuple[str, str, str]] = [
     ),
     (
         "brave_api_key",
-        "Brave Search API key (corroboration — paid, no free tier)",
+        "Brave Search API key (corroboration — free credits, paid usage above allowance)",
         "https://brave.com/search/api/",
     ),
     (
@@ -70,7 +70,7 @@ _RUNNER_CHOICES: list[tuple[str, str, str]] = [
         "https://github.com/openai/codex",
     ),
     ("local", "Local model via SRP_LOCAL_LLM_BIN env var", ""),
-    ("none", "No LLM — skip all AI features", ""),
+    ("none", "No LLM — skip generated summaries, synthesis, and runner-backed search", ""),
 ]
 
 
@@ -201,7 +201,7 @@ def _deep_merge_missing(
 
 def _get_runner_choice(*, _input: object = input) -> str | None:
     """Prompt for runner choice, validate input, return chosen name or None."""
-    print("\nDefault LLM runner — choose which AI backend srp should use:")
+    print("\nDefault LLM runner — choose which AI runner srp should use:")
     for i, (name, description, url) in enumerate(_RUNNER_CHOICES, start=1):
         print(f"  {i}. {name:8}  {description}")
         if url:

@@ -31,10 +31,10 @@ DEFAULT_CONFIG: AppConfig = {
     "llm": {
         "runner": "none",
         "timeout_seconds": 60,
-        "claude": {"model": "sonnet", "extra_flags": []},
-        "gemini": {"model": "gemini-2.5-pro", "extra_flags": []},
-        "codex": {"binary": "codex", "model": "gpt-4o", "extra_flags": []},
-        "local": {"binary": "ollama", "model": "llama3.1:8b", "extra_flags": []},
+        "claude": {"extra_flags": []},
+        "gemini": {"extra_flags": []},
+        "codex": {"binary": "codex", "extra_flags": []},
+        "local": {},
     },
     "corroboration": {
         "provider": "auto",

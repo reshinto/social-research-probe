@@ -264,7 +264,7 @@ def _write_config_to_file(config: JSONObject, path: Path) -> None:
 
 
 def write_config_value(dotted_key: str, value: str) -> None:
-    """Write one config value, supporting nested dotted keys like llm.codex.model."""
+    """Write one config value, supporting nested dotted keys like llm.codex.binary."""
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir

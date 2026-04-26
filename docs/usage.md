@@ -24,6 +24,11 @@ Think of a research command as three decisions:
 
 The current default platform is YouTube because it is the first implemented adapter. The command shape includes a platform position so future adapters can use the same workflow.
 
+Claude Code uses the same command arguments through the `/srp` skill prefix.
+For example, `srp research "model collapse" "latest-news"` becomes
+`/srp research "model collapse" "latest-news"`. See [Commands](commands.md) for
+the side-by-side terminal and Claude Code forms.
+
 Useful flags:
 
 | Flag | Effect |
@@ -34,32 +39,22 @@ Useful flags:
 | `--data-dir PATH` | Use a specific data directory for config, cache, and outputs. |
 | `--verbose` | Show more runtime output. |
 
-Topic and purpose state is local JSON:
-
-```bash
-srp show-topics
-srp update-topics --add "AI safety"
-srp show-purposes
-srp update-purposes --add 'latest-news=Find recent reporting and claims'
-```
+Topic and purpose state is local JSON. Use topics when you want reusable subject
+names, and use purposes when you want reusable research lenses. The exact
+commands are listed in [Commands](commands.md).
 
 The suggestion workflow stages generated ideas before applying them:
 
-```bash
-srp suggest-topics --count 5
-srp show-pending
-srp apply-pending --topics all --purposes all
-srp discard-pending --topics all --purposes all
-```
+1. generate topic or purpose suggestions.
+2. inspect pending suggestions.
+3. apply the ones you want or discard the rest.
 
-Reports can be rebuilt or served:
+This avoids letting generated ideas silently modify saved research state.
 
-```bash
-srp report --packet packet.json --out report.html
-srp serve-report --report ~/.social-research-probe/reports/example.html
-```
-
-Use `report` when you already have a saved packet and want to regenerate HTML after changing authoring sections or report formatting. Use `serve-report` when you want to inspect an HTML report in a browser without moving files around.
+Reports can also be rebuilt or served. Use `report` when you already have a
+saved packet and want to regenerate HTML after changing authoring sections or
+report formatting. Use `serve-report` when you want to inspect an HTML report in
+a browser without moving files around.
 
 ## Reading a run
 

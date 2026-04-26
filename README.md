@@ -61,7 +61,10 @@ Start with [docs/README.md](docs/README.md). Key pages:
 | [Design patterns](docs/design-patterns.md) | Patterns used in the codebase with examples. |
 | [Usage](docs/usage.md) | Day-to-day CLI workflows. |
 | [Configuration](docs/configuration.md) | Config, secrets, gates, and data directory behavior. |
-| [Commands](docs/commands.md) | Full command surface. |
+| [API costs and keys](docs/api-costs-and-keys.md) | Which features are free, quota-based, paid, or authenticated through external CLIs. |
+| [Commands](docs/commands.md) | Full command surface, including Claude Code `/srp` forms. |
+| [Root files](docs/root-files.md) | Purpose of every repository root file and support directory. |
+| [Scoring](docs/scoring.md) | How trust, trend, opportunity, and overall ranking are calculated. |
 | [Python guide](docs/python-language-guide.md) | Python concepts used in the repository. |
 
 ## Architecture in one paragraph

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Normality diagnostics</title>
+  <desc id="desc">Skewness and kurtosis describe whether values look bell-shaped, lopsided, or heavy-tailed.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Normality diagnostics</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Skewness and kurtosis describe whether values look bell-shaped, lopsided, or heavy-tailed.</text>
+  <path d="M105 260 C220 260,250 120,360 120 C470 120,500 260,615 260" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/><path d="M115 260 C180 258,210 210,260 195 C345 170,425 120,605 260" fill="none" stroke="#dc2626" stroke-width="4"/><text x="150" y="305" font-family="Arial" font-size="16" fill="#1d4ed8">balanced bell shape</text><text x="465" y="135" font-family="Arial" font-size="16" fill="#dc2626">skewed tail</text>
+</svg>

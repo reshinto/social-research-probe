@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Spearman rank correlation</title>
+  <desc id="desc">Compares ranked order instead of raw values.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Spearman rank correlation</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Compares ranked order instead of raw values.</text>
+  <polyline points="120,230 250,190 380,145 510,105 640,80" fill="none" stroke="#1d4ed8" stroke-width="4"/><g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="120" cy="230" r="10"/><circle cx="250" cy="190" r="10"/><circle cx="380" cy="145" r="10"/><circle cx="510" cy="105" r="10"/><circle cx="640" cy="80" r="10"/></g><text x="150" y="285" font-family="Arial" font-size="16">works when the relationship is monotonic, even if not perfectly linear</text>
+</svg>

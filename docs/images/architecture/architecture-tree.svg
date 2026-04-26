@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1040" viewBox="0 0 1280 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Top-down architecture tree</title>
+  <desc id="desc">A clear top-down architecture tree with non-overlapping semantic shapes for user, command layer, platform adapter, pipeline state, service branches, local storage, configuration, and external providers.</desc>
+  <rect width="1280" height="1040" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4.5" orient="auto"><path d="M0,0 L0,9 L11,4.5 z" fill="#334155"/></marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.10"/></filter>
+  </defs>
+
+  <text x="40" y="44" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#111111">Architecture tree: top-down runtime shape</text>
+  <text x="40" y="76" font-family="Arial, sans-serif" font-size="16" fill="#334155">Shapes carry meaning: person = user, document = command handling, cloud = external systems, cylinder = local storage, rounded boxes = process layers.</text>
+
+  <!-- Human researcher -->
+  <g transform="translate(580 112)" filter="url(#shadow)">
+    <circle cx="60" cy="28" r="24" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <path d="M22 104 C27 66,93 66,98 104 Z" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="60" y="142" font-family="Arial" font-size="17" font-weight="700" text-anchor="middle" fill="#111111">Human researcher</text>
+  </g>
+
+  <!-- CLI layer -->
+  <g filter="url(#shadow)">
+    <rect x="470" y="290" width="340" height="84" rx="14" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/>
+    <text x="640" y="325" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">CLI / Claude Code skill</text>
+    <text x="640" y="350" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">terminal: srp ...  |  Claude Code: /srp ...</text>
+  </g>
+
+  <!-- Command handlers as document -->
+  <g filter="url(#shadow)">
+    <path d="M450 430 H790 L825 465 V545 H450 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+    <path d="M790 430 V465 H825" fill="none" stroke="#ea580c" stroke-width="3"/>
+    <text x="637" y="474" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">Command handlers</text>
+    <text x="637" y="501" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">research, config, topics, reports, render, setup</text>
+  </g>
+
+  <!-- Side influences: sources and config, intentionally away from center arrows -->
+  <g filter="url(#shadow)">
+    <path d="M80 468 C80 430,135 415,200 430 C232 392,315 408,322 458 C375 465,390 538,318 552 H132 C60 548,42 490,80 468 Z" fill="#ccfbf1" stroke="#0f766e" stroke-width="3"/>
+    <text x="210" y="466" font-family="Arial" font-size="19" font-weight="700" text-anchor="middle" fill="#111111">External sources</text>
+    <text x="210" y="493" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">YouTube now</text>
+    <text x="210" y="514" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">future platforms later</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M930 438 L1180 438 L1180 535 Q1055 575 930 535 Z" fill="#fff7ed" stroke="#ea580c" stroke-width="3"/>
+    <text x="1055" y="482" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">Configuration</text>
+    <text x="1055" y="510" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">gates, weights, provider choices</text>
+  </g>
+
+  <!-- Platform adapter -->
+  <g filter="url(#shadow)">
+    <rect x="450" y="625" width="380" height="104" rx="18" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="640" y="664" font-family="Arial" font-size="21" font-weight="700" text-anchor="middle" fill="#111111">Platform adapter</text>
+    <text x="640" y="692" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">fetches and normalizes source-specific items</text>
+    <text x="640" y="714" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">current concrete adapter: YouTube</text>
+  </g>
+
+  <!-- Pipeline state -->
+  <g filter="url(#shadow)">
+    <rect x="440" y="810" width="400" height="96" rx="32" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+    <text x="640" y="849" font-family="Arial" font-size="22" font-weight="700" text-anchor="middle" fill="#111111">PipelineState</text>
+    <text x="640" y="878" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">inputs + stage outputs + final report packet</text>
+  </g>
+
+  <!-- Local data dir as cylinder, placed off to side with clean connector -->
+  <g filter="url(#shadow)">
+    <path d="M950 770 C950 742,1160 742,1160 770 V880 C1160 908,950 908,950 880 Z" fill="#f8fafc" stroke="#475569" stroke-width="3"/>
+    <ellipse cx="1055" cy="770" rx="105" ry="28" fill="#e2e8f0" stroke="#475569" stroke-width="3"/>
+    <text x="1055" y="826" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">Local data dir</text>
+    <text x="1055" y="854" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">config, secrets, cache</text>
+    <text x="1055" y="876" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">charts, reports</text>
+  </g>
+
+  <!-- Services in bottom row -->
+  <g filter="url(#shadow)" font-family="Arial">
+    <rect x="52" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="125" y="978" font-size="15" font-weight="700" text-anchor="middle">Scoring</text><text x="125" y="999" font-size="12" text-anchor="middle">trust / trend / opp</text>
+    <rect x="242" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="315" y="978" font-size="15" font-weight="700" text-anchor="middle">Enrichment</text><text x="315" y="999" font-size="12" text-anchor="middle">transcripts + LLM</text>
+    <rect x="432" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="505" y="978" font-size="15" font-weight="700" text-anchor="middle">Analysis</text><text x="505" y="999" font-size="12" text-anchor="middle">stats + charts</text>
+    <rect x="622" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="695" y="978" font-size="15" font-weight="700" text-anchor="middle">Corroboration</text><text x="695" y="999" font-size="12" text-anchor="middle">claim checks</text>
+    <rect x="812" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="885" y="978" font-size="15" font-weight="700" text-anchor="middle">Synthesis</text><text x="885" y="999" font-size="12" text-anchor="middle">report sections</text>
+    <rect x="1002" y="950" width="146" height="66" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="1075" y="978" font-size="15" font-weight="700" text-anchor="middle">Reporting</text><text x="1075" y="999" font-size="12" text-anchor="middle">HTML / MD / audio</text>
+  </g>
+
+  <!-- Clean center spine arrows -->
+  <line x1="640" y1="254" x2="640" y2="290" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="640" y1="374" x2="640" y2="430" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="640" y1="545" x2="640" y2="625" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="640" y1="729" x2="640" y2="810" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Side connectors routed into open edges -->
+  <path d="M322 490 C378 490,396 676,450 676" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M930 492 C870 492,875 676,830 676" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M840 858 C888 858,902 830,950 830" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Service fan-out from below PipelineState, no crossing through boxes -->
+  <path d="M640 906 V925 H125 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M640 906 V925 H315 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M640 906 V925 H505 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M640 906 V925 H695 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M640 906 V925 H885 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M640 906 V925 H1075 V950" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+</svg>

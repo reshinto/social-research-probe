@@ -86,7 +86,7 @@ def test_llm_settings_none_returns_empty(tmp_path):
 
 def test_llm_settings_returns_dict(tmp_path):
     cfg = Config.load(tmp_path)
-    assert "model" in cfg.llm_settings("claude")
+    assert cfg.llm_settings("claude") == {"extra_flags": []}
 
 
 def test_llm_timeout_seconds_int(tmp_path):

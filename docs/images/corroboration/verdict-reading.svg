@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="660" viewBox="0 0 1180 660" role="img" aria-labelledby="title desc">
+  <title id="title">How to read corroboration verdicts</title>
+  <desc id="desc">A white-background diagram showing supported, refuted, and inconclusive verdicts with confidence and source interpretation.</desc>
+  <rect width="1180" height="660" fill="#ffffff"/>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <text x="40" y="52" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#111111">Reading a corroboration result</text>
+  <text x="40" y="84" font-family="Arial, sans-serif" font-size="16" fill="#334155">The aggregate verdict is a quick scan label. The provider rows and sources are the evidence you inspect before trusting it.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="70" y="135" width="300" height="370" rx="18" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="220" y="178" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">supported</text>
+    <circle cx="220" cy="245" r="48" fill="#bbf7d0" stroke="#15803d" stroke-width="4"/>
+    <path d="M195 246 L214 265 L249 225" stroke="#15803d" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="220" y="330" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">What it means</text>
+    <text x="220" y="358" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Provider evidence appears to back</text>
+    <text x="220" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">the claim being checked.</text>
+    <text x="220" y="430" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">Human action</text>
+    <text x="220" y="458" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Open the source URLs and confirm</text>
+    <text x="220" y="480" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">they support the same claim.</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="440" y="135" width="300" height="370" rx="18" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/>
+    <text x="590" y="178" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">refuted</text>
+    <circle cx="590" cy="245" r="48" fill="#fecaca" stroke="#dc2626" stroke-width="4"/>
+    <path d="M563 218 L617 272 M617 218 L563 272" stroke="#dc2626" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <text x="590" y="330" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">What it means</text>
+    <text x="590" y="358" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Provider evidence pushes against</text>
+    <text x="590" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">the claim being checked.</text>
+    <text x="590" y="430" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">Human action</text>
+    <text x="590" y="458" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Treat the item as risky until the</text>
+    <text x="590" y="480" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">claim is rewritten or removed.</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="810" y="135" width="300" height="370" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="960" y="178" font-family="Arial" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">inconclusive</text>
+    <circle cx="960" cy="245" r="48" fill="#fde68a" stroke="#d97706" stroke-width="4"/>
+    <text x="960" y="263" font-family="Arial" font-size="64" font-weight="700" text-anchor="middle" fill="#92400e">?</text>
+    <text x="960" y="330" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">What it means</text>
+    <text x="960" y="358" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Providers did not produce enough</text>
+    <text x="960" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">clear support or contradiction.</text>
+    <text x="960" y="430" font-family="Arial" font-size="16" font-weight="700" text-anchor="middle" fill="#111111">Human action</text>
+    <text x="960" y="458" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">Narrow the claim, try another provider,</text>
+    <text x="960" y="480" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">or inspect sources manually.</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="170" y="560" width="840" height="56" rx="16" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+    <text x="590" y="594" font-family="Arial" font-size="17" font-weight="700" text-anchor="middle" fill="#111111">Confidence is not truth. It is the provider-weighted strength of the returned evidence for this run.</text>
+  </g>
+</svg>

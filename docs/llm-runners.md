@@ -8,6 +8,8 @@
 
 Runner output is used for generated text tasks such as summaries, synthesis, and runner-backed search when the selected runner supports it. The rest of the pipeline should still be useful without a runner: fetching, scoring, statistics, charts, cache, and basic reports are local or provider-specific tasks.
 
+For account setup, key behavior, and cost implications, read [API costs and keys](api-costs-and-keys.md).
+
 ## Supported runner names
 
 | Runner | Implementation | Typical use |
@@ -16,7 +18,7 @@ Runner output is used for generated text tasks such as summaries, synthesis, and
 | `claude` | `technologies/llms/claude_cli.py` | Claude CLI structured tasks and search if available. |
 | `gemini` | `technologies/llms/gemini_cli.py` | Gemini CLI structured tasks and grounded search if available. |
 | `codex` | `technologies/llms/codex_cli.py` | Codex CLI structured tasks and search if available. |
-| `local` | config defaults for Ollama-style local use | Local model experimentation when implemented by runner settings. |
+| `local` | `SRP_LOCAL_LLM_BIN` stdin/stdout wrapper | Local model experimentation without hosted model API calls. |
 
 ![Runner registry](diagrams/dp_registry.svg)
 

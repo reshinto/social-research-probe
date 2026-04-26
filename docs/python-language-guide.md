@@ -502,6 +502,52 @@ Async is used because many tasks wait on IO: platform APIs, transcript fetches,
 LLM runner subprocesses, web search providers, and file rendering. Async lets
 independent waits overlap.
 
+The key idea: an async function can pause at `await` while some other async work
+runs. That is different from a normal blocking function, where Python sits and
+waits until the call returns.
+
+Normal function:
+
+```python
+def compute_trust(extras: dict) -> float:
+    return trust_score(...)
+```
+
+Async function:
+
+```python
+async def execute_one(self, data: object) -> ServiceResult:
+    transcript = await transcript_provider.execute(data)
+    return ServiceResult(...)
+```
+
+Use normal functions for CPU-only calculations such as scoring, z-scores, and
+statistics formulas. Use async functions for orchestration that may call network
+providers, subprocess runners, transcript fetchers, or other async services.
+
+In this repository, most service entry points are async because the pipeline
+needs a consistent way to run services whether the current implementation is
+local, network-backed, subprocess-backed, or a mix.
+
+Important rule: if a function is declared with `async def`, callers must use
+`await` unless they are intentionally passing the coroutine object to a scheduler
+such as `asyncio.gather`.
+
+Wrong:
+
+```python
+result = service.execute_one(item)  # result is a coroutine, not the final value
+```
+
+Right:
+
+```python
+result = await service.execute_one(item)
+```
+
+If you forget `await`, later code will often fail in confusing ways because it
+receives a coroutine object instead of a `ServiceResult`.
+
 ## Running tasks concurrently
 
 `asyncio.gather` runs several awaitable tasks concurrently:
@@ -515,6 +561,38 @@ results = await asyncio.gather(
 This does not make CPU-heavy math faster. It helps when tasks spend time waiting
 for external work.
 
+`asyncio.gather` returns results in the same order as the awaitables passed into
+it. That matters when outputs must stay aligned with inputs.
+
+Example:
+
+```python
+tech_results = await asyncio.gather(
+    *(run_technology(tech) for tech in technologies)
+)
+```
+
+If `technologies[0]` finishes last, its result still appears at
+`tech_results[0]`. Concurrency changes completion time, not result ordering.
+
+Also understand failure behavior. If one gathered coroutine raises and the error
+is not caught inside that coroutine, `gather` can raise too. This project often
+catches exceptions inside the per-technology wrapper so one provider failure
+becomes a failed `TechResult` instead of crashing the entire service batch.
+
+That is why service code commonly uses this shape:
+
+```python
+async def _run(tech):
+    try:
+        output = await tech.execute(data)
+        return TechResult(tech_name=tech.name, output=output, success=True)
+    except Exception as exc:
+        return TechResult(tech_name=tech.name, output=None, success=False, error=str(exc))
+```
+
+Each technology gets its own failure boundary.
+
 ## Running blocking code from async code
 
 Some libraries are synchronous. `asyncio.to_thread` runs blocking work in a
@@ -525,6 +603,70 @@ charts = await asyncio.to_thread(render_all, items, charts_dir)
 ```
 
 Use this when calling CPU or blocking IO functions from async service code.
+
+Without `to_thread`, a blocking function can freeze the event loop. For example,
+chart rendering and some transcript or audio operations use normal synchronous
+libraries. Wrapping them with `asyncio.to_thread` lets the service keep an async
+interface while the blocking work runs outside the event loop thread.
+
+Use `to_thread` for:
+
+| Good use | Why |
+| --- | --- |
+| Rendering charts with synchronous plotting code. | Plotting can block. |
+| Running local transcription helpers that are synchronous. | The event loop should stay responsive. |
+| Writing a report with a synchronous renderer. | File/render work can be isolated. |
+
+Do not use `to_thread` just because a function is slow. First ask whether it is
+blocking IO, CPU-heavy work, or code that should be refactored into a pure helper
+and tested directly.
+
+## Event loop
+
+The event loop is the scheduler that drives async functions. A top-level command
+usually starts async work with a helper such as `asyncio.run(...)`. Inside async
+code, do not call `asyncio.run` again; use `await`.
+
+Top-level sync boundary:
+
+```python
+asyncio.run(run_pipeline(command))
+```
+
+Inside async code:
+
+```python
+state = await platform.run(state)
+```
+
+Calling `asyncio.run` from inside an already-running event loop is an error.
+
+## Async design in this repository
+
+The project uses async at orchestration boundaries and keeps math mostly
+synchronous:
+
+| Code area | Async? | Why |
+| --- | --- | --- |
+| Platform pipeline stages | Yes | Stages may fetch data or run services. |
+| Services | Yes | Services may call providers, runners, or blocking work through `to_thread`. |
+| Technology adapters | Often yes | Adapters may wrap external systems. |
+| Scoring math | No | Pure calculation is simpler synchronously. |
+| Statistics formulas | No | Pure calculations are deterministic and easy to test. |
+| CLI parser setup | No | Argument parsing is local and immediate. |
+
+This split keeps the code understandable. Async is used where waiting can
+overlap. Plain functions are used where values can be computed immediately.
+
+## Common async mistakes
+
+| Mistake | Symptom | Fix |
+| --- | --- | --- |
+| Forgetting `await`. | You see a coroutine object instead of a result. | Add `await` at the call site. |
+| Calling `asyncio.run` inside async code. | Runtime error about an active event loop. | Use `await` instead. |
+| Letting one gathered task raise unexpectedly. | A whole batch fails. | Catch inside the per-task wrapper if partial results are valid. |
+| Blocking inside async code. | Other async work stalls. | Use an async API or `asyncio.to_thread`. |
+| Making pure math async. | Tests and callers become more complex for no benefit. | Keep pure calculations synchronous. |
 
 ## Exceptions
 

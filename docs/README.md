@@ -25,8 +25,11 @@ After those six pages, read the reference pages only when you need the matching 
 | Commands | [Commands](commands.md) |
 | Corroboration | [Corroboration](corroboration.md) |
 | LLM runners | [LLM runners](llm-runners.md) |
+| API costs and keys | [API costs and keys](api-costs-and-keys.md) |
 | Data directory | [Data directory](data-directory.md) |
 | Runtime dependencies | [Runtime dependencies](runtime-dependencies.md) |
+| Root files | [Root files](root-files.md) |
+| Scoring | [Scoring](scoring.md) |
 | Statistics | [Statistics](statistics.md) |
 | Charts | [Charts](charts.md) |
 | Synthesis | [Synthesis authoring](synthesis-authoring.md) |
@@ -79,3 +82,4 @@ These SVGs are rendered from `docs/diagrams/src/*.mmd` with a white background f
 | ![Chart suite](diagrams/chart-suite.svg) | Chart-specific data flow |
 | ![Statistics suite](diagrams/statistics-suite.svg) | Statistics data flow |
 | ![Statistics interpretation](diagrams/statistics-interpretation.svg) | Statistics interpretation |
+| ![API cost map](diagrams/api-cost-map.svg) | API keys, free paths, and paid paths |

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">K-means clustering</title>
+  <desc id="desc">Groups items into k feature-similar clusters.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">K-means clustering</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Groups items into k feature-similar clusters.</text>
+  <g><circle cx="205" cy="145" r="12" fill="#dbeafe"/><circle cx="230" cy="170" r="12" fill="#dbeafe"/><circle cx="180" cy="180" r="12" fill="#dbeafe"/><circle cx="510" cy="125" r="12" fill="#dcfce7"/><circle cx="540" cy="155" r="12" fill="#dcfce7"/><circle cx="490" cy="170" r="12" fill="#dcfce7"/><circle cx="390" cy="250" r="12" fill="#fef3c7"/><circle cx="430" cy="235" r="12" fill="#fef3c7"/><circle cx="455" cy="265" r="12" fill="#fef3c7"/></g><circle cx="205" cy="165" r="55" fill="none" stroke="#1d4ed8" stroke-width="3"/><circle cx="515" cy="150" r="55" fill="none" stroke="#15803d" stroke-width="3"/><circle cx="425" cy="250" r="55" fill="none" stroke="#d97706" stroke-width="3"/><text x="640" y="165" font-family="Arial" font-size="16">cluster sizes + WCSS</text>
+</svg>

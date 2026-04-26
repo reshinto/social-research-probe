@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Bootstrap confidence interval</title>
+  <desc id="desc">Repeated resamples create a distribution of possible means.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Bootstrap confidence interval</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Repeated resamples create a distribution of possible means.</text>
+  <line x1="80" y1="250" x2="780" y2="250" stroke="#334155" stroke-width="2"/><path d="M95 245 C170 235,190 155,250 155 C310 155,340 235,410 245 C485 255,510 100,590 105 C670 110,675 235,760 245" fill="none" stroke="#1d4ed8" stroke-width="4"/><rect x="260" y="105" width="280" height="135" fill="#dcfce7" opacity="0.65" stroke="#15803d" stroke-width="2"/><line x1="400" y1="90" x2="400" y2="250" stroke="#dc2626" stroke-width="3"/><text x="282" y="285" font-family="Arial" font-size="16" fill="#15803d">95% interval</text><text x="415" y="94" font-family="Arial" font-size="16" fill="#dc2626">sample mean</text>
+</svg>

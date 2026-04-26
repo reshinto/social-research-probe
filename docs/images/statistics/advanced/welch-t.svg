@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Welch t-test</title>
+  <desc id="desc">Compares two group means when the groups can have different variance.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Welch t-test</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Compares two group means when the groups can have different variance.</text>
+  <rect x="155" y="135" width="110" height="115" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/><rect x="510" y="95" width="110" height="155" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/><line x1="265" y1="135" x2="510" y2="95" stroke="#334155" stroke-width="3" stroke-dasharray="8 6"/><text x="170" y="282" font-family="Arial" font-size="16">group A mean</text><text x="520" y="282" font-family="Arial" font-size="16">group B mean</text><text x="330" y="90" font-family="Arial" font-size="16" fill="#334155">difference relative to noise</text>
+</svg>

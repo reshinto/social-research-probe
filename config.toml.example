@@ -1,122 +1,209 @@
-# Copy to ~/.social-research-probe/config.toml (or pass --data-dir).
-# Secrets live in a separate ~/.social-research-probe/secrets.toml (chmod 0600).
-# The [llm].runner setting is the default runner for config-aware LLM features.
-# See docs/data-directory.md for every file srp writes under ~/.social-research-probe/.
+# Copy to ~/.social-research-probe/config.toml, or pass --data-dir to use a
+# different data directory. Secrets belong in secrets.toml or SRP_* environment
+# variables, not in this file. See docs/data-directory.md for storage details.
 
 [llm]
-runner = "none"           # claude | gemini | codex | local | none
+# Default LLM runner used for summaries, synthesis, structured JSON tasks, and
+# runner-backed search. "none" disables LLM calls while leaving fetch, scoring,
+# statistics, charts, cache, and basic reports available.
+runner = "none" # claude | gemini | codex | local | none
+
+# Maximum wall-clock seconds allowed for one LLM subprocess call before srp
+# kills it and continues with fallback behavior.
 timeout_seconds = 60
 
 [llm.claude]
-model = "sonnet"
+# Extra arguments appended to every Claude CLI call. Use this for CLI-specific
+# options such as model, permission, or profile flags supported by your local
+# Claude Code installation.
 extra_flags = []
 
 [llm.gemini]
-model = "gemini-2.5-pro"
+# Extra arguments appended to every Gemini CLI call. Use this for CLI-specific
+# options such as model or project flags supported by your local Gemini CLI.
 extra_flags = []
 
 [llm.codex]
+# Codex CLI executable name or absolute path. The binary must support
+# "codex exec" because srp invokes Codex in non-interactive mode.
 binary = "codex"
-model = "gpt-4o"
+
+# Extra arguments appended after "codex exec" and before the prompt. Use this
+# for Codex-specific options such as model or sandbox flags supported by your
+# installed Codex CLI.
 extra_flags = []
 
 [llm.local]
-binary = "ollama"
-model = "llama3.1:8b"
-extra_flags = []
+# No file-based defaults are used for the local runner yet. Set
+# SRP_LOCAL_LLM_BIN in the environment to point at a wrapper that accepts a
+# prompt on stdin and writes plain text to stdout.
 
 [scoring.weights]
-# Overrides for the spec §6 defaults used by overall_score:
-#   trust = 0.45, trend = 0.30, opportunity = 0.25
-# Uncomment + edit any subset to tune the trust/trend/opportunity trade-off.
-# Per-purpose scoring_overrides (in purposes/*.json) take precedence over these.
+# Optional score weighting overrides for overall_score. The built-in defaults
+# are trust=0.45, trend=0.30, and opportunity=0.25. Uncomment only the weights
+# you want to override; per-purpose scoring_overrides still take precedence.
 # trust = 0.6
 # trend = 0.2
 # opportunity = 0.2
 
 [corroboration]
-provider = "auto"         # auto | llm_search | exa | brave | tavily | none
+# Default provider for claim checks. "auto" chooses available configured
+# providers; "llm_search" uses the active LLM runner's search tool; "none"
+# disables corroboration.
+provider = "auto" # auto | llm_search | exa | brave | tavily | none
+
+# Maximum claims extracted from one research item before corroboration starts.
+# Lower values reduce cost and runtime; higher values check more details.
 max_claims_per_item = 5
+
+# Maximum claims checked across one research run. This is the main guardrail for
+# paid search APIs and runner-backed search costs.
 max_claims_per_session = 15
 
 [platforms.youtube]
+# Only fetch videos published within this many days of the run.
 recency_days = 90
+
+# Maximum YouTube search results fetched before scoring and enrichment.
 max_items = 20
-enrich_top_n = 5          # number of top-scored videos that get transcripts + LLM summaries
+
+# Number of top-scored videos that receive transcripts, summaries, and deeper
+# enrichment. This controls most of the expensive or slow downstream work.
+enrich_top_n = 5
+
+# Cache time-to-live for YouTube search responses.
 cache_ttl_search_hours = 6
+
+# Cache time-to-live for YouTube channel metadata responses.
 cache_ttl_channel_hours = 24
 
 [stages.youtube]
-# Highest priority. If a stage is false, everything inside that stage is skipped.
-# Stage names map directly to the YouTubePipeline stage execution order.
-fetch = true                 # Fetch YouTube search results.
-score = true                 # Score and rank items by trust/trend/opportunity.
-transcript = true            # Fetch transcripts for top-N items.
-summary = true               # LLM per-item summaries for top-N items.
-corroborate = true           # Corroborate claims via configured search providers.
-stats = true                 # Statistical analysis on engagement and scores.
-charts = true                # Chart generation from statistical results.
-synthesis = true             # Final LLM research synthesis.
-assemble = true              # Assemble research report from stage outputs.
-structured_synthesis = true  # Structured-JSON synthesis for report sections.
-report = true                # HTML report generation.
-narration = true             # Audio narration via Voicebox (or macOS TTS fallback).
+# Stage gates are the highest-priority switches. If a stage is false, srp skips
+# that whole stage even if the service and technology gates below are true.
+fetch = true                 # Fetch YouTube search results and metadata.
+score = true                 # Rank items by trust, trend, and opportunity.
+transcript = true            # Fetch captions or fallback transcripts.
+summary = true               # Generate per-item LLM summaries.
+corroborate = true           # Check extracted claims against search providers.
+stats = true                 # Compute statistics from engagement and scores.
+charts = true                # Render PNG charts from statistical results.
+synthesis = true             # Generate final research synthesis.
+assemble = true              # Assemble stage outputs into the report packet.
+structured_synthesis = true  # Ask an LLM for structured report sections.
+report = true                # Render the HTML report.
+narration = true             # Render audio narration through Voicebox or fallback TTS.
 
 [services.youtube.sourcing]
-youtube = true            # YouTube Data API v3 search and metadata fetch.
+# Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
+# youtube_api_key secret when live YouTube fetching is used.
+youtube = true
 
 [services.youtube.scoring]
-score = true              # Trust/trend/opportunity scoring via overall_score().
+# Enables trust/trend/opportunity scoring through overall_score().
+score = true
 
 [services.youtube.enriching]
-transcript = true         # Transcript fetch: YouTube captions API, then yt-dlp + Whisper fallback.
-summary = true            # LLM summary generation for each enriched item.
+# Enables transcript retrieval: captions first, then yt-dlp plus Whisper when
+# captions are unavailable and the required tools are installed.
+transcript = true
+
+# Enables LLM-generated per-item summaries for enriched items.
+summary = true
 
 [services.youtube.corroborating]
-corroborate = true        # Multi-provider web search to fact-check extracted claims.
+# Enables claim extraction and provider-based corroboration.
+corroborate = true
 
 [services.youtube.analyzing]
-statistics = true         # Statistical analysis on engagement and scores.
-charts = true             # Chart generation from statistical results.
+# Enables numerical statistics over engagement and score fields.
+statistics = true
+
+# Enables chart rendering from the statistics and ranked result tables.
+charts = true
 
 [services.youtube.synthesizing]
-synthesis = true          # Final LLM research synthesis from all stage outputs.
+# Enables final narrative synthesis from the assembled research evidence.
+synthesis = true
 
 [services.youtube.reporting]
-html = true               # HTML report generation.
-audio = true              # Audio narration via Voicebox (or macOS TTS fallback).
+# Enables HTML report generation under the active data directory.
+html = true
 
-# Legacy service gates used internally — do not remove.
+# Enables audio report generation through Voicebox or local fallback TTS.
+audio = true
+
 [services.corroborate]
-corroboration = true      # Enables corroboration provider health checks.
+# Internal service gate still read by corroboration commands and health checks.
+corroboration = true
 
 [services.enrich]
-llm = true                # Enables LLM-based enrichment runner resolution.
+# Internal service gate used before resolving LLM enrichment runners.
+llm = true
 
 [technologies]
-# Lowest priority. Disable one provider/technology without disabling its peers.
-# These represent actual implementations or external services.
+# Enables YouTube Data API v3 calls for search and metadata. This requires a
+# YouTube API key and consumes Google quota units.
 youtube_api = true
+
+# Enables public transcript fetching through youtube-transcript-api. This does
+# not require an SRP API key, but it can be rate-limited or blocked by YouTube.
 youtube_transcript_api = true
+
+# Enables local Whisper fallback transcription after audio is downloaded.
 whisper = true
-yt_dlp = true             # yt-dlp audio download for Whisper fallback transcription.
+
+# Enables yt-dlp audio download for Whisper fallback transcription.
+yt_dlp = true
+
+# Enables Voicebox TTS/report narration integration.
 voicebox = true
-llm_search = true         # Runner-agnostic agentic-search corroboration provider.
+
+# Enables runner-backed web search through Claude, Gemini, or Codex when the
+# selected runner supports search tools.
+llm_search = true
+
+# Enables Exa as a paid/free-credit corroboration provider when an API key is
+# configured.
 exa = true
+
+# Enables Brave Search as a paid/free-credit corroboration provider when an API
+# key is configured.
 brave = true
+
+# Enables Tavily as a paid/free-credit corroboration provider when an API key is
+# configured.
 tavily = true
-claude = false             # Requires Anthropic account setup (claude CLI).
-gemini = false             # Requires Google account setup (gemini CLI).
-codex = false              # Requires OpenAI account setup (codex CLI).
-local = false              # Requires a local LLM setup.
+
+# Allows the Claude CLI runner. Keep false until Claude Code is installed and
+# authenticated outside srp.
+claude = false
+
+# Allows the Gemini CLI runner. Keep false until Gemini CLI is installed and
+# authenticated outside srp.
+gemini = false
+
+# Allows the Codex CLI runner. Keep false until Codex CLI is installed and
+# authenticated outside srp.
+codex = false
+
+# Allows the local free-text runner. Set SRP_LOCAL_LLM_BIN before enabling.
+local = false
 
 [tunables]
-summary_divergence_threshold = 0.4   # transcript/URL summary divergence that triggers a warning
-per_item_summary_words = 100         # target word count for per-item LLM summary
+# Transcript-vs-URL summary divergence threshold that triggers a warning.
+summary_divergence_threshold = 0.4
+
+# Target word count for each per-item LLM summary.
+per_item_summary_words = 100
 
 [debug]
-technology_logs_enabled = true       # stderr start/end pairs around concrete technology calls
-                                     # (override at runtime with SRP_LOGS=1)
+# Enables stderr start/end logs around concrete technology calls. SRP_LOGS=1
+# can enable the same logs at runtime without editing this file.
+technology_logs_enabled = false
 
 [voicebox]
-default_profile_name = "Jarvis"      # preferred Voicebox profile name for generated HTML reports
+# Preferred Voicebox profile name for generated HTML reports and narration.
+default_profile_name = "Jarvis"
+
+# Base URL for the local Voicebox API used by report playback and narration.
+api_base = "http://127.0.0.1:17493"

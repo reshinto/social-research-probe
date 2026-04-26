@@ -27,7 +27,6 @@ class RunnerSettings(TypedDict, total=False):
     """Per-runner CLI settings loaded from config.toml."""
 
     binary: str
-    model: str
     extra_flags: list[str]
 
 
@@ -150,6 +149,7 @@ class VoiceboxConfigSection(TypedDict):
     """Voicebox renderer defaults stored in config.toml."""
 
     default_profile_name: str
+    api_base: str
 
 
 class AppConfig(TypedDict):

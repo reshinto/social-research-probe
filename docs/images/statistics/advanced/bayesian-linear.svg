@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Bayesian linear regression</title>
+  <desc id="desc">Reports coefficient estimates with uncertainty intervals.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Bayesian linear regression</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Reports coefficient estimates with uncertainty intervals.</text>
+  <line x1="150" y1="140" x2="640" y2="140" stroke="#334155" stroke-width="2"/><line x1="220" y1="120" x2="410" y2="120" stroke="#1d4ed8" stroke-width="8"/><circle cx="315" cy="120" r="10" fill="#1d4ed8"/><line x1="300" y1="185" x2="590" y2="185" stroke="#15803d" stroke-width="8"/><circle cx="445" cy="185" r="10" fill="#15803d"/><line x1="170" y1="250" x2="690" y2="250" stroke="#dc2626" stroke-width="8"/><circle cx="430" cy="250" r="10" fill="#dc2626"/><text x="655" y="125" font-family="Arial" font-size="15">narrow CrI</text><text x="655" y="190" font-family="Arial" font-size="15">medium CrI</text><text x="655" y="255" font-family="Arial" font-size="15">wide CrI</text>
+</svg>

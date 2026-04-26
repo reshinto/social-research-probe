@@ -6,6 +6,9 @@
 
 This page explains where to look before editing the code. The repository is organized by responsibility rather than by vendor. A new feature usually touches a command, one or more services, and one or more technologies; it should not scatter logic across unrelated layers.
 
+For repository-level files such as `pyproject.toml`, `Makefile`, `VERSION`,
+workflow files, and example config files, see [Root Files](root-files.md).
+
 ## Root package
 
 | Path | Responsibility |

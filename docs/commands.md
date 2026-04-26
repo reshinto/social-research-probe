@@ -12,6 +12,26 @@ srp [GLOBAL_FLAGS] COMMAND [COMMAND_FLAGS] [ARGUMENTS]
 
 Use `srp --help` or `srp COMMAND --help` when you need the parser's exact flag list.
 
+## Terminal vs Claude Code skill
+
+The Claude Code skill uses the same command surface with a different prefix.
+Everything after `/srp` is the same argument list you would pass after `srp` in
+a terminal.
+
+| Task | Terminal CLI | Claude Code skill |
+| --- | --- | --- |
+| Run research | `srp research "AI safety" "latest-news"` | `/srp research "AI safety" "latest-news"` |
+| Show config | `srp config show` | `/srp config show` |
+| Show topics as JSON | `srp show-topics --output json` | `/srp show-topics --output json` |
+| Use a data directory | `srp --data-dir ./.skill-data config path` | `/srp --data-dir ./.skill-data config path` |
+
+The skill does not define a separate language. It tells Claude Code to operate
+the local `srp` CLI, surface stdout on success, and show stderr plus exit code
+on failure. The CLI remains the source of truth.
+
+For workflow examples and how to decide which command to use, see
+[Usage](usage.md).
+
 ## Global flags
 
 | Flag | How to use it | Example |
@@ -558,6 +578,36 @@ Expected output shape:
 ```text
 Skill installed to /Users/example/.claude/skills/srp
 ```
+
+After installation and a Claude Code restart, use the CLI through `/srp`:
+
+```text
+/srp research "AI safety" "latest-news"
+/srp config show
+```
+
+Everything after `/srp` is the same argument list you would pass after `srp` in
+a terminal.
+
+Skill behavior:
+
+| Topic | Behavior |
+| --- | --- |
+| Install location | Default target is `~/.claude/skills/srp`. |
+| Discovery | Restart Claude Code after install or refresh. |
+| Command mapping | `/srp research ...` maps to `srp research ...`. |
+| Secrets | Use `srp config set-secret`; do not paste API keys into chat. |
+| Failures | Nonzero exits should show stderr and the exit code. |
+| Source of truth | CLI output and files, not generated guesses. |
+
+Troubleshooting:
+
+| Symptom | What to check |
+| --- | --- |
+| `/srp` is not recognized. | Run `srp install-skill` again and restart Claude Code. |
+| `/srp` says `srp` is not found. | Confirm `srp --version` works in the same environment. |
+| Summaries or synthesis are missing. | Check `llm.runner`, runner health, and provider configuration. |
+| Research cannot start. | Run `srp config check-secrets --needed-for research --platform youtube --output json`. |
 
 ## Setup
 
