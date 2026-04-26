@@ -32,7 +32,8 @@ def test_get_version_unknown(monkeypatch):
         raise PackageNotFoundError
 
     monkeypatch.setattr(srp_pkg, "version", boom, raising=False)
-    out = srp_pkg.get_version()
+    with patch("social_research_probe.Path.is_file", return_value=False):
+        out = srp_pkg.get_version()
     assert out == "unknown"
 
 
