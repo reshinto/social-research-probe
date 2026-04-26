@@ -1,0 +1,20 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+sequenceDiagram
+    participant Pipeline as Platform Pipeline
+    participant Service as Service (e.g., Enriching)
+    participant TechA as Tech A (e.g., Vendor API)
+    participant TechB as Tech B (e.g., Local Model)
+
+    Pipeline->>Service: execute_batch([item1, item2])
+    activate Service
+    
+    rect rgb(240, 240, 240)
+        Note over Service, TechB: Concurrent execution for each item
+        Service->>TechA: execute(item1)
+        Service->>TechB: execute(item1)
+        TechA-->>Service: Output or None (Error)
+        TechB-->>Service: Output or None (Error)
+    end
+    
+    Service-->>Pipeline: list[ServiceResult]
+    deactivate Service

@@ -39,6 +39,8 @@ After those six pages, read the reference pages only when you need the matching 
 | Cost optimization | [Cost optimization](cost-optimization.md) |
 | Module map | [Module reference](module-reference.md) |
 | Add a platform | [Adding a platform](adding-a-platform.md) |
+| Add a service | [Adding a service](adding-a-service.md) |
+| Add a technology | [Adding a technology](adding-a-technology.md) |
 | Python primer | [Python language guide](python-language-guide.md) |
 | Testing | [Testing](testing.md) |
 | Security | [Security](security.md) |
@@ -83,3 +85,5 @@ These SVGs are rendered from `docs/diagrams/src/*.mmd` with a white background f
 | ![Statistics suite](diagrams/statistics-suite.svg) | Statistics data flow |
 | ![Statistics interpretation](diagrams/statistics-interpretation.svg) | Statistics interpretation |
 | ![API cost map](diagrams/api-cost-map.svg) | API keys, free paths, and paid paths |
+| ![Architecture interaction](diagrams/architecture_interaction.svg) | Platform/Service/Technology flow |
+| ![Add service interaction](diagrams/add_service_interaction.svg) | Adding a new service |

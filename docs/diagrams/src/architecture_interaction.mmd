@@ -1,0 +1,18 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TD
+    Platform["Platform Pipeline (e.g. YouTube)"]
+    Service["Service (e.g. Transcription)"]
+    TechA["Technology A (e.g. Whisper API)"]
+    TechB["Technology B (e.g. Local Model)"]
+
+    Platform -- "Decides WHEN to run\nexecute_batch()" --> Service
+    Service -- "Decides HOW to run\nexecute()" --> TechA
+    Service -- "execute()" --> TechB
+    
+    classDef platform fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+    classDef service fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+    classDef tech fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+    
+    class Platform platform;
+    class Service service;
+    class TechA,TechB tech;

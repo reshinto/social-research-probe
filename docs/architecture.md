@@ -38,7 +38,7 @@ Non-functional requirements:
 
 ## High-level design
 
-The code is layered:
+The code is layered into distinct boundaries to keep components isolated and testable:
 
 | Layer | Responsibility |
 | --- | --- |
@@ -51,9 +51,25 @@ The code is layered:
 
 ![System tradeoffs](diagrams/system-tradeoffs.svg)
 
-The layers intentionally point downward. Commands may call platform orchestration. Platforms may call services. Services may call technologies and utilities. Technologies should not know about CLI commands or report pages. This keeps a provider integration from becoming tangled with user input parsing or final HTML rendering.
+### Platform, Service, and Technology Interaction
 
-For example, the research command should not know how to call a transcript provider. It should ask the platform pipeline to run. The platform pipeline should ask the transcript service to enrich selected items. The transcript service should call one or more transcript technologies. That separation makes it possible to test each part and replace one provider without rewriting the whole command.
+The core of the system is the relationship between Platforms, Services, and Technologies. 
+- **Platforms** orchestrate the research process. They don't know *how* to transcribe or summarize, but they know *when* to ask for it.
+- **Services** know how to execute a specific task (like fetching transcripts) concurrently across multiple inputs and handle fallbacks, but they don't know where the input came from.
+- **Technologies** know how to do exactly one atomic thing (like calling the Whisper API or YouTube API). They don't know about pipelines or batch processing.
+
+![Architecture interaction](diagrams/architecture_interaction.svg)
+
+The layers intentionally point downward. Commands call platform orchestration. Platforms call services. Services call technologies. Technologies should not know about CLI commands or report pages. This keeps a provider integration from becoming tangled with user input parsing or final HTML rendering.
+
+For example, the research command should not know how to call a transcript provider. It asks the platform pipeline to run. The platform pipeline asks the transcript service to enrich selected items. The transcript service calls one or more transcript technologies. That separation makes it possible to test each part and replace one provider without rewriting the whole command.
+
+### Extending the Architecture
+
+Because of this strict layering, extending the system is straightforward:
+- **[Adding a platform](adding-a-platform.md)**: Add a new source (e.g., TikTok, Web Search). The platform adapter maps source-specific fields into the internal `RawItem` shape.
+- **[Adding a service](adding-a-service.md)**: Add a new pipeline capability (e.g., Image Analysis) that coordinates one or multiple tools.
+- **[Adding a technology](adding-a-technology.md)**: Add a new concrete implementation for a service (e.g., a new Reddit search endpoint or a new Anthropic Claude model).
 
 ## Data model
 
