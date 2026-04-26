@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from social_research_probe.stats import (
+from social_research_probe.services.analyzing import derived_targets
+from social_research_probe.technologies.statistics import (
     bayesian_linear,
-    derived_targets,
     huber_regression,
     kaplan_meier,
     kmeans,

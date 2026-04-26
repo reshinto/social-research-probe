@@ -12,6 +12,9 @@ import html
 import re
 from pathlib import Path
 
+from social_research_probe.services.synthesizing.explanations.topic_hint import (
+    topic_action_hint,
+)
 from social_research_probe.services.synthesizing.formatter import (
     _contextual_explanation,
     _infer_model,
@@ -125,23 +128,45 @@ def section_7_statistics(report: ResearchReport) -> str:
     stats = report.get("stats_summary", {})
     highlights = stats.get("highlights", [])
     low_confidence = stats.get("low_confidence", False)
-    result = "<p><em>(no highlights)</em></p>" if not highlights else _highlights_table(highlights)
+    topic = str(report.get("topic", ""))
+    purposes = list(report.get("purpose_set", []) or [])
+    result = (
+        "<p><em>(no highlights)</em></p>"
+        if not highlights
+        else _highlights_table(highlights, topic, purposes)
+    )
     if low_confidence:
         result += '<p><em style="color:#c0392b">Low confidence — interpret with caution.</em></p>'
     return result
 
 
-def _highlights_table(highlights: list[str]) -> str:
+def _split_metric_finding(line: str) -> tuple[str, str]:
+    if " — " in line:
+        a, b = line.split(" — ", 1)
+        return a, b
+    if ": " in line:
+        a, _, b = line.partition(": ")
+        return a, b
+    return line, ""
+
+
+def _what_it_means(metric: str, finding: str, model: str, topic: str, purposes: list[str]) -> str:
+    """Combine the model's plain-English explanation with topic+purpose guidance."""
+    base = _contextual_explanation(metric, finding)
+    hint = topic_action_hint(model, topic, purposes)
+    if base and hint:
+        return f"{base} {hint}"
+    return base or hint
+
+
+def _highlights_table(highlights: list[str], topic: str, purposes: list[str]) -> str:
     """Render statistics highlights as a four-column HTML table."""
     rows = ["<tr><th>Model</th><th>Metric</th><th>Finding</th><th>What it means</th></tr>"]
     prev_model = None
     for h in highlights:
-        if " — " in h:
-            metric, finding = h.split(" — ", 1)
-        else:
-            metric, finding = h, ""
-        model = _infer_model(metric)
-        explanation = _contextual_explanation(metric, finding)
+        metric, finding = _split_metric_finding(h)
+        model = _infer_model(h) or _infer_model(metric)
+        explanation = _what_it_means(h, finding, model, topic, purposes)
         model_cell = model if model != prev_model else ""
         prev_model = model
         rows.append(

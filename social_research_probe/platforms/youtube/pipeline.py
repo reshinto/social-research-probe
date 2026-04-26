@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage, RawItem
+from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting.writer import write_final_report
 from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
@@ -65,63 +65,32 @@ class YouTubeScoreStage(BaseStage):
         return resolve_scoring_weights(load_active_config(), merged)
 
     @staticmethod
-    def _score_items(items: list, weights) -> list:
-        from social_research_probe.technologies.scoring.combine import overall_score
-        try:
-            scored = []
-            for item in items:
-                normalized = YouTubeScoreStage._normalize_item(item)
-                if normalized is None:
-                    continue
-                scored.append(
-                    {
-                        **normalized,
-                        "overall_score": overall_score(
-                            trust=float(normalized.get("trust", 0.0)),
-                            trend=float(normalized.get("trend", 0.0)),
-                            opportunity=float(normalized.get("opportunity", 0.0)),
-                            weights=weights,
-                        ),
-                    }
-                )
-            return scored
-        except Exception:
-            return items
+    def _empty_score_output(items: list, limit: int) -> dict:
+        return {"all_scored": items, "top_n": items[:limit]}
 
     @staticmethod
-    def _normalize_item(item: object) -> dict[str, object] | None:
-        if isinstance(item, dict):
-            return item
-        if not isinstance(item, RawItem):
-            return None
-        return {
-            "id": item.id,
-            "url": item.url,
-            "title": item.title,
-            "author_id": item.author_id,
-            "author_name": item.author_name,
-            "published_at": item.published_at,
-            "metrics": dict(item.metrics),
-            "text_excerpt": item.text_excerpt,
-            "thumbnail": item.thumbnail,
-            "extras": dict(item.extras),
-            "trust": 0.0,
-            "trend": 0.0,
-            "opportunity": 0.0,
-        }
+    def _safe_score(items: list, metrics: list, weights) -> list:
+        from social_research_probe.services.scoring.compute import score_items
+        try:
+            return score_items(items, metrics, weights)
+        except Exception:
+            return []
+
+    @staticmethod
+    def _build_score_output(scored: list, limit: int) -> dict:
+        return {"all_scored": scored, "top_n": scored[:limit]}
 
     @log_with_time("[srp] youtube/score: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         fetch = state.get_stage_output("fetch")
         items = fetch.get("items", [])
         limit = self._top_n_limit(state)
-        fallback: dict = {"all_scored": items, "top_n": items[:limit]}
         if not self._is_enabled(state) or not items:
-            state.set_stage_output("score", fallback)
+            state.set_stage_output("score", self._empty_score_output(items, limit))
             return state
         weights = self._resolve_purpose_scoring_weights(state)
-        scored = self._score_items(items, weights)
-        state.set_stage_output("score", {"all_scored": scored, "top_n": scored[:limit]})
+        scored = self._safe_score(items, fetch.get("engagement_metrics", []), weights)
+        state.set_stage_output("score", self._build_score_output(scored, limit))
         return state
 
 
@@ -293,22 +262,40 @@ class YouTubeChartsStage(BaseStage):
     def stage_name(self) -> str:
         return "charts"
 
+    @staticmethod
+    def _empty_output() -> dict:
+        return {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    @staticmethod
+    def _scored_dataset(state: PipelineState) -> list:
+        score = state.get_stage_output("score")
+        return list(score.get("all_scored") or score.get("top_n", []))
+
+    @staticmethod
+    async def _render_outputs(items: list) -> list:
+        from social_research_probe.services.analyzing.charts import ChartsService
+        result = await ChartsService().execute_one({"scored_items": items})
+        for tr in result.tech_results:
+            if tr.success and isinstance(tr.output, list):
+                return tr.output
+        return []
+
+    @staticmethod
+    def _build_output(chart_outputs: list) -> dict:
+        return {
+            "chart_outputs": chart_outputs,
+            "chart_captions": [c.caption for c in chart_outputs],
+            "chart_takeaways": [],
+        }
+
     @log_with_time("[srp] youtube/charts: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.analyzing.charts import ChartsService
-
         if not self._is_enabled(state):
-            state.set_stage_output("charts", {"chart_output": None, "chart_captions": [], "chart_takeaways": []})
+            state.set_stage_output("charts", self._empty_output())
             return state
-
-        top_n = list(state.get_stage_output("score").get("top_n", []))
-        result = await ChartsService().execute_one({"scored_items": top_n})
-        chart_output = next((tr.output for tr in result.tech_results if tr.success), None)
-        chart_captions = [chart_output.caption] if chart_output is not None else []
-        state.set_stage_output(
-            "charts",
-            {"chart_output": chart_output, "chart_captions": chart_captions, "chart_takeaways": []},
-        )
+        items = self._scored_dataset(state)
+        outputs = await self._render_outputs(items)
+        state.set_stage_output("charts", self._build_output(outputs))
         return state
 
 
@@ -329,7 +316,7 @@ class YouTubeSynthesisStage(BaseStage):
         return {
             "top_n": top_n,
             "stats_results": stats.get("stats_summary", {}),
-            "chart_results": charts.get("chart_output"),
+            "chart_results": charts.get("chart_outputs", []),
             "items": fetch.get("items", []),
             "engagement_metrics": fetch.get("engagement_metrics", []),
             "topic": state.inputs.get("topic", ""),
