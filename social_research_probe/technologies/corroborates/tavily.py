@@ -18,7 +18,6 @@ from typing import ClassVar
 import httpx
 
 from social_research_probe.services.corroborating.registry import register
-from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
     CorroborationProvider,
@@ -30,7 +29,7 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class TavilyProvider(CorroborationProvider, BaseTechnology):
+class TavilyProvider(CorroborationProvider):
     """Corroboration provider using the Tavily search API.
 
     Purpose: Issues a POST search query to Tavily and uses the returned URLs as
@@ -43,8 +42,6 @@ class TavilyProvider(CorroborationProvider, BaseTechnology):
     """
 
     name: ClassVar[str] = "tavily"
-    health_check_key: ClassVar[str] = "tavily"
-    enabled_config_key: ClassVar[str] = "tavily"
 
     def health_check(self) -> bool:
         """Return True if a Tavily API key is available.
@@ -148,6 +145,3 @@ class TavilyProvider(CorroborationProvider, BaseTechnology):
         raw = await self._search(claim.text)
         return self._build_result(claim, raw)
 
-    async def _execute(self, data: object) -> object:
-        """BaseTechnology async adapter — delegates to corroborate()."""
-        return await self.corroborate(data)

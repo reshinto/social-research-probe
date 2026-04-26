@@ -68,3 +68,20 @@ def list_providers() -> list[str]:
         _REGISTRY at call time.
     """
     return sorted(_REGISTRY.keys())
+
+
+def ensure_providers_registered() -> None:
+    """Import concrete corroboration provider modules so their @register
+    decorators run. Must be called once during process bootstrap.
+
+    Uses importlib to break the import cycle: this module sits below
+    technologies/corroborates/* in the dependency graph, so a top-of-file
+    import would create a loop.
+    """
+    import importlib
+
+    for module in ("exa", "brave", "tavily", "llm_search"):
+        try:
+            importlib.import_module(f"social_research_probe.technologies.corroborates.{module}")
+        except ImportError:
+            continue

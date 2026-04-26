@@ -32,17 +32,32 @@ Evidence:
 Respond in JSON matching the schema: {schema}
 """
 
-# Used by the corroboration host: given a claim and a list of source excerpts,
-# ask the LLM to evaluate whether the sources support, refute, or are
-# inconclusive about the claim.
-CORROBORATION_PROMPT = """\
-You are a fact-checker. Evaluate whether the following claim is supported by the provided sources.
+# Used by the llm_search corroboration provider: ask the active LLM runner to
+# fact-check a claim originating from a known source (e.g. a YouTube video URL)
+# using OTHER, independent text-based evidence. The supplied ``origin_sources``
+# is the URL the claim came from — it must NOT be used as evidence for itself.
+# The model must look elsewhere (independent text sources it knows of) and
+# cite those references in ``sources``. Audio and video hosts are excluded
+# because their content cannot be verified from a URL alone.
+LLM_SEARCH_CORROBORATION_PROMPT = """\
+You are a fact-checker. The following claim originated from the source(s) listed below. Independently verify the claim using OTHER evidence — do not treat the originating source as evidence for itself.
 
-Claim: {claim}
-Sources:
-{sources}
+Claim: {claim_text}
+Originating source(s) (DO NOT cite these as evidence):
+{origin_sources}
 
-Respond in JSON with keys: verdict (supported|refuted|inconclusive), confidence (0.0-1.0), reasoning (str).
+Rules:
+- Verify the claim using independent sources you know of (other URLs, papers, datasets, canonical references). Do not rely on, quote, or cite the originating source(s).
+- Do NOT cite audio or video hosts (e.g. youtube.com, vimeo.com, tiktok.com, soundcloud.com, podcast feeds) — their content cannot be verified from a URL and is not considered reliable evidence here.
+- If you cannot find independent text-based corroborating or refuting evidence, return "inconclusive".
+
+Respond in JSON only. Schema:
+{{
+  "verdict": "supported" | "refuted" | "inconclusive",
+  "confidence": <number in [0.0, 1.0]>,
+  "reasoning": "<short plain-English explanation grounded in independent text-based evidence>",
+  "sources": [<up to 5 independent text-based source references — URLs, paper titles, or canonical names — that you actually relied on; never include the originating source(s); never include audio or video hosts>]
+}}
 """
 
 

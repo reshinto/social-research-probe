@@ -17,7 +17,6 @@ from typing import ClassVar
 import httpx
 
 from social_research_probe.services.corroborating.registry import register
-from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
     CorroborationProvider,
@@ -29,7 +28,7 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class BraveProvider(CorroborationProvider, BaseTechnology):
+class BraveProvider(CorroborationProvider):
     """Corroboration provider using the Brave Search web API.
 
     Purpose: Issues a standard web search query and uses the resulting URLs as
@@ -42,8 +41,6 @@ class BraveProvider(CorroborationProvider, BaseTechnology):
     """
 
     name: ClassVar[str] = "brave"
-    health_check_key: ClassVar[str] = "brave"
-    enabled_config_key: ClassVar[str] = "brave"
 
     def health_check(self) -> bool:
         """Return True if a Brave API key is available.
@@ -149,6 +146,3 @@ class BraveProvider(CorroborationProvider, BaseTechnology):
         raw = await self._search(claim.text)
         return self._build_result(claim, raw)
 
-    async def _execute(self, data: object) -> object:
-        """BaseTechnology async adapter — delegates to corroborate()."""
-        return await self.corroborate(data)

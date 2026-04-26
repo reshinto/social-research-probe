@@ -84,9 +84,13 @@ def main(argv: list[str] | None = None) -> int:
     Raises:
         SrpError: Handled internally when raised by command handlers.
     """
+    from social_research_probe.services.corroborating.registry import (
+        ensure_providers_registered,
+    )
     from social_research_probe.services.llm.registry import ensure_runners_registered
 
     ensure_runners_registered()
+    ensure_providers_registered()
     parser = global_parser()
     args = parser.parse_args(argv)
     if _handle_version(args):

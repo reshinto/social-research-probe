@@ -18,7 +18,6 @@ from typing import ClassVar
 import httpx
 
 from social_research_probe.services.corroborating.registry import register
-from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.corroborates.base import (
     CorroborationProvider,
@@ -30,7 +29,7 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 
 
 @register
-class ExaProvider(CorroborationProvider, BaseTechnology):
+class ExaProvider(CorroborationProvider):
     """Corroboration provider using the Exa AI search API (exa.ai).
 
     Purpose: Searches for semantically similar content to the claim text and
@@ -43,8 +42,6 @@ class ExaProvider(CorroborationProvider, BaseTechnology):
     """
 
     name: ClassVar[str] = "exa"
-    health_check_key: ClassVar[str] = "exa"
-    enabled_config_key: ClassVar[str] = "exa"
 
     def health_check(self) -> bool:
         """Return True if an Exa API key is available.
@@ -152,6 +149,3 @@ class ExaProvider(CorroborationProvider, BaseTechnology):
         raw = await self._search(claim.text)
         return self._build_result(claim, raw)
 
-    async def _execute(self, data: object) -> object:
-        """BaseTechnology async adapter — delegates to corroborate()."""
-        return await self.corroborate(data)
