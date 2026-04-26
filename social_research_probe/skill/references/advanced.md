@@ -1,5 +1,8 @@
-- Setup (first run): `srp setup` — interactive wizard; writes missing config keys + prompts for secrets. Never overwrites existing values.
-- Install skill: `srp install-skill [--target <dir>]` — copies skill files to `~/.claude/skills/srp`.
-- Corroborate claims (standalone): `srp corroborate-claims --input <claims.json> --backends <name[,name...]> [--output <path>]`. Backends: `llm_search`, `tavily`, `brave`, `exa`.
-- Render charts for a saved packet: `srp render --packet <packet.json> [--output-dir <dir>]`.
-- Re-render report: `srp report --packet <packet.json> [--compiled-synthesis <file>] [--opportunity-analysis <file>] [--final-summary <file>] [--out <html>]`. Bypasses the LLM runner.
+- Setup: `srp setup`
+  - Writes default config if missing, prompts runner/secrets.
+- Install this skill: `srp install-skill [--target DIR]`
+  - Default target `~/.claude/skills/srp`.
+- Claims: `srp corroborate-claims --input claims.json [--providers llm_search,exa,brave,tavily] [--output out.json]`
+- Charts/stats from saved report JSON: `srp render --packet report.json [--output-dir DIR]`
+- Re-render HTML: `srp report --packet report.json [--compiled-synthesis FILE] [--opportunity-analysis FILE] [--final-summary FILE] [--out out.html]`
+- Serve HTML + Voicebox proxy: `srp serve-report --report report.html [--host 127.0.0.1] [--port 8000] [--voicebox-base URL]`

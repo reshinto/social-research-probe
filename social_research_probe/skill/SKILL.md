@@ -1,14 +1,15 @@
 ---
 name: srp
-description: Evidence-first social-media research via the `srp` CLI. Handles topics, purposes, suggestions, and research runs.
+description: Manual srp CLI operator for evidence-first social-media research.
+disable-model-invocation: true
 ---
 
-Use `srp` as the source of truth for every command and state change. Shell to `srp`; never invent command syntax; load the matching reference from `references/index.md` and follow it exactly.
+Use only when user invokes `/srp`.
 
-When `llm.runner = none`, use the host LLM for the skill-only reasoning steps: classify natural-language research requests, summarize sections 1-9 from the packet/report, and author Compiled Synthesis, Opportunity Analysis, and Final Summary when the CLI leaves them blank.
+Rules:
+- CLI is truth. Prefer `srp ...`; do not invent flags.
+- Load [references/index.md](references/index.md), then one matching ref only.
+- For secrets, use `srp config set-secret`; never ask for keys in chat.
+- Nonzero exit: show stderr + exit code.
 
-When `llm.runner` is set to `claude`, `gemini`, `codex`, or `local`, prefer the CLI-produced LLM output and do not duplicate it with the host model.
-
-On non-zero exit surface stderr + exit code.
-
-See `references/index.md` for the command map.
+$ARGUMENTS

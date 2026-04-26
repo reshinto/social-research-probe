@@ -1,4 +1,4 @@
-"""Contract: the bundled skill uses host-LLM fallback unless a runner is configured."""
+"""Contract: bundled skill is manual and avoids host-LLM fallback docs."""
 
 from __future__ import annotations
 
@@ -9,21 +9,18 @@ SKILL_MANIFEST = ROOT / "social_research_probe" / "skill" / "SKILL.md"
 RESEARCH_REFERENCE = ROOT / "social_research_probe" / "skill" / "references" / "research.md"
 
 
-def test_skill_manifest_allows_host_model_invocation() -> None:
+def test_skill_manifest_is_manual_only() -> None:
     text = SKILL_MANIFEST.read_text(encoding="utf-8")
-    assert "disable-model-invocation" not in text
+    assert "disable-model-invocation: true" in text
 
 
-def test_skill_manifest_documents_runner_override_rule() -> None:
+def test_skill_manifest_does_not_document_host_llm_fallback() -> None:
     text = SKILL_MANIFEST.read_text(encoding="utf-8")
-    assert "When `llm.runner = none`, use the host LLM" in text
-    assert "do not duplicate it with the host model" in text
+    assert "host LLM" not in text
+    assert "host model" not in text
 
 
-def test_research_reference_documents_host_llm_fallback() -> None:
+def test_research_reference_does_not_document_host_llm_fallback() -> None:
     text = RESEARCH_REFERENCE.read_text(encoding="utf-8")
-    assert "If the user gave a natural-language query and `llm.runner = none`" in text
-    assert (
-        "use the host LLM to write Compiled Synthesis, Opportunity Analysis, and Final Summary inline from the packet"
-        in text
-    )
+    assert "host LLM" not in text
+    assert "host model" not in text
