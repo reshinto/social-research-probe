@@ -100,6 +100,7 @@ def _get_server_url() -> str:
     if url:
         return url
     from social_research_probe.config import load_active_config
+
     return load_active_config().voicebox["api_base"]
 
 

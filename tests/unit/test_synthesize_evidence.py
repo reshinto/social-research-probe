@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from social_research_probe.synthesize.evidence import summarize, summarize_engagement_metrics
 
-from social_research_probe.platforms.base import RawItem, EngagementMetrics
+from social_research_probe.platforms.base import EngagementMetrics, RawItem
 
 
 def _item(channel: str = "ch", title: str = "t") -> RawItem:
@@ -95,7 +95,10 @@ class TestSummarizeSignals:
         assert summarize_engagement_metrics([]) == "no data"
 
     def test_full_metric_summary(self):
-        engagement_metrics = [_signal(views=1000, velocity=50.0), _signal(views=2000, velocity=150.0)]
+        engagement_metrics = [
+            _signal(views=1000, velocity=50.0),
+            _signal(views=2000, velocity=150.0),
+        ]
         result = summarize_engagement_metrics(engagement_metrics)
         assert "2 items" in result
         assert "total views: 3,000" in result

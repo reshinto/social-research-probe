@@ -38,10 +38,7 @@ def _call_llm(prompt: str, runner: str) -> dict:
 
 def _extract_drafts(result: dict) -> list[dict]:
     """Extract purpose suggestion dicts from the LLM result."""
-    return [
-        {"name": s["name"], "method": s["method"]}
-        for s in result.get("suggestions", [])
-    ]
+    return [{"name": s["name"], "method": s["method"]} for s in result.get("suggestions", [])]
 
 
 def run(args: argparse.Namespace) -> int:

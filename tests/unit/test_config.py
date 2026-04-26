@@ -147,7 +147,12 @@ def test_config_allows_applies_stage_then_service_then_technology(tmp_data_dir: 
         encoding="utf-8",
     )
     cfg = Config.load(tmp_data_dir)
-    assert cfg.allows(platform="youtube", stage="corroborate", service="corroboration", technology="exa") is False
+    assert (
+        cfg.allows(
+            platform="youtube", stage="corroborate", service="corroboration", technology="exa"
+        )
+        is False
+    )
     assert cfg.allows(service="corroboration", technology="exa") is True
 
 

@@ -5,10 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
-from social_research_probe.utils.core.types import AdapterConfig
-
-from social_research_probe.platforms.base import FetchLimits, RawItem, SearchClient, EngagementMetrics
+from social_research_probe.platforms.base import (
+    FetchLimits,
+    RawItem,
+    SearchClient,
+)
 from social_research_probe.platforms.registry import register
+from social_research_probe.utils.core.types import AdapterConfig
 
 
 def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
@@ -52,4 +55,3 @@ class FakeYouTubeClient(SearchClient):
 
     async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]:
         return items
-

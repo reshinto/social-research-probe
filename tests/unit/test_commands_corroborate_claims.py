@@ -120,5 +120,3 @@ def test_run_raises_when_corroboration_service_disabled(monkeypatch, tmp_path):
     )
     with pytest.raises(ValidationError, match=r"services\.corroboration is false"):
         cc_cmd.run(str(input_path), backends=["llm_search"])
-
-

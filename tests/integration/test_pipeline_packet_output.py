@@ -2,8 +2,8 @@ import os
 import subprocess
 import sys
 
-from social_research_probe.commands import Command
 from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands import Command
 
 
 def test_run_pipeline_emits_packet_envelope(tmp_path):

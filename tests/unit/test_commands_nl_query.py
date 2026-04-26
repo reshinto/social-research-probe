@@ -174,7 +174,7 @@ def _make_runner(
 
 def test_classify_query_raises_when_runner_disabled(tmp_data_dir: Path) -> None:
     """classify_query raises ValidationError when runner is 'none'."""
-    cfg = _make_cfg("none")
+    _make_cfg("none")
     with pytest.raises(ValidationError, match=r"llm\.runner is disabled"):
         classify_query("find AI jobs")
 
@@ -190,7 +190,7 @@ def test_classify_query_returns_classified_query(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query returns a ClassifiedQuery with correct normalized fields."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     runner = _make_runner(
         result={
             "topic": "  AI  ",
@@ -216,7 +216,7 @@ def test_classify_query_topic_already_exists(
 
     add_topics(tmp_data_dir, ["ai"], force=False)
 
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     result = classify_query("find AI jobs")
@@ -232,7 +232,7 @@ def test_classify_query_purpose_already_exists(
 
     add_purpose(tmp_data_dir, name="latest-news", method="latest news and updates", force=False)
 
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     result = classify_query("find AI jobs")
@@ -244,7 +244,7 @@ def test_classify_query_skips_unhealthy_runner(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query skips runners whose health_check returns False."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     unhealthy = _make_runner(healthy=False)
     healthy = _make_runner(healthy=True)
 
@@ -268,7 +268,7 @@ def test_classify_query_skips_runner_that_raises(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query moves on when a runner.run() raises an exception."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     failing = _make_runner(raises=RuntimeError("boom"))
     good = _make_runner()
 
@@ -285,7 +285,7 @@ def test_classify_query_skips_invalid_result(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query skips a runner whose result fails validation."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     bad = _make_runner(result={"topic": "", "purpose_name": "x", "purpose_method": "y"})
     good = _make_runner()
 
@@ -302,7 +302,7 @@ def test_classify_query_raises_when_all_runners_fail(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query raises ValidationError when every runner fails."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     broken = _make_runner(raises=RuntimeError("always fails"))
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: broken)
     with pytest.raises(ValidationError, match="all LLM runners failed"):
@@ -313,7 +313,7 @@ def test_classify_query_propagates_unexpected_topic_error(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query re-raises non-DuplicateError from add_topics."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     monkeypatch.setattr(
@@ -328,7 +328,7 @@ def test_classify_query_propagates_unexpected_purpose_error(
     tmp_data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """classify_query re-raises non-DuplicateError from add_purpose."""
-    cfg = _make_cfg("claude")
+    _make_cfg("claude")
     runner = _make_runner()
     monkeypatch.setattr("social_research_probe.commands.nl_query.get_runner", lambda name: runner)
     monkeypatch.setattr(

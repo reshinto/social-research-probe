@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 
-from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
 from social_research_probe.config import load_active_config
 from social_research_probe.platforms import PIPELINES
 from social_research_probe.platforms.state import PipelineState
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
 from social_research_probe.utils.core.types import (
     AdapterConfig,
     MultiResearchReport,
@@ -17,7 +18,6 @@ from social_research_probe.utils.display.fast_mode import (
     FAST_MODE_TOP_N,
     fast_mode_enabled,
 )
-from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.purposes import registry as purpose_registry
 from social_research_probe.utils.purposes.merge import MergedPurpose, merge_purposes
 
@@ -33,7 +33,9 @@ def _build_platform_config(cmd: ParsedRunResearch) -> AdapterConfig:
     cfg = load_active_config()
     platform_cfg = {**cfg.platform_defaults(cmd.platform)}
     if fast_mode_enabled():
-        platform_cfg["enrich_top_n"] = min(int(platform_cfg.get("enrich_top_n", 5)), FAST_MODE_TOP_N)
+        platform_cfg["enrich_top_n"] = min(
+            int(platform_cfg.get("enrich_top_n", 5)), FAST_MODE_TOP_N
+        )
     return platform_cfg
 
 

@@ -11,7 +11,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from social_research_probe.platforms.base import FetchLimits, RawItem
-from social_research_probe.services.sourcing.youtube import YouTubeConnector, compute_engagement_metrics
+from social_research_probe.services.sourcing.youtube import (
+    YouTubeConnector,
+    compute_engagement_metrics,
+)
 from social_research_probe.utils.core.coerce import coerce_int as _as_int
 
 
@@ -322,7 +325,7 @@ async def test_enrich_skips_shorts_when_include_shorts_false(monkeypatch):
 
 def test_to_signals_computes_velocity(monkeypatch):
     """to_signals() computes view_velocity and engagement_ratio from metrics."""
-    adapter = _make_connector(monkeypatch)
+    _make_connector(monkeypatch)
     published = datetime.now(UTC) - timedelta(days=10)
     item = _raw_item(views=1000, likes=50, comments=10, published_at=published)
     engagement_metrics = compute_engagement_metrics([item])
@@ -335,7 +338,5 @@ def test_to_signals_computes_velocity(monkeypatch):
 
 def test_to_signals_empty(monkeypatch):
     """to_signals() returns empty list for empty input."""
-    adapter = _make_connector(monkeypatch)
+    _make_connector(monkeypatch)
     assert compute_engagement_metrics([]) == []
-
-

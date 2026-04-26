@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from enum import StrEnum
 from typing import ClassVar
 
 from social_research_probe.services.llm.prompts import CLAUDE_SEARCH_PROMPT
@@ -16,7 +17,6 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
-from enum import StrEnum
 
 
 class ClaudeCliFlag(StrEnum):
@@ -62,7 +62,11 @@ class ClaudeRunner(JsonCliRunner):
 
     name: ClassVar[str] = "claude"
     binary_name: ClassVar[str] = "claude"
-    base_argv: ClassVar[tuple[str, ...]] = (ClaudeCliFlag.PRINT, ClaudeCliFlag.OUTPUT_FORMAT, "json")
+    base_argv: ClassVar[tuple[str, ...]] = (
+        ClaudeCliFlag.PRINT,
+        ClaudeCliFlag.OUTPUT_FORMAT,
+        "json",
+    )
     schema_flag: ClassVar[str | None] = ClaudeCliFlag.JSON_SCHEMA
     health_check_key: ClassVar[str] = "claude"
     enabled_config_key: ClassVar[str] = "claude"

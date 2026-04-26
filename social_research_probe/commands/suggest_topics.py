@@ -39,8 +39,7 @@ def _call_llm(prompt: str, runner: str) -> dict:
 def _extract_drafts(result: dict) -> list[dict]:
     """Extract topic suggestion dicts from the LLM result."""
     return [
-        {"value": s["value"], "reason": s.get("reason", "")}
-        for s in result.get("suggestions", [])
+        {"value": s["value"], "reason": s.get("reason", "")} for s in result.get("suggestions", [])
     ]
 
 

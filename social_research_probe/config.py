@@ -135,7 +135,11 @@ def resolve_data_dir(flag: str | None, cwd: Path | None = None) -> None:
     else:
         cwd = cwd or Path.cwd()
         local = cwd / ".skill-data"
-        resolved = local.resolve() if local.is_dir() else (Path.home() / ".social-research-probe").resolve()
+        resolved = (
+            local.resolve()
+            if local.is_dir()
+            else (Path.home() / ".social-research-probe").resolve()
+        )
     os.environ["SRP_DATA_DIR"] = str(resolved)
     load_active_config(resolved)
 

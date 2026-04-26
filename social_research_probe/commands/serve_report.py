@@ -20,10 +20,15 @@ from social_research_probe.utils.core.exit_codes import ExitCode
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 8000
+
+
 def _default_voicebox_base() -> str:
     """Get default Voicebox API base from config."""
     from social_research_probe.config import load_active_config
+
     return load_active_config().voicebox["api_base"]
+
+
 _DEFAULT_PROXY_TIMEOUT_SECONDS = 180
 _STREAM_PROXY_TIMEOUT_SECONDS = 120
 _API_BASE_ATTR_RE = re.compile(r'data-api-base="[^"]*"')
@@ -50,7 +55,9 @@ _API_BASE_SUBSTITUTION_COUNT = 1
 
 def _rewrite_report_html(html_text: str) -> str:
     """Point the embedded report toolbar at the local same-origin proxy."""
-    return _API_BASE_ATTR_RE.sub(f'data-api-base="{_VOICEBOX_PROXY_PREFIX}"', html_text, count=_API_BASE_SUBSTITUTION_COUNT)
+    return _API_BASE_ATTR_RE.sub(
+        f'data-api-base="{_VOICEBOX_PROXY_PREFIX}"', html_text, count=_API_BASE_SUBSTITUTION_COUNT
+    )
 
 
 def _proxy_timeout_seconds(path: str) -> int:
@@ -98,7 +105,9 @@ def _resolve_safe_local_file(request_path: str, report_dir: Path) -> Path | None
 def _proxy_voicebox_request(handler: BaseHTTPRequestHandler, proxy_base: str) -> None:
     """Proxy request to Voicebox API."""
     target = proxy_base + handler.path.removeprefix(_VOICEBOX_PROXY_PREFIX)
-    length = int(handler.headers.get("Content-Length", _NO_CONTENT_LENGTH_STR) or _NO_CONTENT_LENGTH_STR)
+    length = int(
+        handler.headers.get("Content-Length", _NO_CONTENT_LENGTH_STR) or _NO_CONTENT_LENGTH_STR
+    )
     body = handler.rfile.read(length) if length else None
     headers = {}
     for name in ("Content-Type", "Accept", "Range"):
@@ -149,7 +158,9 @@ def _make_handler(
         def do_GET(self) -> None:
             path = urlsplit(self.path).path
             if path in {_ROOT_PATH, report_url_path}:
-                _send_html_response(self, _rewrite_report_html(report_file.read_text(encoding="utf-8")))
+                _send_html_response(
+                    self, _rewrite_report_html(report_file.read_text(encoding="utf-8"))
+                )
                 return
             if path.startswith(_VOICEBOX_PROXY_PREFIX):
                 _proxy_voicebox_request(self, proxy_base)

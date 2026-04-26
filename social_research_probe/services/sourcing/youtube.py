@@ -7,12 +7,11 @@ from typing import ClassVar
 
 from social_research_probe.config import load_active_config
 from social_research_probe.platforms.base import (
+    EngagementMetrics,
     FetchLimits,
     RawItem,
     SearchClient,
-    EngagementMetrics,
 )
-
 from social_research_probe.platforms.registry import register
 from social_research_probe.technologies.media_fetch.youtube_api import (
     hydrate_youtube,
@@ -68,7 +67,9 @@ class YouTubeConnector(SearchClient):
         hydrated = {str(v["id"]): v for v in raw_videos}
         channels = {str(c["id"]): c for c in raw_channels}
         enriched = [
-            self._merge_video_and_channel_data(it, hydrated.get(it.id, {}), channels.get(it.author_id, {}))
+            self._merge_video_and_channel_data(
+                it, hydrated.get(it.id, {}), channels.get(it.author_id, {})
+            )
             for it in items
         ]
         return self._filter_shorts(enriched)
@@ -114,7 +115,9 @@ class YouTubeConnector(SearchClient):
             )
         return items
 
-    def _merge_video_and_channel_data(self, item: RawItem, vid: JSONObject, ch: JSONObject) -> RawItem:
+    def _merge_video_and_channel_data(
+        self, item: RawItem, vid: JSONObject, ch: JSONObject
+    ) -> RawItem:
         stats = coerce_object(vid.get("statistics"))
         ch_stats = coerce_object(ch.get("statistics"))
         ch_snippet = coerce_object(ch.get("snippet"))

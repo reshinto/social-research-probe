@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from social_research_probe.commands import add_purpose
 from social_research_probe.commands import (
+    add_purpose,
+    add_topics,
     apply_pending,
     discard_pending,
     show_pending,
@@ -16,7 +17,6 @@ from social_research_probe.commands import (
     suggest_purposes,
     suggest_topics,
 )
-from social_research_probe.commands import add_topics
 
 
 def _pending(data_dir: Path) -> dict:

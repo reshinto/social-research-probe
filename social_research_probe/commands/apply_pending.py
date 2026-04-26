@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 
 from social_research_probe.utils.core.exit_codes import ExitCode
 
@@ -27,10 +28,8 @@ def _apply_topic_entries(chosen_topics: list) -> None:
     from social_research_probe.utils.core.errors import DuplicateError
 
     for entry in chosen_topics:
-        try:
+        with contextlib.suppress(DuplicateError):
             add_topics([entry["value"]], force=False)
-        except DuplicateError:
-            pass
 
 
 def _apply_purpose_entries(chosen_purposes: list) -> None:
@@ -39,10 +38,8 @@ def _apply_purpose_entries(chosen_purposes: list) -> None:
     from social_research_probe.utils.core.errors import DuplicateError
 
     for entry in chosen_purposes:
-        try:
+        with contextlib.suppress(DuplicateError):
             add_purpose(name=entry["name"], method=entry["method"], force=False)
-        except DuplicateError:
-            pass
 
 
 def _commit_pending(pending: dict, remaining_topics: list, remaining_purposes: list) -> None:
@@ -59,7 +56,9 @@ def run(args: argparse.Namespace) -> int:
     from social_research_probe.utils.display.cli_output import emit
 
     pending = load_pending()
-    chosen_topics, remaining_topics, chosen_purposes, remaining_purposes = _select_from_pending(pending, args)
+    chosen_topics, remaining_topics, chosen_purposes, remaining_purposes = _select_from_pending(
+        pending, args
+    )
     _apply_topic_entries(chosen_topics)
     _apply_purpose_entries(chosen_purposes)
     _commit_pending(pending, remaining_topics, remaining_purposes)

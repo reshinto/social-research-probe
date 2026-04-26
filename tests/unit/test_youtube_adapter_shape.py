@@ -4,6 +4,7 @@ API key is missing."""
 from __future__ import annotations
 
 import pytest
+
 from social_research_probe.utils.core.errors import AdapterError
 
 
@@ -14,7 +15,6 @@ def test_adapter_requires_api_key(monkeypatch: pytest.MonkeyPatch):
     adapter = YouTubeConnector({"data_dir": None})
     with pytest.raises(AdapterError):
         adapter.health_check()
-
 
 
 def test_api_key_from_env(monkeypatch: pytest.MonkeyPatch):
@@ -46,21 +46,27 @@ def test_health_check_returns_true(monkeypatch: pytest.MonkeyPatch):
 
 def test_parse_duration_no_match_returns_zero():
     """Line 51: _parse_duration_seconds returns 0 when duration doesn't match PT pattern."""
-    from social_research_probe.utils.core.coerce import parse_duration_seconds as _parse_duration_seconds
+    from social_research_probe.utils.core.coerce import (
+        parse_duration_seconds as _parse_duration_seconds,
+    )
 
     assert _parse_duration_seconds("invalid") == 0
 
 
 def test_parse_duration_hours_minutes_seconds():
     """Lines 52-53: _parse_duration_seconds computes h*3600+m*60+s."""
-    from social_research_probe.utils.core.coerce import parse_duration_seconds as _parse_duration_seconds
+    from social_research_probe.utils.core.coerce import (
+        parse_duration_seconds as _parse_duration_seconds,
+    )
 
     assert _parse_duration_seconds("PT1H30M45S") == 1 * 3600 + 30 * 60 + 45
 
 
 def test_parse_duration_minutes_only():
     """Lines 52-53: _parse_duration_seconds handles minutes-only format."""
-    from social_research_probe.utils.core.coerce import parse_duration_seconds as _parse_duration_seconds
+    from social_research_probe.utils.core.coerce import (
+        parse_duration_seconds as _parse_duration_seconds,
+    )
 
     assert _parse_duration_seconds("PT5M") == 300
 

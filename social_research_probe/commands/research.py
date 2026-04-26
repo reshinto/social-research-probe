@@ -77,9 +77,7 @@ def _parse_research_input(positional: list[str]) -> _ResearchArgs:
     from social_research_probe.platforms import PIPELINES
 
     if len(positional) == 0:
-        raise ValidationError(
-            "research needs TOPIC and PURPOSES (or a natural-language query)"
-        )
+        raise ValidationError("research needs TOPIC and PURPOSES (or a natural-language query)")
 
     first_arg = positional[0]
     if first_arg in PIPELINES:

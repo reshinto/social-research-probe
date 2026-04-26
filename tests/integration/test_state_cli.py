@@ -7,8 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from social_research_probe.commands import Command, ConfigSubcommand, ResearchCommand
 from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands import Command, ConfigSubcommand, ResearchCommand
 
 
 def _run(data_dir: Path, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:

@@ -22,13 +22,17 @@ class YouTubeFetchStage(BaseStage):
         merged = state.inputs.get("merged_purpose")
         if merged is not None:
             from social_research_probe.utils.search.query import enrich_query
+
             return enrich_query(topic, merged.method)
         return topic
 
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
         from social_research_probe.services.sourcing.youtube import YouTubeConnector
+
         connector = YouTubeConnector(config)
-        raw = await asyncio.to_thread(connector.find_by_topic, search_topic, connector.default_limits)
+        raw = await asyncio.to_thread(
+            connector.find_by_topic, search_topic, connector.default_limits
+        )
         items = await connector.fetch_item_details(raw)
         engagement_metrics = compute_engagement_metrics(items)
         return items, engagement_metrics
@@ -62,6 +66,7 @@ class YouTubeScoreStage(BaseStage):
             return None
         from social_research_probe.config import load_active_config
         from social_research_probe.services.scoring.weights import resolve_scoring_weights
+
         return resolve_scoring_weights(load_active_config(), merged)
 
     @staticmethod
@@ -71,6 +76,7 @@ class YouTubeScoreStage(BaseStage):
     @staticmethod
     def _safe_score(items: list, metrics: list, weights) -> list:
         from social_research_probe.services.scoring.compute import score_items
+
         try:
             return score_items(items, metrics, weights)
         except Exception:
@@ -162,12 +168,14 @@ class YouTubeCorroborateStage(BaseStage):
     @staticmethod
     def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
         from social_research_probe.services.corroborating.providers import auto_mode_providers
+
         return auto_mode_providers(cfg) if configured == "auto" else (configured,)
 
     @staticmethod
     def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
         from social_research_probe.services.corroborating.registry import get_provider
         from social_research_probe.utils.core.errors import ValidationError
+
         providers: list[str] = []
         for name in candidates:
             if not cfg.technology_enabled(name):
@@ -274,6 +282,7 @@ class YouTubeChartsStage(BaseStage):
     @staticmethod
     async def _render_outputs(items: list) -> list:
         from social_research_probe.services.analyzing.charts import ChartsService
+
         result = await ChartsService().execute_one({"scored_items": items})
         for tr in result.tech_results:
             if tr.success and isinstance(tr.output, list):
@@ -326,6 +335,7 @@ class YouTubeSynthesisStage(BaseStage):
     async def _run_synthesis(context: dict) -> str:
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
         from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
+
         try:
             return await multi_llm_prompt(build_synthesis_prompt(context)) or ""
         except Exception:
@@ -414,6 +424,7 @@ class YouTubeAssembleStage(BaseStage):
         purpose_names = state.inputs.get("purpose_names", [])
 
         from social_research_probe.config import load_active_config
+
         threshold = float(load_active_config().tunables.get("summary_divergence_threshold", 0.4))
         warnings = self._collect_divergence_warnings(top_n, threshold)
 
@@ -447,6 +458,7 @@ class YouTubeStructuredSynthesisStage(BaseStage):
             return state
 
         from social_research_probe.services.synthesizing.runner import attach_synthesis
+
         report = state.outputs.get("report", {})
         await asyncio.to_thread(attach_synthesis, report)
         state.outputs["report"] = report
@@ -466,6 +478,7 @@ class YouTubeReportStage(BaseStage):
     @staticmethod
     async def _write_html_report(report: dict) -> None:
         from social_research_probe.services.reporting.html import HtmlReportService
+
         await HtmlReportService().execute_one({"report": report})
 
     @log_with_time("[srp] youtube/report: execute")

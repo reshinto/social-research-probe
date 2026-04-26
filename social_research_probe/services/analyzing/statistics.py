@@ -42,6 +42,7 @@ class StatisticsService(BaseService):
     @staticmethod
     def _build_targets_dict(items: list[dict]) -> dict[str, list]:
         from social_research_probe.services.analyzing.derived_targets import build_targets
+
         return build_targets(items)
 
     @staticmethod
@@ -51,6 +52,7 @@ class StatisticsService(BaseService):
     @staticmethod
     def _run_for_label(series: list[float], label: str) -> list:
         from social_research_probe.technologies.statistics.selector import select_and_run
+
         return select_and_run(series, label=label)
 
     @classmethod
@@ -94,16 +96,19 @@ class StatisticsService(BaseService):
     @staticmethod
     def _cache_key(items: list[dict]) -> str:
         from social_research_probe.services.analyzing._dataset_key import dataset_key
+
         return dataset_key(items, namespace="stats")
 
     @staticmethod
     def _stats_cache():
         from social_research_probe.utils.caching.pipeline_cache import stage_cache
+
         return stage_cache("analyze")
 
     @classmethod
     def _cached_or_compute(cls, items: list[dict]) -> dict:
         from social_research_probe.utils.caching.pipeline_cache import get_json, set_json
+
         if not items:
             return cls._compute(items)
         cache = cls._stats_cache()
@@ -118,12 +123,11 @@ class StatisticsService(BaseService):
     @staticmethod
     async def _compute_async(items: list[dict]) -> dict:
         import asyncio
+
         return await asyncio.to_thread(StatisticsService._cached_or_compute, items)
 
     def _success(self, data: object, output: dict) -> TechResult:
-        return TechResult(
-            tech_name="stats_per_target", input=data, output=output, success=True
-        )
+        return TechResult(tech_name="stats_per_target", input=data, output=output, success=True)
 
     def _failure(self, data: object, exc: Exception) -> TechResult:
         return TechResult(

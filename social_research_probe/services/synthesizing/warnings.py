@@ -13,7 +13,7 @@ from __future__ import annotations
 import statistics
 from datetime import UTC, datetime
 
-from social_research_probe.platforms.base import RawItem, EngagementMetrics
+from social_research_probe.platforms.base import EngagementMetrics, RawItem
 from social_research_probe.utils.core.types import ScoredItem
 
 _LOW_CHANNEL_THRESHOLD = 3
@@ -76,7 +76,9 @@ def _check_top_n_quality(top_n: list[ScoredItem], notes: list[str]) -> None:
         notes.append(f"all top-N items scored below {_LOW_SCORE_THRESHOLD}")
 
 
-def _check_freshness(engagement_metrics: list[EngagementMetrics], now: datetime, notes: list[str]) -> None:
+def _check_freshness(
+    engagement_metrics: list[EngagementMetrics], now: datetime, notes: list[str]
+) -> None:
     ages = [max(0.0, (now - s.upload_date).days) for s in engagement_metrics if s.upload_date]
     if not ages:
         return

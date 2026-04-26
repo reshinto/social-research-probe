@@ -5,13 +5,13 @@ from __future__ import annotations
 import pytest
 
 from social_research_probe.utils.core.research_command_parser import (
-    ResearchCommand,
     ParsedApplyPending,
     ParsedDiscardPending,
     ParsedRunResearch,
     ParsedUpdatePurposes,
     ParsedUpdateTopics,
     ParseError,
+    ResearchCommand,
     parse,
 )
 
@@ -39,7 +39,9 @@ def test_update_topics_rename():
 
 
 def test_update_purposes_add_with_method():
-    result = parse(f'{ResearchCommand.UPDATE_PURPOSES} add:"trends"="Track emergence across channels"')
+    result = parse(
+        f'{ResearchCommand.UPDATE_PURPOSES} add:"trends"="Track emergence across channels"'
+    )
     assert isinstance(result, ParsedUpdatePurposes)
     assert result.op == "add"
     assert result.name == "trends"
@@ -75,7 +77,9 @@ def test_run_research_single_topic():
 
 
 def test_run_research_combined_purposes():
-    result = parse(f'{ResearchCommand.RESEARCH} platform:youtube "ai agents"->trends+job-opportunities')
+    result = parse(
+        f'{ResearchCommand.RESEARCH} platform:youtube "ai agents"->trends+job-opportunities'
+    )
     assert isinstance(result, ParsedRunResearch)
     assert result.topics == [("ai agents", ["trends", "job-opportunities"])]
 

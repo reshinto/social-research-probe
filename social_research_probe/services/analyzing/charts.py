@@ -28,6 +28,7 @@ class ChartsService(BaseService):
     @staticmethod
     def _data_charts_dir() -> Path:
         from social_research_probe.config import load_active_config
+
         return load_active_config().data_dir / "charts"
 
     @classmethod
@@ -47,16 +48,19 @@ class ChartsService(BaseService):
         import asyncio
 
         from social_research_probe.services.analyzing.charts_suite import render_all
+
         return await asyncio.to_thread(render_all, items, out)
 
     @staticmethod
     def _cache_key(items: list[dict]) -> str:
         from social_research_probe.services.analyzing._dataset_key import dataset_key
+
         return dataset_key(items, namespace="charts")
 
     @staticmethod
     def _charts_cache():
         from social_research_probe.utils.caching.pipeline_cache import stage_cache
+
         return stage_cache("analyze")
 
     @staticmethod
@@ -70,6 +74,7 @@ class ChartsService(BaseService):
     @staticmethod
     def _restore_results(payload: dict, charts_dir: Path) -> list:
         from social_research_probe.technologies.charts.base import ChartResult
+
         filenames = payload.get("filenames", [])
         captions = payload.get("captions", [])
         if len(filenames) != len(captions):
@@ -85,6 +90,7 @@ class ChartsService(BaseService):
     @classmethod
     async def _render_with_cache(cls, items: list[dict], charts_dir: Path) -> list:
         from social_research_probe.utils.caching.pipeline_cache import get_json, set_json
+
         if not items:
             return []
         cache = cls._charts_cache()

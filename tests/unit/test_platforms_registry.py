@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from social_research_probe.utils.core.errors import ValidationError
-from social_research_probe.utils.core.types import AdapterConfig
 
 from social_research_probe.platforms.base import FetchLimits, RawItem, SearchClient
 from social_research_probe.platforms.registry import get_client, list_clients, register
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import AdapterConfig
 
 
 def test_register_and_get():

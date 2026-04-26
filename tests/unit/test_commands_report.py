@@ -105,9 +105,7 @@ def test_run_skips_voicebox_profile_loading_when_voicebox_technology_disabled(
         lambda api_base: (_ for _ in ()).throw(AssertionError("voicebox profiles should not load")),
     )
     monkeypatch.setattr(f"{_render_module}.render_html", _fake_render_html)
-    monkeypatch.setattr(
-        f"{_render_module}.serve_report_command", lambda dest: "cmd"
-    )
+    monkeypatch.setattr(f"{_render_module}.serve_report_command", lambda dest: "cmd")
 
     rc = report_cmd.run(
         str(packet_path),

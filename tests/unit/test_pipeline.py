@@ -20,13 +20,13 @@ from social_research_probe.pipeline.scoring import (
 )
 from social_research_probe.pipeline.stats import _build_stats_summary, _stats_models_for
 from social_research_probe.pipeline.svs import _build_svs
+from social_research_probe.services.corroborating.backends import available_backends
 
 from social_research_probe.commands import ResearchCommand, parse
 from social_research_probe.platforms.orchestrator import (
     _maybe_register_fake,
     run_pipeline,
 )
-from social_research_probe.services.corroborating.backends import available_backends
 from social_research_probe.services.scoring.weights import resolve_scoring_weights
 
 
@@ -85,8 +85,9 @@ def test_zscore_two_values():
 def test_score_item_returns_score_and_dict():
     from datetime import datetime
 
-    from social_research_probe.platforms.base import RawItem, EngagementMetrics
     from social_research_probe.platforms.youtube.connector import TrustHints
+
+    from social_research_probe.platforms.base import EngagementMetrics, RawItem
 
     item = RawItem(
         id="x",
@@ -127,8 +128,9 @@ def test_score_item_returns_score_and_dict():
 def test_score_item_custom_weights_shift_overall():
     from datetime import datetime
 
-    from social_research_probe.platforms.base import RawItem, EngagementMetrics
     from social_research_probe.platforms.youtube.connector import TrustHints
+
+    from social_research_probe.platforms.base import EngagementMetrics, RawItem
 
     item = RawItem(
         id="x",

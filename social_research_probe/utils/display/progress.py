@@ -72,9 +72,7 @@ def _compact_value(value: object, *, max_chars: int) -> str:
 
 def _is_pipeline_state(value: object) -> bool:
     return (
-        hasattr(value, "platform_type")
-        and hasattr(value, "inputs")
-        and hasattr(value, "outputs")
+        hasattr(value, "platform_type") and hasattr(value, "inputs") and hasattr(value, "outputs")
     )
 
 
@@ -90,7 +88,11 @@ def _summarize_pipeline_state(value: object) -> dict[str, object]:
 
 
 def _is_service_result(value: object) -> bool:
-    return hasattr(value, "service_name") and hasattr(value, "input_key") and hasattr(value, "tech_results")
+    return (
+        hasattr(value, "service_name")
+        and hasattr(value, "input_key")
+        and hasattr(value, "tech_results")
+    )
 
 
 def _summarize_service_result(value: object) -> dict[str, object]:
@@ -140,11 +142,7 @@ def _summarize_dataclass(value: object) -> dict[str, object]:
 
 
 def _format_call_input(bound: inspect.BoundArguments, *, max_chars: int) -> str:
-    values = {
-        name: value
-        for name, value in bound.arguments.items()
-        if name not in {"self", "cls"}
-    }
+    values = {name: value for name, value in bound.arguments.items() if name not in {"self", "cls"}}
     value = next(iter(values.values())) if len(values) == 1 else values
     return _compact_value(value, max_chars=max_chars)
 
@@ -163,7 +161,9 @@ def log_with_time(
             return msg.format(**bound.arguments)
 
         def format_start(operation_msg: str, bound: inspect.BoundArguments) -> str:
-            return f"{operation_msg} input={_format_call_input(bound, max_chars=max_chars)} starting"
+            return (
+                f"{operation_msg} input={_format_call_input(bound, max_chars=max_chars)} starting"
+            )
 
         def format_success(operation_msg: str, result: object, elapsed: float) -> str:
             base = f"{operation_msg} outcome=success elapsed={elapsed:.2f}s"

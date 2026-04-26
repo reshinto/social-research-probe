@@ -23,6 +23,7 @@ class PackageManagerFlag(StrEnum):
     FORCE = "--force"
     REINSTALL = "--reinstall"
 
+
 _PACKAGE_REPO = "git+https://github.com/reshinto/social-research-probe"
 _BUNDLED_CONFIG = Path(__file__).resolve().parents[2] / "config.toml.example"
 
@@ -110,7 +111,15 @@ def _validate_target(dest: Path) -> None:
 def _install_cli() -> None:
     if shutil.which("uv"):
         subprocess.run(
-            ["uv", "tool", "install", PackageManagerFlag.FORCE, PackageManagerFlag.REINSTALL, _PACKAGE_REPO], check=True
+            [
+                "uv",
+                "tool",
+                "install",
+                PackageManagerFlag.FORCE,
+                PackageManagerFlag.REINSTALL,
+                _PACKAGE_REPO,
+            ],
+            check=True,
         )
         print("srp CLI installed via uv tool")
     elif shutil.which("pipx"):
@@ -232,7 +241,9 @@ def _prompt_for_runner(*, _input: object = input) -> None:
         _write_runner_config(chosen)
 
 
-def _prompt_for_single_secret(name: str, description: str, url: str, *, _input: object = input) -> tuple[str | None, bool]:
+def _prompt_for_single_secret(
+    name: str, description: str, url: str, *, _input: object = input
+) -> tuple[str | None, bool]:
     """Prompt user for a single API key. Return (value, should_continue).
 
     Returns:
@@ -271,6 +282,7 @@ def _prompt_for_secrets(*, _input: object = input) -> None:
 def _get_voicebox_default_url() -> str:
     """Load Voicebox API base URL from config."""
     from social_research_probe.config import load_active_config
+
     return load_active_config().voicebox["api_base"]
 
 

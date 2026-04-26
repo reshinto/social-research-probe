@@ -64,9 +64,7 @@ def _run_corroboration(raw_claims: list[dict], providers: list[str]) -> list[dic
             return await corroborate_claim(claim, providers)
 
     async def _gather_all() -> list[dict]:
-        return await asyncio.gather(
-            *[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)]
-        )
+        return await asyncio.gather(*[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)])
 
     return asyncio.run(_gather_all())
 

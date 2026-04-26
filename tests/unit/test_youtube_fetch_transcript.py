@@ -9,6 +9,7 @@ This file covers:
 from __future__ import annotations
 
 import social_research_probe.platforms.youtube.whisper_transcript as wt
+
 from social_research_probe.technologies.media_fetch.yt_dlp import YtDlpFlag
 
 

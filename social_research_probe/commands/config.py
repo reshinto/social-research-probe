@@ -9,10 +9,10 @@ import stat
 import tomllib
 from pathlib import Path
 
-from social_research_probe.utils.core.exit_codes import ExitCode
-from social_research_probe.utils.core.research_command_parser import ResearchCommand
 from social_research_probe.config import DEFAULT_CONFIG
 from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.exit_codes import ExitCode
+from social_research_probe.utils.core.research_command_parser import ResearchCommand
 from social_research_probe.utils.core.types import JSONObject, JSONScalar
 
 SECRET_FILENAME = "secrets.toml"
@@ -39,7 +39,6 @@ _MASKED_CHARS_TO_SHOW = 4
 _MASKED_PLACEHOLDER = "***"
 
 
-
 def _env_key(name: str) -> str:
     """Map a logical secret name to its environment-variable override name."""
     return f"SRP_{name.upper()}"
@@ -48,6 +47,7 @@ def _env_key(name: str) -> str:
 def _read_secrets_file() -> dict[str, str]:
     """Read secrets.toml when it exists and return a plain string mapping."""
     from social_research_probe.config import load_active_config
+
     path = load_active_config().data_dir / SECRET_FILENAME
     if not path.exists():
         return {}
@@ -82,6 +82,7 @@ def _format_secrets_toml(secrets: dict[str, str]) -> str:
 def _write_secrets_file(secrets: dict[str, str]) -> None:
     """Persist secrets.toml with restrictive permissions."""
     from social_research_probe.config import load_active_config
+
     data_dir = load_active_config().data_dir
     path = data_dir / SECRET_FILENAME
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -156,6 +157,7 @@ def _format_secrets_section(secrets: dict[str, str]) -> list[str]:
 def show_config() -> str:
     """Render the merged config plus masked secret status for CLI display."""
     from social_research_probe.config import load_active_config
+
     cfg = load_active_config()
     secrets = _read_secrets_file()
     lines = _format_config_section(cfg.data_dir, cfg.raw) + _format_secrets_section(secrets)
@@ -264,6 +266,7 @@ def _write_config_to_file(config: JSONObject, path: Path) -> None:
 def write_config_value(dotted_key: str, value: str) -> None:
     """Write one config value, supporting nested dotted keys like llm.codex.model."""
     from social_research_probe.config import load_active_config
+
     data_dir = load_active_config().data_dir
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -328,9 +331,8 @@ def run_set_secret(args: argparse.Namespace) -> int:
 
 
 def run(args: argparse.Namespace) -> int:
-    from social_research_probe.config import load_active_config
-
     from social_research_probe.commands import ConfigSubcommand
+    from social_research_probe.config import load_active_config
     from social_research_probe.utils.display.cli_output import emit
 
     if args.config_cmd == ConfigSubcommand.SHOW:

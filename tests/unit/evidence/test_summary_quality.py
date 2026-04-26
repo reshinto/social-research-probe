@@ -30,15 +30,14 @@ import json
 from pathlib import Path
 
 import pytest
-from social_research_probe.pipeline.enrichment import (
-    _build_summary_prompt,
-    _fallback_transcript_summary,
-)
-
 from scripts.eval_summary_quality import (
     coverage_score,
     hallucinated_proper_nouns,
     word_count,
+)
+from social_research_probe.pipeline.enrichment import (
+    _build_summary_prompt,
+    _fallback_transcript_summary,
 )
 
 FIXTURES = Path(__file__).resolve().parent.parent.parent / "fixtures" / "golden" / "transcripts"

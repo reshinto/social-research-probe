@@ -62,10 +62,14 @@ _SECTIONS = [
     ("final-summary", "12. Final Summary"),
 ]
 
+
 def _default_voicebox_api_base() -> str:
     """Get default Voicebox API base from config."""
     from social_research_probe.config import load_active_config
+
     return load_active_config().voicebox["api_base"]
+
+
 _VOICEBOX_PROFILE_NAMES_FILENAME = "voicebox_profiles.json"
 
 
@@ -169,9 +173,7 @@ def write_html_report(
         )
     selected_profile_name = selected_profile["name"] if selected_profile is not None else None
     audio_enabled = (
-        _audio_report_enabled()
-        if prepare_voicebox_audio is None
-        else bool(prepare_voicebox_audio)
+        _audio_report_enabled() if prepare_voicebox_audio is None else bool(prepare_voicebox_audio)
     )
     prepared_audio_sources: dict[str, str] = {}
     if audio_enabled and cfg.technology_enabled("voicebox"):

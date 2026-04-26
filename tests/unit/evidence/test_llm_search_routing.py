@@ -31,11 +31,12 @@ from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import CapabilityUnavailableError
 from social_research_probe.llm.runners.claude import ClaudeRunner
 from social_research_probe.llm.runners.codex import CodexRunner
-from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
 from social_research_probe.llm.runners.gemini import GeminiRunner
 from social_research_probe.llm.runners.local import LocalRunner
 from social_research_probe.llm.types import AgenticSearchCitation, AgenticSearchResult
 from social_research_probe.validation.claims import Claim
+
+from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
 
 
 class _StubConfig:

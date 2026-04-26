@@ -7,12 +7,12 @@ from datetime import UTC, datetime
 import pytest
 
 from social_research_probe.platforms.base import (
-    FetchLimits,
+    EngagementMetrics,
     FetchClient,
+    FetchLimits,
     PlatformClient,
     RawItem,
     SearchClient,
-    EngagementMetrics,
 )
 
 

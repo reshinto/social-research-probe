@@ -99,9 +99,7 @@ def compute_opportunity(engagement: float, cross_rep: float, age: float) -> floa
     )
 
 
-def build_features(
-    velocity: float, engagement: float, age: float, subscribers: int | None
-) -> dict:
+def build_features(velocity: float, engagement: float, age: float, subscribers: int | None) -> dict:
     return {
         "view_velocity": velocity,
         "engagement_ratio": engagement,
@@ -154,8 +152,6 @@ def score_items(items: list, engagement_metrics: list, weights=None) -> list[dic
     engagements = [_metric_values(m)[1] for m in aligned]
     zv = zscores(velocities)
     ze = zscores(engagements)
-    scored = [
-        score_one(n, aligned[i], zv[i], ze[i], weights) for i, n in enumerate(normalized)
-    ]
+    scored = [score_one(n, aligned[i], zv[i], ze[i], weights) for i, n in enumerate(normalized)]
     scored.sort(key=lambda d: d["overall_score"], reverse=True)
     return scored

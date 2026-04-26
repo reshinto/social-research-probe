@@ -18,6 +18,7 @@ import social_research_probe.llm.gemini_cli as gc
 from social_research_probe.errors import AdapterError
 from social_research_probe.llm.base import LLMRunner
 from social_research_probe.llm.runners.gemini import GeminiRunner
+from social_research_probe.pipeline import enrichment
 from social_research_probe.pipeline.charts import (
     _chart_takeaways,
     _interpret_distribution,
@@ -25,12 +26,11 @@ from social_research_probe.pipeline.charts import (
     _interpret_strongest_correlation,
 )
 
+from social_research_probe.cli.parsers import Arg
 from social_research_probe.commands import ResearchCommand
 from social_research_probe.commands.research import _service_flag, _stage_flag, _write_final_report
 from social_research_probe.config import Config
-from social_research_probe.pipeline import enrichment
 from social_research_probe.platforms.orchestrator import _divergence_warnings
-from social_research_probe.cli.parsers import Arg
 
 # ---------------------------------------------------------------- llm/base.py
 
@@ -490,8 +490,9 @@ def test_run_pipeline_skip_reason_when_no_backends(monkeypatch, tmp_path):
     """Covers orchestrator.py:181 (skip_reason assignment when not backends)."""
     import asyncio as _asyncio
 
-    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
+
+    from social_research_probe.utils.core.research_command_parser import parse
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     _setup_purposes(tmp_path)
@@ -508,8 +509,9 @@ def test_run_pipeline_caps_top_n_and_backends_in_fast_mode(monkeypatch, tmp_path
     """Fast mode forces enrich_top_n<=3 and limits corroboration to one backend."""
     import asyncio as _asyncio
 
-    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
+
+    from social_research_probe.utils.core.research_command_parser import parse
 
     monkeypatch.setenv("SRP_TEST_USE_FAKE_YOUTUBE", "1")
     monkeypatch.setenv("SRP_FAST_MODE", "1")
@@ -541,8 +543,9 @@ def test_run_pipeline_skips_non_string_verdict(monkeypatch, tmp_path):
     """Covers orchestrator.py:172->170 branch (verdict is not a str)."""
     import asyncio as _asyncio
 
-    from social_research_probe.utils.core.research_command_parser import parse
     from social_research_probe.pipeline import run_pipeline
+
+    from social_research_probe.utils.core.research_command_parser import parse
 
     async def _fake_corroborate(top_n, backends):
         return [{"aggregate_verdict": 999} for _ in top_n]

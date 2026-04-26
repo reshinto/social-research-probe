@@ -144,4 +144,3 @@ class TavilyProvider(CorroborationProvider):
         log(f"[srp] tavily: searching for claim: {claim.text[:80]!r}")
         raw = await self._search(claim.text)
         return self._build_result(claim, raw)
-

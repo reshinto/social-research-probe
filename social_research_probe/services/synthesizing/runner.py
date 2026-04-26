@@ -34,6 +34,7 @@ def run_required_synthesis(report: dict) -> dict | None:
         )
         return None
     from social_research_probe.config import load_active_config
+
     cfg = load_active_config()
     preferred = cfg.default_structured_runner
     if preferred == "none":
@@ -103,6 +104,7 @@ def log_synthesis_runner_status() -> None:
         )
         return
     from social_research_probe.config import load_active_config
+
     preferred = load_active_config().default_structured_runner
     if preferred == "none":
         log(

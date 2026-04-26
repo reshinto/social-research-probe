@@ -465,6 +465,7 @@ class TestRenderHtml:
 
     def test_tts_defaults_to_configured_profile_name(self, tmp_data_dir):
         from social_research_probe.config import reset_config_cache
+
         (tmp_data_dir / "config.toml").write_text(
             '[voicebox]\ndefault_profile_name = "Friday"\n',
             encoding="utf-8",
@@ -491,9 +492,7 @@ class TestRenderHtml:
                 embed_voicebox_profiles=True,
             )
         assert 'data-voice-name="Jarvis" selected="selected"' in html
-        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
-            "Jarvis"
-        ]
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == ["Jarvis"]
 
     def test_prepared_audio_attrs_embedded(self):
         html = render_html(
@@ -628,6 +627,7 @@ class TestVoiceoverHelpers:
 
     def test_audio_report_enabled_reads_data_dir_config(self, tmp_data_dir):
         from social_research_probe.config import reset_config_cache
+
         cfg_path = tmp_data_dir / "config.toml"
         cfg_path.write_text("[services.youtube.reporting]\naudio = false\n", encoding="utf-8")
         reset_config_cache()
@@ -708,11 +708,10 @@ class TestWriteHtmlReport:
     @pytest.fixture(autouse=True)
     def _setup(self, monkeypatch, tmp_data_dir):
         from social_research_probe.config import reset_config_cache
+
         reset_config_cache()
         self.data_dir = tmp_data_dir
-        monkeypatch.setattr(
-            f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: []
-        )
+        monkeypatch.setattr(f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: [])
         monkeypatch.setattr(
             f"{self._render_module}._prepare_voiceover_audios",
             lambda packet, report_path, *, tts_api_base, tts_profiles, tts_profile_name: {},
@@ -767,9 +766,7 @@ class TestWriteHtmlReport:
         assert 'value="voicebox::Alpha"' in content
         assert 'data-source="voicebox"' in content
         assert ">Alpha<" in content
-        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
-            "Alpha"
-        ]
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == ["Alpha"]
 
     def test_does_not_touch_profile_name_cache_without_profiles(self):
         cache_path = _voicebox_profile_names_path()
@@ -779,6 +776,7 @@ class TestWriteHtmlReport:
 
     def test_write_html_report_raises_when_html_report_is_disabled(self):
         from social_research_probe.config import reset_config_cache
+
         (self.data_dir / "config.toml").write_text(
             "[services.youtube.reporting]\nhtml = false\n",
             encoding="utf-8",
@@ -814,6 +812,7 @@ class TestWriteHtmlReport:
 
     def test_emits_voicebox_service_logs_when_enabled(self, capsys):
         from social_research_probe.config import reset_config_cache
+
         (self.data_dir / "config.toml").write_text(
             "[debug]\ntechnology_logs_enabled = true\n",
             encoding="utf-8",
@@ -842,6 +841,7 @@ class TestWriteHtmlReport:
 
     def test_skips_voicebox_profile_loading_when_voicebox_technology_disabled(self):
         from social_research_probe.config import reset_config_cache
+
         (self.data_dir / "config.toml").write_text(
             "[technologies]\nvoicebox = false\n",
             encoding="utf-8",
@@ -933,9 +933,7 @@ class TestVoiceboxProfileDiscovery:
             ],
         )
 
-        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == [
-            "Jarvis"
-        ]
+        assert json.loads(_voicebox_profile_names_path().read_text(encoding="utf-8")) == ["Jarvis"]
 
     def test_write_discovered_voicebox_profile_names_does_not_write_when_names_are_empty(
         self, tmp_data_dir
@@ -955,9 +953,7 @@ class TestCommandsReport:
 
     @pytest.fixture(autouse=True)
     def _stub_voicebox_helpers(self, monkeypatch, tmp_data_dir):
-        monkeypatch.setattr(
-            f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: []
-        )
+        monkeypatch.setattr(f"{self._render_module}._fetch_voicebox_profiles", lambda api_base: [])
         monkeypatch.setattr(
             f"{self._render_module}._prepare_voiceover_audios",
             lambda packet, report_path, *, tts_api_base, tts_profiles, tts_profile_name: {},
@@ -1102,7 +1098,9 @@ class TestCommandsReport:
         assert out_path.exists()
         assert "CLI-injected summary" in out_path.read_text(encoding="utf-8")
 
-    def test_run_emits_voicebox_service_logs_when_enabled(self, tmp_path, tmp_data_dir, capsys, monkeypatch):
+    def test_run_emits_voicebox_service_logs_when_enabled(
+        self, tmp_path, tmp_data_dir, capsys, monkeypatch
+    ):
         from social_research_probe.commands.report import run
         from social_research_probe.config import reset_config_cache
 

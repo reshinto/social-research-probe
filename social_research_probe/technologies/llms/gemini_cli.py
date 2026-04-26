@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 import shutil
+from enum import StrEnum
 from typing import ClassVar, TypedDict
 
 from social_research_probe.config import load_active_config
@@ -18,7 +19,6 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as subprocess_run
-from enum import StrEnum
 
 
 class GeminiCliFlag(StrEnum):
@@ -118,7 +118,14 @@ def _parse_search_stdout(stdout: str) -> GeminiSearchResult:
 
 def _run_search_sync(binary: str, query: str, timeout_s: float) -> str:
     """Invoke the Gemini CLI synchronously and return raw stdout."""
-    argv = [binary, GeminiCliFlag.GOOGLE_SEARCH, GeminiCliFlag.OUTPUT_FORMAT, "json", GeminiCliFlag.PROMPT, query]
+    argv = [
+        binary,
+        GeminiCliFlag.GOOGLE_SEARCH,
+        GeminiCliFlag.OUTPUT_FORMAT,
+        "json",
+        GeminiCliFlag.PROMPT,
+        query,
+    ]
     result = subprocess_run(argv, timeout=int(timeout_s))
     return result.stdout
 

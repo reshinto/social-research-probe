@@ -92,6 +92,7 @@ class BaseStage(ABC):
 
     def _is_enabled(self, state: PipelineState) -> bool:
         from social_research_probe.config import load_active_config
+
         return load_active_config().stage_enabled(state.platform_type, self.stage_name())
 
 
@@ -105,9 +106,7 @@ class BaseResearchPlatform(ABC):
     async def run(self, state: PipelineState) -> PipelineState: ...
 
 
-async def run_stages(
-    platform: BaseResearchPlatform, state: PipelineState
-) -> PipelineState:
+async def run_stages(platform: BaseResearchPlatform, state: PipelineState) -> PipelineState:
     """Execute all enabled stages of a platform pipeline in order."""
     start = time.monotonic()
     name = type(platform).__name__

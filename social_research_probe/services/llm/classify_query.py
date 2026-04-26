@@ -79,7 +79,9 @@ def classify_query(query: str) -> ClassifiedQuery:
     purpose_name = normalize_whitespace(result["purpose_name"])
     purpose_method = normalize_whitespace(result["purpose_method"])
 
-    topic_created, purpose_created = _persist_classification_result(topic, purpose_name, purpose_method)
+    topic_created, purpose_created = _persist_classification_result(
+        topic, purpose_name, purpose_method
+    )
 
     return ClassifiedQuery(
         topic=topic,

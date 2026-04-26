@@ -17,6 +17,7 @@ def write_final_report(report: dict, *, allow_html: bool) -> str:
     generation disabled or fails, ensuring consistent output.
     """
     from social_research_probe.config import load_active_config
+
     data_dir = load_active_config().data_dir
     html_on = (
         allow_html

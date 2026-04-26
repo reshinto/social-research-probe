@@ -71,9 +71,15 @@ def _raw_item(*, published_at: datetime | None = _NOW) -> RawItem:
 
 def _engagement() -> EngagementMetrics:
     return EngagementMetrics(
-        views=1000, likes=100, comments=10, upload_date=_NOW,
-        view_velocity=10.0, engagement_ratio=0.2, comment_velocity=1.0,
-        cross_channel_repetition=0.0, raw={},
+        views=1000,
+        likes=100,
+        comments=10,
+        upload_date=_NOW,
+        view_velocity=10.0,
+        engagement_ratio=0.2,
+        comment_velocity=1.0,
+        cross_channel_repetition=0.0,
+        raw={},
     )
 
 

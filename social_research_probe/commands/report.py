@@ -34,9 +34,12 @@ def _load_and_validate_report(report_path: str) -> dict:
     return report
 
 
-def _apply_text_overrides(report: dict, compiled_synthesis_path: str | None,
-                         opportunity_analysis_path: str | None,
-                         final_summary_path: str | None) -> dict:
+def _apply_text_overrides(
+    report: dict,
+    compiled_synthesis_path: str | None,
+    opportunity_analysis_path: str | None,
+    final_summary_path: str | None,
+) -> dict:
     """Apply text file overrides to report."""
     rendered_report = dict(report)
     for key, path in (
@@ -50,7 +53,9 @@ def _apply_text_overrides(report: dict, compiled_synthesis_path: str | None,
     return rendered_report
 
 
-def _prepare_tts_setup(report: dict, out_path: str | None, cfg_logs: bool) -> tuple[list, str | None, dict]:
+def _prepare_tts_setup(
+    report: dict, out_path: str | None, cfg_logs: bool
+) -> tuple[list, str | None, dict]:
     """Fetch voicebox profiles and prepare audio if enabled. Returns (profiles, profile_name, audio_sources)."""
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         _audio_report_enabled,
@@ -91,9 +96,15 @@ def _prepare_tts_setup(report: dict, out_path: str | None, cfg_logs: bool) -> tu
     return tts_profiles, selected_profile_name, prepared_audio_sources
 
 
-def _render_and_output_html(report: dict, charts_dir: Path | None, out_path: str | None,
-                           tts_profiles: list, selected_profile_name: str | None,
-                           prepared_audio_sources: dict, tts_api_base: str) -> None:
+def _render_and_output_html(
+    report: dict,
+    charts_dir: Path | None,
+    out_path: str | None,
+    tts_profiles: list,
+    selected_profile_name: str | None,
+    prepared_audio_sources: dict,
+    tts_api_base: str,
+) -> None:
     """Render HTML and write to file or stdout."""
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         render_html,

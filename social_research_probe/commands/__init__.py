@@ -7,6 +7,7 @@ from typing import Literal, TypeVar, cast
 
 from social_research_probe.utils.core.dedupe import DuplicateStatus, classify
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
+from social_research_probe.utils.core.research_command_parser import ResearchCommand
 from social_research_probe.utils.core.types import (
     JSONObject,
     PendingPurposeSuggestion,
@@ -24,7 +25,6 @@ from social_research_probe.utils.state.schemas import (
 )
 from social_research_probe.utils.state.store import atomic_write_json, read_json
 from social_research_probe.utils.state.validate import validate
-from social_research_probe.utils.core.research_command_parser import ResearchCommand
 
 
 class Command(StrEnum):
@@ -362,20 +362,20 @@ def stage_suggestions(
 __all__ = [
     "Command",
     "ConfigSubcommand",
+    "IdSelector",
+    "PendingEntry",
     "ResearchCommand",
     "SpecialCommand",
-    "show_topics",
-    "add_topics",
-    "remove_topics",
-    "rename_topic",
-    "show_purposes",
     "add_purpose",
-    "remove_purposes",
-    "rename_purpose",
-    "stage_suggestions",
+    "add_topics",
     "load_pending",
+    "remove_purposes",
+    "remove_topics",
+    "rename_purpose",
+    "rename_topic",
     "save_pending",
     "select_pending",
-    "PendingEntry",
-    "IdSelector",
+    "show_purposes",
+    "show_topics",
+    "stage_suggestions",
 ]

@@ -30,7 +30,9 @@ def _purpose_focus(purposes: list[str]) -> str:
 
 def _baseline_action(model: str, topic: str, focus: str) -> str:
     if model == "descriptive":
-        return f"Use this baseline when judging if a `{topic}` idea clears the bar; lean into {focus}."
+        return (
+            f"Use this baseline when judging if a `{topic}` idea clears the bar; lean into {focus}."
+        )
     if model == "spread":
         return f"Calibrate how aggressive your `{topic}` differentiation needs to be to stand out on {focus}."
     if model in ("regression", "growth"):

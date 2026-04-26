@@ -39,6 +39,7 @@ _RESPONSE_SCHEMA: dict = {
     "additionalProperties": False,
 }
 
+
 def _format_origin_sources(urls: list[str]) -> str:
     cleaned = [u for u in urls if u]
     if not cleaned:
@@ -48,6 +49,7 @@ def _format_origin_sources(urls: list[str]) -> str:
 
 def _build_prompt(claim_text: str, origin_urls: list[str]) -> str:
     from social_research_probe.services.llm.prompts import LLM_SEARCH_CORROBORATION_PROMPT
+
     return LLM_SEARCH_CORROBORATION_PROMPT.format(
         claim_text=claim_text,
         origin_sources=_format_origin_sources(origin_urls),
@@ -95,7 +97,7 @@ class LLMSearchProvider(CorroborationProvider):
 
     def health_check(self) -> bool:
         """Return True when at least one registered LLM runner is healthy."""
-        from social_research_probe.services.llm.registry import list_runners, get_runner
+        from social_research_probe.services.llm.registry import get_runner, list_runners
 
         for name in list_runners():
             try:
@@ -108,11 +110,13 @@ class LLMSearchProvider(CorroborationProvider):
     @staticmethod
     def _preferred_runner() -> str:
         from social_research_probe.config import load_active_config
+
         return load_active_config().llm_runner
 
     @classmethod
     def _run_llm(cls, prompt: str) -> dict:
         from social_research_probe.services.llm.registry import run_with_fallback
+
         return run_with_fallback(prompt, schema=_RESPONSE_SCHEMA, preferred=cls._preferred_runner())
 
     @staticmethod
@@ -139,4 +143,3 @@ class LLMSearchProvider(CorroborationProvider):
         log(f"[srp] llm_search: assessing claim: {claim.text[:80]!r}")
         payload = await self._ask_llm(claim.text, self._origin_urls_for(claim))
         return self._build_result(payload)
-

@@ -112,9 +112,7 @@ def _add_output_arg(parser: argparse.ArgumentParser) -> None:
     Args:
         parser: Parser or subparser that should accept an output format.
     """
-    parser.add_argument(
-        Arg.OUTPUT, choices=list(OutputFormat), default=OutputFormat.TEXT
-    )
+    parser.add_argument(Arg.OUTPUT, choices=list(OutputFormat), default=OutputFormat.TEXT)
 
 
 def _add_mutation_group(parser: argparse.ArgumentParser) -> None:
@@ -128,8 +126,8 @@ def _add_mutation_group(parser: argparse.ArgumentParser) -> None:
         parser: Parser that should receive mutation-related arguments.
     """
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(Arg.ADD, nargs='+')
-    group.add_argument(Arg.REMOVE, nargs='+')
+    group.add_argument(Arg.ADD, nargs="+")
+    group.add_argument(Arg.REMOVE, nargs="+")
     group.add_argument(Arg.RENAME, nargs=2)
     parser.add_argument(Arg.FORCE, action=Action.STORE_TRUE)
 
@@ -225,32 +223,20 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
         action=Action.STORE_TRUE,
         help="Skip writing the HTML report to the reports directory",
     )
-    cc = sub.add_parser(
-        Command.CORROBORATE_CLAIMS, help="Corroborate claims from a JSON file"
-    )
+    cc = sub.add_parser(Command.CORROBORATE_CLAIMS, help="Corroborate claims from a JSON file")
     cc.add_argument(Arg.INPUT, required=True, help="Path to claims JSON file")
-    cc.add_argument(
-        Arg.PROVIDERS, default=Default.PROVIDERS, help="Comma-separated provider names"
-    )
+    cc.add_argument(Arg.PROVIDERS, default=Default.PROVIDERS, help="Comma-separated provider names")
     cc.add_argument(Arg.OUTPUT, default=None, help="Output file path (default: stdout)")
-    rend = sub.add_parser(
-        Command.RENDER, help="Render charts and stats for a research packet"
-    )
+    rend = sub.add_parser(Command.RENDER, help="Render charts and stats for a research packet")
     rend.add_argument(Arg.PACKET, required=True, help="Path to packet JSON file")
     rend.add_argument(Arg.OUTPUT_DIR, default=None, help="Directory to save charts")
-    ins = sub.add_parser(
-        Command.INSTALL_SKILL, help="Copy skill files into ~/.claude/skills/srp"
-    )
-    ins.add_argument(
-        Arg.TARGET, default=None, help="Destination (default: ~/.claude/skills/srp)"
-    )
+    ins = sub.add_parser(Command.INSTALL_SKILL, help="Copy skill files into ~/.claude/skills/srp")
+    ins.add_argument(Arg.TARGET, default=None, help="Destination (default: ~/.claude/skills/srp)")
     sub.add_parser(
         Command.SETUP,
         help="Interactive first-time setup: default config + LLM + API keys",
     )
-    rep = sub.add_parser(
-        Command.REPORT, help="Re-render an HTML report from a saved packet file"
-    )
+    rep = sub.add_parser(Command.REPORT, help="Re-render an HTML report from a saved packet file")
     rep.add_argument(Arg.PACKET, required=True, help="Path to packet JSON file")
     rep.add_argument(
         Arg.COMPILED_SYNTHESIS,
@@ -274,15 +260,9 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     serve = sub.add_parser(
         Command.SERVE_REPORT, help="Serve one HTML report with a local Voicebox proxy"
     )
-    serve.add_argument(
-        Arg.REPORT, required=True, help="Path to an existing HTML report"
-    )
-    serve.add_argument(
-        Arg.HOST, default=Default.HOST, help="Bind host (default: 127.0.0.1)"
-    )
-    serve.add_argument(
-        Arg.PORT, type=int, default=Default.PORT, help="Bind port (default: 8000)"
-    )
+    serve.add_argument(Arg.REPORT, required=True, help="Path to an existing HTML report")
+    serve.add_argument(Arg.HOST, default=Default.HOST, help="Bind host (default: 127.0.0.1)")
+    serve.add_argument(Arg.PORT, type=int, default=Default.PORT, help="Bind port (default: 8000)")
     serve.add_argument(
         Arg.VOICEBOX_BASE,
         default=None,

@@ -29,9 +29,9 @@ from social_research_probe.synthesize.explanations import (
 )
 
 from social_research_probe.cli import main
+from social_research_probe.cli.parsers import Arg
 from social_research_probe.commands import Command
 from social_research_probe.platforms.orchestrator import run_pipeline
-from social_research_probe.cli.parsers import Arg
 
 _VALID_PACKET = {
     "topic": "ai",

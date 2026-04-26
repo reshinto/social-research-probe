@@ -22,8 +22,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from social_research_probe.cli.parsers import Arg
 from social_research_probe.commands import Command, ConfigSubcommand
-from social_research_probe.technologies.llms.codex_cli import CodexCliFlag
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUMMARY_PHRASE = "Generated summary from codex fallback."

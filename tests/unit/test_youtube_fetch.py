@@ -64,14 +64,18 @@ def test_build_client_calls_discovery(monkeypatch):
 def test_search_videos_returns_items(monkeypatch):
     """_search_videos returns the items list from the API response."""
     items = [{"id": {"videoId": "abc"}}]
-    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(search_resp={"items": items}))
+    monkeypatch.setattr(
+        fetch, "_build_client", lambda key: _MockClient(search_resp={"items": items})
+    )
     result = fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
     assert result == items
 
 
 def test_search_videos_handles_non_list_items(monkeypatch):
     """_search_videos returns an empty list when the API payload is malformed."""
-    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(search_resp={"items": "not-a-list"}))
+    monkeypatch.setattr(
+        fetch, "_build_client", lambda key: _MockClient(search_resp={"items": "not-a-list"})
+    )
     result = fetch._search_videos("fake-key", topic="ai", max_items=5, published_after=None)
     assert result == []
 
@@ -113,7 +117,9 @@ def test_search_youtube_uses_cache_on_second_call(tmp_path, monkeypatch):
 def test_fetch_video_details_returns_items(monkeypatch):
     """_fetch_video_details returns the items list from the videos.list response."""
     items = [{"id": "abc"}]
-    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(videos_resp={"items": items}))
+    monkeypatch.setattr(
+        fetch, "_build_client", lambda key: _MockClient(videos_resp={"items": items})
+    )
     result = fetch._fetch_video_details("fake-key", video_ids=["abc"])
     assert result == items
 
@@ -133,7 +139,9 @@ def test_fetch_video_details_raises_adapter_error_on_exception(monkeypatch):
 def test_fetch_channel_details_returns_items(monkeypatch):
     """_fetch_channel_details returns the items list from the channels.list response."""
     items = [{"id": "UC123"}]
-    monkeypatch.setattr(fetch, "_build_client", lambda key: _MockClient(channels_resp={"items": items}))
+    monkeypatch.setattr(
+        fetch, "_build_client", lambda key: _MockClient(channels_resp={"items": items})
+    )
     result = fetch._fetch_channel_details("fake-key", channel_ids=["UC123"])
     assert result == items
 

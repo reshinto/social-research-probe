@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from social_research_probe.utils.core.errors import DuplicateError, SrpError, ValidationError
 
 from social_research_probe.commands import (
     add_purpose,
@@ -14,6 +13,7 @@ from social_research_probe.commands import (
     rename_purpose,
     show_purposes,
 )
+from social_research_probe.utils.core.errors import DuplicateError, SrpError, ValidationError
 
 
 def _read(data_dir: Path) -> dict:

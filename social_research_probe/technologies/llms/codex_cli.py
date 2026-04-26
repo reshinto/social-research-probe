@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import ClassVar
@@ -18,7 +19,6 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
-from enum import StrEnum
 
 
 class CodexCliFlag(StrEnum):
