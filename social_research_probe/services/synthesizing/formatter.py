@@ -187,7 +187,7 @@ def render_sections_1_9(report: ResearchReport) -> str:
     also called by render_full and by tests that verify section formatting
     without requiring LLM synthesis.
     """
-    svs = report["source_validation_summary"]
+    svs = report.get("source_validation_summary") or {}
     items = report["items_top_n"]
     stats = report["stats_summary"]
     warnings = report.get("warnings", [])
@@ -210,9 +210,9 @@ def render_sections_1_9(report: ResearchReport) -> str:
     parts.append("## 4. Platform Signals\n\n" + _to_bullets(report["platform_engagement_summary"]))
     parts.append(
         "## 5. Source Validation\n\n"
-        f"- validated: {svs['validated']}, partial: {svs['partially']}, "
-        f"unverified: {svs['unverified']}, low-trust: {svs['low_trust']}\n"
-        f"- primary/secondary/commentary: {svs['primary']}/{svs['secondary']}/{svs['commentary']}"
+        f"- validated: {svs.get('validated', 0)}, partial: {svs.get('partially', 0)}, "
+        f"unverified: {svs.get('unverified', 0)}, low-trust: {svs.get('low_trust', 0)}\n"
+        f"- primary/secondary/commentary: {svs.get('primary', 0)}/{svs.get('secondary', 0)}/{svs.get('commentary', 0)}"
         + (f"\n- notes: {svs['notes']}" if svs.get("notes") else "")
     )
     parts.append("## 6. Evidence\n\n" + _to_bullets(report["evidence_summary"]))

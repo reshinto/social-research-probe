@@ -103,12 +103,12 @@ def section_4_platform_engagement(report: ResearchReport) -> str:
 
 def section_5_source_validation(report: ResearchReport) -> str:
     """Section 5: Source validation counts."""
-    svs = report["source_validation_summary"]
+    svs = report.get("source_validation_summary") or {}
     lines = [
-        f"<li>Validated: {svs['validated']}, Partial: {svs['partially']}, "
-        f"Unverified: {svs['unverified']}, Low-trust: {svs['low_trust']}</li>",
+        f"<li>Validated: {svs.get('validated', 0)}, Partial: {svs.get('partially', 0)}, "
+        f"Unverified: {svs.get('unverified', 0)}, Low-trust: {svs.get('low_trust', 0)}</li>",
         f"<li>Primary / Secondary / Commentary: "
-        f"{svs['primary']} / {svs['secondary']} / {svs['commentary']}</li>",
+        f"{svs.get('primary', 0)} / {svs.get('secondary', 0)} / {svs.get('commentary', 0)}</li>",
     ]
     if svs.get("notes"):
         lines.append(f"<li>Notes: {_esc(svs['notes'])}</li>")

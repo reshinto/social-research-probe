@@ -85,11 +85,7 @@ def _summarize_pipeline_state(value: object) -> dict[str, object]:
         "platform": getattr(value, "platform_type", ""),
         "topic": value.inputs.get("topic", "") if isinstance(value.inputs, dict) else "",
         "purposes": value.inputs.get("purpose_names", []) if isinstance(value.inputs, dict) else [],
-        "stage_outputs": {
-            name: _summarize_dict(output) if isinstance(output, dict) else type(output).__name__
-            for name, output in stages.items()
-        },
-        "outputs": _summarize_dict(outputs) if isinstance(outputs, dict) else type(outputs).__name__,
+        "stages_done": list(stages.keys()),
     }
 
 

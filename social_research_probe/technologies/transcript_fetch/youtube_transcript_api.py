@@ -64,8 +64,8 @@ def fetch_transcript(url: str) -> str | None:
         return cached
     log(f"[srp] captions: fetching via youtube-transcript-api for {url}")
     try:
-        entries = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
-        text = "\n".join(e["text"] for e in entries if e.get("text", "").strip())
+        fetched = YouTubeTranscriptApi().fetch(video_id, languages=["en", "en-US", "en-GB"])
+        text = "\n".join(snippet.text for snippet in fetched if snippet.text.strip())
         if text:
             set_str(cache, video_id, text)
             return text

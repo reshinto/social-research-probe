@@ -117,7 +117,7 @@ class VoiceboxTTS(BaseTechnology[str, dict]):
 
     name: ClassVar[str] = "voicebox_tts"
     health_check_key: ClassVar[str] = "voicebox_tts"
-    enabled_config_key: ClassVar[str] = "voicebox_tts"
+    enabled_config_key: ClassVar[str] = "voicebox"
 
     async def _execute(self, data: str) -> dict:
         """Synthesize data (text) and return audio path dict."""
