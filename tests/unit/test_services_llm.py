@@ -8,8 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.services.llm import ensemble, registry, runners
-from social_research_probe.services.llm.host import emit_report
+from social_research_probe.services.llm.core import ensemble
+from social_research_probe.services.llm.core.helpers import registry
+from social_research_probe.services.llm.core.output import emit_report
 from social_research_probe.technologies.llms import LLMRunner
 from social_research_probe.utils.core.errors import ValidationError
 
@@ -106,10 +107,10 @@ class TestRegistry:
 
 class TestRunners:
     def test_prioritize_runner(self):
-        assert runners.prioritize_runner(["a", "b", "c"], "b") == ["b", "a", "c"]
+        assert registry.prioritize_runner(["a", "b", "c"], "b") == ["b", "a", "c"]
 
     def test_prioritize_runner_already_first(self):
-        assert runners.prioritize_runner(["a", "b"], "a") == ["a", "b"]
+        assert registry.prioritize_runner(["a", "b"], "a") == ["a", "b"]
 
 
 class TestHost:
@@ -173,3 +174,55 @@ class TestEnsemble:
         cfg.service_enabled.return_value = False
         with patch.object(ensemble, "load_active_config", return_value=cfg):
             assert asyncio.run(ensemble.multi_llm_prompt("p")) is None
+
+
+class TestLLMTech:
+    from social_research_probe.services.llm.core import LLMTech
+
+    def test_name_property(self):
+        from social_research_probe.services.llm.core import LLMTech
+
+        tech = LLMTech("claude", schema={"type": "object"})
+        assert tech.name == "llm.claude"
+
+    def test_execute_healthy_runner(self, monkeypatch):
+        import asyncio
+
+        from social_research_probe.services.llm.core import LLMTech
+
+        runner = _FakeRunner(healthy=True, payload={"ok": True})
+        monkeypatch.setattr(
+            "social_research_probe.services.llm.core.helpers.registry.get_runner",
+            lambda name: runner,
+        )
+        tech = LLMTech("claude", schema={})
+        result = asyncio.run(tech._execute("prompt"))
+        assert result == {"ok": True}
+
+    def test_execute_unhealthy_runner_returns_none(self, monkeypatch):
+        import asyncio
+
+        from social_research_probe.services.llm.core import LLMTech
+
+        runner = _FakeRunner(healthy=False)
+        monkeypatch.setattr(
+            "social_research_probe.services.llm.core.helpers.registry.get_runner",
+            lambda name: runner,
+        )
+        tech = LLMTech("claude", schema={})
+        result = asyncio.run(tech._execute("prompt"))
+        assert result is None
+
+
+class TestLLMService:
+    def test_get_technologies_preferred_first(self, monkeypatch):
+        from social_research_probe.services.llm.core import LLMService, LLMTech
+
+        monkeypatch.setattr(
+            "social_research_probe.services.llm.core.helpers.registry.list_runners",
+            lambda: ["claude", "gemini"],
+        )
+        svc = LLMService(preferred="gemini", schema={})
+        techs = svc._get_technologies()
+        assert [t._runner_name for t in techs] == ["gemini", "claude"]
+        assert all(isinstance(t, LLMTech) for t in techs)

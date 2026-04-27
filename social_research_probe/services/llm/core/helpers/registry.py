@@ -81,6 +81,11 @@ def list_runners() -> list[str]:
     return sorted(_REGISTRY.keys())
 
 
+def prioritize_runner(candidates: list[RunnerName], preferred: RunnerName) -> list[RunnerName]:
+    """Return runner names with the preferred runner first."""
+    return [preferred, *[n for n in candidates if n != preferred]]
+
+
 def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
     """Run the prompt using the preferred runner, then fallback runners.
 

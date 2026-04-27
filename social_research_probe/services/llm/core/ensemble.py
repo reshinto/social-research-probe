@@ -5,7 +5,7 @@ uses that provider directly for free-text prompts. Otherwise it fans out across
 Claude, Gemini, and Codex in parallel, then synthesizes the responses with the
 highest-priority available provider.
 
-Counterpart to ``llm/runners/``, which handles structured JSON-schema LLM
+Counterpart to ``llm/core/helpers/registry.py``, which handles structured JSON-schema LLM
 calls (used by corroboration). This module handles free-text prompts used
 by the pipeline for summarization and any other unstructured LLM tasks.
 

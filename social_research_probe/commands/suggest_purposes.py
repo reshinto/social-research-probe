@@ -20,7 +20,7 @@ def _validate_llm_runner() -> str:
 
 def _build_prompt(existing: list[str], count: int) -> str:
     """Format the suggest-purposes LLM prompt."""
-    from social_research_probe.services.llm.prompts import SUGGEST_PURPOSES_PROMPT
+    from social_research_probe.services.llm.core.helpers.prompts import SUGGEST_PURPOSES_PROMPT
 
     return SUGGEST_PURPOSES_PROMPT.format(
         existing_purposes=", ".join(existing) if existing else "(none yet)",
@@ -30,8 +30,8 @@ def _build_prompt(existing: list[str], count: int) -> str:
 
 def _call_llm(prompt: str, runner: str) -> dict:
     """Call the LLM and return the raw result dict."""
-    from social_research_probe.services.llm.registry import run_with_fallback
-    from social_research_probe.services.llm.schemas import PURPOSE_SUGGESTIONS_SCHEMA
+    from social_research_probe.services.llm.core.helpers.registry import run_with_fallback
+    from social_research_probe.services.llm.core.helpers.schemas import PURPOSE_SUGGESTIONS_SCHEMA
 
     return run_with_fallback(prompt, PURPOSE_SUGGESTIONS_SCHEMA, runner)
 

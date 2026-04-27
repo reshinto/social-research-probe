@@ -663,7 +663,7 @@ def test_warnings_unknown_source_class():
 
 def test_ensemble_synthesis_fallback_to_codex(monkeypatch):
     """services/llm/ensemble.py:147 — last-line fallback returns codex."""
-    from social_research_probe.services.llm import ensemble
+    from social_research_probe.services.llm.core import ensemble
 
     async def fake_run_provider(name, *a, **kw):
         return None  # all synthesis attempts fail

@@ -10,7 +10,7 @@ from social_research_probe.services.analyzing.statistics import StatisticsServic
 from social_research_probe.services.corroborating.corroborate import CorroborationService
 from social_research_probe.services.enriching.summary import SummaryService
 from social_research_probe.services.enriching.transcript import TranscriptService
-from social_research_probe.services.llm import schemas
+from social_research_probe.services.llm.core.helpers import schemas
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
