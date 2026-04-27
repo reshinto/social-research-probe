@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.reporting as writer_svc
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
@@ -14,7 +15,6 @@ from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.llm import ensemble
-import social_research_probe.services.reporting as writer_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
 from social_research_probe.services.synthesizing.explanations import (
     explain_correlation,

@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.reporting as writer_svc
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
-import social_research_probe.services.reporting as writer_svc
 from social_research_probe.services.scoring import score as scoring_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
 from social_research_probe.services.synthesizing.explanations import (
