@@ -19,7 +19,7 @@ from social_research_probe.services.synthesizing.synthesis.helpers.contextual_mo
     explain_spread,
     explain_tests,
 )
-from social_research_probe.technologies.corroborates._filters import _host, is_self_source
+from social_research_probe.technologies.corroborates import _host, is_self_source
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.statistics import (
     bayesian_linear,

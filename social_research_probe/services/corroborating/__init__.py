@@ -7,7 +7,7 @@ import sys
 from collections import Counter
 
 from social_research_probe.config import Config
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
 )

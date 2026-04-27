@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import social_research_probe.services.scoring as compute_mod
+import social_research_probe.technologies.corroborates as filters_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
@@ -18,7 +19,6 @@ from social_research_probe.services.synthesizing.synthesis.helpers import format
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_descriptive,
 )
-from social_research_probe.technologies.corroborates import _filters as filters_mod
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.tavily import TavilyProvider
 from social_research_probe.technologies.llms import gemini_cli

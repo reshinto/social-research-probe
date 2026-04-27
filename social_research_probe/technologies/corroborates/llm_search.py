@@ -19,7 +19,7 @@ import asyncio
 from typing import ClassVar
 
 from social_research_probe.services.corroborating import register
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
 )

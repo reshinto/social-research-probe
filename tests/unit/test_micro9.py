@@ -15,7 +15,7 @@ from social_research_probe.services.synthesizing.synthesis.helpers.contextual_mo
     explain_correlation,
     explain_descriptive,
 )
-from social_research_probe.technologies.corroborates._filters import _host
+from social_research_probe.technologies.corroborates import _host
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.report_render.html.raw_html import markdown_to_html
 from social_research_probe.technologies.report_render.html.raw_html import youtube as yt_html

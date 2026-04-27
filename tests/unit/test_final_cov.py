@@ -18,7 +18,7 @@ from social_research_probe.services.synthesizing.synthesis.helpers.contextual_mo
     explain_tests,
 )
 from social_research_probe.technologies.charts import heatmap
-from social_research_probe.technologies.corroborates._filters import filter_results
+from social_research_probe.technologies.corroborates import filter_results
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.statistics import (
     bayesian_linear,

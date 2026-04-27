@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.technologies.corroborates as _filters
 from social_research_probe import get_version
 from social_research_probe.commands import install_skill
-from social_research_probe.technologies.corroborates import _filters
 from social_research_probe.technologies.media_fetch import yt_dlp
 from social_research_probe.technologies.report_render.html.raw_html import _sections
 from social_research_probe.technologies.statistics import (

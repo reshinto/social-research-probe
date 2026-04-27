@@ -9,12 +9,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.technologies.corroborates as _filters
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_spearman,
 )
 from social_research_probe.technologies.charts import histogram
-from social_research_probe.technologies.corroborates import _filters
 from social_research_probe.technologies.media_fetch import yt_dlp
 from social_research_probe.technologies.statistics import (
     bayesian_linear,
