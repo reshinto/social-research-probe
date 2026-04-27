@@ -134,8 +134,8 @@ def test_statistics_skip_empty_series():
 
 
 def test_scoring_skip_invalid_item():
-    """services/scoring/compute.py:68 — continue on bad item."""
-    from social_research_probe.services.scoring.compute import normalize_with_metrics
+    """services/scoring/__init__.py:68 — continue on bad item."""
+    from social_research_probe.services.scoring import normalize_with_metrics
 
     items = ["not-a-dict-or-rawitem", {"id": "ok", "url": "u", "channel": "c"}]
     norm, _eng = normalize_with_metrics(items, [None, None])

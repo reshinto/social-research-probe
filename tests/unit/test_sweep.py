@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.scoring as compute_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.services.analyzing import statistics as stats_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.reporting import html as html_svc
-from social_research_probe.services.scoring import compute as compute_mod
 from social_research_probe.services.synthesizing import formatter
 from social_research_probe.services.synthesizing.explanations import (
     explain_correlation,

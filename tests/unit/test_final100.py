@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.scoring as compute_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.corroborating import corroborate as corr_svc
 from social_research_probe.services.reporting import audio as audio_svc
-from social_research_probe.services.scoring import compute as compute_mod
 from social_research_probe.services.synthesizing import formatter
 from social_research_probe.services.synthesizing.explanations import explain_descriptive
 from social_research_probe.technologies.corroborates import _filters as filters_mod

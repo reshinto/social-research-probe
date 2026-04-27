@@ -130,7 +130,7 @@ class TestScoringServiceFailure:
     def test_failure_path(self, monkeypatch):
         # Force score_items to raise → exception branch
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.compute.score_items",
+            "social_research_probe.services.scoring.score_items",
             lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("nope")),
         )
         out = asyncio.run(

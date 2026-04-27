@@ -14,7 +14,7 @@ class ScoringComputeTech(BaseTechnology[object, list]):
     name: ClassVar[str] = "scoring.compute"
 
     async def _execute(self, input_data: object) -> list:
-        from social_research_probe.services.scoring.compute import score_items
+        from social_research_probe.services.scoring import score_items
 
         items = input_data.get("items", []) if isinstance(input_data, dict) else []
         metrics = input_data.get("engagement_metrics", []) if isinstance(input_data, dict) else []

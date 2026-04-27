@@ -68,7 +68,7 @@ class YouTubeScoreStage(BaseStage):
         if merged is None:
             return None
         from social_research_probe.config import load_active_config
-        from social_research_probe.services.scoring.weights import resolve_scoring_weights
+        from social_research_probe.services.scoring import resolve_scoring_weights
 
         return resolve_scoring_weights(load_active_config(), merged)
 

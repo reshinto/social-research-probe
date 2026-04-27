@@ -89,7 +89,7 @@ class TestScoreStage:
             names=("c",), method="m", evidence_priorities=()
         )
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.weights.resolve_scoring_weights",
+            "social_research_probe.services.scoring.resolve_scoring_weights",
             lambda cfg, m: {"trust": 0.5},
         )
         out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
