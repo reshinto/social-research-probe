@@ -99,7 +99,7 @@ def test_yt_score_full_path(enabled_state, monkeypatch):
 
 def test_yt_score_full_path_failure(enabled_state, monkeypatch):
     enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
-    from social_research_probe.services.base import ServiceResult, TechResult
+    from social_research_probe.services import ServiceResult, TechResult
 
     async def fake_execute_one(self, data):
         return ServiceResult(

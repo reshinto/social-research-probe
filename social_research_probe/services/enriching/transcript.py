@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import FallbackService, ServiceResult
+from social_research_probe.services import FallbackService, ServiceResult
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (
     YoutubeTranscriptFetch,

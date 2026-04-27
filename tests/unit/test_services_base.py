@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from social_research_probe.services.base import BaseService, ServiceResult, TechResult
+from social_research_probe.services import BaseService, ServiceResult, TechResult
 from social_research_probe.technologies.base import BaseTechnology
 
 

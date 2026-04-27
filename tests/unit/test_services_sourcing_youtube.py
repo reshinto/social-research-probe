@@ -342,7 +342,7 @@ def test_run_youtube_sourcing_returns_items_and_engagement(monkeypatch):
     engagement = asyncio.run(YouTubeEngagementTech()._execute([item]))
 
     async def fake_execute(self, data):
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         return ServiceResult(
             service_name=self.service_name,

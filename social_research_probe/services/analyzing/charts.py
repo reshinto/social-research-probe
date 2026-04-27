@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult
+from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.base import BaseTechnology
 
 _TECH_NAME = "charts_suite"

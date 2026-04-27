@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import ClassVar
 
-from social_research_probe.services.base import FallbackService
+from social_research_probe.services import FallbackService
 from social_research_probe.technologies.base import BaseTechnology
 from social_research_probe.utils.core.types import RunnerName
 

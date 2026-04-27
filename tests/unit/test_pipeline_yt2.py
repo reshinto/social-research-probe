@@ -9,7 +9,7 @@ import pytest
 
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.base import ServiceResult, TechResult
+from social_research_probe.services import ServiceResult, TechResult
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ class TestFetchStage:
 class TestScoreStage:
     def test_enabled_with_items(self, enabled_state, monkeypatch):
         enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         async def fake_one(self, data):
             return ServiceResult(
@@ -117,7 +117,7 @@ class TestTranscriptStage:
         assert out.get_stage_output("transcript")["top_n"] == []
 
     def test_merge_no_success(self):
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         sr = ServiceResult(
             service_name="t",
@@ -250,7 +250,7 @@ class TestCorroborateStage:
             lambda self: ["exa"],
         )
 
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         async def fake_batch(self, items):
             return [

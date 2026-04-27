@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import BaseService, ServiceResult
+from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.base import BaseTechnology
 
 

@@ -61,7 +61,7 @@ class TestCmdConfigInvalidSection:
 
 class TestPipelineYtChartsExecuteWithFailure:
     def test_render_outputs_no_success(self, monkeypatch):
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         async def fake_one(self, data):
             return ServiceResult(
