@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from social_research_probe.technologies.statistics import (
+    StatResult,
     correlation,
     descriptive,
     growth,
@@ -12,7 +13,6 @@ from social_research_probe.technologies.statistics import (
     selector,
     spread,
 )
-from social_research_probe.technologies.statistics.base import StatResult
 
 
 def names(results):

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import statistics
 
-from social_research_probe.technologies.statistics.base import StatResult
+from social_research_probe.technologies.statistics import StatResult
 
 
 def run(data: list[float], label: str = "values") -> list[StatResult]:

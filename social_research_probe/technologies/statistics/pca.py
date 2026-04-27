@@ -8,7 +8,7 @@ via power iteration + deflation.
 
 from __future__ import annotations
 
-from social_research_probe.technologies.statistics.base import StatResult
+from social_research_probe.technologies.statistics import StatResult
 
 
 def run(

@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+
+
+@dataclass
+class StatResult:
+    """The output of a single statistical analysis."""
+
+    name: str
+    value: float
+    caption: str
 
 
 class StatisticsTech(BaseTechnology[object, dict]):

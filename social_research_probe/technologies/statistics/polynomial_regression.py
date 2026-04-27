@@ -10,7 +10,7 @@ dependency is required.
 
 from __future__ import annotations
 
-from social_research_probe.technologies.statistics.base import StatResult
+from social_research_probe.technologies.statistics import StatResult
 from social_research_probe.technologies.statistics.multi_regression import _solve_normal_equations
 
 
