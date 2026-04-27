@@ -1,12 +1,4 @@
-"""Detect report-level warnings about result quality.
-
-The pipeline previously hard-coded ``warnings=[]``, which always rendered as
-"_(none)_" even when results had real quality concerns (low channel
-diversity, no corroboration, low absolute scores, stale content). This
-module inspects the fetched items, derived engagement_metrics, and scored top-N to
-return a list of human-readable warnings the user should consider before
-acting on the report.
-"""
+"""Detect report-level warnings about result quality."""
 
 from __future__ import annotations
 
@@ -30,13 +22,7 @@ def detect(
     corroboration_ran: bool = False,
     corroboration_skip_reason: str | None = None,
 ) -> list[str]:
-    """Return a list of warning strings about quality concerns.
-
-    Includes a corroboration reminder only when the pipeline skipped the
-    corroboration stage, so users do not mistake the heuristic trust score for
-    a verified source check. Pass ``corroboration_skip_reason`` to make the
-    HTML report self-explanatory (e.g. "provider disabled in config").
-    """
+    """Return a list of warning strings about quality concerns."""
     reference_now = now or datetime.now(UTC)
     notes: list[str] = []
     _check_fetch_volume(items, notes)

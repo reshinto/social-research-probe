@@ -23,24 +23,7 @@ def summarize(
     top_n: list[ScoredItem],
     now: datetime | None = None,
 ) -> str:
-    """Build an evidence sentence from fetched items, engagement_metrics, and scored top-N.
-
-    Args:
-        items: All raw items returned by the adapter.
-        engagement_metrics: Parallel list of derived engagement_metrics (one per item).
-        top_n: The scored top-N dicts produced by ``_score_item``.
-        now: Override for "now" (used by tests to make ages deterministic).
-
-    Returns:
-        A single-line summary such as
-        "17 items from 14 channels; median upload age 4d;
-         avg view velocity 8,432/day; avg engagement 0.042;
-         top-N source mix: 5S".
-
-    Why this exists: the raw adapter output is a firehose; consumers need a
-    compact narrative that answers "what did the data actually look like?"
-    without forcing them to parse every item.
-    """
+    """Build an evidence sentence from fetched items, engagement_metrics, and scored top-N."""
     if not items:
         return "no items fetched"
 
@@ -67,12 +50,7 @@ def summarize(
 
 
 def summarize_engagement_metrics(engagement_metrics: list[EngagementMetrics]) -> str:
-    """Build a compact metric summary of platform engagement_metrics.
-
-    Used for ``report["platform_engagement_summary"]``. Focuses on raw numbers
-    (counts, velocities, engagement) rather than the narrative view from
-    :func:`summarize`.
-    """
+    """Build a compact metric summary of platform engagement_metrics."""
     if not engagement_metrics:
         return "no data"
 

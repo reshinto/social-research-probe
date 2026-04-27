@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.services.synthesizing import divergence, explain, llm_contract
+from social_research_probe.services.synthesizing import explain, llm_contract
 from social_research_probe.technologies.statistics.base import StatResult
 from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.text import divergence
 
 
 class TestDivergence:

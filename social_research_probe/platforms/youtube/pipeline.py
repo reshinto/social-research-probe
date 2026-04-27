@@ -337,7 +337,9 @@ class YouTubeSynthesisStage(BaseStage):
     @staticmethod
     async def _run_synthesis(context: dict) -> str:
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
-        from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
+        from social_research_probe.services.synthesizing.synthesis.llm_contract import (
+            build_synthesis_prompt,
+        )
 
         try:
             return await multi_llm_prompt(build_synthesis_prompt(context)) or ""
@@ -384,13 +386,15 @@ class YouTubeAssembleStage(BaseStage):
         chart_takeaways: list,
         warnings: list[str],
     ) -> dict:
-        from social_research_probe.services.synthesizing.evidence import (
+        from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize as summarize_evidence,
         )
-        from social_research_probe.services.synthesizing.evidence import (
+        from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize_engagement_metrics,
         )
-        from social_research_probe.services.synthesizing.formatter import build_report
+        from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+            build_report,
+        )
 
         return build_report(
             topic=topic,
@@ -460,7 +464,7 @@ class YouTubeStructuredSynthesisStage(BaseStage):
         if not self._is_enabled(state):
             return state
 
-        from social_research_probe.services.synthesizing.runner import attach_synthesis
+        from social_research_probe.services.synthesizing.synthesis.runner import attach_synthesis
 
         report = state.outputs.get("report", {})
         await asyncio.to_thread(attach_synthesis, report)

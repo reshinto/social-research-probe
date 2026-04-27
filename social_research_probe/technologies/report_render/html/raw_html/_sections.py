@@ -12,10 +12,10 @@ import html
 import re
 from pathlib import Path
 
-from social_research_probe.services.synthesizing.explanations.topic_hint import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     topic_action_hint,
 )
-from social_research_probe.services.synthesizing.formatter import (
+from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
     _contextual_explanation,
     _infer_model,
 )

@@ -23,7 +23,7 @@ from social_research_probe.platforms.base import (
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_kaplan_meier,
 )
 from social_research_probe.technologies.charts import histogram

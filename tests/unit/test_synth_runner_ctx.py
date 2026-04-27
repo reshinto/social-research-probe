@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from social_research_probe.services.llm import classify_query as cq
-from social_research_probe.services.synthesizing import runner, synthesis_context
+from social_research_probe.services.synthesizing.synthesis import runner, synthesis_context
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 
 

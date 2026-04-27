@@ -21,8 +21,8 @@ from social_research_probe.utils.core.types import (
     StatsSummary,
 )
 
-from .explanations import contextual_explanation as _contextual_explanation
-from .explanations import infer_model as _infer_model
+from .contextual_explain import contextual_explanation as _contextual_explanation
+from .contextual_explain import infer_model as _infer_model
 
 __all__ = [
     "build_fallback_report_summary",
@@ -181,12 +181,7 @@ def _render_timing_footer(timings: list) -> str:
 
 
 def render_sections_1_9(report: ResearchReport) -> str:
-    """Render sections 1-9 deterministically from report data.
-
-    Each section maps directly to a field in the report. This function is
-    also called by render_full and by tests that verify section formatting
-    without requiring LLM synthesis.
-    """
+    """Render sections 1-9 deterministically from report data."""
     svs = report.get("source_validation_summary") or {}
     items = report["items_top_n"]
     stats = report["stats_summary"]

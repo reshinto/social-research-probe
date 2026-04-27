@@ -12,9 +12,9 @@ from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.all import pipeline as all_pipeline
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.services.synthesizing.explanations import explain_kmeans
-from social_research_probe.services.synthesizing.explanations.clustering import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_kaplan_meier,
+    explain_kmeans,
 )
 from social_research_probe.technologies.charts import (
     bar,

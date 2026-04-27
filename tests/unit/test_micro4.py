@@ -13,7 +13,7 @@ from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.llm import ensemble
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )

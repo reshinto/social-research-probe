@@ -10,8 +10,8 @@ import pytest
 from social_research_probe import get_version
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.config import Config
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )

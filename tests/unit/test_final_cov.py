@@ -13,8 +13,10 @@ from social_research_probe.commands import suggest_purposes, suggest_topics
 from social_research_probe.config import load_active_config, reset_config_cache
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import explain_tests
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+    explain_tests,
+)
 from social_research_probe.technologies.charts import heatmap
 from social_research_probe.technologies.corroborates._filters import filter_results
 from social_research_probe.technologies.media_fetch import youtube_api

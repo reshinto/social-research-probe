@@ -14,8 +14,10 @@ from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.corroborating import corroborate as corr_svc
 from social_research_probe.services.reporting import audio as audio_svc
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import explain_descriptive
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+    explain_descriptive,
+)
 from social_research_probe.technologies.corroborates import _filters as filters_mod
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.tavily import TavilyProvider

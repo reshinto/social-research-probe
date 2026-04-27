@@ -1,6 +1,6 @@
 """Reporting services."""
 
-from social_research_probe.services.synthesizing.formatter import render_full
+from social_research_probe.services.synthesizing.synthesis.helpers.formatter import render_full
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     serve_report_command,
     write_html_report,

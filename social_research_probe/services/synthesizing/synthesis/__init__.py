@@ -15,9 +15,8 @@ class SynthesisTech(BaseTechnology[object, str]):
 
     async def _execute(self, input_data: object) -> str | None:
         from social_research_probe.services.llm.ensemble import multi_llm_prompt
-        from social_research_probe.services.synthesizing.llm_contract import (
-            build_synthesis_prompt,
-        )
+
+        from .llm_contract import build_synthesis_prompt
 
         prompt = build_synthesis_prompt(input_data if isinstance(input_data, dict) else {})
         synthesis = await multi_llm_prompt(prompt) or ""

@@ -25,7 +25,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from social_research_probe.config import load_active_config
-from social_research_probe.services.synthesizing.formatter import resolve_report_summary
+from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+    resolve_report_summary,
+)
 from social_research_probe.technologies.report_render.html.raw_html._assets import (
     CSS_STYLES,
     TTS_SCRIPT,

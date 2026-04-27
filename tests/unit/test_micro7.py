@@ -179,7 +179,9 @@ def test_claim_extractor_execute(monkeypatch):
 
 
 def test_correlation_no_factors_finally():
-    from social_research_probe.services.synthesizing.explanations import explain_correlation
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+        explain_correlation,
+    )
 
     out = explain_correlation("Pearson r alone: 0.05")
     # weak case + no factors → should return weak strength
@@ -187,7 +189,9 @@ def test_correlation_no_factors_finally():
 
 
 def test_descriptive_no_match():
-    from social_research_probe.services.synthesizing.explanations import explain_descriptive
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+        explain_descriptive,
+    )
 
     # Doesn't match Mean/Median/Min/Max → returns ""
     out = explain_descriptive("Std overall: 0.5")

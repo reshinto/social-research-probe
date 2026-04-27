@@ -10,8 +10,8 @@ from social_research_probe.config import Config, _collect_service_names
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )

@@ -1,6 +1,6 @@
-"""services/synthesizing/llm_contract.py — Prompt building and response parsing for LLM synthesis.
+"""Prompt building and response parsing for LLM synthesis.
 
-The pipeline produces a raw evidence report (via services.synthesizing.formatter.build_report).
+The pipeline produces a raw evidence report (via services.synthesizing.helpers.formatter.build_report).
 This module's job is to:
   1. Turn that report into a prompt the LLM can respond to (build_synthesis_prompt).
   2. Parse and validate the LLM's JSON response (parse_synthesis_response).
@@ -14,8 +14,9 @@ import json
 from typing import Final
 
 from social_research_probe.services.llm.prompts import SYNTHESIS_PROMPT
-from social_research_probe.services.synthesizing.synthesis_context import build_synthesis_context
 from social_research_probe.utils.core.errors import ValidationError
+
+from .synthesis_context import build_synthesis_context
 
 SYNTHESIS_JSON_SCHEMA: Final[dict] = {
     "type": "object",
@@ -50,19 +51,12 @@ def build_synthesis_prompt(report: dict) -> str:
     the runner.
 
     Args:
-        report: A dict produced by services.synthesizing.formatter.build_report.
+        report: A dict produced by services.synthesizing.helpers.formatter.build_report.
 
     Returns:
         A formatted prompt string ready to send to an LLMRunner.
-
-    Example:
-        prompt = build_synthesis_prompt(report)
-        result = runner.run(prompt, schema=RESPONSE_SCHEMA)
     """
     context = build_synthesis_context(report)
-    # Pass the compact synthesis context as the evidence body. It already
-    # contains items, stats highlights, chart takeaways, coverage, warnings —
-    # everything the LLM should ground its synthesis in.
     evidence = json.dumps(context, indent=2)
     schema = json.dumps(SYNTHESIS_JSON_SCHEMA)
     return SYNTHESIS_PROMPT.format(
@@ -75,10 +69,6 @@ def build_synthesis_prompt(report: dict) -> str:
 
 def parse_synthesis_response(raw: dict) -> dict:
     """Validate and extract the LLM's synthesis response.
-
-    Checks that both required keys are present and are plain strings.
-    If either check fails the caller gets a clear ValidationError rather
-    than a cryptic KeyError or type coercion downstream.
 
     Args:
         raw: The dict returned by LLMRunner.run().

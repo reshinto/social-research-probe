@@ -13,8 +13,8 @@ from social_research_probe.commands import install_skill
 from social_research_probe.services.analyzing import statistics as stats_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.reporting import html as html_svc
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )
