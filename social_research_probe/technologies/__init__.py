@@ -1,4 +1,7 @@
-"""Atomic async technology adapters: single input → single output."""
+"""Atomic async technology adapters: single input → single output.
+
+Internal package; BaseTechnology is for use within technologies/ folder only.
+"""
 
 import hashlib
 import time
@@ -8,6 +11,8 @@ from typing import ClassVar, Generic, TypeVar
 
 from social_research_probe.config import load_active_config
 from social_research_probe.utils.display.progress import log
+
+__all__ = []
 
 TInput = TypeVar("TInput")
 TOutput = TypeVar("TOutput")

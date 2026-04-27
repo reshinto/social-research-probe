@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
-from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.display.progress import log_with_time
 
 TInput = TypeVar("TInput")
@@ -60,7 +59,7 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         """Run all technologies for one input; isolate per-technology errors."""
         techs = self._get_technologies()
 
-        async def _run(tech: BaseTechnology) -> TechResult:
+        async def _run(tech: object) -> TechResult:
             tech.caller_service = self.service_name
             try:
                 output = await tech.execute(data)
@@ -87,7 +86,7 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         )
 
     @abstractmethod
-    def _get_technologies(self) -> list[BaseTechnology]:
+    def _get_technologies(self) -> list[object]:
         """Return technology instances to run for one input."""
 
 

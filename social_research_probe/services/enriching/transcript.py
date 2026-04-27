@@ -5,29 +5,10 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services import FallbackService, ServiceResult
-from social_research_probe.technologies import BaseTechnology
+from social_research_probe.technologies.enriching import TranscriptWhisperTech
 from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (
     YoutubeTranscriptFetch,
 )
-
-
-class TranscriptWhisperTech(BaseTechnology[str, str]):
-    """Fallback technology using yt-dlp to download audio and Whisper to transcribe."""
-
-    name: ClassVar[str] = "whisper_fallback"
-
-    async def _execute(self, input_data: str) -> str | None:
-        import asyncio
-        import tempfile
-
-        from social_research_probe.technologies.media_fetch.yt_dlp import download_audio
-        from social_research_probe.technologies.transcript_fetch.whisper import transcribe_audio
-
-        with tempfile.TemporaryDirectory(prefix="srp-ytdlp-") as tmpdir:
-            audio_path = await asyncio.to_thread(download_audio, input_data, tmpdir)
-            if audio_path is not None:
-                return await asyncio.to_thread(transcribe_audio, audio_path)
-        return None
 
 
 class TranscriptService(FallbackService):

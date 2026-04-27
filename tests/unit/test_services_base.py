@@ -7,7 +7,6 @@ import asyncio
 import pytest
 
 from social_research_probe.services import BaseService, ServiceResult, TechResult
-from social_research_probe.technologies import BaseTechnology
 
 
 class _OkTech(BaseTechnology[str, str]):

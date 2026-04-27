@@ -210,6 +210,29 @@ class JsonCliRunner(LLMRunner, BaseTechnology[str, dict]):
         return await asyncio.to_thread(self.run, data)
 
 
+class LLMTech(BaseTechnology[str, dict]):
+    """Technology adapter wrapping one registered LLM runner for structured JSON calls."""
+
+    enabled_config_key: ClassVar[str] = ""
+
+    def __init__(self, runner_name: str, schema: dict | None = None) -> None:
+        super().__init__()
+        self._runner_name = runner_name
+        self._schema = schema
+
+    @property
+    def name(self) -> str:  # type: ignore[override]
+        return f"llm.{self._runner_name}"
+
+    async def _execute(self, prompt: str) -> dict | None:
+        from social_research_probe.services.llm.core.helpers.registry import get_runner
+
+        runner = get_runner(self._runner_name)
+        if not runner.health_check():
+            return None
+        return await asyncio.to_thread(runner.run, prompt, schema=self._schema)
+
+
 # ---------------------------------------------------------------------------
 # Data structures for search results
 # ---------------------------------------------------------------------------

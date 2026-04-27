@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services import BaseService, ServiceResult
-from social_research_probe.technologies import BaseTechnology
+from social_research_probe.technologies.statistics import StatisticsTech
 
 _NUMERIC_TARGETS: tuple[str, ...] = (
     "overall",
@@ -131,11 +131,3 @@ class StatisticsService(BaseService):
         result.input_key = "scored_items"
         return result
 
-
-class StatisticsTech(BaseTechnology[object, dict]):
-    """Technology wrapper for computing statistics across all targets."""
-
-    name: ClassVar[str] = "stats_per_target"
-
-    async def _execute(self, input_data: object) -> dict:
-        return await StatisticsService._compute_async(StatisticsService._items(input_data))

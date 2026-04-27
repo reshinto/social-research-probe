@@ -6,21 +6,10 @@ from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.services import BaseService, ServiceResult
-from social_research_probe.technologies import BaseTechnology
+from social_research_probe.technologies.charts import ChartsTech
 
 _TECH_NAME = "charts_suite"
 _INPUT_KEY = "scored_items"
-
-
-class ChartsTech(BaseTechnology[object, list]):
-    """Technology wrapper for generating the full chart suite."""
-
-    name: ClassVar[str] = _TECH_NAME
-
-    async def _execute(self, input_data: object) -> list:
-        items = ChartsService._items_from(input_data)
-        out_dir = ChartsService._ensure_charts_dir()
-        return await ChartsService._render_with_cache(items, out_dir)
 
 
 class ChartsService(BaseService):

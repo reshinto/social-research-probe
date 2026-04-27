@@ -14,7 +14,6 @@ from social_research_probe.commands import Command
 from social_research_probe.platforms.all import pipeline as all_pipeline
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.llm.core import ensemble
-from social_research_probe.technologies import BaseTechnology
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.tts import voicebox
 from social_research_probe.utils.core.errors import AdapterError
