@@ -4,53 +4,12 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from social_research_probe.platforms.state import PipelineState
 
-from social_research_probe.utils.core.types import MetricMap
-
-
-@dataclass(frozen=True)
-class FetchLimits:
-    """Search-time fetch limits shared by all platform adapters."""
-
-    max_items: int = 20
-    recency_days: int | None = 90
-
-
-@dataclass(frozen=True)
-class RawItem:
-    """Normalised raw content item returned by a platform adapter."""
-
-    id: str
-    url: str
-    title: str
-    author_id: str
-    author_name: str
-    published_at: datetime
-    metrics: MetricMap
-    text_excerpt: str | None
-    thumbnail: str | None
-    extras: MetricMap
-
-
-@dataclass(frozen=True)
-class EngagementMetrics:
-    """Derived numeric signals computed from one or more raw items."""
-
-    views: int | None
-    likes: int | None
-    comments: int | None
-    upload_date: datetime | None
-    view_velocity: float | None
-    engagement_ratio: float | None
-    comment_velocity: float | None
-    cross_channel_repetition: float | None
-    raw: MetricMap = field(default_factory=dict)
+from social_research_probe.utils.core.types import EngagementMetrics, FetchLimits, RawItem
 
 
 class PlatformClient(ABC):

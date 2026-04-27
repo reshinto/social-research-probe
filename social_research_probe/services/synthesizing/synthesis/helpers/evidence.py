@@ -13,8 +13,7 @@ from __future__ import annotations
 import statistics
 from datetime import UTC, datetime
 
-from social_research_probe.platforms import EngagementMetrics, RawItem
-from social_research_probe.utils.core.types import ScoredItem
+from social_research_probe.utils.core.types import EngagementMetrics, RawItem, ScoredItem
 
 
 def summarize(

@@ -5,16 +5,16 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.platforms import (
-    EngagementMetrics,
-    FetchLimits,
-    RawItem,
-)
 from social_research_probe.services import BaseService, ServiceResult, TechResult
 from social_research_probe.technologies.web_search import (
     YouTubeEngagementTech,
     YouTubeHydrateTech,
     YouTubeSearchTech,
+)
+from social_research_probe.utils.core.types import (
+    EngagementMetrics,
+    FetchLimits,
+    RawItem,
 )
 
 

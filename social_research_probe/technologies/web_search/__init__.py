@@ -6,7 +6,6 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
-from social_research_probe.platforms import EngagementMetrics, FetchLimits, RawItem
 from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.core.coerce import (
     as_optional_string,
@@ -15,7 +14,12 @@ from social_research_probe.utils.core.coerce import (
     coerce_string,
     parse_duration_seconds,
 )
-from social_research_probe.utils.core.types import JSONObject
+from social_research_probe.utils.core.types import (
+    EngagementMetrics,
+    FetchLimits,
+    JSONObject,
+    RawItem,
+)
 
 
 def _recency_cutoff(days: int | None) -> str | None:

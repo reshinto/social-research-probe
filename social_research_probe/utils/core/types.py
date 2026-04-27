@@ -9,6 +9,8 @@ reviewable shapes.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Literal, TypeAlias, TypedDict
 
@@ -18,6 +20,46 @@ JSONObject: TypeAlias = dict[str, JSONValue]
 
 MetricValue: TypeAlias = None | bool | int | float | str
 MetricMap: TypeAlias = dict[str, MetricValue]
+
+
+@dataclass(frozen=True)
+class FetchLimits:
+    """Search-time fetch limits shared by all platform adapters."""
+
+    max_items: int = 20
+    recency_days: int | None = 90
+
+
+@dataclass(frozen=True)
+class RawItem:
+    """Normalised raw content item returned by a platform adapter."""
+
+    id: str
+    url: str
+    title: str
+    author_id: str
+    author_name: str
+    published_at: datetime
+    metrics: MetricMap
+    text_excerpt: str | None
+    thumbnail: str | None
+    extras: MetricMap
+
+
+@dataclass(frozen=True)
+class EngagementMetrics:
+    """Derived numeric signals computed from one or more raw items."""
+
+    views: int | None
+    likes: int | None
+    comments: int | None
+    upload_date: datetime | None
+    view_velocity: float | None
+    engagement_ratio: float | None
+    comment_velocity: float | None
+    cross_channel_repetition: float | None
+    raw: MetricMap = field(default_factory=dict)
+
 
 RunnerName = Literal["none", "claude", "gemini", "codex", "local"]
 FreeTextRunnerName = Literal["claude", "gemini", "codex", "local"]
