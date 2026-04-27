@@ -72,7 +72,7 @@ def render(
     try:
         _render_with_matplotlib(x, y, path, label, slope, intercept, r_squared)
     except Exception:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

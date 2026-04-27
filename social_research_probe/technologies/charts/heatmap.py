@@ -73,11 +73,11 @@ def render(
     try:
         _render_with_matplotlib(names, matrix, path, label) if names else None
     except Exception:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
     if not names:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

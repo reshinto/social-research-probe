@@ -55,11 +55,11 @@ def render(
         try:
             mean_val, median_val = _render_with_matplotlib(data, path, label, bins)
         except Exception:
-            from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+            from social_research_probe.technologies.charts import write_placeholder_png
 
             write_placeholder_png(path)
     else:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

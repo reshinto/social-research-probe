@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from social_research_probe.technologies.charts import (
+    ChartResult,
     bar,
     heatmap,
     histogram,
@@ -17,7 +18,6 @@ from social_research_probe.technologies.charts import (
     scatter,
     table,
 )
-from social_research_probe.technologies.charts import ChartResult
 from social_research_probe.utils.caching.pipeline_cache import hash_key
 
 _ROUND_DIGITS = 6

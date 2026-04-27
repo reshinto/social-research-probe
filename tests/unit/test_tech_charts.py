@@ -5,15 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from social_research_probe.technologies.charts import (
-    _png_writer,
+    ChartResult,
     ascii,
     bar,
     histogram,
     line,
     scatter,
     selector,
+    write_placeholder_png,
 )
-from social_research_probe.technologies.charts import ChartResult
 
 
 class TestAscii:
@@ -68,6 +68,6 @@ class TestSelector:
 class TestPngWriter:
     def test_writes_valid_png_header(self, tmp_path: Path):
         target = tmp_path / "p.png"
-        _png_writer.write_placeholder_png(str(target))
+        write_placeholder_png(str(target))
         assert target.exists()
         assert target.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
