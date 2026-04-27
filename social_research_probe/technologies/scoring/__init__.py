@@ -1,11 +1,9 @@
-
-
-
 from __future__ import annotations
 
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+
 
 class ScoringComputeTech(BaseTechnology[object, list]):
     """Technology wrapper for computing full scores for a batch of items."""

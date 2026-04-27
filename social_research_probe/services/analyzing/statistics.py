@@ -130,4 +130,3 @@ class StatisticsService(BaseService):
         result = await super().execute_one(data)
         result.input_key = "scored_items"
         return result
-

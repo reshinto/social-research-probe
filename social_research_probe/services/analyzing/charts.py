@@ -8,7 +8,6 @@ from typing import ClassVar
 from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.charts import ChartsTech
 
-_TECH_NAME = "charts_suite"
 _INPUT_KEY = "scored_items"
 
 
@@ -89,7 +88,10 @@ class ChartsService(BaseService):
 
     @classmethod
     async def _render_with_cache(cls, items: list[dict], charts_dir: Path) -> list:
-        from social_research_probe.utils.caching.pipeline_cache import get_json, set_json
+        from social_research_probe.utils.caching.pipeline_cache import (
+            get_json,
+            set_json,
+        )
 
         if not items:
             return []

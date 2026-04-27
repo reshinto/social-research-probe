@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
@@ -13,10 +12,10 @@ from social_research_probe.platforms import (
     RawItem,
 )
 from social_research_probe.services import BaseService, ServiceResult, TechResult
-from social_research_probe.technologies.web_search import YouTubeSearchTech, YouTubeHydrateTech
-from social_research_probe.technologies.media_fetch.youtube_api import (
-    hydrate_youtube,
-    search_youtube,
+from social_research_probe.technologies.web_search import (
+    YouTubeEngagementTech,
+    YouTubeHydrateTech,
+    YouTubeSearchTech,
 )
 from social_research_probe.utils.core.coerce import (
     as_optional_string,
@@ -124,7 +123,7 @@ class YouTubeSourcingService(BaseService[str, dict]):
         self._hydrate = YouTubeHydrateTech()
         self._engagement = YouTubeEngagementTech()
 
-    def _get_technologies(self) -> list[BaseTechnology]:
+    def _get_technologies(self) -> list[object]:
         return [self._search, self._hydrate, self._engagement]
 
     async def execute_one(self, data: str) -> ServiceResult:
@@ -158,7 +157,7 @@ class YouTubeSourcingService(BaseService[str, dict]):
 
     async def _run_tech(
         self,
-        tech: BaseTechnology,
+        tech: object,
         data: object,
         sink: list[TechResult],
     ) -> object:
