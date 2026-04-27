@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.platforms.base import (
+from social_research_probe.platforms import (
     EngagementMetrics,
     FetchLimits,
     RawItem,

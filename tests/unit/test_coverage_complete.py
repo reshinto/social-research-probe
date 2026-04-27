@@ -217,7 +217,7 @@ def test_summary_cache_hit_branch(tmp_path, monkeypatch):
 
 def test_warnings_freshness_stale(monkeypatch):
     """services/synthesizing/warnings.py 86->exit — stale items branch."""
-    from social_research_probe.platforms.base import EngagementMetrics
+    from social_research_probe.platforms import EngagementMetrics
     from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
         _check_freshness,
     )
@@ -431,7 +431,7 @@ def test_synthesis_runner_status_healthy(monkeypatch):
 
 def test_warnings_freshness_old_items():
     """warnings.py 86->exit — stale and fresh freshness branches."""
-    from social_research_probe.platforms.base import EngagementMetrics
+    from social_research_probe.platforms import EngagementMetrics
     from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
         _check_freshness,
     )
@@ -567,7 +567,7 @@ def test_config_service_enabled_non_dict_category(tmp_path):
 
 def test_evidence_summarize_skips_none_branches():
     """services/synthesizing/evidence.py 51->54 etc — all metric helpers None."""
-    from social_research_probe.platforms.base import EngagementMetrics, RawItem
+    from social_research_probe.platforms import EngagementMetrics, RawItem
     from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
         summarize,
         summarize_engagement_metrics,

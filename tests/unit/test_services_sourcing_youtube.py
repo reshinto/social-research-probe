@@ -6,7 +6,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from social_research_probe.platforms.base import FetchLimits, RawItem
+from social_research_probe.platforms import FetchLimits, RawItem
 from social_research_probe.services.sourcing.youtube import (
     YouTubeEngagementTech,
     YouTubeHydrateTech,

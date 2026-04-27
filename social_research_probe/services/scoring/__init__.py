@@ -7,7 +7,7 @@ import statistics
 from datetime import UTC, datetime
 
 from social_research_probe.config import Config
-from social_research_probe.platforms.base import EngagementMetrics, RawItem
+from social_research_probe.platforms import EngagementMetrics, RawItem
 from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS, overall_score
 from social_research_probe.technologies.scoring.opportunity import opportunity_score
 from social_research_probe.technologies.scoring.trend import trend_score

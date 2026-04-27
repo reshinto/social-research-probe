@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.platforms.base import RawItem
+from social_research_probe.platforms import RawItem
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.analyzing import statistics as stats_svc
 from social_research_probe.services.sourcing.youtube import (
@@ -115,7 +115,7 @@ class TestSourcingYouTube:
         assert _recency_cutoff(0) is None
 
     def test_search_tech_calls_search_youtube(self, monkeypatch):
-        from social_research_probe.platforms.base import FetchLimits
+        from social_research_probe.platforms import FetchLimits
 
         monkeypatch.setattr(
             "social_research_probe.services.sourcing.youtube.search_youtube",

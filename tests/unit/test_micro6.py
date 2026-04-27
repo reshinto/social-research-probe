@@ -41,7 +41,7 @@ class TestYtFetchItemsAsync:
     def test_fetch_items_calls_sourcing_service(self, monkeypatch):
         from datetime import UTC, datetime
 
-        from social_research_probe.platforms.base import RawItem
+        from social_research_probe.platforms import RawItem
 
         item = RawItem(
             id="1",

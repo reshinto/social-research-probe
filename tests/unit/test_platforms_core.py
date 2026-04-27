@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.platforms import base, registry
+from social_research_probe.platforms import (
+    BaseResearchPlatform,
+    BaseStage,
+    FetchClient,
+    FetchLimits,
+    PlatformClient,
+    SearchClient,
+    registry,
+)
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.utils.core.errors import ValidationError
 
@@ -29,7 +37,7 @@ class TestRegistry:
         assert "all" not in registry.list_clients()
 
     def test_register_and_get_roundtrip(self, monkeypatch):
-        class FakeClient(base.PlatformClient):
+        class FakeClient(PlatformClient):
             name = "fake-test-platform"
 
             def __init__(self, config):
@@ -75,19 +83,19 @@ class TestPipelineState:
 
 def test_base_classes_abstract():
     with pytest.raises(TypeError):
-        base.PlatformClient()  # type: ignore[abstract]
+        PlatformClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.SearchClient()  # type: ignore[abstract]
+        SearchClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.FetchClient()  # type: ignore[abstract]
+        FetchClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.BaseStage()  # type: ignore[abstract]
+        BaseStage()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.BaseResearchPlatform()  # type: ignore[abstract]
+        BaseResearchPlatform()  # type: ignore[abstract]
 
 
 def test_fetch_limits_defaults():
-    fl = base.FetchLimits()
+    fl = FetchLimits()
     assert fl.max_items == 20
     assert fl.recency_days == 90
 

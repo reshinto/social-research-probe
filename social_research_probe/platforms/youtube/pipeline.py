@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
+from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting import write_final_report
 from social_research_probe.utils.display.progress import log_with_time

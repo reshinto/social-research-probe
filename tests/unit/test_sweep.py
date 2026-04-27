@@ -80,7 +80,7 @@ def test_yt_api_fetch_channel_failure(monkeypatch):
 def test_compute_normalize_with_metrics_short_metrics():
     from datetime import UTC, datetime
 
-    from social_research_probe.platforms.base import RawItem
+    from social_research_probe.platforms import RawItem
 
     items = [
         RawItem(

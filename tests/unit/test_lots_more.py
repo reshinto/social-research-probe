@@ -15,7 +15,7 @@ from social_research_probe.commands import ConfigSubcommand
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.config import _active_data_dir
-from social_research_probe.platforms.base import (
+from social_research_probe.platforms import (
     BaseResearchPlatform,
     BaseStage,
     run_stages,

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import social_research_probe.services.scoring as compute
 import social_research_probe.services.scoring as weights
-from social_research_probe.platforms.base import EngagementMetrics, RawItem
+from social_research_probe.platforms import EngagementMetrics, RawItem
 from social_research_probe.utils.purposes.merge import MergedPurpose
 
 
