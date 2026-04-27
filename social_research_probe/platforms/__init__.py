@@ -6,7 +6,6 @@ _concrete_pipelines: dict[str, type] | None = None
 def _get_concrete_pipelines() -> dict[str, type]:
     global _concrete_pipelines
     if _concrete_pipelines is None:
-        import social_research_probe.services.sourcing.youtube  # registers YouTubeConnector
         from social_research_probe.platforms.youtube.pipeline import YouTubePipeline
 
         _concrete_pipelines = {"youtube": YouTubePipeline}

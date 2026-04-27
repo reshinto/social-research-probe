@@ -7,7 +7,6 @@ import asyncio
 from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting import write_final_report
-from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
 from social_research_probe.utils.display.progress import log_with_time
 
 
@@ -27,18 +26,9 @@ class YouTubeFetchStage(BaseStage):
         return topic
 
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
-        from importlib import import_module
+        from social_research_probe.services.sourcing import youtube as yt_sourcing
 
-        from social_research_probe.platforms.registry import get_client
-
-        import_module("social_research_probe.services.sourcing.youtube")
-        connector = get_client("youtube", config)
-        raw = await asyncio.to_thread(
-            connector.find_by_topic, search_topic, connector.default_limits
-        )
-        items = await connector.fetch_item_details(raw)
-        engagement_metrics = compute_engagement_metrics(items)
-        return items, engagement_metrics
+        return await yt_sourcing.run_youtube_sourcing(search_topic, config)
 
     @log_with_time("[srp] youtube/fetch: execute")
     async def execute(self, state: PipelineState) -> PipelineState:

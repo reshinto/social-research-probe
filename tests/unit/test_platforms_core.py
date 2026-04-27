@@ -28,6 +28,24 @@ class TestRegistry:
     def test_list_clients_excludes_all(self):
         assert "all" not in registry.list_clients()
 
+    def test_register_and_get_roundtrip(self, monkeypatch):
+        class FakeClient(base.PlatformClient):
+            name = "fake-test-platform"
+
+            def __init__(self, config):
+                self.config = config
+
+            def health_check(self) -> bool:
+                return True
+
+        monkeypatch.setitem(registry.CLIENTS, "fake-test-platform", None)
+        registry.register(FakeClient)
+        assert "fake-test-platform" in registry.list_clients()
+        out = registry.get_client("fake-test-platform", {"k": 1})
+        assert isinstance(out, FakeClient)
+        assert out.config == {"k": 1}
+        registry.CLIENTS.pop("fake-test-platform", None)
+
 
 class TestPipelineState:
     def test_set_get_stage(self):

@@ -187,17 +187,9 @@ class TestAllPipelineRunFull:
                 state.outputs["report"] = {"k": 1}
                 return state
 
-        with (
-            patch.object(all_pipeline, "PIPELINES", create=True)
-            if False
-            else patch(
-                "social_research_probe.platforms.PIPELINES",
-                {"all": object, "youtube": FakePipeline},
-            ),
-            patch(
-                "social_research_probe.platforms.registry.get_client",
-                return_value=MagicMock(),
-            ),
+        with patch(
+            "social_research_probe.platforms.PIPELINES",
+            {"all": object, "youtube": FakePipeline},
         ):
             state = PipelineState(
                 platform_type="all",

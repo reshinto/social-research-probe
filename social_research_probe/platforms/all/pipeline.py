@@ -9,12 +9,7 @@ from social_research_probe.platforms.state import PipelineState
 
 
 async def _run_one(name: str, pipeline_cls: type, state: PipelineState) -> tuple[str, dict]:
-    from social_research_probe.platforms.registry import get_client
-
-    platform_config = state.inputs.get("platform_config", {})
-    adapter = get_client(name, platform_config)
-    platform_inputs = {**state.inputs, "adapter": adapter}
-    platform_state = replace(state, platform_type=name, inputs=platform_inputs, outputs={})
+    platform_state = replace(state, platform_type=name, inputs=dict(state.inputs), outputs={})
     result = await pipeline_cls().run(platform_state)
     return name, result.outputs.get("report", {})
 

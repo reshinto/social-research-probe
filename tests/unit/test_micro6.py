@@ -38,7 +38,7 @@ class TestYtTechnologyLogsException:
 
 
 class TestYtFetchItemsAsync:
-    def test_fetch_items_uses_connector(self, monkeypatch):
+    def test_fetch_items_calls_sourcing_service(self, monkeypatch):
         from datetime import UTC, datetime
 
         from social_research_probe.platforms.base import RawItem
@@ -56,24 +56,12 @@ class TestYtFetchItemsAsync:
             extras={},
         )
 
-        class FakeConn:
-            default_limits = MagicMock()
+        async def fake_run(topic, config):
+            assert topic == "topic"
+            return [item], []
 
-            def __init__(self, cfg):
-                pass
-
-            def find_by_topic(self, topic, limits):
-                return [item]
-
-            async def fetch_item_details(self, items):
-                return items
-
-        from social_research_probe.platforms.registry import CLIENTS
-
-        monkeypatch.setitem(CLIENTS, "youtube", FakeConn)
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.compute_engagement_metrics",
-            lambda items: [],
+            "social_research_probe.services.sourcing.youtube.run_youtube_sourcing", fake_run
         )
         items, _em = asyncio.run(yt.YouTubeFetchStage()._fetch_items("topic", {}))
         assert len(items) == 1

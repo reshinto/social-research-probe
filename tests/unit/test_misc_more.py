@@ -405,9 +405,5 @@ class TestAllPipeline:
             )
             return await all_pipeline._run_one("youtube", FakePipeline, state)
 
-        with patch(
-            "social_research_probe.platforms.registry.get_client",
-            return_value=MagicMock(),
-        ):
-            name, out = asyncio.run(coro())
+        name, out = asyncio.run(coro())
         assert name == "youtube" and out == {"x": 1}

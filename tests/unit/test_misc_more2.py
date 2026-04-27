@@ -11,7 +11,11 @@ import pytest
 from social_research_probe.platforms.base import RawItem
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.analyzing import statistics as stats_svc
-from social_research_probe.services.sourcing.youtube import YouTubeConnector, _recency_cutoff
+from social_research_probe.services.sourcing.youtube import (
+    YouTubeHydrateTech,
+    YouTubeSearchTech,
+    _recency_cutoff,
+)
 from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
 from social_research_probe.technologies.transcript_fetch import (
     youtube_transcript_api as yt_api,
@@ -110,29 +114,9 @@ class TestSourcingYouTube:
     def test_recency_cutoff_zero(self):
         assert _recency_cutoff(0) is None
 
-    def test_init_uses_config(self, monkeypatch):
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {"max_items": 7, "recency_days": 14}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert conn.default_limits.max_items == 7
+    def test_search_tech_calls_search_youtube(self, monkeypatch):
+        from social_research_probe.platforms.base import FetchLimits
 
-    def test_health_check(self, monkeypatch):
-        monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.youtube_health_check",
-            lambda: True,
-        )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert conn.health_check() is True
-
-    def test_find_by_topic(self, monkeypatch):
         monkeypatch.setattr(
             "social_research_probe.services.sourcing.youtube.search_youtube",
             lambda topic, max_items, published_after: [
@@ -147,27 +131,13 @@ class TestSourcingYouTube:
                 }
             ],
         )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-            from social_research_probe.platforms.base import FetchLimits
-
-            out = conn.find_by_topic("t", FetchLimits())
+        out = asyncio.run(YouTubeSearchTech()._execute(("t", FetchLimits())))
         assert out[0].title == "T"
 
-    def test_fetch_item_details_empty(self):
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert asyncio.run(conn.fetch_item_details([])) == []
+    def test_hydrate_tech_empty(self):
+        assert asyncio.run(YouTubeHydrateTech()._execute(([], True))) == []
 
-    def test_fetch_item_details_basic(self, monkeypatch):
+    def test_hydrate_tech_merges(self, monkeypatch):
         async def fake_hydrate(vids, chids):
             return [
                 {
@@ -186,12 +156,6 @@ class TestSourcingYouTube:
         monkeypatch.setattr(
             "social_research_probe.services.sourcing.youtube.hydrate_youtube", fake_hydrate
         )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
         item = RawItem(
             id="1",
             url="u",
@@ -204,7 +168,7 @@ class TestSourcingYouTube:
             thumbnail=None,
             extras={},
         )
-        out = asyncio.run(conn.fetch_item_details([item]))
+        out = asyncio.run(YouTubeHydrateTech()._execute(([item], True)))
         assert out[0].metrics["views"] == 100
         assert out[0].extras["channel_subscribers"] == 5
 
