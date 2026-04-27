@@ -8,14 +8,16 @@ from unittest.mock import MagicMock, patch
 
 from social_research_probe.platforms import FetchLimits, RawItem
 from social_research_probe.services.sourcing.youtube import (
+    YouTubeSourcingService,
+    run_youtube_sourcing,
+)
+from social_research_probe.technologies.web_search import (
     YouTubeEngagementTech,
     YouTubeHydrateTech,
     YouTubeSearchTech,
-    YouTubeSourcingService,
     _filter_shorts,
     _parse_search_results,
     _recency_cutoff,
-    run_youtube_sourcing,
 )
 
 

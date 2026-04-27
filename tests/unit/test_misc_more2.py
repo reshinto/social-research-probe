@@ -11,14 +11,14 @@ import pytest
 from social_research_probe.platforms import RawItem
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.analyzing import statistics as stats_svc
-from social_research_probe.services.sourcing.youtube import (
-    YouTubeHydrateTech,
-    YouTubeSearchTech,
-    _recency_cutoff,
-)
 from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
 from social_research_probe.technologies.transcript_fetch import (
     youtube_transcript_api as yt_api,
+)
+from social_research_probe.technologies.web_search import (
+    YouTubeHydrateTech,
+    YouTubeSearchTech,
+    _recency_cutoff,
 )
 
 
