@@ -121,7 +121,7 @@ def test_search_tech_calls_search_youtube(monkeypatch):
         ]
 
     monkeypatch.setattr(
-        "social_research_probe.services.sourcing.youtube.search_youtube", fake_search
+        "social_research_probe.technologies.media_fetch.youtube_api.search_youtube", fake_search
     )
     out = asyncio.run(YouTubeSearchTech()._execute(("topic", FetchLimits(max_items=3))))
     assert out[0].title == "T"
@@ -150,7 +150,7 @@ def test_hydrate_tech_merges(monkeypatch):
         ]
 
     monkeypatch.setattr(
-        "social_research_probe.services.sourcing.youtube.hydrate_youtube", fake_hydrate
+        "social_research_probe.technologies.media_fetch.youtube_api.hydrate_youtube", fake_hydrate
     )
     item = RawItem(
         id="1",

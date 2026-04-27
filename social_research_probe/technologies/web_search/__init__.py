@@ -17,16 +17,20 @@ class YouTubeSearchTech(BaseTechnology[tuple[str, FetchLimits], list[RawItem]]):
     name: ClassVar[str] = "youtube_search"
 
     async def _execute(self, data: tuple[str, FetchLimits]) -> list[RawItem]:
-        from social_research_probe.services.sourcing.youtube import search_youtube
+        from social_research_probe.services.sourcing.youtube import (
+            _parse_search_results,
+            _recency_cutoff,
+        )
+        from social_research_probe.technologies.media_fetch.youtube_api import search_youtube
 
         topic, limits = data
         raw = await asyncio.to_thread(
             search_youtube,
             topic,
             max_items=limits.max_items,
-            order=limits.order,
+            published_after=_recency_cutoff(limits.recency_days),
         )
-        return raw
+        return _parse_search_results(raw)
 
 
 class YouTubeHydrateTech(BaseTechnology[tuple[list[RawItem], bool], list[RawItem]]):
@@ -36,26 +40,24 @@ class YouTubeHydrateTech(BaseTechnology[tuple[list[RawItem], bool], list[RawItem
 
     async def _execute(self, data: tuple[list[RawItem], bool]) -> list[RawItem]:
         from social_research_probe.services.sourcing.youtube import (
-            get_channel_stats,
-            get_video_stats,
+            _filter_shorts,
+            _merge_video_and_channel_data,
         )
+        from social_research_probe.technologies.media_fetch.youtube_api import hydrate_youtube
 
         items, include_shorts = data
         if not items:
             return items
         video_ids = [it.id for it in items]
         channel_ids = list({it.author_id for it in items if it.author_id})
-        video_stats = await asyncio.to_thread(get_video_stats, video_ids)
-        channel_stats = await asyncio.to_thread(get_channel_stats, channel_ids)
-
-        for item in items:
-            item.stats = video_stats.get(item.id)
-            if item.author_id:
-                item.author_stats = channel_stats.get(item.author_id)
-
-        if not include_shorts:
-            items = [it for it in items if not (it.stats and it.stats.get("height") == 1080)]
-        return items
+        raw_videos, raw_channels = await hydrate_youtube(video_ids, channel_ids)
+        videos = {str(v["id"]): v for v in raw_videos}
+        channels = {str(c["id"]): c for c in raw_channels}
+        enriched = [
+            _merge_video_and_channel_data(it, videos.get(it.id, {}), channels.get(it.author_id, {}))
+            for it in items
+        ]
+        return _filter_shorts(enriched, include_shorts)
 
 
 class YouTubeEngagementTech(BaseTechnology[list[RawItem], list[EngagementMetrics]]):

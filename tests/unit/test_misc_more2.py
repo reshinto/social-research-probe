@@ -118,7 +118,7 @@ class TestSourcingYouTube:
         from social_research_probe.platforms import FetchLimits
 
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.search_youtube",
+            "social_research_probe.technologies.media_fetch.youtube_api.search_youtube",
             lambda topic, max_items, published_after: [
                 {
                     "id": {"videoId": "v"},
@@ -154,7 +154,8 @@ class TestSourcingYouTube:
             ]
 
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.hydrate_youtube", fake_hydrate
+            "social_research_probe.technologies.media_fetch.youtube_api.hydrate_youtube",
+            fake_hydrate,
         )
         item = RawItem(
             id="1",
