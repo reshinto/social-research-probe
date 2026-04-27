@@ -34,7 +34,7 @@ class TestChartsService:
         assert ChartsService._items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
 
     def test_serialise_roundtrip(self, tmp_path):
-        from social_research_probe.technologies.charts.base import ChartResult
+        from social_research_probe.technologies.charts import ChartResult
 
         png = tmp_path / "x.png"
         png.write_bytes(b"\x89PNG")

@@ -118,7 +118,7 @@ def test_charts_suite_returns_already_annotated(tmp_path):
     """services/analyzing/__init__.py:31 — annotation idempotency."""
 
     from social_research_probe.services.analyzing import _annotate
-    from social_research_probe.technologies.charts.base import ChartResult
+    from social_research_probe.technologies.charts import ChartResult
 
     r = ChartResult(path="/p.png", caption="cap\n_(see PNG: /p.png)_")
     out = _annotate(r)

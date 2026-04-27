@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import tempfile
 
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 
 
 def _fit_line(x: list[float], y: list[float]) -> tuple[float, float, float]:

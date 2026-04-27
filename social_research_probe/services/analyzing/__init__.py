@@ -17,7 +17,7 @@ from social_research_probe.technologies.charts import (
     scatter,
     table,
 )
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 from social_research_probe.utils.caching.pipeline_cache import hash_key
 
 _ROUND_DIGITS = 6

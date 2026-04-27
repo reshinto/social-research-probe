@@ -259,7 +259,7 @@ class TestChartsSvcRestoredEmpty:
         captured = {}
 
         async def fake_render(items, out):
-            from social_research_probe.technologies.charts.base import ChartResult
+            from social_research_probe.technologies.charts import ChartResult
 
             png = tmp_path / "fresh.png"
             png.write_bytes(b"x")

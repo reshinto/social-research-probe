@@ -72,7 +72,7 @@ class ChartsService(BaseService):
 
     @staticmethod
     def _restore_results(payload: dict, charts_dir: Path) -> list:
-        from social_research_probe.technologies.charts.base import ChartResult
+        from social_research_probe.technologies.charts import ChartResult
 
         filenames = payload.get("filenames", [])
         captions = payload.get("captions", [])

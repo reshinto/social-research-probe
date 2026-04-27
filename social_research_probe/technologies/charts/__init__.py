@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+
+
+@dataclass
+class ChartResult:
+    """The output of a chart-rendering function."""
+
+    path: str
+    caption: str
 
 
 class ChartsTech(BaseTechnology[object, list]):

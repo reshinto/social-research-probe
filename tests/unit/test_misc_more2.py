@@ -195,7 +195,7 @@ class TestChartsService:
         assert out and out[0].caption == "cap"
 
     def test_render_with_cache_miss_writes(self, monkeypatch, tmp_path):
-        from social_research_probe.technologies.charts.base import ChartResult
+        from social_research_probe.technologies.charts import ChartResult
 
         monkeypatch.setattr(
             "social_research_probe.utils.caching.pipeline_cache.get_json",

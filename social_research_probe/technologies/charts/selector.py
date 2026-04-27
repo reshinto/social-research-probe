@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import tempfile
 
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 
 
 def select_and_render(

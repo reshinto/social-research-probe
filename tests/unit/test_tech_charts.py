@@ -13,7 +13,7 @@ from social_research_probe.technologies.charts import (
     scatter,
     selector,
 )
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 
 
 class TestAscii:
