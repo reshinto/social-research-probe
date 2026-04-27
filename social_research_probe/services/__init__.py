@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.display.progress import log_with_time
 
 TInput = TypeVar("TInput")

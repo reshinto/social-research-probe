@@ -14,7 +14,7 @@ import os
 import re
 from typing import ClassVar
 
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.caching.pipeline_cache import (
     get_str,
     set_str,

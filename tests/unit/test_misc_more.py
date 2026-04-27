@@ -14,7 +14,7 @@ from social_research_probe.commands import Command
 from social_research_probe.platforms.all import pipeline as all_pipeline
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.llm.core import ensemble
-from social_research_probe.technologies import base as tech_base
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.tts import voicebox
 from social_research_probe.utils.core.errors import AdapterError
@@ -84,7 +84,7 @@ class TestEnsembleMulti:
         assert out == "x"
 
 
-class _NopTech(tech_base.BaseTechnology):
+class _NopTech(BaseTechnology):
     name = "nop"
     health_check_key = "nop"
     enabled_config_key = "nop"
@@ -93,7 +93,7 @@ class _NopTech(tech_base.BaseTechnology):
         return f"nop:{data}"
 
 
-class _BoomTech(tech_base.BaseTechnology):
+class _BoomTech(BaseTechnology):
     name = "boom"
     health_check_key = "boom"
     enabled_config_key = "boom"
@@ -106,28 +106,28 @@ class TestTechBase:
     def test_disabled_returns_none(self):
         cfg = MagicMock()
         cfg.technology_enabled.return_value = False
-        with patch("social_research_probe.technologies.base.load_active_config", return_value=cfg):
+        with patch("social_research_probe.technologies.load_active_config", return_value=cfg):
             assert asyncio.run(_NopTech().execute("d")) is None
 
     def test_enabled_runs(self):
         cfg = MagicMock()
         cfg.technology_enabled.return_value = True
         cfg.debug_enabled.return_value = False
-        with patch("social_research_probe.technologies.base.load_active_config", return_value=cfg):
+        with patch("social_research_probe.technologies.load_active_config", return_value=cfg):
             assert asyncio.run(_NopTech().execute("d")) == "nop:d"
 
     def test_exception_returns_none(self):
         cfg = MagicMock()
         cfg.technology_enabled.return_value = True
         cfg.debug_enabled.return_value = False
-        with patch("social_research_probe.technologies.base.load_active_config", return_value=cfg):
+        with patch("social_research_probe.technologies.load_active_config", return_value=cfg):
             assert asyncio.run(_BoomTech().execute("d")) is None
 
     def test_debug_logs_enabled(self):
         cfg = MagicMock()
         cfg.technology_enabled.return_value = True
         cfg.debug_enabled.return_value = True
-        with patch("social_research_probe.technologies.base.load_active_config", return_value=cfg):
+        with patch("social_research_probe.technologies.load_active_config", return_value=cfg):
             assert asyncio.run(_NopTech().execute("d")) == "nop:d"
 
     def test_health_check_default(self):

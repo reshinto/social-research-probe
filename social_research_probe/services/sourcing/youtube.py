@@ -13,7 +13,7 @@ from social_research_probe.platforms.base import (
     RawItem,
 )
 from social_research_probe.services import BaseService, ServiceResult, TechResult
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.technologies.media_fetch.youtube_api import (
     hydrate_youtube,
     search_youtube,

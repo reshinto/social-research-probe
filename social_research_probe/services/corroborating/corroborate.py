@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from social_research_probe.services import BaseService
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 
 
 class CorroborationHostTech(BaseTechnology[object, dict]):

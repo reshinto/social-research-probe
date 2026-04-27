@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.services import BaseService, ServiceResult
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 
 _TECH_NAME = "charts_suite"
 _INPUT_KEY = "scored_items"

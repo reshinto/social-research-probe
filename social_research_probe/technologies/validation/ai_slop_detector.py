@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import ClassVar
 
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 
 _BOILERPLATE_PHRASES: list[str] = [
     "in conclusion",
