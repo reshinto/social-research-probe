@@ -172,13 +172,13 @@ class YouTubeCorroborateStage(BaseStage):
 
     @staticmethod
     def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
-        from social_research_probe.services.corroborating.providers import auto_mode_providers
+        from social_research_probe.services.corroborating import auto_mode_providers
 
         return auto_mode_providers(cfg) if configured == "auto" else (configured,)
 
     @staticmethod
     def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
-        from social_research_probe.services.corroborating.registry import get_provider
+        from social_research_probe.services.corroborating import get_provider
         from social_research_probe.utils.core.errors import ValidationError
 
         providers: list[str] = []

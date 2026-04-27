@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 from social_research_probe.config import load_active_config
-from social_research_probe.services.corroborating.host import corroborate_claim
+from social_research_probe.services.corroborating import corroborate_claim
 from social_research_probe.technologies.validation.claim_extractor import Claim
 from social_research_probe.utils.core.exit_codes import ExitCode
 

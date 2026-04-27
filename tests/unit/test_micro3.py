@@ -126,7 +126,7 @@ def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
         patch(
-            "social_research_probe.services.corroborating.registry.get_provider",
+            "social_research_probe.services.corroborating.get_provider",
             side_effect=ValidationError("nope"),
         ),
     ):

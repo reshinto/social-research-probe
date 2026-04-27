@@ -41,9 +41,7 @@ def test_corroborate_svc_str_data(monkeypatch):
         async def fake(claim, providers):
             return {"verdict": "x"}
 
-        monkeypatch.setattr(
-            "social_research_probe.services.corroborating.host.corroborate_claim", fake
-        )
+        monkeypatch.setattr("social_research_probe.services.corroborating.corroborate_claim", fake)
         out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
 
@@ -205,7 +203,7 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
         patch(
-            "social_research_probe.services.corroborating.registry.get_provider",
+            "social_research_probe.services.corroborating.get_provider",
             side_effect=ValidationError("nope"),
         ),
     ):

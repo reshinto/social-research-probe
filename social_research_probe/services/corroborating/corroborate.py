@@ -17,7 +17,7 @@ class CorroborationHostTech(BaseTechnology[object, dict]):
         self.providers = providers
 
     async def _execute(self, input_data: object) -> dict:
-        from social_research_probe.services.corroborating.host import corroborate_claim
+        from social_research_probe.services.corroborating import corroborate_claim
         from social_research_probe.technologies.validation.claim_extractor import Claim
 
         title = input_data.get("title", "") if isinstance(input_data, dict) else str(input_data)

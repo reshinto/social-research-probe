@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 from typing import ClassVar
 
-from social_research_probe.services.corroborating.registry import register
+from social_research_probe.services.corroborating import register
 from social_research_probe.technologies.corroborates.base import (
     CorroborationProvider,
     CorroborationResult,

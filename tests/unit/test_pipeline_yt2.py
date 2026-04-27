@@ -175,7 +175,7 @@ class TestCorroborateStage:
         provider.health_check.return_value = False
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 return_value=provider,
             ):
                 out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
@@ -190,11 +190,11 @@ class TestCorroborateStage:
         provider.health_check.return_value = True
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("exa",),
             ):
                 with patch(
-                    "social_research_probe.services.corroborating.registry.get_provider",
+                    "social_research_probe.services.corroborating.get_provider",
                     return_value=provider,
                 ):
                     out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
@@ -209,7 +209,7 @@ class TestCorroborateStage:
         cfg.technology_enabled.return_value = True
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 side_effect=ValidationError("x"),
             ):
                 out = yt.YouTubeCorroborateStage()._select_corroboration_providers()

@@ -196,10 +196,10 @@ class TestPipelineYtCorroborateLLMSearchGate:
         with (
             patch("social_research_probe.config.load_active_config", return_value=cfg),
             patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("llm_search", "exa"),
             ),
-            patch("social_research_probe.services.corroborating.registry.get_provider") as gp,
+            patch("social_research_probe.services.corroborating.get_provider") as gp,
         ):
             healthy = MagicMock()
             healthy.health_check.return_value = True

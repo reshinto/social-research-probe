@@ -133,9 +133,7 @@ class TestCorroborationService:
         async def boom(claim, providers):
             raise RuntimeError("x")
 
-        monkeypatch.setattr(
-            "social_research_probe.services.corroborating.host.corroborate_claim", boom
-        )
+        monkeypatch.setattr("social_research_probe.services.corroborating.corroborate_claim", boom)
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
         with patch("social_research_probe.config.load_active_config", return_value=cfg):

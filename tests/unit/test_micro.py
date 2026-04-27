@@ -105,11 +105,11 @@ class TestPipelineYtCorroborateExecuteFastMode:
         with (
             patch("social_research_probe.config.load_active_config", return_value=cfg),
             patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("exa", "brave"),
             ),
             patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 side_effect=[provider, ValidationError("x")],
             ),
         ):

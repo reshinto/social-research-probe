@@ -182,7 +182,7 @@ def test_corroborate_providers_list_branch(monkeypatch):
         return MagicMock(verdict="inconclusive", source_urls=[], runner_name="x")
 
     monkeypatch.setattr(
-        "social_research_probe.services.corroborating.host.corroborate_claim",
+        "social_research_probe.services.corroborating.corroborate_claim",
         fake_corroborate_claim,
     )
     svc = corroborate.CorroborationService()
