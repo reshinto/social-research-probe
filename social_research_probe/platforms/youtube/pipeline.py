@@ -6,7 +6,7 @@ import asyncio
 
 from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.services.reporting.writer import write_final_report
+from social_research_probe.services.reporting import write_final_report
 from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
 from social_research_probe.utils.display.progress import log_with_time
 

@@ -13,7 +13,7 @@ from social_research_probe.commands import Command
 from social_research_probe.platforms.all import pipeline as all_pipeline
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.llm import ensemble
-from social_research_probe.services.reporting import writer
+import social_research_probe.services.reporting as writer
 from social_research_probe.technologies import base as tech_base
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.tts import voicebox
