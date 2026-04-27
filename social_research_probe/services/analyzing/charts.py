@@ -58,13 +58,13 @@ class ChartsService(BaseService):
     async def _render(items: list[dict], out: Path) -> list:
         import asyncio
 
-        from social_research_probe.services.analyzing.charts_suite import render_all
+        from social_research_probe.services.analyzing import render_all
 
         return await asyncio.to_thread(render_all, items, out)
 
     @staticmethod
     def _cache_key(items: list[dict]) -> str:
-        from social_research_probe.services.analyzing._dataset_key import dataset_key
+        from social_research_probe.services.analyzing import dataset_key
 
         return dataset_key(items, namespace="charts")
 

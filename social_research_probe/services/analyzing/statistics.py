@@ -41,7 +41,7 @@ class StatisticsService(BaseService):
 
     @staticmethod
     def _build_targets_dict(items: list[dict]) -> dict[str, list]:
-        from social_research_probe.services.analyzing.derived_targets import build_targets
+        from social_research_probe.services.analyzing import build_targets
 
         return build_targets(items)
 
@@ -95,7 +95,7 @@ class StatisticsService(BaseService):
 
     @staticmethod
     def _cache_key(items: list[dict]) -> str:
-        from social_research_probe.services.analyzing._dataset_key import dataset_key
+        from social_research_probe.services.analyzing import dataset_key
 
         return dataset_key(items, namespace="stats")
 

@@ -115,9 +115,9 @@ def test_config_service_enabled_nested(tmp_path):
 
 
 def test_charts_suite_returns_already_annotated(tmp_path):
-    """services/analyzing/charts_suite.py:31 — annotation idempotency."""
+    """services/analyzing/__init__.py:31 — annotation idempotency."""
 
-    from social_research_probe.services.analyzing.charts_suite import _annotate
+    from social_research_probe.services.analyzing import _annotate
     from social_research_probe.technologies.charts.base import ChartResult
 
     r = ChartResult(path="/p.png", caption="cap\n_(see PNG: /p.png)_")
