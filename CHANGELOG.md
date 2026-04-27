@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current documentation updates in this working tree.
 
+### Refactored (refactor/analyzing-services)
+
+- Consolidated `BaseService` from `services/base.py` into `services/__init__.py` and `BaseTechnology` from `technologies/base.py` into `technologies/__init__.py`, eliminating unnecessary base files.
+- Consolidated `platforms/base.py` into `platforms/__init__.py`.
+- Consolidated analyzing helpers, corroborating submodules, reporting writer, and scoring compute/weights into their respective package `__init__` files.
+- Restructured synthesizing service into a `synthesis/` subfolder with helpers.
+- Restructured LLM service into a `core/` subfolder following the `BaseService` pattern.
+- Refactored YouTube sourcing as a `BaseService` with sequential technology steps.
+- Moved all `BaseTechnology` subclasses out of `services/` into `technologies/`, enforcing the encapsulation boundary.
+- Moved YouTube helper functions (`search_youtube`, `hydrate_youtube`, and engagement helpers) from `services/sourcing/youtube.py` into `technologies/web_search`.
+- Consolidated `StatResult` from `statistics/base.py` into `statistics/__init__.py`.
+- Consolidated `ChartResult` from `charts/base.py` and `write_placeholder_png` from `charts/_png_writer.py` into `charts/__init__.py`.
+- Consolidated `CorroborationResult`, `CorroborationProvider`, and all filter utilities (`filter_results`, `is_video_url`, `is_self_source`, `VIDEO_HOST_DOMAINS`) from `corroborates/base.py` and `corroborates/_filters.py` into `corroborates/__init__.py`.
+
 ### Added
 
 - Added the modular `services/` layer for analyzing, scoring, enriching, corroborating, synthesizing, sourcing, and reporting responsibilities.
