@@ -2,8 +2,11 @@ import os
 import subprocess
 import sys
 
+from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands import Command
 
-def test_run_research_emits_packet_envelope(tmp_path):
+
+def test_run_pipeline_emits_packet_envelope(tmp_path):
     env = {
         **os.environ,
         "SRP_DATA_DIR": str(tmp_path),
@@ -15,8 +18,8 @@ def test_run_research_emits_packet_envelope(tmp_path):
             sys.executable,
             "-m",
             "social_research_probe.cli",
-            "update-purposes",
-            "--add",
+            Command.UPDATE_PURPOSES,
+            Arg.ADD,
             '"trends"="Track emergence"',
         ],
         check=True,
@@ -38,6 +41,4 @@ def test_run_research_emits_packet_envelope(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     out = proc.stdout.strip()
-    assert out.endswith(".html") or out.endswith(".md")
-    # Stdout contract is the report file path; HTML/MD content is the source of truth.
-    assert out.startswith("file://") or out.endswith(".md")
+    assert out.startswith("srp serve-report --report ") or out.endswith(".md")

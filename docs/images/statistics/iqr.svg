@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="250" viewBox="0 0 760 250" role="img" aria-labelledby="title desc">
+  <title id="title">Interquartile range example</title>
+  <desc id="desc">A box plot showing the middle fifty percent of values.</desc>
+  <rect width="760" height="250" fill="#ffffff"/>
+  <text x="28" y="34" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111111">IQR: the middle 50 percent</text>
+  <line x1="90" y1="130" x2="670" y2="130" stroke="#334155" stroke-width="3"/>
+  <line x1="130" y1="110" x2="130" y2="150" stroke="#334155" stroke-width="3"/>
+  <rect x="250" y="85" width="260" height="90" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+  <line x1="380" y1="85" x2="380" y2="175" stroke="#15803d" stroke-width="4"/>
+  <line x1="630" y1="110" x2="630" y2="150" stroke="#334155" stroke-width="3"/>
+  <text x="235" y="205" font-family="Arial, sans-serif" font-size="16" fill="#d97706">Q1</text>
+  <text x="350" y="205" font-family="Arial, sans-serif" font-size="16" fill="#15803d">median</text>
+  <text x="502" y="205" font-family="Arial, sans-serif" font-size="16" fill="#d97706">Q3</text>
+  <text x="255" y="67" font-family="Arial, sans-serif" font-size="17" fill="#111111">IQR = Q3 - Q1; robust to extreme ends</text>
+</svg>

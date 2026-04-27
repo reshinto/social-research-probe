@@ -1,8 +1,20 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-    Corpus["Reference corpus<br/>tests/fixtures/golden/eval/"] --> Gen
-    Gen["Generator runner<br/>(config.llm_runner)"]
-    Gen -->|N samples| Sample["SampleOutcome<br/>coverage / hallucinations / length"]
-    Sample --> Gate["apply_gates<br/>mean + stdev + max"]
-    Sample -->|optional| Judge["Judge runner<br/>(independent; skipped if 1 runner)"]
-    Judge --> Gate
-    Gate -->|pass/fail| Report[".srp-eval/&lt;service&gt;/&lt;ts&gt;.{json,md}"]
+  Corpus["eval corpus"] --> Samples["multiple runner samples"]
+  Samples --> Judge["optional judge runner"]
+  Samples --> Metrics["length, coverage, drift"]
+  Judge --> Report["eval markdown"]
+  Metrics --> Report
+  Report --> Gate["CI or manual quality decision"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Corpus input;
+  class Samples,Metrics,Gate process;
+  class Judge external;
+  class Report output;

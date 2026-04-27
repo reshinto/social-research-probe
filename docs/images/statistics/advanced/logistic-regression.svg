@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Logistic regression</title>
+  <desc id="desc">Predicts probability of a binary event such as top-N membership.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Logistic regression</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Predicts probability of a binary event such as top-N membership.</text>
+  <line x1="100" y1="260" x2="735" y2="260" stroke="#334155"/><line x1="100" y1="75" x2="100" y2="260" stroke="#334155"/><path d="M120 245 C260 245,310 220,390 168 C475 112,540 92,710 90" fill="none" stroke="#1d4ed8" stroke-width="5"/><line x1="100" y1="168" x2="735" y2="168" stroke="#dc2626" stroke-width="2" stroke-dasharray="8 6"/><text x="630" y="160" font-family="Arial" font-size="15" fill="#dc2626">0.5 threshold</text><text x="560" y="90" font-family="Arial" font-size="15" fill="#1d4ed8">probability curve</text>
+</svg>

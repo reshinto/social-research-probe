@@ -1,11 +1,13 @@
 """End-to-end research CLI tests with deterministic fake providers.
 
+from social_research_probe.commands import Command, ConfigSubcommand
+
 These tests shell out through the real ``python -m social_research_probe.cli``
 entrypoint, but replace external dependencies with local fakes:
 
 - Fake YouTube adapter via ``SRP_TEST_USE_FAKE_YOUTUBE=1``
 - Fake corroboration backends via ``SRP_TEST_USE_FAKE_CORROBORATION=1``
-- Fake Gemini / Claude / Codex binaries on PATH
+- Fake Gemini / Claude / Codex runner binaries on PATH
 
 This keeps the coverage genuinely integration-level while remaining offline
 and deterministic.
@@ -14,16 +16,20 @@ and deterministic.
 from __future__ import annotations
 
 import os
+import shlex
 import stat
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+
+from social_research_probe.cli.parsers import Arg
+from social_research_probe.commands import Command, ConfigSubcommand
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUMMARY_PHRASE = "Generated summary from codex fallback."
-_SYNTHESIS_10 = "Compiled synthesis from codex fallback."
-_SYNTHESIS_11 = "Opportunity analysis from codex fallback."
+_EXPECTED_COMPILED_SYNTHESIS = "Compiled synthesis from codex fallback."
+_EXPECTED_OPPORTUNITY_ANALYSIS = "Opportunity analysis from codex fallback."
+_EXPECTED_REPORT_SUMMARY = "Final report summary from codex fallback."
 
 
 def _run(
@@ -47,7 +53,7 @@ def _write_executable(path: Path, source: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def _install_fake_llm_clis(bin_dir: Path) -> None:
+def _install_fake_runner_binaries(bin_dir: Path) -> None:
     python = sys.executable
 
     failing_cli = f"""#!{python}
@@ -63,11 +69,13 @@ sys.exit(1)
 import json
 import sys
 from pathlib import Path
+from social_research_probe.cli.parsers import Arg
 
 SUMMARY = "{_SUMMARY_PHRASE} {summary_tail}"
 SYNTHESIS = {{
-    "compiled_synthesis": "{_SYNTHESIS_10}",
-    "opportunity_analysis": "{_SYNTHESIS_11}",
+    "compiled_synthesis": "{_EXPECTED_COMPILED_SYNTHESIS}",
+    "opportunity_analysis": "{_EXPECTED_OPPORTUNITY_ANALYSIS}",
+    "report_summary": "{_EXPECTED_REPORT_SUMMARY}",
 }}
 
 args = sys.argv[1:]
@@ -117,10 +125,11 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
 
     commands = [
-        ("update-purposes", "--add", '"trends"="Track emergence across channels"'),
-        ("config", "set", "llm.runner", "gemini"),
-        ("config", "set", "features.codex_service_enabled", "true"),
-        ("config", "set", "corroboration.backend", "host"),
+        (Command.UPDATE_PURPOSES, Arg.ADD, '"trends"="Track emergence across channels"'),
+        (Command.CONFIG, ConfigSubcommand.SET, "llm.runner", "gemini"),
+        (Command.CONFIG, ConfigSubcommand.SET, "technologies.gemini", "true"),
+        (Command.CONFIG, ConfigSubcommand.SET, "technologies.codex", "true"),
+        (Command.CONFIG, ConfigSubcommand.SET, "corroboration.backend", "auto"),
     ]
     for args in commands:
         result = _run(data_dir, env, *args)
@@ -134,41 +143,47 @@ def _configure_research_stack(data_dir: Path, env: dict[str, str]) -> None:
             data_dir,
             env,
             "config",
-            "set-secret",
+            ConfigSubcommand.SET_SECRET,
             secret_name,
-            "--from-stdin",
+            Arg.FROM_STDIN,
             stdin=secret_value,
         )
         assert result.returncode == 0, result.stderr
 
 
-def _path_from_uri(uri: str) -> Path:
-    parsed = urlparse(uri)
-    assert parsed.scheme == "file", uri
-    return Path(unquote(parsed.path))
+def _path_from_serve_report_command(command: str) -> Path:
+    parts = shlex.split(command)
+    assert parts[:3] == ["srp", "serve-report", Arg.REPORT], command
+    return Path(parts[3]).expanduser()
 
 
 def test_research_packet_and_html_end_to_end(tmp_path: Path) -> None:
     data_dir = tmp_path / ".skill-data"
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    _install_fake_llm_clis(bin_dir)
+    _install_fake_runner_binaries(bin_dir)
     env = _test_env(data_dir, bin_dir)
     _configure_research_stack(data_dir, env)
 
     result = _run(data_dir, env, "research", "youtube", "ai agents", "trends")
     assert result.returncode == 0, result.stderr
-    stdout_uri = result.stdout.strip()
-    assert stdout_uri.startswith("file://") and stdout_uri.endswith(".html")
+    stdout_command = result.stdout.strip()
+    assert stdout_command.startswith("srp serve-report --report ")
 
-    report_path = _path_from_uri(stdout_uri)
+    report_path = _path_from_serve_report_command(stdout_command)
     assert report_path.exists()
     html = report_path.read_text(encoding="utf-8")
     assert _SUMMARY_PHRASE in html
 
-    assert _SYNTHESIS_10 in html
-    assert _SYNTHESIS_11 in html
-    assert "LLM synthesis unavailable" not in html
+    if _EXPECTED_COMPILED_SYNTHESIS not in html:
+        print("STDERR:", result.stderr)
+        print("STDOUT:", result.stdout)
+        raise AssertionError("_EXPECTED_COMPILED_SYNTHESIS not found in html")
+
+    assert _EXPECTED_OPPORTUNITY_ANALYSIS in html
+    assert _EXPECTED_REPORT_SUMMARY in html
+    assert "_(LLM synthesis unavailable" not in html
+    assert "_(LLM summary unavailable" not in html
     assert "source corroboration was not run; trust scores are heuristic only" not in html
     assert _SUMMARY_PHRASE in html
     assert "<th>Model</th>" in html

@@ -1,91 +1,82 @@
-"""
-Tests for ``social_research_probe.utils.io``.
-
-Verifies that ``read_json`` handles existing and missing files correctly (with
-and without a default), and that ``write_json`` creates files atomically (no
-leftover ``.tmp`` file), creates parent directories automatically, and writes
-the correct content.
-"""
+"""Tests for utils.io.io and utils.io.subprocess_runner."""
 
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from social_research_probe.utils.io import read_json, write_json
+from social_research_probe.utils.core.errors import AdapterError
+from social_research_probe.utils.io.io import read_json, write_json
+from social_research_probe.utils.io.subprocess_runner import run
 
 
-def test_read_json_existing(tmp_path: Path) -> None:
-    """read_json must return the parsed content of an existing JSON file."""
-    data = {"name": "alice", "score": 42}
-    target = tmp_path / "data.json"
-    target.write_text(json.dumps(data), encoding="utf-8")
+class TestReadJson:
+    def test_missing_returns_default_copy(self, tmp_path: Path):
+        default = {"x": 1}
+        result = read_json(tmp_path / "missing.json", default=default)
+        assert result == {"x": 1}
+        result["y"] = 2
+        assert default == {"x": 1}
 
-    result = read_json(target)
-    assert result == data
+    def test_missing_with_no_default_returns_empty(self, tmp_path: Path):
+        assert read_json(tmp_path / "absent.json") == {}
 
+    def test_reads_existing_file(self, tmp_path: Path):
+        path = tmp_path / "data.json"
+        path.write_text('{"a": 1, "b": [2, 3]}')
+        assert read_json(path) == {"a": 1, "b": [2, 3]}
 
-def test_read_json_missing_returns_default(tmp_path: Path) -> None:
-    """read_json must return a *copy* of the provided default when the file is absent."""
-    default = {"fallback": True}
-    result = read_json(tmp_path / "nonexistent.json", default=default)
-
-    assert result == default
-    # Must be a copy, not the same object, to avoid shared-state bugs.
-    assert result is not default
-
-
-def test_read_json_missing_no_default_returns_empty_dict(tmp_path: Path) -> None:
-    """read_json must return an empty dict when the file is absent and no default is given."""
-    result = read_json(tmp_path / "nonexistent.json")
-    assert result == {}
+    def test_invalid_json_raises(self, tmp_path: Path):
+        path = tmp_path / "bad.json"
+        path.write_text("not json")
+        with pytest.raises(json.JSONDecodeError):
+            read_json(path)
 
 
-def test_write_json_creates_file(tmp_path: Path) -> None:
-    """write_json must create the file with the correct JSON content."""
-    data = {"platform": "youtube", "count": 7}
-    target = tmp_path / "output.json"
+class TestWriteJson:
+    def test_creates_file_and_parents(self, tmp_path: Path):
+        path = tmp_path / "nested" / "dir" / "out.json"
+        write_json(path, {"k": "v"})
+        assert json.loads(path.read_text()) == {"k": "v"}
 
-    write_json(target, data)
+    def test_overwrites_existing(self, tmp_path: Path):
+        path = tmp_path / "out.json"
+        path.write_text('{"old": true}')
+        write_json(path, {"new": True})
+        assert json.loads(path.read_text()) == {"new": True}
 
-    assert target.exists()
-    assert json.loads(target.read_text(encoding="utf-8")) == data
-
-
-def test_write_json_atomic(tmp_path: Path) -> None:
-    """After a successful write no ``.tmp`` sibling file must remain."""
-    target = tmp_path / "output.json"
-    write_json(target, {"x": 1})
-
-    tmp_file = target.with_suffix(".tmp")
-    assert not tmp_file.exists()
-
-
-def test_write_json_creates_parent_dirs(tmp_path: Path) -> None:
-    """write_json must create any missing parent directories automatically."""
-    nested = tmp_path / "a" / "b" / "c" / "data.json"
-    write_json(nested, {"nested": True})
-
-    assert nested.exists()
-    assert json.loads(nested.read_text(encoding="utf-8")) == {"nested": True}
+    def test_unserializable_raises_and_cleans_tmp(self, tmp_path: Path):
+        path = tmp_path / "bad.json"
+        with pytest.raises(TypeError):
+            write_json(path, {"k": object()})
+        assert not (tmp_path / "bad.tmp").exists()
 
 
-def test_write_json_cleans_up_tmp_on_error(tmp_path: Path, monkeypatch) -> None:
-    """On write failure the .tmp file must be cleaned up and the exception re-raised."""
-    import os as _os
+class TestSubprocessRun:
+    def test_success(self):
+        result = run(["true"])
+        assert result.returncode == 0
 
-    target = tmp_path / "output.json"
-    tmp_file = target.with_suffix(".tmp")
+    def test_nonzero_raises(self):
+        with pytest.raises(AdapterError, match="failed"):
+            run(["false"])
 
-    def exploding_replace(src, dst):
-        raise OSError("simulated replace failure")
+    def test_captures_stdout(self):
+        result = run(["echo", "hello"])
+        assert "hello" in result.stdout
 
-    monkeypatch.setattr(_os, "replace", exploding_replace)
+    def test_timeout_raises_adapter_error(self):
+        def raise_timeout(*a, **kw):
+            raise subprocess.TimeoutExpired(cmd="x", timeout=1)
 
-    with pytest.raises(OSError, match="simulated replace failure"):
-        write_json(target, {"x": 1})
+        with patch("subprocess.run", side_effect=raise_timeout):
+            with pytest.raises(AdapterError, match="timed out"):
+                run(["sleep", "10"], timeout=1)
 
-    # The .tmp file must have been cleaned up (best-effort unlink).
-    assert not tmp_file.exists()
+    def test_input_passed(self):
+        result = run(["cat"], input="hello world")
+        assert "hello world" in result.stdout

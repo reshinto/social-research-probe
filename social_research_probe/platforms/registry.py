@@ -1,30 +1,33 @@
-"""Module-level registry for platform adapters."""
+"""Module-level registry for platform clients."""
 
 from __future__ import annotations
 
-from social_research_probe.errors import ValidationError
-from social_research_probe.platforms.base import PlatformAdapter
-from social_research_probe.types import AdapterConfig
+from social_research_probe.platforms.base import PlatformClient
+from social_research_probe.utils.core.errors import ValidationError
+from social_research_probe.utils.core.types import AdapterConfig
 
-_REGISTRY: dict[str, type[PlatformAdapter]] = {}
+CLIENTS: dict[str, type[PlatformClient] | None] = {"all": None}
 
 
-def register(cls: type[PlatformAdapter]) -> type[PlatformAdapter]:
-    """Register one platform adapter class under its declared name."""
+def register(cls: type[PlatformClient]) -> type[PlatformClient]:
+    """Register one platform client class under its declared name."""
     if not hasattr(cls, "name") or not cls.name:
         raise ValueError(f"{cls!r} must define class var `name`")
-    _REGISTRY[cls.name] = cls
+    CLIENTS[cls.name] = cls
     return cls
 
 
-def get_adapter(name: str, config: AdapterConfig) -> PlatformAdapter:
-    """Instantiate the named adapter with the merged runtime config."""
-    if name not in _REGISTRY:
-        known = sorted(_REGISTRY.keys())
+def list_clients() -> list[str]:
+    """Return names of all registered clients (excludes meta-platforms like 'all')."""
+    return [k for k, v in CLIENTS.items() if v is not None]
+
+
+def get_client(name: str, config: AdapterConfig) -> PlatformClient:
+    """Instantiate the named client with the merged runtime config."""
+    if name not in CLIENTS:
+        known = sorted(CLIENTS.keys())
         raise ValidationError(f"unknown platform: {name!r} (registered: {known})")
-    return _REGISTRY[name](config)
-
-
-def list_adapters() -> list[str]:
-    """Return the registered adapter names in deterministic order."""
-    return sorted(_REGISTRY.keys())
+    cls = CLIENTS[name]
+    if cls is None:
+        raise ValidationError(f"platform {name!r} has no dedicated client")
+    return cls(config)

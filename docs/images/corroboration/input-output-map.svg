@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="980" viewBox="0 0 1700 980" role="img" aria-labelledby="title desc">
+  <title id="title">Corroboration input and output map</title>
+  <desc id="desc">A white-background left-to-right diagram showing claim input, provider fan-out, aggregation, and output JSON without text overlap.</desc>
+  <rect width="1700" height="980" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="5" orient="auto">
+      <path d="M0,0 L0,10 L13,5 z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <text x="60" y="58" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#111111">Corroboration: input to output</text>
+  <text x="60" y="94" font-family="Arial, sans-serif" font-size="18" fill="#334155">Claims enter the host, fan out to evidence providers, return as provider results, then become one aggregate result.</text>
+
+  <!-- Step labels above the flow. These stay away from arrows. -->
+  <g font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#475569">
+    <text x="220" y="154" text-anchor="middle">1. provide claims</text>
+    <text x="590" y="154" text-anchor="middle">2. normalize and cache</text>
+    <text x="1045" y="154" text-anchor="middle">3. gather evidence</text>
+    <text x="1425" y="154" text-anchor="middle">4. write result</text>
+  </g>
+
+  <!-- Input document -->
+  <g filter="url(#shadow)">
+    <path d="M75 235 H320 L365 280 V505 H75 Z" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/>
+    <path d="M320 235 V280 H365" fill="none" stroke="#1d4ed8" stroke-width="3"/>
+    <text x="220" y="292" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">Input JSON</text>
+    <text x="220" y="342" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">claims[].text</text>
+    <text x="220" y="378" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">claims[].source_text</text>
+    <text x="220" y="414" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">optional source URL</text>
+    <text x="220" y="468" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#475569">Keep each claim narrow.</text>
+  </g>
+
+  <!-- Host -->
+  <g filter="url(#shadow)">
+    <rect x="480" y="250" width="320" height="210" rx="22" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+    <text x="640" y="300" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">corroborate_claim()</text>
+    <text x="640" y="352" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">deduplicate providers</text>
+    <text x="640" y="386" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">check disk cache</text>
+    <text x="640" y="420" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">run async provider calls</text>
+  </g>
+
+  <!-- Providers are vertically separated from the host and output. -->
+  <g filter="url(#shadow)">
+    <rect x="960" y="205" width="310" height="86" rx="16" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="1115" y="240" font-family="Arial, sans-serif" font-size="21" font-weight="700" text-anchor="middle" fill="#111111">BraveProvider</text>
+    <text x="1115" y="267" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#334155">search results and URLs</text>
+
+    <rect x="960" y="345" width="310" height="86" rx="16" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="1115" y="380" font-family="Arial, sans-serif" font-size="21" font-weight="700" text-anchor="middle" fill="#111111">ExaProvider</text>
+    <text x="1115" y="407" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#334155">semantic evidence excerpts</text>
+
+    <rect x="960" y="485" width="310" height="86" rx="16" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+    <text x="1115" y="520" font-family="Arial, sans-serif" font-size="21" font-weight="700" text-anchor="middle" fill="#111111">Tavily / LLM search</text>
+    <text x="1115" y="547" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#334155">alternate evidence paths</text>
+  </g>
+
+  <!-- Aggregator and output sit below providers, with arrows routed in open corridors. -->
+  <g filter="url(#shadow)">
+    <rect x="480" y="690" width="320" height="140" rx="22" fill="#ccfbf1" stroke="#0f766e" stroke-width="3"/>
+    <text x="640" y="740" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">aggregate_verdict()</text>
+    <text x="640" y="786" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">majority vote</text>
+    <text x="640" y="816" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">weighted confidence</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M1360 680 H1630 V850 H1360 Z" fill="#f8fafc" stroke="#475569" stroke-width="3"/>
+    <text x="1495" y="730" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#111111">Output JSON</text>
+    <text x="1495" y="776" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">claim_text</text>
+    <text x="1495" y="808" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">results[] per provider</text>
+    <text x="1495" y="840" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#334155">aggregate verdict</text>
+  </g>
+
+  <!-- Clean arrow lanes. No text is placed on top of these connectors. -->
+  <path d="M365 370 H455" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Fan-out: route from host right edge to an open vertical bus, then into each provider. -->
+  <path d="M800 355 H890 V248 H940" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M800 355 H940" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M800 355 H890 V528 H940" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Return path: all providers connect to a right-side result bus, then descend and return to aggregator. -->
+  <path d="M1270 248 H1325" stroke="#334155" stroke-width="4" fill="none"/>
+  <path d="M1270 388 H1325" stroke="#334155" stroke-width="4" fill="none"/>
+  <path d="M1270 528 H1325" stroke="#334155" stroke-width="4" fill="none"/>
+  <path d="M1325 248 V620 H900 V760 H820" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Final result arrow. -->
+  <path d="M800 760 H1340" stroke="#334155" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Bottom legend, separated from every connector. -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="700" width="330" height="130" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="235" y="740" font-family="Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">How to read it</text>
+    <text x="235" y="780" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#334155">Provider rows show evidence.</text>
+    <text x="235" y="810" font-family="Arial, sans-serif" font-size="15" text-anchor="middle" fill="#334155">Aggregate fields summarize.</text>
+  </g>
+</svg>

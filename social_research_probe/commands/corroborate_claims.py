@@ -1,7 +1,7 @@
 """commands/corroborate_claims.py — CLI command to corroborate a list of claims.
 
 Takes a JSON file containing claim texts, extracts Claim objects, runs each
-through one or more corroboration backends, and writes the aggregated results
+through one or more corroboration providers, and writes the aggregated results
 to stdout or an output file.
 
 Input JSON format::
@@ -22,67 +22,70 @@ import json
 import sys
 from pathlib import Path
 
-from social_research_probe.corroboration.host import corroborate_claim
-from social_research_probe.validation.claims import Claim
+from social_research_probe.config import load_active_config
+from social_research_probe.services.corroborating.host import corroborate_claim
+from social_research_probe.technologies.validation.claim_extractor import Claim
+from social_research_probe.utils.core.exit_codes import ExitCode
 
 
-def run(
-    input_path: str,
-    backends: list[str],
-    output_path: str | None = None,
-) -> int:
-    """Load claims from a JSON file, corroborate each, and write results.
+def _validate_corroboration_config() -> None:
+    """Raise ValidationError if corroboration stage or service is disabled."""
+    from social_research_probe.utils.core.errors import ValidationError
 
-    Reads a JSON file whose top-level key "claims" holds a list of objects
-    with "text" and optional "source_text" fields. Each claim is wrapped in a
-    Claim dataclass and passed to the corroboration host. The aggregated
-    verdicts are written as JSON either to stdout or to output_path.
+    cfg = load_active_config()
+    if hasattr(cfg, "service_enabled") and not cfg.service_enabled("corroboration"):
+        raise ValidationError(
+            "cannot corroborate claims: services.corroboration is false. "
+            "Enable the corroboration service to use corroboration providers."
+        )
 
-    Args:
-        input_path: Path to the JSON file containing claims.
-        backends: List of backend names to use (e.g. ['exa', 'llm_search']).
-        output_path: If given, write JSON results here; otherwise print to
-            stdout.
 
-    Returns:
-        Exit code (0 on success).
-
-    Raises:
-        ValidationError: If the input file is missing, unreadable, or is not
-            valid JSON.
-    """
-    from social_research_probe.errors import ValidationError
+def _load_claims(input_path: str) -> list[dict]:
+    """Read and parse the claims JSON file. Returns the raw claims list."""
+    from social_research_probe.utils.core.errors import ValidationError
 
     try:
         with open(input_path) as f:
             data = json.load(f)
     except (json.JSONDecodeError, OSError) as exc:
         raise ValidationError(f"cannot read claims file: {exc}") from exc
+    return data.get("claims", [])
 
-    raw_claims = data.get("claims", [])
 
-    # Cap concurrent claim processing to avoid hammering external APIs.
+def _run_corroboration(raw_claims: list[dict], providers: list[str]) -> list[dict]:
+    """Corroborate all claims concurrently and return results."""
     sem = asyncio.Semaphore(5)
 
     async def _corroborate_one(i: int, rc: dict) -> dict:
         text = rc.get("text", "")
-        # Fall back to the claim text itself when no separate source is given,
-        # so corroboration backends always have a non-empty source to check.
         source = rc.get("source_text", text)
         claim = Claim(text=text, source_text=source, index=i)
         async with sem:
-            return await corroborate_claim(claim, backends)
+            return await corroborate_claim(claim, providers)
 
-    async def _gather_claims() -> list[dict]:
-        return await asyncio.gather(
-            *[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)],
-        )
+    async def _gather_all() -> list[dict]:
+        return await asyncio.gather(*[_corroborate_one(i, rc) for i, rc in enumerate(raw_claims)])
 
-    results = asyncio.run(_gather_claims())
+    return asyncio.run(_gather_all())
 
+
+def _write_output(results: list[dict], output_path: str | None) -> None:
+    """Write corroboration results to file or stdout."""
     out = json.dumps({"results": results}, indent=2, ensure_ascii=False)
     if output_path:
         Path(output_path).write_text(out)
     else:
         sys.stdout.write(out + "\n")
-    return 0
+
+
+def run(
+    input_path: str,
+    providers: list[str],
+    output_path: str | None = None,
+) -> int:
+    """Load claims from a JSON file, corroborate each, and write results."""
+    _validate_corroboration_config()
+    raw_claims = _load_claims(input_path)
+    results = _run_corroboration(raw_claims, providers)
+    _write_output(results, output_path)
+    return ExitCode.SUCCESS

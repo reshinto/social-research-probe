@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="260" viewBox="0 0 760 260" role="img" aria-labelledby="title desc">
+  <title id="title">Standard deviation example</title>
+  <desc id="desc">Two dot plots comparing low and high standard deviation.</desc>
+  <rect width="760" height="260" fill="#ffffff"/>
+  <text x="28" y="34" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111111">Standard deviation: how far values sit from the mean</text>
+  <line x1="80" y1="100" x2="680" y2="100" stroke="#334155" stroke-width="2"/>
+  <line x1="380" y1="75" x2="380" y2="125" stroke="#dc2626" stroke-width="3" stroke-dasharray="6 5"/>
+  <text x="397" y="83" font-family="Arial, sans-serif" font-size="15" fill="#dc2626">mean</text>
+  <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2">
+    <circle cx="340" cy="100" r="12"/><circle cx="365" cy="100" r="12"/><circle cx="383" cy="100" r="12"/><circle cx="405" cy="100" r="12"/><circle cx="425" cy="100" r="12"/>
+  </g>
+  <text x="80" y="145" font-family="Arial, sans-serif" font-size="17" fill="#111111">Low stdev: values are clustered, one summary number is more representative.</text>
+  <line x1="80" y1="190" x2="680" y2="190" stroke="#334155" stroke-width="2"/>
+  <line x1="380" y1="165" x2="380" y2="215" stroke="#dc2626" stroke-width="3" stroke-dasharray="6 5"/>
+  <g fill="#fee2e2" stroke="#dc2626" stroke-width="2">
+    <circle cx="130" cy="190" r="12"/><circle cx="250" cy="190" r="12"/><circle cx="385" cy="190" r="12"/><circle cx="535" cy="190" r="12"/><circle cx="650" cy="190" r="12"/>
+  </g>
+  <text x="80" y="238" font-family="Arial, sans-serif" font-size="17" fill="#111111">High stdev: values are spread out, inspect individual items.</text>
+</svg>

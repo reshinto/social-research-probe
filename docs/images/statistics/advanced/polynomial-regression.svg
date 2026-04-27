@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Polynomial regression</title>
+  <desc id="desc">Uses a curve when a straight line cannot explain the shape.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Polynomial regression</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Uses a curve when a straight line cannot explain the shape.</text>
+  <line x1="100" y1="260" x2="735" y2="260" stroke="#334155"/><line x1="100" y1="75" x2="100" y2="260" stroke="#334155"/><path d="M120 95 C220 210,340 245,470 230 C595 215,650 145,710 95" fill="none" stroke="#7c3aed" stroke-width="5"/><line x1="130" y1="220" x2="710" y2="100" stroke="#94a3b8" stroke-width="3" stroke-dasharray="8 7"/><text x="485" y="78" font-family="Arial" font-size="16" fill="#7c3aed">curved fit</text><text x="510" y="205" font-family="Arial" font-size="16" fill="#64748b">straight fit misses pattern</text>
+</svg>

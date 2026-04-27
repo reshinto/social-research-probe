@@ -7,13 +7,11 @@ from typing import ClassVar
 
 from social_research_probe.platforms.base import (
     FetchLimits,
-    PlatformAdapter,
     RawItem,
-    SignalSet,
-    TrustHints,
+    SearchClient,
 )
 from social_research_probe.platforms.registry import register
-from social_research_probe.types import AdapterConfig
+from social_research_probe.utils.core.types import AdapterConfig
 
 
 def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
@@ -42,7 +40,7 @@ def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
 
 
 @register
-class FakeYouTubeAdapter(PlatformAdapter):
+class FakeYouTubeClient(SearchClient):
     name: ClassVar[str] = "youtube"
     default_limits: ClassVar[FetchLimits] = FetchLimits()
 
@@ -52,46 +50,8 @@ class FakeYouTubeAdapter(PlatformAdapter):
     def health_check(self) -> bool:
         return True
 
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
+    def find_by_topic(self, topic: str, limits: FetchLimits) -> list[RawItem]:
         return _fixture_items(topic, n=min(5, limits.max_items))
 
-    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
+    async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]:
         return items
-
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
-        now = datetime.now(UTC)
-        signals = []
-        for item in items:
-            age_days = max(1, (now - item.published_at).days)
-            views = item.metrics.get("views", 0)
-            likes = item.metrics.get("likes", 0)
-            comments = item.metrics.get("comments", 0)
-            signals.append(
-                SignalSet(
-                    views=views,
-                    likes=likes,
-                    comments=comments,
-                    upload_date=item.published_at,
-                    view_velocity=views / age_days,
-                    engagement_ratio=(likes + comments) / max(1, views),
-                    comment_velocity=comments / age_days,
-                    cross_channel_repetition=0.0,
-                    raw={},
-                )
-            )
-        return signals
-
-    def trust_hints(self, item: RawItem) -> TrustHints:
-        return TrustHints(
-            account_age_days=1200,
-            verified=True,
-            subscriber_count=int(item.extras.get("channel_subscribers", 0)),
-            upload_cadence_days=7.0,
-            citation_markers=[],
-        )
-
-    def url_normalize(self, url: str) -> str:
-        return url.split("&")[0]
-
-    def fetch_text_for_claim_extraction(self, item: RawItem) -> str | None:
-        return item.text_excerpt

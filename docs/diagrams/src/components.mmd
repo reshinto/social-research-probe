@@ -1,27 +1,20 @@
-graph TD
-    CLI["cli/\nArgument parsing + dispatch"]
-    CMD["commands/\nParsedRunResearch"]
-    ORCH["pipeline/orchestrator\nrun_research()"]
-    SCORE["pipeline/scoring\nScore + z-score"]
-    ENRICH["pipeline/enrichment\nTranscripts + LLM summaries"]
-    STATS["pipeline/stats\n20+ statistical models"]
-    CHARTS["pipeline/charts\nPNG rendering"]
-    CORR["pipeline/corroboration\nTop-N evidence"]
-    SVS["pipeline/svs\nSignal vectors"]
-    SYNTH["synthesize/\nbuild_packet + formatter"]
-    ADAPT["platforms/youtube\nYouTube Data API adapter"]
-    BACKENDS["corroboration/\nllm_search · tavily ·\nbrave · exa"]
-    LLM["llm/ensemble\nclaude · gemini · codex · local"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TB
+  CLI["cli/parsers.py and handlers.py"] --> Commands["commands/*"]
+  Commands --> Orchestrator["platforms/orchestrator.py"]
+  Orchestrator --> Pipeline["platforms/youtube/pipeline.py"]
+  Pipeline --> Services["services/* orchestration"]
+  Services --> Technologies["technologies/* adapters and pure algorithms"]
+  Services --> Utils["utils/* state, cache, IO, display"]
 
-    CLI --> CMD
-    CMD --> ORCH
-    ORCH --> ADAPT
-    ORCH --> SCORE
-    ORCH --> ENRICH
-    ORCH --> STATS
-    ORCH --> CHARTS
-    ORCH --> CORR
-    ORCH --> SVS
-    ORCH --> SYNTH
-    ENRICH --> LLM
-    CORR --> BACKENDS
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class CLI,Commands,Orchestrator,Pipeline process;
+  class Services analysis;
+  class Technologies external;
+  class Utils config;

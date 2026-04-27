@@ -1,358 +1,471 @@
-# Statistical Models
+[Back to docs index](README.md)
 
-[Home](README.md) → Statistical Models
+# Statistics
 
-`srp` runs up to 20+ statistical models on every research run. This page explains what each model measures, when it fires, and how to interpret the output in your report.
+![Statistics suite](diagrams/statistics-suite.svg)
+
+Statistics are computed after the pipeline has collected, enriched, and scored
+research items. The statistics service does not change the ranking. It reads
+the scored items, derives aligned target arrays, runs the automatic selector,
+and returns human-readable highlight captions for reports.
+
+Use statistics to understand the shape of the current result set: center,
+spread, trend, outliers, and relationships between numeric signals. Do not read
+them as causal proof. A statistic can tell you that `trust` and `overall` move
+together in this run; it cannot prove trust caused the ranking by itself.
 
----
+## Data Used
 
-## Why statistics?
+Each scored item becomes one row. Derived target arrays keep the same row order,
+so `overall[3]`, `trust[3]`, `view_velocity[3]`, and `age_days[3]` describe the
+same item.
+
+| Target | Type | How it is built | How to interpret it |
+| --- | --- | --- | --- |
+| `rank` | Ordinal | Zero-based index in the scored list. | Lower rank means the item appears earlier in the final ranking. |
+| `is_top_n` | Binary | `1` when `rank < 5`, otherwise `0`. | Useful for models that ask what separates the top five from the rest. |
+| `is_top_tenth` | Binary | `1` when the item is inside the top tenth of the list, with a minimum cutoff of two. | Useful for larger result sets where "top five" is too blunt. |
+| `overall` | Continuous score | `overall_score` from the scoring stage. | Final ranking score. Higher means the item is more useful for the query. |
+| `trust` | Continuous score | `trust` from the scoring stage. | Higher means stronger source or reliability signal. |
+| `trend` | Continuous score | `trend` from the scoring stage. | Higher means stronger recency or momentum signal. |
+| `opportunity` | Continuous score | `opportunity` from the scoring stage. | Higher means the item may be useful despite not being obvious from popularity alone. |
+| `view_velocity` | Continuous feature | `features.view_velocity`. | Approximate views per day. High values mean fast audience growth. |
+| `engagement_ratio` | Continuous feature | `features.engagement_ratio`. | Engagement relative to views. High values mean viewers interact more often. |
+| `age_days` | Continuous feature | `features.age_days`. | Days since upload. Larger values mean older items. |
+| `subscribers` | Continuous feature | `features.subscriber_count`. | Channel size. Large values can explain popularity but can also hide small-channel opportunities. |
+| `views` | Count-like feature | `view_velocity * age_days`. | Estimated total views from available derived features. |
+| `source_class` | Categorical | Item `source_class`, defaulting to `unknown`. | Lets classification or grouped analysis compare source types. |
+| `event_crossed_100k` | Binary event | `1` when estimated `views >= 100000`. | Used for event-style analysis such as crossing 100k views. |
+| `time_to_event_days` | Event time | Same value as `age_days`. | Used with event indicators for survival-style analysis. |
+
+The automatic report suite currently runs on these numeric targets:
+`overall`, `trust`, `trend`, `opportunity`, `view_velocity`,
+`engagement_ratio`, `age_days`, `subscribers`, and `views`.
+
+## Automatic Selector
+
+![Statistics interpretation](diagrams/statistics-interpretation.svg)
+
+The selector runs more statistics as the sample gets larger.
+
+| Data size | Analyses selected |
+| --- | --- |
+| 1 or more values | Descriptive statistics: mean, median, min, max, and standard deviation when possible. |
+| 2 or more values | Spread and regression over result order. |
+| 3 or more values | Growth and outlier checks. |
+
+The report marks `low_confidence: true` when fewer than five scored items are
+available. That does not mean the numbers are wrong. It means the sample is too
+small for strong interpretation.
+
+## Automatic Statistics
+
+These are the statistics that the report selector can run automatically for
+each available numeric target.
 
-YouTube search results are noisy. A video with 10 million views might be viral clickbait; a video with 50,000 views from a specialist channel might be the most credible source on the topic. Statistics help you go beyond surface metrics and understand the *structure* of the dataset:
+### Mean
 
-- Are the scores clustered or spread out? (Is there a clear winner, or are results roughly equal?)
-- Does high trust predict high overall score? (Are credible sources also being rewarded by the scoring?)
-- Is there an unusual outlier that warrants extra attention?
-- Are results statistically separable into meaningful groups?
+![Mean statistic example](images/statistics/mean.svg)
 
-The statistical highlights appear in **Section 7** of the report. Each is phrased in plain English by the synthesis layer.
+| Field | Value |
+| --- | --- |
+| Output name | `mean` |
+| Runs when | The target has at least one value. |
+| Measures | Arithmetic average: `sum(values) / count(values)`. |
+| Best for | A quick center point when values are not dominated by extremes. |
+| Be careful when | A few very high or very low values pull the average away from most items. |
+
+Example: for `overall = [0.91, 0.84, 0.82, 0.52, 0.50]`, the mean is `0.718`.
+That says the average item is moderately strong, but it hides the gap between
+the top three and bottom two values.
 
----
+### Median
 
-## Which models run and when
+![Median statistic example](images/statistics/median.svg)
 
-Models are gated by dataset size. Small runs (e.g. `max_items = 5`) skip models that require more data points.
+| Field | Value |
+| --- | --- |
+| Output name | `median` |
+| Runs when | The target has at least one value. |
+| Measures | The middle value after sorting. |
+| Best for | A robust center point when popularity or engagement is skewed. |
+| Be careful when | The sample is very small; one added item can move the median. |
+
+Example: for sorted `overall = [0.50, 0.52, 0.82, 0.84, 0.91]`, the median is
+`0.82`. The median is higher than the mean, so the weaker bottom values are
+pulling the mean down.
 
-| Minimum items | Models enabled |
-|---|---|
-| 1 | Descriptive statistics |
-| 2 | Spread, OLS regression, correlation, Spearman, Mann–Whitney U, Welch's t-test |
-| 3 | Growth rate, outlier detection |
-| 4 | Normality test, polynomial regression (degree 2 & 3), bootstrap confidence intervals |
-| 5+ | All of the above plus: multi-regression, logistic regression, k-means clustering, PCA, Kaplan–Meier survival, Naive Bayes, Huber regression, Bayesian linear regression |
+### Minimum, Maximum, And Range
 
-Low-confidence mode is flagged when `n < 8`. The report's Section 7 will note this so you know to treat the statistics as indicative rather than conclusive.
+![Minimum maximum and range example](images/statistics/min-max-range.svg)
 
----
+| Field | Value |
+| --- | --- |
+| Output names | `min`, `max`, `range` |
+| Runs when | Min and max run with at least one value. Range is part of spread analysis. |
+| Measures | The lowest value, highest value, and full distance between them. |
+| Best for | Seeing the outer bounds of the result set. |
+| Be careful when | One unusual item makes the whole dataset look more spread out than it usually is. |
+
+Example: for `overall = [0.91, 0.84, 0.82, 0.52, 0.50]`, min is `0.50`, max is
+`0.91`, and range is `0.41`. That shows a wide gap between strongest and
+weakest items, but it does not describe where the middle values sit.
+
+### Standard Deviation
+
+![Standard deviation example](images/statistics/stdev.svg)
+
+| Field | Value |
+| --- | --- |
+| Output name | `stdev` |
+| Runs when | The target has at least two values. |
+| Measures | Typical distance from the mean. |
+| Best for | Understanding whether values are clustered or volatile. |
+| Be careful when | The distribution is skewed or outlier-heavy. |
 
-## Model reference
+Low standard deviation means one summary number is more representative. High
+standard deviation means individual items matter more. For platform data,
+`view_velocity` often has high standard deviation because a few items can grow
+much faster than the rest.
+
+### Interquartile Range
+
+![Interquartile range example](images/statistics/iqr.svg)
+
+| Field | Value |
+| --- | --- |
+| Output name | `iqr` |
+| Runs when | Spread analysis has enough values for quartiles. |
+| Measures | `Q3 - Q1`, the spread of the middle 50 percent of values. |
+| Best for | Understanding spread without letting extreme values dominate. |
+| Be careful when | The dataset is too small for stable quartiles. |
+
+Use IQR with median when the data is skewed. If `view_velocity` has one viral
+item and many normal items, IQR usually describes the normal middle better than
+range.
+
+### Linear Slope And R-Squared
 
-### Descriptive statistics
+![Linear slope and R squared example](images/statistics/slope-r2.svg)
 
-**What it measures:** Mean, median, standard deviation, min, and max of the overall score.
+| Field | Value |
+| --- | --- |
+| Output names | `slope`, `r_squared` |
+| Runs when | Regression has at least two values. |
+| Measures | A straight-line fit over result order. Slope gives direction; R-squared gives fit quality. |
+| Best for | Checking whether a metric changes smoothly across rank. |
+| Be careful when | The relationship is curved, clustered, or dominated by one outlier. |
 
-**When it runs:** Always (n ≥ 1).
+For `overall`, a negative slope is usually expected because scores should fall
+as rank gets worse. High R-squared means the score drop is smooth. Low R-squared
+means rank order does not explain that metric well.
 
-**How to interpret:** The mean tells you the average quality of results. A high standard deviation means the results are very uneven — some standout videos and many poor ones. A low standard deviation means most videos are similar in quality.
+### Average Growth Rate
 
-**Example finding:** "Mean overall score: 0.62. Std dev: 0.21 — moderate spread, suggesting a few high-quality sources among average results."
+![Average growth rate example](images/statistics/growth.svg)
 
-**Example output:**
+| Field | Value |
+| --- | --- |
+| Output name | `avg_growth_rate` |
+| Runs when | Growth analysis has at least three values. |
+| Measures | Average period-over-period percentage change between adjacent values. |
+| Best for | Seeing whether values tend to rise or fall down the ranked list. |
+| Be careful when | Earlier values are close to zero; percentage changes can become very large. |
 
-```
-mean_overall: 0.6147    median_overall: 0.6300
-stdev_overall: 0.1284   min_overall: 0.3200   max_overall: 0.8700
-```
+Growth is about adjacent movement, not long-term platform growth. A positive
+growth rate means values tend to increase as the list moves forward. A negative
+growth rate means they tend to decrease.
 
----
+### Outlier Count And Outlier Fraction
 
-### Spread analysis
+![Outlier count and fraction example](images/statistics/outliers.svg)
 
-**What it measures:** Interquartile range (IQR), skewness, and kurtosis of the overall score distribution.
+| Field | Value |
+| --- | --- |
+| Output names | `outlier_count`, `outlier_fraction` |
+| Runs when | Outlier analysis has at least three values. |
+| Measures | Values far from the group using z-score style distance. |
+| Best for | Finding items that deserve manual inspection. |
+| Be careful when | Small samples can make outlier labels unstable. |
 
-**When it runs:** n ≥ 2.
+An outlier can be bad data, a genuinely important source, or evidence that the
+query mixed different kinds of content. Treat outliers as review prompts, not
+automatic errors.
 
-**How to interpret:** High skewness (> 1) means most results cluster at the low end with a few outliers at the top — common when one viral channel dominates. Kurtosis indicates how extreme the tail outliers are. A wide IQR means the middle 50% of results are very diverse.
+### Pearson Correlation
 
-**Example output:**
+![Pearson correlation example](images/statistics/pearson.svg)
 
-```
-iqr_overall: 0.1950   skewness_overall: 0.3820   kurtosis_overall: -0.6140
-```
+| Field | Value |
+| --- | --- |
+| Output name | `pearson_r` |
+| Runs when | Correlation helper receives two numeric series with at least two paired values. |
+| Measures | Linear relationship between two same-length numeric series. |
+| Best for | Seeing whether two metrics move together, apart, or independently. |
+| Be careful when | The relationship is nonlinear or an outlier drives the result. |
 
----
+`1.0` means the series move together. `-1.0` means they move in opposite
+directions. `0.0` means no linear relationship. A positive correlation between
+`trust` and `overall` means the ranking score tends to rise when trust rises,
+but it does not prove trust caused the ranking by itself.
 
-### OLS linear regression (rank vs score)
+## Advanced Modules
 
-**What it measures:** Fits a straight line to the relationship between a video's rank position (1st, 2nd, 3rd…) and its overall score. The slope tells you how steeply quality drops off down the list.
+These modules exist in `social_research_probe/technologies/statistics/`. They
+are available building blocks for deeper analysis, tests, or future report
+features. The current statistics report service does not automatically run all
+of them on every pipeline result.
 
-**When it runs:** n ≥ 2.
+### Bootstrap
 
-**How to interpret:** A steep negative slope means the top-ranked video is significantly better than the others. A shallow slope means the results are roughly equal in quality and the ranking is less decisive.
+![Bootstrap confidence interval](images/statistics/advanced/bootstrap.svg)
 
-**Example output:**
+| Field | Value |
+| --- | --- |
+| Module | `bootstrap` |
+| Returns | Bootstrap mean plus lower and upper confidence interval bounds. |
+| Use when | The sample is small or skewed and a normal-theory interval would be fragile. |
+| Interpret as | Narrow intervals mean the mean is stable; wide intervals mean more data is needed. |
 
-```
-ols_slope: -0.0241   ols_intercept: 0.7310   ols_r2: 0.6803
-```
+Bootstrap resampling repeatedly samples from the observed values and recomputes
+the mean. The spread of those resampled means becomes an uncertainty interval.
 
----
+### Normality
 
-### Correlation (Pearson)
+![Normality diagnostics](images/statistics/advanced/normality.svg)
 
-**What it measures:** Linear correlation between trust score and opportunity score across all items.
+| Field | Value |
+| --- | --- |
+| Module | `normality` |
+| Returns | Skewness, excess kurtosis, and a normality verdict. |
+| Use when | You need to know whether normal-assumption methods are reasonable. |
+| Interpret as | Skew shows left/right imbalance; high kurtosis means heavy tails or sharp peaks. |
 
-**When it runs:** n ≥ 2.
+Normality diagnostics help decide whether parametric methods are appropriate.
+If values are heavily skewed, prefer robust or rank-based methods.
 
-**How to interpret:** A strong positive correlation (+0.7 or above) means channels with high credibility also have high engagement opportunity — credible sources are also accessible. A near-zero correlation means trust and opportunity are independent, and you may need to choose between authoritative sources and engaging ones.
+### Welch T-Test
 
-**Example output:**
+![Welch t-test](images/statistics/advanced/welch-t.svg)
 
-```
-pearson_r (trust vs opportunity): 0.7412  (positive correlation)
-```
+| Field | Value |
+| --- | --- |
+| Module | `hypothesis_tests.run_welch_t` |
+| Returns | Welch t statistic, degrees of freedom, and mean difference. |
+| Use when | Comparing two numeric groups with unequal variance. |
+| Interpret as | Larger absolute t values suggest stronger group separation. |
 
----
+Read Welch's test as "is the mean gap large compared with within-group noise?"
 
-### Spearman rank correlation
+### One-Way ANOVA
 
-**What it measures:** Same as Pearson correlation but uses ranks instead of raw values, making it robust to outliers and non-linear relationships.
+![One-way ANOVA](images/statistics/advanced/anova.svg)
 
-**When it runs:** n ≥ 2.
+| Field | Value |
+| --- | --- |
+| Module | `hypothesis_tests.run_anova` |
+| Returns | One-way ANOVA F statistic. |
+| Use when | Comparing means across three or more groups. |
+| Interpret as | Larger F means between-group differences are large relative to within-group noise. |
 
-**How to interpret:** Compare with the Pearson result. If Spearman is much higher than Pearson, the relationship is monotonic but not linear (e.g. exponential). If they are similar, the relationship is roughly linear.
+ANOVA tells you whether group means differ enough to deserve attention. It does
+not tell you which pair of groups is responsible without follow-up comparisons.
 
-**Example output:**
+### Kruskal-Wallis
 
-```
-spearman_r (trust vs opportunity): 0.7908  (positive correlation)
-```
+![Kruskal-Wallis](images/statistics/advanced/kruskal-wallis.svg)
 
----
+| Field | Value |
+| --- | --- |
+| Module | `hypothesis_tests.run_kruskal_wallis` |
+| Returns | Kruskal-Wallis H statistic. |
+| Use when | Comparing groups with a rank-based nonparametric method. |
+| Interpret as | Larger H means group distributions are more separated. |
 
-### Mann–Whitney U test
+Use Kruskal-Wallis when values are skewed, outlier-heavy, or not safe to treat
+as normally distributed.
 
-**What it measures:** Tests whether the top half of results (by rank) has significantly different overall scores from the bottom half — without assuming a normal distribution.
+### Chi-Square
 
-**When it runs:** n ≥ 2.
+![Chi-square test](images/statistics/advanced/chi-square.svg)
 
-**How to interpret:** A statistically significant result (p < 0.05) means there is a real quality gap between the top and bottom halves of your results. An insignificant result means the divide between "good" and "bad" results is not statistically meaningful — the dataset may be uniformly mediocre or uniformly good.
+| Field | Value |
+| --- | --- |
+| Module | `hypothesis_tests.run_chi_square` |
+| Returns | Chi-square statistic and degrees of freedom. |
+| Use when | Testing association in a categorical contingency table. |
+| Interpret as | Larger chi-square means observed counts differ more from independent expectations. |
 
-**Example output:**
+Chi-square is for counts, not continuous scores. Use it when both variables are
+categories.
 
-```
-mann_whitney_u: 52.0   mann_whitney_p: 0.0183   (significant split, top vs bottom half)
-```
+### Spearman Rank Correlation
 
----
+![Spearman rank correlation](images/statistics/advanced/spearman.svg)
 
-### Welch's t-test
+| Field | Value |
+| --- | --- |
+| Module | `nonparametric.run_spearman` |
+| Returns | Spearman rho. |
+| Use when | Comparing monotonic relationships when raw values are nonlinear or outlier-heavy. |
+| Interpret as | Positive rho means ranks rise together; negative rho means one rank rises as the other falls. |
 
-**What it measures:** Same hypothesis as Mann–Whitney but assumes normally distributed scores. Compares means between top and bottom halves.
+Spearman compares rank order instead of raw values. It is often safer than
+Pearson when the shape is not a straight line.
 
-**When it runs:** n ≥ 2.
+### Mann-Whitney U
 
-**How to interpret:** Use alongside the normality test. If the normality test passes, Welch's t-test is reliable. If the normality test fails, trust Mann–Whitney instead.
+![Mann-Whitney U](images/statistics/advanced/mann-whitney.svg)
 
-**Example output:**
+| Field | Value |
+| --- | --- |
+| Module | `nonparametric.run_mann_whitney` |
+| Returns | Mann-Whitney U and z approximation. |
+| Use when | Comparing two groups without assuming normal distributions. |
+| Interpret as | A small U means one group tends to rank above the other. |
 
-```
-welch_t: 2.8841   welch_p: 0.0117   (significant mean difference, top vs bottom half)
-```
+Mann-Whitney answers whether values from one group usually sit higher or lower
+than values from another group.
 
----
+### Multiple Regression
 
-### Normality test (Shapiro–Wilk)
+![Multiple regression](images/statistics/advanced/multi-regression.svg)
 
-**What it measures:** Tests whether the overall scores follow a normal (bell-curve) distribution.
+| Field | Value |
+| --- | --- |
+| Module | `multi_regression` |
+| Returns | Intercept, feature coefficients, R-squared, and adjusted R-squared. |
+| Use when | Explaining a continuous target with multiple numeric features. |
+| Interpret as | Coefficients show feature direction while holding other included features in the model. |
 
-**When it runs:** n ≥ 4.
+Adjusted R-squared penalizes extra features. Prefer it when comparing models
+with different numbers of inputs.
 
-**How to interpret:** If the test passes (scores are normal), parametric tests like Welch's t are valid. If it fails, the distribution is skewed or has heavy tails — use the non-parametric results (Spearman, Mann–Whitney) instead.
+### Bayesian Linear Regression
 
-**Example output:**
+![Bayesian linear regression](images/statistics/advanced/bayesian-linear.svg)
 
-```
-shapiro_w: 0.9612   shapiro_p: 0.2340   (normality not rejected — parametric tests valid)
-```
+| Field | Value |
+| --- | --- |
+| Module | `bayesian_linear` |
+| Returns | Posterior coefficient means, credible intervals, and residual variance. |
+| Use when | Coefficient uncertainty matters, not just point estimates. |
+| Interpret as | A credible interval crossing zero means the feature direction is uncertain. |
 
----
+Wide credible intervals mean the data does not tightly identify the coefficient.
 
-### Polynomial regression (degree 2 & 3)
+### Huber Regression
 
-**What it measures:** Fits a curve (quadratic or cubic) to the rank vs score relationship. Captures non-linear score decay patterns.
+![Huber robust regression](images/statistics/advanced/huber-regression.svg)
 
-**When it runs:** n ≥ 4.
+| Field | Value |
+| --- | --- |
+| Module | `huber_regression` |
+| Returns | Robust intercept, slope, and R-squared. |
+| Use when | Outliers would distort ordinary least squares. |
+| Interpret as | A large difference from OLS means outliers are influencing the simple fit. |
 
-**How to interpret:** A good quadratic fit means quality drops sharply in the top few results, then flattens — a typical "power law" content distribution. If the cubic fit is significantly better than quadratic, there is a more complex structure (e.g. a cluster of mid-tier results above a floor).
+Huber regression is useful when a few unusual items should not fully control
+the fitted line.
 
-**Example output:**
+### Polynomial Regression
 
-```
-poly2_r2: 0.7441   poly3_r2: 0.7508
-poly2_coeffs: [-0.0018, -0.0093, 0.7621]
-```
+![Polynomial regression](images/statistics/advanced/polynomial-regression.svg)
 
----
+| Field | Value |
+| --- | --- |
+| Module | `polynomial_regression` |
+| Returns | Polynomial R-squared and leading coefficient. |
+| Use when | Detecting curved relationships, such as a sharp drop after the first few ranks. |
+| Interpret as | Higher R-squared than linear regression means a curve explains the pattern better. |
 
-### Bootstrap confidence intervals
+Use polynomial regression when a straight line is visibly missing the structure.
+Do not use higher-degree curves as proof without enough data.
 
-**What it measures:** Resamples the dataset 1,000 times to estimate a 95% confidence interval for the mean overall score. Does not assume any distribution.
+### Logistic Regression
 
-**When it runs:** n ≥ 4.
+![Logistic regression](images/statistics/advanced/logistic-regression.svg)
 
-**How to interpret:** A tight confidence interval (e.g. [0.58, 0.65]) means the mean is stable and the dataset is consistent. A wide interval means the mean is sensitive to which specific videos appeared in this run — results would likely vary significantly on a re-run.
+| Field | Value |
+| --- | --- |
+| Module | `logistic_regression` |
+| Returns | Intercept, feature coefficients, odds ratios, pseudo R-squared, and training accuracy. |
+| Use when | Predicting binary targets such as `is_top_n` or `event_crossed_100k`. |
+| Interpret as | Positive coefficients increase event odds; negative coefficients lower them. |
 
-**Example output:**
-
-```
-bootstrap_mean: 0.6147   bootstrap_ci_95: [0.5712, 0.6581]   (n_resamples=1000)
-```
-
----
-
-### Multiple regression
-
-**What it measures:** Fits a linear model predicting the overall score from all three sub-scores (trust, trend, opportunity) simultaneously. The coefficients show which sub-score drives the overall score most.
-
-**When it runs:** n ≥ 5.
-
-**How to interpret:** A high trust coefficient means credibility dominates the ranking on this topic. A high trend coefficient means view velocity is the main driver. Use this to understand what kind of content your scoring is rewarding for the current topic and purpose.
-
-**Example output:**
-
-```
-multi_reg_r2: 0.9871
-coefficients — trust: 0.4421  trend: 0.2978  opportunity: 0.2503
-intercept: 0.0041
-```
-
----
-
-### Logistic regression
-
-**What it measures:** Predicts whether an item will rank in the top 5 based on its seven features (trust, trend, opportunity, view velocity, engagement ratio, age in days, subscriber count).
-
-**When it runs:** n ≥ 5.
-
-**How to interpret:** The feature with the highest coefficient is the strongest predictor of top-N inclusion. This is more actionable than multiple regression when you want to understand "what makes a video stand out" rather than "what drives the overall score."
-
-**Example output:**
-
-```
-logistic_accuracy: 0.8000
-top_predictor: trust (coeff 2.1840)
-feature_coeffs — trust: 2.1840  trend: 0.9312  opportunity: 0.6774
-                 view_velocity: 0.3201  engagement_ratio: 0.1903
-                 age_days: -0.0041  subscriber_count: 0.0000
-```
-
----
-
-### K-means clustering (k=3)
-
-**What it measures:** Groups all scored items into 3 clusters based on their seven-feature vectors. Each cluster represents a distinct type of video in the dataset.
-
-**When it runs:** n ≥ 5.
-
-**How to interpret:** Typical clusters are "credible established channels," "new viral content," and "niche low-engagement sources." The cluster labels are not fixed — look at the centroid values to characterise each group. A cluster with very few members is an outlier group.
-
-**Example output:**
-
-```
-kmeans_k: 3   inertia: 1.2340
-cluster_0: 7 items  centroid_overall=0.7190  centroid_trust=0.7840
-cluster_1: 6 items  centroid_overall=0.5810  centroid_trust=0.5230
-cluster_2: 2 items  centroid_overall=0.3410  centroid_trust=0.3120
-```
-
----
-
-### PCA (Principal Component Analysis)
-
-**What it measures:** Reduces the seven features to two principal components that capture the most variance. Used to visualise the structure of the dataset in the scatter chart.
-
-**When it runs:** n ≥ 5.
-
-**How to interpret:** The first principal component typically separates high-overall from low-overall items. The second often separates trust-dominated from trend-dominated items. If PC1 explains > 70% of variance, the dataset has a single dominant dimension and one score (likely trust) is driving everything.
-
-**Example output:**
-
-```
-pca_pc1_variance_explained: 0.6823
-pca_pc2_variance_explained: 0.1741
-pca_cumulative_2pc: 0.8564
-```
-
----
-
-### Kaplan–Meier survival analysis
-
-**What it measures:** Treats the time for a video to reach 100,000 views as a "survival time" and estimates the probability of reaching that milestone at each age (days since publish).
-
-**When it runs:** n ≥ 5.
-
-**How to interpret:** A steep early drop in the survival curve means most videos hit 100k views quickly (viral content). A flat curve means most videos never reach 100k — content on this topic has limited viral potential. The median survival time (50% mark on the curve) tells you how long it typically takes for a breakout video to become visible.
-
-**Example output:**
-
-```
-km_median_survival_days: 42   km_events_observed: 9 of 15
-km_survival_at_30d: 0.6800   km_survival_at_90d: 0.3100
-```
-
----
+Logistic regression is for yes/no targets. It is not for predicting a continuous
+score directly.
 
 ### Naive Bayes
 
-**What it measures:** A probabilistic classifier that predicts top-N membership using the seven features, treating each feature independently. Provides a baseline accuracy score.
+![Naive Bayes](images/statistics/advanced/naive-bayes.svg)
 
-**When it runs:** n ≥ 5.
+| Field | Value |
+| --- | --- |
+| Module | `naive_bayes` |
+| Returns | Class priors and training accuracy. |
+| Use when | Building a simple classifier from numeric features and categorical labels. |
+| Interpret as | Priors show class balance; accuracy shows in-sample classification quality. |
 
-**How to interpret:** Accuracy above 70% means the features are good predictors of top-N inclusion. Low accuracy (below 60%) suggests that top-N status is not well-explained by the available features — other factors (e.g. timing, thumbnails) may matter more.
+Naive Bayes is a transparent baseline. It assumes feature independence, which is
+often imperfect but useful for comparison.
 
-**Example output:**
+### K-Means
 
-```
-naive_bayes_accuracy: 0.7333   naive_bayes_top_n_precision: 0.8000
-```
+![K-means clustering](images/statistics/advanced/kmeans.svg)
 
----
+| Field | Value |
+| --- | --- |
+| Module | `kmeans` |
+| Returns | Within-cluster sum of squares and cluster sizes. |
+| Use when | Grouping items into feature-similar tiers without labels. |
+| Interpret as | Lower within-cluster sum of squares means tighter clusters. |
 
-### Huber regression
+Uneven cluster sizes may indicate one dominant group plus niche outliers.
 
-**What it measures:** A robust linear regression that is less sensitive to outliers than OLS. Fits rank vs score with downweighted influence for unusual items.
+### PCA
 
-**When it runs:** n ≥ 5.
+![Principal component analysis](images/statistics/advanced/pca.svg)
 
-**How to interpret:** Compare with the OLS regression result. If the Huber slope is much less steep than OLS, there is at least one outlier video inflating the apparent quality gap. The Huber result is the more reliable summary of the typical rank-score relationship.
+| Field | Value |
+| --- | --- |
+| Module | `pca` |
+| Returns | Variance explained by each principal component and top loadings. |
+| Use when | Compressing many related features into fewer dimensions. |
+| Interpret as | A high first-component variance ratio means one combined axis explains much of the feature movement. |
 
-**Example output:**
+PCA helps reveal whether many features are mostly describing the same underlying
+direction.
 
-```
-huber_slope: -0.0189   huber_intercept: 0.7021   (cf. ols_slope: -0.0241 — outlier dampened)
-```
+### Kaplan-Meier
 
----
+![Kaplan-Meier survival](images/statistics/advanced/kaplan-meier.svg)
 
-### Bayesian linear regression
+| Field | Value |
+| --- | --- |
+| Module | `kaplan_meier` |
+| Returns | Median survival and survival at a configured horizon. |
+| Use when | Estimating time-to-event behavior, such as time until crossing a view threshold. |
+| Interpret as | Survival `S(t)` is the estimated fraction that has not had the event by time `t`. |
 
-**What it measures:** Fits a linear model from trust, trend, and opportunity to the overall score using Bayesian estimation. Reports the posterior mean and a credible interval for each coefficient.
+Kaplan-Meier is useful when not every item has had the event yet. Those items
+are treated as still surviving rather than as failures.
 
-**When it runs:** n ≥ 5.
+## Practical Reading Rules
 
-**How to interpret:** The credible interval tells you how uncertain the coefficient estimate is given this data size. A narrow interval (e.g. trust: 0.35 ± 0.04) means the result is reliable. A wide interval means you need more data before drawing conclusions about which sub-score matters most.
+Prefer medians and IQR when popularity metrics are skewed. Platform view and
+engagement data often have a long tail, so one viral item can distort the mean,
+range, and standard deviation.
 
-**Example output:**
+Treat rank-based regressions as quality checks for the result ordering. A clean
+`overall` ranking should usually show a downward slope over rank. Other targets
+do not have to follow rank; for example, `opportunity` may intentionally surface
+lower-popularity items.
 
-```
-bayesian_trust:       mean=0.4418  ci95=[0.3901, 0.4941]
-bayesian_trend:       mean=0.2981  ci95=[0.2310, 0.3650]
-bayesian_opportunity: mean=0.2489  ci95=[0.1804, 0.3172]
-```
+Use outliers as review prompts, not automatic errors. An outlier can be a bad
+data point, a genuinely important item, or a sign that the query found multiple
+types of content.
 
----
-
-## Low-confidence mode
-
-When fewer than 8 items are scored, the report flags `low_confidence: true` in the statistics section. All models still run (subject to their individual minimum-n thresholds), but the findings should be treated as directional rather than statistically rigorous.
-
-To get reliable statistics, set `max_items` to at least 20 (the default). Below 8 results, standard errors are large and p-values unreliable.
-
----
-
-## See also
-
-- [Charts](charts.md) — visual representations of these statistical results
-- [Usage Guide](usage.md) — how to control how many videos are fetched
-- [model-applicability.md](model-applicability.md) — which LLM models are recommended for statistical explanation
+For fewer than five items, read every number as a rough summary. A single added
+or removed item can change the mean, slope, standard deviation, and outlier
+status.

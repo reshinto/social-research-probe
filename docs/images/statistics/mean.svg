@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" role="img" aria-labelledby="title desc">
+  <title id="title">Mean statistic example</title>
+  <desc id="desc">Five bars with a horizontal mean line and a separate label callout.</desc>
+  <rect width="760" height="300" fill="#ffffff"/>
+  <text x="28" y="34" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111111">Mean: the balance point</text>
+  <rect x="520" y="54" width="190" height="54" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+  <text x="540" y="87" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#9a3412">mean = 0.718</text>
+  <line x1="80" y1="230" x2="720" y2="230" stroke="#334155" stroke-width="2"/>
+  <line x1="80" y1="92" x2="720" y2="92" stroke="#dc2626" stroke-width="3" stroke-dasharray="8 6"/>
+  <rect x="120" y="48" width="70" height="182" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+  <rect x="240" y="62" width="70" height="168" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+  <rect x="360" y="66" width="70" height="164" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+  <rect x="480" y="126" width="70" height="104" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <rect x="600" y="130" width="70" height="100" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="130" y="255" font-family="Arial, sans-serif" font-size="14" fill="#111111">0.91</text>
+  <text x="250" y="255" font-family="Arial, sans-serif" font-size="14" fill="#111111">0.84</text>
+  <text x="370" y="255" font-family="Arial, sans-serif" font-size="14" fill="#111111">0.82</text>
+  <text x="490" y="255" font-family="Arial, sans-serif" font-size="14" fill="#111111">0.52</text>
+  <text x="610" y="255" font-family="Arial, sans-serif" font-size="14" fill="#111111">0.50</text>
+</svg>

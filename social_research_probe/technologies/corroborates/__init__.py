@@ -1,0 +1,1 @@
+"""Corroboration provider technology adapters."""

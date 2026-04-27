@@ -1,14 +1,21 @@
-graph TD
-    START["asyncio.run(main())"]
-    START --> TOPICS["Topic loop\nasyncio.gather + Semaphore"]
-    TOPICS --> T1["Topic 1"]
-    TOPICS --> T2["Topic 2"]
-    TOPICS --> TN["Topic N"]
-    T1 --> ENRICH1["Enrichment fan-out\nasyncio.gather (top-N)"]
-    ENRICH1 --> E1A["Transcript\n(captions → Whisper)"]
-    ENRICH1 --> E1B["LLM summary\n(claude · gemini · codex · local)"]
-    T1 --> CORR1["Corroboration fan-out\nasyncio.gather"]
-    CORR1 --> C1A["llm_search backend"]
-    CORR1 --> C1B["tavily backend"]
-    CORR1 --> C1C["brave backend"]
-    CORR1 --> C1D["exa backend"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TB
+  Score["score top-N"] --> Group["pipeline group"]
+  Group --> Transcript["TranscriptStage"]
+  Group --> Stats["StatsStage"]
+  Group --> Charts["ChartsStage"]
+  Transcript --> Join["next stage waits"]
+  Stats --> Join
+  Charts --> Join
+  Join --> Summary["SummaryStage"]
+  Summary --> Corr["CorroborateStage semaphore=3"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Score,Group,Transcript,Join,Summary,Corr process;
+  class Stats,Charts analysis;

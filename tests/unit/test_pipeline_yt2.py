@@ -1,0 +1,454 @@
+"""Comprehensive tests for platforms/youtube/pipeline enabled-paths."""
+
+from __future__ import annotations
+
+import asyncio
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from social_research_probe.platforms.state import PipelineState
+from social_research_probe.platforms.youtube import pipeline as yt
+from social_research_probe.services.base import ServiceResult, TechResult
+
+
+@pytest.fixture
+def enabled_state(monkeypatch):
+    cfg = MagicMock()
+    cfg.stage_enabled.return_value = True
+    cfg.service_enabled.return_value = True
+    cfg.technology_enabled.return_value = True
+    cfg.corroboration_provider = "exa"
+    cfg.tunables = {"summary_divergence_threshold": 0.4}
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+
+    cmd = MagicMock()
+    cmd.platform = "youtube"
+    state = PipelineState(
+        platform_type="youtube",
+        cmd=cmd,
+        cache=None,
+        platform_config={"enrich_top_n": 2, "include_shorts": True, "allow_html": False},
+        inputs={"topic": "ai", "purpose_names": ["career"]},
+    )
+    return state
+
+
+def _mk_service_result(name, output, success=True):
+    return ServiceResult(
+        service_name=name,
+        input_key="x",
+        tech_results=[TechResult(tech_name=name, input=None, output=output, success=success)],
+    )
+
+
+class TestFetchStage:
+    def test_enabled_path(self, enabled_state, monkeypatch):
+        async def fake_fetch(self, topic, cfg):
+            return [{"id": "1"}], [{"v": 1}]
+
+        monkeypatch.setattr(yt.YouTubeFetchStage, "_fetch_items", fake_fetch)
+        out = asyncio.run(yt.YouTubeFetchStage().execute(enabled_state))
+        assert out.get_stage_output("fetch")["items"] == [{"id": "1"}]
+
+
+class TestScoreStage:
+    def test_enabled_with_items(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
+        from social_research_probe.services.base import ServiceResult, TechResult
+
+        async def fake_one(self, data):
+            return ServiceResult(
+                service_name="scoring",
+                input_key="items",
+                tech_results=[
+                    TechResult(
+                        tech_name="t",
+                        input=None,
+                        output=[{"id": "1", "overall_score": 0.5}],
+                        success=True,
+                    )
+                ],
+            )
+
+        monkeypatch.setattr(
+            "social_research_probe.services.scoring.score.ScoringService.execute_one", fake_one
+        )
+        out = asyncio.run(yt.YouTubeScoreStage().execute(enabled_state))
+        assert out.get_stage_output("score")["all_scored"]
+
+    def test_enabled_no_items(self, enabled_state):
+        enabled_state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
+        out = asyncio.run(yt.YouTubeScoreStage().execute(enabled_state))
+        assert out.get_stage_output("score")["all_scored"] == []
+
+    def test_score_resolve_weights_with_purpose(self, enabled_state, monkeypatch):
+        from social_research_probe.utils.purposes.merge import MergedPurpose
+
+        enabled_state.inputs["merged_purpose"] = MergedPurpose(
+            names=("c",), method="m", evidence_priorities=()
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.scoring.weights.resolve_scoring_weights",
+            lambda cfg, m: {"trust": 0.5},
+        )
+        out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
+        assert out["trust"] == 0.5
+
+
+class TestTranscriptStage:
+    def test_enabled_with_results(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": [{"url": "u1"}]})
+        sr = _mk_service_result("transcript", "TRANSCRIPT")
+
+        async def fake_batch(self, items):
+            return [sr]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.transcript.TranscriptService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeTranscriptStage().execute(enabled_state))
+        assert out.get_stage_output("transcript")["top_n"][0]["transcript"] == "TRANSCRIPT"
+
+    def test_enabled_empty_top_n(self, enabled_state):
+        enabled_state.set_stage_output("score", {"top_n": []})
+        out = asyncio.run(yt.YouTubeTranscriptStage().execute(enabled_state))
+        assert out.get_stage_output("transcript")["top_n"] == []
+
+    def test_merge_no_success(self):
+        from social_research_probe.services.base import ServiceResult, TechResult
+
+        sr = ServiceResult(
+            service_name="t",
+            input_key="x",
+            tech_results=[TechResult("t", None, None, success=False)],
+        )
+        out = yt.YouTubeTranscriptStage._merge_transcripts([{"id": 1}], [sr])
+        assert "transcript" not in out[0]
+
+
+class TestSummaryStage:
+    def test_enabled(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1"}]})
+        sr = _mk_service_result("summary", "SUM")
+
+        async def fake_batch(self, items):
+            return [sr]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.summary.SummaryService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        assert out.get_stage_output("summary")["top_n"][0]["summary"] == "SUM"
+
+    def test_empty_top_n(self, enabled_state):
+        enabled_state.set_stage_output("transcript", {"top_n": []})
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        assert out.get_stage_output("summary")["top_n"] == []
+
+
+class TestCorroborateStage:
+    def test_provider_selection_disabled(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = False
+        cfg.corroboration_provider = "exa"
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == []
+
+    def test_provider_selection_none(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        cfg.corroboration_provider = "none"
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == []
+
+    def test_provider_selection_unhealthy(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        cfg.corroboration_provider = "exa"
+        cfg.technology_enabled.return_value = True
+        provider = MagicMock()
+        provider.health_check.return_value = False
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            with patch(
+                "social_research_probe.services.corroborating.registry.get_provider",
+                return_value=provider,
+            ):
+                out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == []
+
+    def test_provider_selection_auto(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        cfg.corroboration_provider = "auto"
+        cfg.technology_enabled.return_value = True
+        provider = MagicMock()
+        provider.health_check.return_value = True
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            with patch(
+                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                return_value=("exa",),
+            ):
+                with patch(
+                    "social_research_probe.services.corroborating.registry.get_provider",
+                    return_value=provider,
+                ):
+                    out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == ["exa"]
+
+    def test_provider_validation_error_skipped(self, monkeypatch):
+        from social_research_probe.utils.core.errors import ValidationError
+
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        cfg.corroboration_provider = "exa"
+        cfg.technology_enabled.return_value = True
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            with patch(
+                "social_research_probe.services.corroborating.registry.get_provider",
+                side_effect=ValidationError("x"),
+            ):
+                out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == []
+
+    def test_provider_llm_search_no_llm(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.corroboration_provider = "llm_search"
+        cfg.service_enabled.side_effect = lambda n: n == "corroboration"
+        cfg.technology_enabled.return_value = True
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
+        assert out == []
+
+    def test_fast_mode_caps(self, monkeypatch):
+        monkeypatch.setenv("SRP_FAST_MODE", "1")
+        out = yt.YouTubeCorroborateStage._cap_corroboration_providers_in_fast_mode(["a", "b", "c"])
+        assert len(out) == 1
+
+    def test_execute_disabled_or_empty(self, enabled_state):
+        enabled_state.set_stage_output("summary", {"top_n": []})
+        out = asyncio.run(yt.YouTubeCorroborateStage().execute(enabled_state))
+        assert out.get_stage_output("corroborate")["top_n"] == []
+
+    def test_execute_no_providers(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("summary", {"top_n": [{"id": "1"}]})
+        monkeypatch.setattr(
+            yt.YouTubeCorroborateStage, "_select_corroboration_providers", lambda self: []
+        )
+        out = asyncio.run(yt.YouTubeCorroborateStage().execute(enabled_state))
+        assert out.get_stage_output("corroborate")["top_n"] == [{"id": "1"}]
+
+    def test_execute_with_providers(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("summary", {"top_n": [{"id": "1"}]})
+        monkeypatch.setattr(
+            yt.YouTubeCorroborateStage,
+            "_select_corroboration_providers",
+            lambda self: ["exa"],
+        )
+
+        from social_research_probe.services.base import ServiceResult, TechResult
+
+        async def fake_batch(self, items):
+            return [
+                ServiceResult(
+                    service_name="test",
+                    input_key="x",
+                    tech_results=[TechResult(tech_name="t", input="i", output="ok", success=True)],
+                )
+            ]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.corroborating.corroborate.CorroborationService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeCorroborateStage().execute(enabled_state))
+        assert out.get_stage_output("corroborate")["top_n"][0]["corroboration"] == "ok"
+
+
+class TestStatsStage:
+    def test_enabled(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": [{"x": 1}]})
+        sr = _mk_service_result("stats", {"highlights": ["h"]})
+
+        async def fake_one(self, data):
+            return sr
+
+        monkeypatch.setattr(
+            "social_research_probe.services.analyzing.statistics.StatisticsService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeStatsStage().execute(enabled_state))
+        assert out.get_stage_output("stats")["stats_summary"]["highlights"] == ["h"]
+
+    def test_enabled_failure(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": [{"x": 1}]})
+        sr = ServiceResult("stats", "x", [TechResult("t", None, None, success=False)])
+
+        async def fake_one(self, data):
+            return sr
+
+        monkeypatch.setattr(
+            "social_research_probe.services.analyzing.statistics.StatisticsService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeStatsStage().execute(enabled_state))
+        assert out.get_stage_output("stats")["stats_summary"] == {}
+
+
+class TestChartsStage:
+    def test_enabled(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"all_scored": [{"x": 1}]})
+
+        class FakeChart:
+            caption = "c1"
+
+        sr = _mk_service_result("charts", [FakeChart()])
+
+        async def fake_one(self, data):
+            return sr
+
+        monkeypatch.setattr(
+            "social_research_probe.services.analyzing.charts.ChartsService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeChartsStage().execute(enabled_state))
+        assert out.get_stage_output("charts")["chart_captions"] == ["c1"]
+
+
+class TestSynthesisStage:
+    def test_build_context(self, enabled_state):
+        enabled_state.set_stage_output("score", {"top_n": [{"x": 1}]})
+        enabled_state.set_stage_output("corroborate", {"top_n": [{"y": 1}]})
+        enabled_state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
+        enabled_state.set_stage_output("stats", {"stats_summary": {}})
+        enabled_state.set_stage_output("charts", {"chart_outputs": []})
+        out = yt.YouTubeSynthesisStage._build_synthesis_context(enabled_state)
+        assert out["topic"] == "ai" and out["top_n"] == [{"y": 1}]
+
+    def test_run_synthesis_success(self, monkeypatch):
+        async def fake_multi(p, task="generating response"):
+            return "synth"
+
+        monkeypatch.setattr(
+            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            lambda c: "p",
+        )
+        out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
+        assert out == "synth"
+
+    def test_run_synthesis_failure(self, monkeypatch):
+        async def fake_multi(p, task="generating response"):
+            raise RuntimeError("x")
+
+        monkeypatch.setattr(
+            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            lambda c: "p",
+        )
+        out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
+        assert out == ""
+
+    def test_execute_enabled(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": []})
+        enabled_state.set_stage_output("corroborate", {"top_n": []})
+        enabled_state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
+        enabled_state.set_stage_output("stats", {"stats_summary": {}})
+        enabled_state.set_stage_output("charts", {"chart_outputs": []})
+
+        async def fake_run(ctx):
+            return "synth-text"
+
+        monkeypatch.setattr(yt.YouTubeSynthesisStage, "_run_synthesis", staticmethod(fake_run))
+        out = asyncio.run(yt.YouTubeSynthesisStage().execute(enabled_state))
+        assert out.get_stage_output("synthesis")["synthesis"] == "synth-text"
+
+
+class TestAssembleStage:
+    def test_collect_divergence_warnings(self):
+        items = [
+            {"summary_divergence": 0.6, "title": "t"},
+            {"summary_divergence": 0.1},
+            {},
+        ]
+        out = yt.YouTubeAssembleStage._collect_divergence_warnings(items, 0.4)
+        assert len(out) == 1
+
+    def test_execute_enabled(self, enabled_state):
+        enabled_state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
+        enabled_state.set_stage_output(
+            "score", {"top_n": [{"id": "1", "title": "t", "channel": "c", "url": "u"}]}
+        )
+        enabled_state.set_stage_output("corroborate", {"top_n": []})
+        enabled_state.set_stage_output("stats", {"stats_summary": {}})
+        enabled_state.set_stage_output("charts", {"chart_captions": [], "chart_takeaways": []})
+        out = asyncio.run(yt.YouTubeAssembleStage().execute(enabled_state))
+        assert out.outputs["report"]["topic"] == "ai"
+
+
+class TestStructuredSynthesisStage:
+    def test_enabled(self, enabled_state, monkeypatch):
+        enabled_state.outputs["report"] = {}
+        called = []
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.runner.attach_synthesis",
+            lambda r: called.append(True),
+        )
+        asyncio.run(yt.YouTubeStructuredSynthesisStage().execute(enabled_state))
+        assert called == [True]
+
+
+class TestReportStage:
+    def test_enabled(self, enabled_state, monkeypatch):
+        enabled_state.outputs["report"] = {}
+        monkeypatch.setattr(yt, "write_final_report", lambda r, allow_html: "/tmp/rep.html")
+
+        async def fake_html(self, data):
+            return _mk_service_result("html", "ok")
+
+        monkeypatch.setattr(
+            "social_research_probe.services.reporting.html.HtmlReportService.execute_one",
+            fake_html,
+        )
+        out = asyncio.run(yt.YouTubeReportStage().execute(enabled_state))
+        assert out.outputs["report"]["report_path"] == "/tmp/rep.html"
+
+
+class TestNarrationStage:
+    def test_enabled_no_text(self, enabled_state):
+        enabled_state.outputs["report"] = {"evidence_summary": ""}
+        out = asyncio.run(yt.YouTubeNarrationStage().execute(enabled_state))
+        assert out is enabled_state
+
+    def test_enabled_with_text(self, enabled_state, monkeypatch):
+        enabled_state.outputs["report"] = {"evidence_summary": "x"}
+
+        async def fake_one(self, data):
+            return _mk_service_result("audio", "ok")
+
+        monkeypatch.setattr(
+            "social_research_probe.services.reporting.audio.AudioReportService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeNarrationStage().execute(enabled_state))
+        assert out is enabled_state
+
+
+class TestPipelineRun:
+    def test_full_run_disabled(self, enabled_state, monkeypatch):
+        monkeypatch.setattr(
+            "social_research_probe.config.load_active_config",
+            lambda *a, **k: MagicMock(
+                stage_enabled=lambda *a, **k: False, service_enabled=lambda *a, **k: False
+            ),
+        )
+        out = asyncio.run(yt.YouTubePipeline().run(enabled_state))
+        assert out is enabled_state

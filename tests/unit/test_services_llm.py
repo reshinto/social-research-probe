@@ -1,0 +1,175 @@
+"""Tests for services.llm package."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from social_research_probe.services.llm import ensemble, registry, runners
+from social_research_probe.services.llm.host import emit_report
+from social_research_probe.technologies.llms import LLMRunner
+from social_research_probe.utils.core.errors import ValidationError
+
+
+class _FakeRunner(LLMRunner):
+    name = "fake"
+
+    def __init__(self, healthy=True, payload=None, raise_on_run=False):
+        self._healthy = healthy
+        self._payload = payload or {"ok": True}
+        self._raise = raise_on_run
+
+    def health_check(self):
+        return self._healthy
+
+    def run(self, prompt, *, schema=None):
+        if self._raise:
+            raise RuntimeError("nope")
+        return self._payload
+
+
+class TestRegistry:
+    def test_register_requires_name(self):
+        class Bad(LLMRunner):
+            name = ""
+
+            def health_check(self):
+                return True
+
+            def run(self, p, *, schema=None):
+                return {}
+
+        with pytest.raises(ValueError):
+            registry.register(Bad)
+
+    def test_register_and_get(self):
+        class A(LLMRunner):
+            name = "test_register_and_get_a"
+
+            def health_check(self):
+                return True
+
+            def run(self, p, *, schema=None):
+                return {"ok": True}
+
+        registry.register(A)
+        assert isinstance(registry.get_runner("test_register_and_get_a"), A)
+
+    def test_get_unknown(self):
+        with pytest.raises(ValidationError):
+            registry.get_runner("definitely-missing-runner-xyz")
+
+    def test_list_runners_sorted(self):
+        names = registry.list_runners()
+        assert names == sorted(names)
+
+    def test_run_with_fallback_uses_preferred(self, monkeypatch):
+        a = _FakeRunner(healthy=True, payload={"r": "a"})
+        b = _FakeRunner(healthy=True, payload={"r": "b"})
+
+        monkeypatch.setattr(registry, "list_runners", lambda: ["a", "b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: a if n == "a" else b)
+
+        out = registry.run_with_fallback("p", schema={}, preferred="a")
+        assert out == {"r": "a"}
+
+    def test_run_with_fallback_skips_unhealthy(self, monkeypatch):
+        a = _FakeRunner(healthy=False)
+        b = _FakeRunner(healthy=True, payload={"r": "b"})
+        monkeypatch.setattr(registry, "list_runners", lambda: ["a", "b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: a if n == "a" else b)
+        out = registry.run_with_fallback("p", schema={}, preferred="a")
+        assert out == {"r": "b"}
+
+    def test_run_with_fallback_skips_failures(self, monkeypatch):
+        a = _FakeRunner(raise_on_run=True)
+        b = _FakeRunner(payload={"r": "b"})
+        monkeypatch.setattr(registry, "list_runners", lambda: ["a", "b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: a if n == "a" else b)
+        out = registry.run_with_fallback("p", schema={}, preferred="a")
+        assert out == {"r": "b"}
+
+    def test_run_with_fallback_all_fail(self, monkeypatch):
+        a = _FakeRunner(healthy=False)
+        b = _FakeRunner(raise_on_run=True)
+        monkeypatch.setattr(registry, "list_runners", lambda: ["a", "b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: a if n == "a" else b)
+        with pytest.raises(ValidationError):
+            registry.run_with_fallback("p", schema={}, preferred="a")
+
+    def test_ensure_runners_registered_runs(self):
+        registry.ensure_runners_registered()
+
+
+class TestRunners:
+    def test_prioritize_runner(self):
+        assert runners.prioritize_runner(["a", "b", "c"], "b") == ["b", "a", "c"]
+
+    def test_prioritize_runner_already_first(self):
+        assert runners.prioritize_runner(["a", "b"], "a") == ["a", "b"]
+
+
+class TestHost:
+    def test_emit_report_writes_envelope(self, capsys):
+        emit_report({"x": 1}, "synthesis")
+        out = capsys.readouterr().out.strip()
+        assert json.loads(out) == {"kind": "synthesis", "report": {"x": 1}}
+
+
+class TestEnsemble:
+    def test_llm_enabled_callable(self):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        assert ensemble._llm_enabled(cfg) is True
+
+    def test_llm_enabled_no_method(self):
+        class Cfg:
+            pass
+
+        assert ensemble._llm_enabled(Cfg()) is True
+
+    def test_service_enabled_disabled(self):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = False
+        assert ensemble._service_enabled(cfg, "claude") is False
+
+    def test_collect_responses_empty(self):
+        out = asyncio.run(ensemble._collect_responses("p", providers=()))
+        assert out == {}
+
+    def test_build_synthesis_prompt_basic(self):
+        prompt = ensemble._build_synthesis_prompt("orig", {"a": "x", "b": "y"})
+        assert "Response 1" in prompt and "x" in prompt
+
+    def test_synthesize_empty_returns_none(self):
+        out = asyncio.run(ensemble._synthesize({}, "p"))
+        assert out is None
+
+    def test_synthesize_single_returns_directly(self):
+        out = asyncio.run(ensemble._synthesize({"claude": "hello"}, "p"))
+        assert out == "hello"
+
+    def test_run_provider_unknown(self):
+        out = asyncio.run(ensemble._run_provider("bogus", "p"))
+        assert out is None
+
+    def test_run_provider_local_no_bin(self, monkeypatch):
+        monkeypatch.delenv("SRP_LOCAL_LLM_BIN", raising=False)
+        out = asyncio.run(ensemble._run_provider("local", "p"))
+        assert out is None
+
+    def test_multi_llm_prompt_runner_none(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = True
+        cfg.llm_runner = "none"
+        with patch.object(ensemble, "load_active_config", return_value=cfg):
+            assert asyncio.run(ensemble.multi_llm_prompt("p")) is None
+
+    def test_multi_llm_prompt_disabled(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = False
+        with patch.object(ensemble, "load_active_config", return_value=cfg):
+            assert asyncio.run(ensemble.multi_llm_prompt("p")) is None

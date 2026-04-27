@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">One-way ANOVA</title>
+  <desc id="desc">Compares means across three or more groups.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">One-way ANOVA</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Compares means across three or more groups.</text>
+  <rect x="120" y="155" width="95" height="95" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/><rect x="310" y="105" width="95" height="145" fill="#dcfce7" stroke="#15803d" stroke-width="3"/><rect x="500" y="130" width="95" height="120" fill="#fef3c7" stroke="#d97706" stroke-width="3"/><text x="110" y="282" font-family="Arial" font-size="16">group 1</text><text x="300" y="282" font-family="Arial" font-size="16">group 2</text><text x="490" y="282" font-family="Arial" font-size="16">group 3</text><text x="645" y="160" font-family="Arial" font-size="16" fill="#334155">F asks whether</text><text x="645" y="182" font-family="Arial" font-size="16" fill="#334155">between-group gaps</text><text x="645" y="204" font-family="Arial" font-size="16" fill="#334155">beat within-group noise</text>
+</svg>

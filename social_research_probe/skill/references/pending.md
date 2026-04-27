@@ -1,5 +1,7 @@
-- Show: `srp show-pending` — print stdout.
-- Apply: `srp apply-pending --topics <IDS|all> --purposes <IDS|all>`
-- Discard: `srp discard-pending --topics <IDS|all> --purposes <IDS|all>`
+State: `pending_suggestions.json`.
 
-IDs are comma-separated integers from `show-pending` output. Use `all` to select everything.
+- Show: `srp show-pending [--output text|json|markdown]`
+- Apply: `srp apply-pending --topics IDS|all --purposes IDS|all`
+- Discard: `srp discard-pending --topics IDS|all --purposes IDS|all`
+
+`IDS` = comma ints from `show-pending`. Empty selector = none. Apply silently skips duplicates, then removes selected pending rows.

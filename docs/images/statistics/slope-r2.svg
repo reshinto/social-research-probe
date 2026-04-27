@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" role="img" aria-labelledby="title desc">
+  <title id="title">Linear slope and R squared example</title>
+  <desc id="desc">A scatter plot with a downward fit line and points close to the line.</desc>
+  <rect width="760" height="300" fill="#ffffff"/>
+  <text x="28" y="34" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111111">Slope and R-squared: score movement over rank</text>
+  <line x1="90" y1="250" x2="680" y2="250" stroke="#334155" stroke-width="2"/>
+  <line x1="90" y1="65" x2="90" y2="250" stroke="#334155" stroke-width="2"/>
+  <line x1="120" y1="75" x2="635" y2="220" stroke="#dc2626" stroke-width="4"/>
+  <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2">
+    <circle cx="130" cy="80" r="10"/><circle cx="250" cy="100" r="10"/><circle cx="370" cy="115" r="10"/><circle cx="490" cy="190" r="10"/><circle cx="610" cy="215" r="10"/>
+  </g>
+  <text x="560" y="55" font-family="Arial, sans-serif" font-size="16" fill="#dc2626">negative slope</text>
+  <text x="505" y="90" font-family="Arial, sans-serif" font-size="16" fill="#111111">high R-squared = points follow the line</text>
+  <text x="315" y="282" font-family="Arial, sans-serif" font-size="15" fill="#111111">rank increases left to right</text>
+  <text x="20" y="155" font-family="Arial, sans-serif" font-size="15" fill="#111111" transform="rotate(-90 20 155)">score</text>
+</svg>

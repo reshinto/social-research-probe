@@ -1,96 +1,38 @@
-# Statistical Model Reference
+[Back to docs index](README.md)
 
-[Home](README.md) → Statistical Model Reference
+# Model Applicability
 
-This document maps every statistical model family to its implementation module, the minimum dataset size it requires, and the data it operates on. For a guide to interpreting model output, see [Statistics](statistics.md).
+![Model applicability](diagrams/scoring-model.svg)
 
----
+The project uses lightweight statistical models where the data size supports them. It avoids pretending that a tiny top-N sample can support heavy inference.
 
-## Currently implemented
+This page explains what kind of model is appropriate for what kind of data. It is separate from [Statistics](statistics.md), which lists the actual statistics and how to interpret their output.
 
-All models below run automatically on every `srp research` output. Each contributes result rows into `packet.stats_summary.highlights`, which are rendered in Section 7 of the report.
+| Model family | Minimum useful data | Use |
+| --- | --- | --- |
+| Descriptive stats | 1 item | Basic center and values. |
+| Spread | 2 items | Variance and range-style signals. |
+| Regression over rank | 2 items | Directional score movement. |
+| Growth/outliers | 3 items | Simple changes and unusual points. |
+| Correlation helpers | 2 paired values | Relationship between two numeric series. |
+| Chart regressions | enough rendered points | Visual relationship checks. |
 
-| # | Model | Module | Min items | Input data |
-|---|---|---|---|---|
-| 1 | Descriptive statistics | `stats.descriptive` | 1 | Overall score |
-| 2 | Spread (IQR, range) | `stats.spread` | 2 | Overall score |
-| 3 | Growth rate | `stats.growth` | 3 | Overall score |
-| 4 | Outlier detection | `stats.outliers` | 3 | Overall score |
-| 5 | OLS linear regression | `stats.regression` | 2 | Rank → overall slope, R² |
-| 6 | Pearson correlation | `stats.correlation` | 2 | Trust × opportunity |
-| 7 | Multiple OLS regression | `stats.multi_regression` | 5 | Overall ~ trust + trend + opportunity |
-| 8 | Normality diagnostics | `stats.normality` | 4 | Skewness, kurtosis, Shapiro–Wilk |
-| 9 | Polynomial regression (deg 2 & 3) | `stats.polynomial_regression` | 4 | Rank → overall |
-| 10 | Spearman rank correlation | `stats.nonparametric` | 2 | Trust × opportunity |
-| 11 | Mann–Whitney U test | `stats.nonparametric` | 2 | Top half vs bottom half |
-| 12 | Welch's t-test | `stats.hypothesis_tests` | 2 | Top half vs bottom half |
-| 13 | Bootstrap confidence intervals | `stats.bootstrap` | 4 | Overall score (percentile method) |
-| 14 | Logistic regression | `stats.logistic_regression` | 5 | is_top_n ~ 7 features |
-| 15 | K-means clustering (k=3) | `stats.kmeans` | 5 | 7-feature matrix |
-| 16 | PCA | `stats.pca` | 5 | 7-feature matrix → 2 principal components |
-| 17 | Kaplan–Meier survival | `stats.kaplan_meier` | 5 | Time to reach 100k views |
-| 18 | Naive Bayes | `stats.naive_bayes` | 5 | is_top_n ~ 7 features |
-| 19 | Huber regression | `stats.huber_regression` | 5 | Rank → overall (outlier-robust) |
-| 20 | Bayesian linear regression | `stats.bayesian_linear` | 5 | Overall ~ trust + trend + opportunity |
+Advanced modules exist under `technologies/statistics`, but the production selector chooses conservative analyses for the scored dataset.
 
-### The 7 features used by advanced models
+## How to choose a model
 
-Advanced models (rows 14–20) operate on a feature vector derived for each item:
+Use descriptive statistics when you only need to summarize what was fetched. Use spread and outlier checks when you need to know whether the result set is stable or dominated by a few extreme items. Use regression over rank when you want to verify whether the ranking order produces a clear score decline. Use correlation when you want to compare two numeric signals, such as trust and overall score.
 
-| Feature | What it captures |
-|---|---|
-| `trust` | Channel credibility score |
-| `trend` | View velocity (views per hour since publish) |
-| `opportunity` | Engagement rate relative to channel size |
-| `view_velocity` | Raw views per day |
-| `engagement_ratio` | (likes + comments) / views |
-| `age_days` | Days since the video was published |
-| `subscribers` | Channel subscriber count |
+Do not use complex models just because they exist. Logistic regression, clustering, PCA, and survival analysis need enough rows to say something meaningful. On tiny result sets, they can produce numbers that look precise but mostly describe noise.
 
----
+## Example decisions
 
-## Planned models (not yet implemented)
+| Question | Better fit | Why |
+| --- | --- | --- |
+| Are the top results clearly better than the rest? | Rank regression and score spread. | They directly describe score movement over ranked items. |
+| Is one viral item distorting the dataset? | Median, IQR, and outlier checks. | These reveal skew better than the mean alone. |
+| Do trusted sources also score high overall? | Pearson or Spearman correlation. | They compare two aligned numeric series. |
+| What separates top-five items from others? | Logistic regression, if enough rows exist. | The target is binary: top-five or not. |
+| Are there natural groups of items? | K-means or PCA, if enough feature rows exist. | These look at multi-feature structure rather than one score. |
 
-These models require data structures that are not yet collected. They are documented here so contributors know what groundwork is needed.
-
-### Requires cross-run persistence (SQLite history store)
-
-Once a `~/.social-research-probe/history.db` store appends each run's items, any video seen in two or more runs becomes longitudinal data and the following models become available:
-
-| Model | What it needs |
-|---|---|
-| Repeated-measures ANOVA | Same videos measured across ≥ 2 runs |
-| Linear mixed-effects | Videos nested within channels, ≥ 2 observations |
-| ARIMA / SARIMA | Daily time series of a single metric |
-| Growth curve models | Video-level view trajectory over time |
-| Difference-in-differences | Before/after a platform algorithm change |
-
-### Requires exposed scoring sub-components
-
-The trust, trend, and opportunity scores are each composites of 3–5 sub-indicators. When those sub-indicators are exposed as individual features, models that need multiple indicators per latent construct become feasible:
-
-| Model | What it needs |
-|---|---|
-| Confirmatory factor analysis (CFA) | ≥ 3 indicators per latent construct |
-| Structural equation modelling (SEM) | CFA + path model between constructs |
-| Mediation analysis | X → M → Y with bootstrap standard errors |
-
----
-
-## Tradeoffs and limitations
-
-- **Dataset size.** Fetching 20 videos (the default) gives decent statistical power for correlation and regression but is too small for multi-level models. Set `max_items` to at least 20–50 for reliable results. Below 8 items, the report flags `low_confidence: true`.
-
-- **Single-snapshot data.** Most models run on a single point-in-time snapshot. Survival and longitudinal models are structurally limited until the history store is built.
-
-- **Self-referential classification.** Models that predict `is_top_n` use the pipeline's own scoring as the ground truth label. R² will be artificially high — these models reveal which features *drive the scoring*, not which features predict external quality.
-
-- **Transcript rate-limiting.** Enriching more than ~20 items per run with transcripts is slow due to yt-dlp rate limits. Increase `max_items` for better statistical coverage, but expect longer run times.
-
----
-
-## See also
-
-- [Statistics](statistics.md) — what each model measures and how to interpret it
-- [Charts](charts.md) — visualisations derived from these models
-- [Usage Guide](usage.md) — how to control `max_items` and `recency_days`
+The safest default is to read simple statistics first, then use advanced models only when they answer a specific question and the dataset is large enough to support them.

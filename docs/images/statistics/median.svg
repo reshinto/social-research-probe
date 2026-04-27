@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="230" viewBox="0 0 760 230" role="img" aria-labelledby="title desc">
+  <title id="title">Median statistic example</title>
+  <desc id="desc">Sorted values with the middle value highlighted as the median.</desc>
+  <rect width="760" height="230" fill="#ffffff"/>
+  <text x="28" y="34" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111111">Median: the middle sorted value</text>
+  <line x1="90" y1="125" x2="670" y2="125" stroke="#334155" stroke-width="3"/>
+  <g font-family="Arial, sans-serif" font-size="16" text-anchor="middle">
+    <circle cx="130" cy="125" r="28" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="130" y="131" fill="#111111">0.50</text>
+    <circle cx="255" cy="125" r="28" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/><text x="255" y="131" fill="#111111">0.52</text>
+    <circle cx="380" cy="125" r="36" fill="#dcfce7" stroke="#15803d" stroke-width="3"/><text x="380" y="131" fill="#111111" font-weight="700">0.82</text>
+    <circle cx="505" cy="125" r="28" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/><text x="505" y="131" fill="#111111">0.84</text>
+    <circle cx="630" cy="125" r="28" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/><text x="630" y="131" fill="#111111">0.91</text>
+  </g>
+  <text x="310" y="195" font-family="Arial, sans-serif" font-size="17" fill="#15803d">Two values below, two values above, median = 0.82</text>
+</svg>

@@ -1,12 +1,21 @@
-graph LR
-    A["topics + purposes"] --> B["Platform search\nraw items"]
-    B --> C["Transcript enrichment\nLLM summary per item"]
-    C --> D["Scoring + z-score\nranked list"]
-    D --> E["Top-N selection"]
-    E --> F["Corroboration\nevidence snippets"]
-    E --> G["Stats models\n20+ outputs"]
-    E --> H["Chart rendering\nPNG files"]
-    F --> I["build_packet\nResearchPacket"]
-    G --> I
-    H --> I
-    I --> J["HTML + Markdown report"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Query["topic + purpose"] --> Fetch["fetch items"] --> Score["score and rank"]
+  Score --> Parallel["parallel analysis"]
+  Parallel --> Transcript["transcripts"]
+  Parallel --> Stats["statistics"]
+  Parallel --> Charts["PNG charts"]
+  Transcript --> Summary["top-N summaries"] --> Corroborate["claim corroboration"]
+  Corroborate --> Synthesis["synthesis"] --> Assemble["report packet"] --> Render["HTML and Markdown"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Query input;
+  class Fetch,Score,Transcript,Summary,Corroborate,Synthesis,Assemble process;
+  class Parallel,Stats,Charts analysis;
+  class Render output;

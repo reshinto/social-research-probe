@@ -1,33 +1,17 @@
-graph LR
-    subgraph TODAY["Supported today"]
-        direction TB
-        P1["YouTube"]
-        R1["LLM runners:<br/>claude · gemini · codex · local"]
-        B1["Corroboration:<br/>llm_search · tavily · brave · exa"]
-    end
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Today["Current source: YouTube platform"] --> Adapter["New source adapter"]
+  Adapter --> Contract["RawItem + EngagementMetrics"]
+  Contract --> Shared["shared scoring, analysis, synthesis"]
+  Shared --> Reports["same report outputs"]
 
-    subgraph NEXT["Planned platforms"]
-        direction TB
-        P2["TikTok"]
-        P3["X / Twitter"]
-        P4["Facebook"]
-        P5["Reddit"]
-    end
-
-    subgraph LATER["Beyond social"]
-        direction TB
-        P6["RSS feeds"]
-        P7["Web search"]
-        P8["Web crawling"]
-        P9["Document research<br/>(PDF / arXiv / Drive / local)"]
-    end
-
-    TODAY --> NEXT
-    NEXT --> LATER
-
-    classDef today fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
-    classDef planned fill:#fff3e0,stroke:#fb8c00,color:#e65100;
-    classDef later fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
-    class P1,R1,B1 today;
-    class P2,P3,P4,P5 planned;
-    class P6,P7,P8,P9 later;
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Today input;
+  class Adapter,Contract,Shared process;
+  class Reports output;

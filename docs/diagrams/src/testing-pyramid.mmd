@@ -1,10 +1,19 @@
-graph BT
-    U["Unit tests\ntests/unit/\nPure functions, no I/O"]
-    I["Integration tests\ntests/integration/\nOrchestrator + fake adapters"]
-    C["Contract tests\ntests/contract/\nCross-cutting invariants"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TB
+  Unit["unit tests: pure functions and adapters"] --> Contract["contract tests: docs, version, type guardrails"]
+  Contract --> Integration["integration tests: CLI, state, pipeline packet"]
+  Integration --> Eval["evals: LLM and summary quality"]
+  Eval --> Coverage["100 percent coverage gate"]
 
-    U --> I --> C
-
-    style U fill:#d4edda,stroke:#28a745
-    style I fill:#fff3cd,stroke:#ffc107
-    style C fill:#f8d7da,stroke:#dc3545
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Unit process;
+  class Contract analysis;
+  class Integration output;
+  class Eval external;
+  class Coverage risk;

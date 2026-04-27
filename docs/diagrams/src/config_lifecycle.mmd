@@ -1,25 +1,19 @@
-graph TD
-    A["srp setup / install-skill"] --> B{{"config.toml<br/>exists?"}}
-    B -->|no| C["Copy bundled<br/>config.toml.example"]
-    B -->|yes| D["Deep-merge missing<br/>keys only<br/>(no overwrite)"]
-    C --> E{{"secrets.toml<br/>exists?"}}
-    D --> E
-    E -->|no| F["Create new<br/>secrets.toml"]
-    E -->|yes| G["Prompt per key<br/>blank = skip"]
-    F --> H["umask 0o077<br/>+ chmod 0600"]
-    G --> H
-    H --> I["Prompt for<br/>llm.runner<br/>write via config set"]
-    I --> J{{"runner = none?"}}
-    J -->|yes| K["CLI skips runner calls<br/>Claude Code skill may still use<br/>host LLM for skill-only language work"]
-    J -->|no| L["CLI uses configured runner<br/>Claude Code skill defers to<br/>runner-produced output"]
-    K --> M["Done<br/>re-running is safe"]
-    L --> M
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Defaults["DEFAULT_CONFIG in config.py"] --> Merge["merge config.toml"]
+  Env["SRP_DATA_DIR"] --> Resolve["resolve data dir"] --> Merge
+  Merge --> Gates["stage, service, technology gates"]
+  Secrets["secrets.toml or SRP_* env"] --> Providers["provider health checks"]
+  Gates --> Pipeline["runtime decisions"]
+  Providers --> Pipeline
 
-    classDef fresh fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
-    classDef existing fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
-    classDef decide fill:#fff3e0,stroke:#fb8c00,color:#e65100;
-    classDef terminal fill:#ede7f6,stroke:#5e35b1,color:#311b92;
-    class C,F fresh;
-    class D,G existing;
-    class B,E,J decide;
-    class A,H,I,K,L,M terminal;
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Defaults,Env,Secrets config;
+  class Resolve,Merge,Gates,Pipeline process;
+  class Providers external;

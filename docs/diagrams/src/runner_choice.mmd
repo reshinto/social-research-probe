@@ -1,19 +1,22 @@
-graph TD
-    Q["Pick an LLM runner"] --> A{{"Want free tier<br/>and no API key?"}}
-    A -->|yes| G["gemini ⭐<br/>browser OAuth<br/>also powers<br/>llm_search"]
-    A -->|no| B{{"Already pay<br/>for Claude?"}}
-    B -->|yes| C["claude<br/>best prose<br/>quality"]
-    B -->|no| D{{"Want OpenAI<br/>JSON output?"}}
-    D -->|yes| E["codex<br/>requires key"]
-    D -->|no| F{{"Need to run<br/>offline?"}}
-    F -->|yes| H["local<br/>SRP_LOCAL_LLM_BIN<br/>e.g. ollama"]
-    F -->|no| I["none<br/>CLI skips runner calls<br/>sections 10-11 stay placeholders<br/>CLI NL-query disabled<br/>Claude Code skill may use host LLM"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Need["Need generated text or JSON"] --> Enabled{"llm service enabled?"}
+  Enabled -- no --> Skip["skip LLM task"]
+  Enabled -- yes --> Runner["configured llm.runner"]
+  Runner --> Health{"CLI on PATH?"}
+  Health -- yes --> Run["run prompt with timeout"]
+  Health -- no --> Fallback["try registered fallback runners"]
+  Fallback --> Fail["return empty or validation error by caller"]
 
-    classDef recommended fill:#e8f5e9,stroke:#43a047,color:#1b5e20,stroke-width:3px;
-    classDef paid fill:#fff3e0,stroke:#fb8c00,color:#e65100;
-    classDef local fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
-    classDef decide fill:#f3e5f5,stroke:#8e24aa,color:#4a148c;
-    class G recommended;
-    class C,E paid;
-    class H,I local;
-    class A,B,D,F decide;
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Need input;
+  class Enabled,Health analysis;
+  class Skip,Run,Fallback process;
+  class Runner external;
+  class Fail risk;

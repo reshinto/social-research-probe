@@ -1,20 +1,15 @@
-graph TD
-    A["Start: decide platform<br/>e.g. TikTok / Reddit / RSS"] --> B["Step 1<br/>Create subpackage<br/>platforms/tiktok/"]
-    B --> C["Step 2<br/>Wire registry<br/>(__init__.py + parent __init__.py)"]
-    C --> D["Step 3<br/>Implement adapter<br/>subclass PlatformAdapter<br/>6 required methods"]
-    D --> E["Step 4<br/>Add config section<br/>[platforms.tiktok]<br/>to config.toml.example"]
-    E --> F{"Needs<br/>API key?"}
-    F -->|yes| G["Step 5<br/>Add _api_key() helper<br/>reads SRP_TIKTOK_API_KEY env<br/>or secrets.toml"]
-    F -->|no| H["Skip Step 5"]
-    G --> I["Step 6<br/>Register test fake<br/>tests/fixtures/fake_tiktok.py<br/>env-gated registration"]
-    H --> I
-    I --> J["Step 7<br/>Write tests<br/>unit + integration +<br/>contract auto-covers registry"]
-    J --> K{"100% branch<br/>coverage?"}
-    K -->|no| J
-    K -->|yes| L["Step 8<br/>Run it<br/>srp research tiktok '...' '...'"]
-    L --> M["Done"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Create["create platforms/<name>/pipeline.py"] --> Register["register in platforms/all or registry"] --> Config["add defaults and gates"] --> Tests["unit + integration tests"] --> Docs["document behavior"]
 
-    style A fill:#e3f2fd,stroke:#1976d2
-    style D fill:#fff3e0,stroke:#f57c00
-    style J fill:#fce4ec,stroke:#c62828
-    style M fill:#e8f5e9,stroke:#388e3c
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Create input;
+  class Register,Tests process;
+  class Config config;
+  class Docs output;

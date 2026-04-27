@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="760" viewBox="0 0 1220 760" role="img" aria-labelledby="title desc">
+  <title id="title">Finding Social Research Probe local data</title>
+  <desc id="desc">A white-background diagram showing data directory resolution and where config, secrets, cache, charts, reports, and state files live.</desc>
+  <rect width="1220" height="760" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4.5" orient="auto">
+      <path d="M0,0 L0,9 L11,4.5 z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <text x="44" y="52" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#111111">Where local data is stored</text>
+  <text x="44" y="84" font-family="Arial, sans-serif" font-size="16" fill="#334155">Use srp config path, then inspect the folders under the resolved data directory.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="140" width="260" height="86" rx="16" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/>
+    <text x="190" y="176" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">1. CLI starts</text>
+    <text x="190" y="204" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">srp resolves data dir first</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M430 122 H770 L805 157 V250 H430 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+    <path d="M770 122 V157 H805" fill="none" stroke="#ea580c" stroke-width="3"/>
+    <text x="618" y="162" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">Resolution order</text>
+    <text x="618" y="190" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">--data-dir PATH</text>
+    <text x="618" y="212" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">SRP_DATA_DIR</text>
+    <text x="618" y="234" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">./.skill-data, then home default</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M930 145 C930 118,1130 118,1130 145 V232 C1130 260,930 260,930 232 Z" fill="#e2e8f0" stroke="#475569" stroke-width="3"/>
+    <ellipse cx="1030" cy="145" rx="100" ry="27" fill="#f8fafc" stroke="#475569" stroke-width="3"/>
+    <text x="1030" y="188" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Data directory</text>
+    <text x="1030" y="215" font-family="Arial" font-size="13" text-anchor="middle" fill="#334155">usually ~/.social-research-probe</text>
+  </g>
+
+  <path d="M320 183 H410" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M805 185 H910" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="350" width="180" height="105" rx="14" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="150" y="383" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Config</text>
+    <text x="150" y="410" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">config.toml</text>
+    <text x="150" y="432" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">non-secret gates</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="270" y="350" width="180" height="105" rx="14" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/>
+    <text x="360" y="383" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Secrets</text>
+    <text x="360" y="410" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">secrets.toml</text>
+    <text x="360" y="432" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">0600 permissions</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="480" y="350" width="180" height="105" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="570" y="383" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Cache</text>
+    <text x="570" y="410" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">cache/*.json</text>
+    <text x="570" y="432" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">repeat-work data</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="690" y="350" width="180" height="105" rx="14" fill="#ccfbf1" stroke="#0f766e" stroke-width="3"/>
+    <text x="780" y="383" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Charts</text>
+    <text x="780" y="410" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">charts/*.png</text>
+    <text x="780" y="432" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">analysis images</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="900" y="350" width="180" height="105" rx="14" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+    <text x="990" y="383" font-family="Arial" font-size="18" font-weight="700" text-anchor="middle" fill="#111111">Reports</text>
+    <text x="990" y="410" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">report.md</text>
+    <text x="990" y="432" font-family="Arial" font-size="14" text-anchor="middle" fill="#334155">reports/*.html</text>
+  </g>
+
+  <path d="M1030 260 V300 H150 V335" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1030 300 H360 V335" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1030 300 H570 V335" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1030 300 H780 V335" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1030 300 H990 V335" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="190" y="545" width="840" height="96" rx="18" fill="#f8fafc" stroke="#475569" stroke-width="3"/>
+    <text x="610" y="580" font-family="Arial" font-size="20" font-weight="700" text-anchor="middle" fill="#111111">Quick inspection commands</text>
+    <text x="610" y="610" font-family="Arial" font-size="15" text-anchor="middle" fill="#334155">srp config path  ->  ls -la ~/.social-research-probe  ->  find ~/.social-research-probe -maxdepth 2 -type f</text>
+  </g>
+</svg>

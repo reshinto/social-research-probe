@@ -1,9 +1,14 @@
-graph LR
-    V["Bump VERSION file\npush to main"]
-    V --> CI["CI workflow\nlint + test (3.11/3.12/3.13)"]
-    V --> REL["release.yml triggers"]
-    REL --> TAG["Create git tag\nv{VERSION}"]
-    TAG --> BUILD["python -m build\ndist/*.whl + *.tar.gz"]
-    BUILD --> SHA["sha256sum checksums"]
-    SHA --> GH["GitHub Release\nsoftprops/action-gh-release"]
-    GH --> PYPI["publish-pypi job\npypa/gh-action-pypi-publish\nOIDC trusted-publishing"]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart LR
+  Change["code or docs change"] --> Ruff["ruff lint"] --> Pytest["pytest with coverage"] --> Contracts["docs and package contracts"] --> Build["hatch build"] --> Release["GitHub release workflow"]
+
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
+  class Change input;
+  class Ruff,Pytest,Contracts,Build process;
+  class Release output;

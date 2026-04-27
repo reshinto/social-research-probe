@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Huber robust regression</title>
+  <desc id="desc">Fits a line while reducing the influence of extreme points.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Huber robust regression</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Fits a line while reducing the influence of extreme points.</text>
+  <line x1="110" y1="260" x2="740" y2="260" stroke="#334155"/><line x1="110" y1="70" x2="110" y2="260" stroke="#334155"/><line x1="130" y1="225" x2="670" y2="100" stroke="#1d4ed8" stroke-width="4"/><line x1="130" y1="245" x2="670" y2="55" stroke="#dc2626" stroke-width="3" stroke-dasharray="7 6"/><g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="155" cy="220" r="9"/><circle cx="260" cy="190" r="9"/><circle cx="370" cy="165" r="9"/><circle cx="500" cy="135" r="9"/></g><circle cx="645" cy="65" r="13" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/><text x="500" y="290" font-family="Arial" font-size="15" fill="#1d4ed8">robust line</text><text x="560" y="50" font-family="Arial" font-size="15" fill="#dc2626">OLS pulled by outlier</text>
+</svg>

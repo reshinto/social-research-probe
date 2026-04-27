@@ -63,7 +63,7 @@ if "rpds" not in sys.modules:
         sys.modules["rpds"] = _FakeRpds()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def tmp_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect SRP data dir to a per-test temp path."""
     data_dir = tmp_path / ".skill-data"
@@ -92,8 +92,8 @@ def _reset_whisper_model_cache() -> None:
     objects, so a stale mock model from an earlier test could masquerade as a
     hit for a later test's fresh mock. Clearing avoids that cross-contamination.
     """
-    from social_research_probe.platforms.youtube import whisper_transcript
+    from social_research_probe.technologies.transcript_fetch import whisper
 
-    whisper_transcript._MODEL_CACHE.clear()
+    whisper._MODEL_CACHE.clear()
     yield
-    whisper_transcript._MODEL_CACHE.clear()
+    whisper._MODEL_CACHE.clear()

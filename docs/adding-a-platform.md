@@ -1,275 +1,543 @@
-[Home](README.md) → Adding a Platform
+[Back to docs index](README.md)
 
-# Adding a New Platform
+# Adding A Platform
 
-This guide walks through adding a new content source (e.g. TikTok, Reddit, Twitter/X, Bluesky, RSS feeds) alongside the existing YouTube adapter. By the end you will be able to run:
+![Platform contract](diagrams/add_platform_contract.svg)
 
-```bash
-srp research tiktok "AI safety" "latest-news"
+A platform adapter should fetch raw items and engagement metrics, then hand them to the shared pipeline concepts. The current concrete platform is YouTube, but YouTube is not the product boundary. The architecture is meant to support additional public sources such as TikTok, Instagram, X, web search, RSS, forums, and other platforms.
+
+The job of a platform adapter is to translate source-specific data into the internal research shape. After that translation, the shared services should be able to score, analyze, summarize, corroborate, chart, and report without caring where the item came from.
+
+## Contract
+
+A platform needs:
+
+| Part | Responsibility |
+| --- | --- |
+| Fetch stage | Find candidate items for a topic. |
+| Raw item shape | Provide id, url, title, author/channel, timestamps, metrics, excerpts. |
+| Engagement metrics | Provide velocity, engagement ratio, and cross-channel repetition when available. |
+| Config defaults | Add platform limits and cache TTLs. |
+| Tests | Fake data, parser coverage, stage behavior, and report integration. |
+
+The contract should be stable before adding a new source. A platform can have source-specific fields, but the shared pipeline needs a common minimum: an item id, title, URL, source name, timestamps when available, text or transcript material when available, and numeric features that can support scoring.
+
+![Add platform flow](diagrams/add_platform_flow.svg)
+
+## Why this boundary
+
+The rest of the system should not know which source produced an item. Once the adapter supplies normalized items and metrics, scoring, enrichment, analysis, and reporting can stay shared.
+
+Without this boundary, each service would grow platform-specific branches. Charting would need to know about TikTok views versus YouTube views. Corroboration would need to know platform URL formats. Synthesis would need custom logic for every source. The adapter boundary keeps those differences close to the source integration.
+
+## Implementation checklist
+
+| Step | What to add | What to verify |
+| --- | --- | --- |
+| 1 | Platform config defaults. | The platform can be enabled, limited, and cached independently. |
+| 2 | Fetch adapter. | Raw API/search results become deterministic internal items. |
+| 3 | Normalization helpers. | Missing source fields become safe defaults rather than crashes. |
+| 4 | Pipeline registration. | `srp research PLATFORM TOPIC PURPOSES` can route to the new platform. |
+| 5 | Fake data seam. | Tests can run without network access or provider credentials. |
+| 6 | Report integration. | Reports identify the source platform and preserve item URLs. |
+
+Start small. A new platform does not need every enrichment feature on day one. It should first fetch, normalize, score, and report. Transcript-like enrichment, platform-specific metrics, and richer charts can follow once the base contract is stable.
+
+## Concrete Example: Add A Web Search Platform
+
+The examples below use `web` as the new platform name. The same structure works for TikTok, Instagram, X, RSS, forums, or any future source. Only the sourcing technology and normalization rules change.
+
+This is the current integration shape:
+
+```text
+user command
+  -> platform orchestrator
+  -> concrete platform pipeline
+  -> fetch stage
+  -> registered platform client
+  -> shared score / stats / charts / synthesis / report stages
 ```
 
-The pipeline, scoring, statistics, charts, and report generation are all platform-agnostic. You only have to implement the adapter.
+The important rule is that platform-specific code should end after the fetch and normalization boundary. Once the platform returns `RawItem` objects and `EngagementMetrics`, the rest of the pipeline should look like the YouTube pipeline.
 
-![Workflow for adding a new platform adapter](diagrams/add_platform_flow.svg)
+## 1. Add The Sourcing Client
 
----
-
-## Architecture in one paragraph
-
-Every content source is a **platform adapter** — a class that knows how to search its source, hydrate results with metrics, and expose trust signals. The pipeline calls your adapter via a shared interface ([`PlatformAdapter`](../social_research_probe/platforms/base.py)) and never knows which platform it is talking to. Registration happens at import time via the `@register` decorator, so adding a platform is a matter of creating a new subpackage and implementing six methods.
-
----
-
-## The adapter contract
-
-Your adapter must subclass [`PlatformAdapter`](../social_research_probe/platforms/base.py) and implement these six methods:
-
-| Method | What it does | Called in stage |
-|---|---|---|
-| `health_check() -> bool` | Return True if the adapter can run (API keys present, etc.) | Pre-flight |
-| `search(topic, limits) -> list[RawItem]` | Query the source and return a list of normalised items | 1 (Fetch) |
-| `async enrich(items) -> list[RawItem]` | Add metrics (views, likes, author stats) to each item | 1 (Fetch) |
-| `to_signals(items) -> list[SignalSet]` | Derive per-item numeric signals used by the scorer | 2 (Score) |
-| `trust_hints(item) -> TrustHints` | Extract trust metadata for one item | 2 (Score) |
-| `url_normalize(url) -> str` | Return a canonical URL for deduplication | 2 (Score) |
-
-Plus two class-level attributes:
+Create a client under `social_research_probe/services/sourcing/web.py`. This client is responsible for calling the external source, parsing the raw response, and returning normalized `RawItem` objects.
 
 ```python
-name: ClassVar[str] = "tiktok"                     # the registry key
-default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=50, recency_days=90)
-```
+"""WebSearchConnector: SearchClient implementation for web sourcing."""
 
-Optionally, override `fetch_text_for_claim_extraction(item)` to supply text (e.g. a caption or description) for the corroboration stage. Default returns `None`.
-
-![How the adapter methods plug into the pipeline](diagrams/add_platform_contract.svg)
-
----
-
-## Step-by-step walkthrough
-
-### Step 1 — Create the subpackage
-
-```bash
-mkdir -p social_research_probe/platforms/tiktok
-touch social_research_probe/platforms/tiktok/__init__.py
-touch social_research_probe/platforms/tiktok/adapter.py
-touch social_research_probe/platforms/tiktok/fetch.py    # your HTTP/API calls
-```
-
-### Step 2 — Wire the subpackage into the registry
-
-`social_research_probe/platforms/tiktok/__init__.py`:
-
-```python
-"""Importing this subpackage registers the TikTokAdapter."""
-
-from social_research_probe.platforms.tiktok.adapter import TikTokAdapter
-
-__all__ = ["TikTokAdapter"]
-```
-
-`social_research_probe/platforms/__init__.py` — add one import line so the adapter is registered at package load:
-
-```python
-import social_research_probe.platforms.youtube.adapter
-import social_research_probe.platforms.tiktok.adapter
-```
-
-### Step 3 — Implement the adapter
-
-Copy the structure of [`platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py) and adapt. Minimal skeleton:
-
-```python
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import ClassVar
 
+from social_research_probe.config import load_active_config
 from social_research_probe.platforms.base import (
+    EngagementMetrics,
     FetchLimits,
-    PlatformAdapter,
     RawItem,
-    SignalSet,
-    TrustHints,
+    SearchClient,
 )
 from social_research_probe.platforms.registry import register
-from social_research_probe.types import AdapterConfig
+from social_research_probe.utils.core.types import AdapterConfig, JSONObject
 
 
 @register
-class TikTokAdapter(PlatformAdapter):
-    name: ClassVar[str] = "tiktok"
-    default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=30, recency_days=30)
+class WebSearchConnector(SearchClient):
+    """Bridges a web search technology to the platform pipeline protocol."""
+
+    name: ClassVar[str] = "web"
+
+    def __init__(self, config: AdapterConfig) -> None:
+        self.config = config
+        platform = load_active_config().platform_defaults("web")
+        self.default_limits = FetchLimits(
+            max_items=int(platform.get("max_items", FetchLimits().max_items)),
+            recency_days=platform.get("recency_days", FetchLimits().recency_days),
+        )
+
+    def health_check(self) -> bool:
+        return True
+
+    def find_by_topic(self, topic: str, limits: FetchLimits) -> list[RawItem]:
+        raw_results = self._search_web(topic, limits)
+        return [self._to_raw_item(result) for result in raw_results]
+
+    async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]:
+        return items
+
+    def _search_web(self, topic: str, limits: FetchLimits) -> list[JSONObject]:
+        # Replace this with a technology module call, for example:
+        # return search_web(topic, max_items=limits.max_items)
+        return [
+            {
+                "id": "example-1",
+                "url": "https://example.com/research-note",
+                "title": f"Research note about {topic}",
+                "source": "Example Source",
+                "published_at": "2026-04-01T00:00:00Z",
+                "snippet": "A short excerpt from the search result.",
+            }
+        ][: limits.max_items]
+
+    def _to_raw_item(self, result: JSONObject) -> RawItem:
+        published_raw = str(result.get("published_at") or "")
+        try:
+            published_at = datetime.fromisoformat(
+                published_raw.replace("Z", "+00:00")
+            ).astimezone(UTC)
+        except ValueError:
+            published_at = datetime.now(UTC)
+
+        return RawItem(
+            id=str(result.get("id") or result.get("url") or ""),
+            url=str(result.get("url") or ""),
+            title=str(result.get("title") or "Untitled result"),
+            author_id=str(result.get("source") or "unknown"),
+            author_name=str(result.get("source") or "Unknown source"),
+            published_at=published_at,
+            metrics={},
+            text_excerpt=str(result.get("snippet") or ""),
+            thumbnail=None,
+            extras={"source_type": "web_search"},
+        )
+
+
+def compute_engagement_metrics(items: list[RawItem]) -> list[EngagementMetrics]:
+    """Return neutral metrics when the platform does not expose engagement counts."""
+    return [
+        EngagementMetrics(
+            views=None,
+            likes=None,
+            comments=None,
+            upload_date=item.published_at,
+            view_velocity=None,
+            engagement_ratio=None,
+            comment_velocity=None,
+            cross_channel_repetition=0.0,
+            raw={"source_type": item.extras.get("source_type")},
+        )
+        for item in items
+    ]
+```
+
+Why use `RawItem` instead of dictionaries? A dataclass gives the pipeline a stable shape. If every platform returns a different dictionary, the scoring, charting, and reporting stages must guess field names and handle many special cases. `RawItem` keeps platform-specific parsing inside the adapter.
+
+Why allow `None` metrics? Some platforms do not expose views, likes, or comments. `None` means “not available.” It is better than pretending the value is zero, because zero means the platform reported a real count of zero.
+
+## 2. Add The Platform Pipeline
+
+Create `social_research_probe/platforms/web/pipeline.py`. Start with fetch, score, assemble, and report. Then add transcript, summary, corroboration, statistics, charts, synthesis, structured synthesis, and narration when the platform has enough data to benefit from them.
+
+```python
+"""Web research platform: concrete stage implementations and pipeline runner."""
+
+from __future__ import annotations
+
+import asyncio
+from importlib import import_module
+
+from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
+from social_research_probe.platforms.state import PipelineState
+from social_research_probe.services.reporting.writer import write_final_report
+from social_research_probe.services.sourcing.web import compute_engagement_metrics
+from social_research_probe.utils.display.progress import log_with_time
+
+
+class WebFetchStage(BaseStage):
+    """Fetch web search results and normalize them into RawItem objects."""
+
+    def stage_name(self) -> str:
+        return "fetch"
+
+    @log_with_time("[srp] web/fetch: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
+            return state
+
+        from social_research_probe.platforms.registry import get_client
+
+        import_module("social_research_probe.services.sourcing.web")
+        connector = get_client("web", state.platform_config)
+        topic = str(state.inputs.get("topic", ""))
+
+        raw_items = await asyncio.to_thread(
+            connector.find_by_topic,
+            topic,
+            connector.default_limits,
+        )
+        items = await connector.fetch_item_details(raw_items)
+        metrics = compute_engagement_metrics(items)
+        state.set_stage_output("fetch", {"items": items, "engagement_metrics": metrics})
+        return state
+
+
+class WebScoreStage(BaseStage):
+    """Score fetched web items using the shared scoring service."""
+
+    def stage_name(self) -> str:
+        return "score"
+
+    @log_with_time("[srp] web/score: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        fetch = state.get_stage_output("fetch")
+        items = list(fetch.get("items", []))
+        limit = int(state.platform_config.get("enrich_top_n", 5))
+
+        if not self._is_enabled(state) or not items:
+            state.set_stage_output("score", {"all_scored": items, "top_n": items[:limit]})
+            return state
+
+        from social_research_probe.services.scoring.compute import score_items
+
+        scored = score_items(items, fetch.get("engagement_metrics", []), None)
+        state.set_stage_output("score", {"all_scored": scored, "top_n": scored[:limit]})
+        return state
+
+
+class WebAssembleStage(BaseStage):
+    """Build the final report packet from fetch and score outputs."""
+
+    def stage_name(self) -> str:
+        return "assemble"
+
+    @log_with_time("[srp] web/assemble: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            return state
+
+        fetch = state.get_stage_output("fetch")
+        score = state.get_stage_output("score")
+        top_n = score.get("top_n", [])
+
+        from social_research_probe.services.synthesizing.formatter import build_report
+
+        report = build_report(
+            topic=str(state.inputs.get("topic", "")),
+            platform="web",
+            purpose_set=list(state.inputs.get("purpose_names", [])),
+            items_top_n=top_n,
+            source_validation_summary={},
+            platform_engagement_summary="web search results do not expose shared engagement counts",
+            evidence_summary=f"fetched {len(fetch.get('items', []))} web results",
+            stats_summary={},
+            chart_captions=[],
+            chart_takeaways=[],
+            warnings=[],
+        )
+        state.set_stage_output("assemble", {"report": report})
+        state.outputs["report"] = report
+        return state
+
+
+class WebReportStage(BaseStage):
+    """Write the final report to disk."""
+
+    def stage_name(self) -> str:
+        return "report"
+
+    @log_with_time("[srp] web/report: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            return state
+        report = state.outputs.get("report", {})
+        report["report_path"] = write_final_report(report, allow_html=False)
+        state.outputs["report"] = report
+        return state
+
+
+class WebPipeline(BaseResearchPlatform):
+    """Orchestrates the first useful version of the web platform."""
+
+    def stages(self) -> list[list[BaseStage]]:
+        return [
+            [WebFetchStage()],
+            [WebScoreStage()],
+            [WebAssembleStage()],
+            [WebReportStage()],
+        ]
+
+    @log_with_time("[srp] web/pipeline: run")
+    async def run(self, state: PipelineState) -> PipelineState:
+        for group in self.stages():
+            if len(group) == 1:
+                state = await group[0].execute(state)
+            else:
+                await asyncio.gather(*(stage.execute(state) for stage in group))
+        return state
+```
+
+This example intentionally begins with a small pipeline. Copying every YouTube stage on day one is usually the wrong tradeoff. A new platform should first prove that it can fetch, normalize, score, and write a report. After that works, add optional enrichment stages one at a time.
+
+## 3. Export The Pipeline
+
+Add a package marker:
+
+```python
+# social_research_probe/platforms/web/__init__.py
+"""Web platform pipeline."""
+```
+
+Then register the concrete pipeline in `social_research_probe/platforms/__init__.py`:
+
+```python
+def _get_concrete_pipelines() -> dict[str, type]:
+    global _concrete_pipelines
+    if _concrete_pipelines is None:
+        import social_research_probe.services.sourcing.youtube
+        import social_research_probe.services.sourcing.web
+        from social_research_probe.platforms.web.pipeline import WebPipeline
+        from social_research_probe.platforms.youtube.pipeline import YouTubePipeline
+
+        _concrete_pipelines = {
+            "youtube": YouTubePipeline,
+            "web": WebPipeline,
+        }
+    return _concrete_pipelines
+```
+
+Why import the sourcing module here? The `@register` decorator runs when the module is imported. If `social_research_probe.services.sourcing.web` is never imported, `get_client("web", ...)` will not know the client exists.
+
+## 4. Add Config Defaults
+
+Add platform defaults and stage gates in `social_research_probe/config.py` under `DEFAULT_CONFIG`.
+
+```python
+DEFAULT_CONFIG = {
+    "platforms": {
+        "youtube": {
+            "recency_days": 90,
+            "max_items": 20,
+            "enrich_top_n": 5,
+            "cache_ttl_search_hours": 6,
+            "cache_ttl_channel_hours": 24,
+        },
+        "web": {
+            "recency_days": 30,
+            "max_items": 20,
+            "enrich_top_n": 5,
+            "cache_ttl_search_hours": 6,
+        },
+    },
+    "stages": {
+        "youtube": {
+            # existing YouTube flags
+        },
+        "web": {
+            "fetch": True,
+            "score": True,
+            "assemble": True,
+            "report": True,
+        },
+    },
+}
+```
+
+Also update `config.toml.example` so users can discover the new settings:
+
+```toml
+[platforms.web]
+recency_days = 30
+max_items = 20
+enrich_top_n = 5
+cache_ttl_search_hours = 6
+
+[stages.web]
+fetch = true
+score = true
+assemble = true
+report = true
+```
+
+If a stage is missing from `[stages.web]`, `Config.stage_enabled("web", "stage_name")` currently defaults to `True` for unknown stage keys on known platforms. It is still better to list the stages explicitly because configuration should document the runtime shape.
+
+## 5. Use The New Platform From The CLI
+
+Once the platform is registered in `PIPELINES`, the existing research command parser can route to it.
+
+```bash
+srp research web "agentic search" "market-research"
+```
+
+Expected shape:
+
+```text
+[srp] web/pipeline: run
+[srp] web/fetch: execute
+[srp] web/score: execute
+[srp] web/assemble: execute
+[srp] web/report: execute
+```
+
+The report packet should include:
+
+```json
+{
+  "topic": "agentic search",
+  "platform": "web",
+  "purpose_set": ["market-research"],
+  "items_top_n": [
+    {
+      "id": "example-1",
+      "url": "https://example.com/research-note",
+      "title": "Research note about agentic search"
+    }
+  ],
+  "report_path": "/path/to/report.md"
+}
+```
+
+The exact scored item fields depend on the scoring service output. The important check is that the report says `"platform": "web"` and preserves source URLs.
+
+## 6. Add A Fake Client For Tests
+
+Tests should not depend on live provider credentials or network access. Add a fake client similar to `tests/fixtures/fake_youtube.py`.
+
+```python
+"""Deterministic web adapter for tests. Registered on import."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import ClassVar
+
+from social_research_probe.platforms.base import FetchLimits, RawItem, SearchClient
+from social_research_probe.platforms.registry import register
+from social_research_probe.utils.core.types import AdapterConfig
+
+
+@register
+class FakeWebClient(SearchClient):
+    name: ClassVar[str] = "web"
+    default_limits: ClassVar[FetchLimits] = FetchLimits(max_items=5, recency_days=30)
 
     def __init__(self, config: AdapterConfig) -> None:
         self.config = config
 
     def health_check(self) -> bool:
-        # Return True iff your API key / auth is available.
-        return bool(self.config.get("data_dir"))
+        return True
 
-    def search(self, topic: str, limits: FetchLimits) -> list[RawItem]:
-        # Call your platform API; return a list of RawItem objects.
-        # See RawItem fields in social_research_probe/platforms/base.py.
-        return []
-
-    async def enrich(self, items: list[RawItem]) -> list[RawItem]:
-        # Optional: hydrate with view/like/comment counts if not already present.
-        return items
-
-    def to_signals(self, items: list[RawItem]) -> list[SignalSet]:
+    def find_by_topic(self, topic: str, limits: FetchLimits) -> list[RawItem]:
         now = datetime.now(UTC)
-        signals: list[SignalSet] = []
-        for it in items:
-            age_days = max(1, (now - it.published_at).days)
-            views = int(it.metrics.get("views") or 0)
-            likes = int(it.metrics.get("likes") or 0)
-            comments = int(it.metrics.get("comments") or 0)
-            signals.append(
-                SignalSet(
-                    views=views,
-                    likes=likes,
-                    comments=comments,
-                    upload_date=it.published_at,
-                    view_velocity=views / age_days,
-                    engagement_ratio=(likes + comments) / max(1, views),
-                    comment_velocity=comments / age_days,
-                    cross_channel_repetition=0.0,
-                    raw={},
-                )
+        return [
+            RawItem(
+                id=f"web-{i}",
+                url=f"https://example.com/{topic}/{i}",
+                title=f"{topic} result {i}",
+                author_id="example",
+                author_name="Example Source",
+                published_at=now - timedelta(days=i),
+                metrics={},
+                text_excerpt=f"Example text about {topic}.",
+                thumbnail=None,
+                extras={"source_type": "web_search"},
             )
-        return signals
+            for i in range(min(5, limits.max_items))
+        ]
 
-    def trust_hints(self, item: RawItem) -> TrustHints:
-        return TrustHints(
-            account_age_days=None,
-            verified=None,
-            subscriber_count=None,
-            upload_cadence_days=None,
-            citation_markers=[],
-        )
-
-    def url_normalize(self, url: str) -> str:
-        return url.rstrip("/")
+    async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]:
+        return items
 ```
 
-### Step 4 — Add a config section
-
-Edit [`config.toml.example`](../config.toml.example) (and the copy in `social_research_probe/config.toml.example`):
-
-```toml
-[platforms.tiktok]
-recency_days = 30
-max_items = 30
-enrich_top_n = 5
-```
-
-Any keys you add here become available inside your adapter via `self.config.get("your_key")`. Users override them with:
-
-```bash
-srp config set platforms.tiktok.max_items 100
-```
-
-### Step 5 — Add a secret (if the API needs a key)
-
-The secret store is shared across all platforms. Follow the pattern from [`platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py)'s `_api_key` method:
+Then write a focused pipeline test:
 
 ```python
-def _api_key(self) -> str:
-    import os
+import asyncio
+from types import SimpleNamespace
 
-    key = os.environ.get("SRP_TIKTOK_API_KEY")
-    if key:
-        return key
-    data_dir = self.config.get("data_dir")
-    if data_dir is not None:
-        from social_research_probe.commands.config import read_secret
-        val = read_secret(data_dir, "tiktok_api_key")
-        if val:
-            return val
-    from social_research_probe.errors import AdapterError
-    raise AdapterError(
-        "tiktok_api_key missing — run `srp config set-secret tiktok_api_key`"
+from social_research_probe.platforms.state import PipelineState
+from social_research_probe.platforms.web.pipeline import WebFetchStage
+
+
+def test_web_fetch_stage_uses_registered_client(monkeypatch):
+    import tests.fixtures.fake_web  # registers FakeWebClient
+
+    state = PipelineState(
+        platform_type="web",
+        cmd=SimpleNamespace(platform="web"),
+        cache=None,
+        platform_config={"max_items": 3},
+        inputs={"topic": "ai research"},
     )
+
+    monkeypatch.setattr(WebFetchStage, "_is_enabled", lambda self, state: True)
+
+    out = asyncio.run(WebFetchStage().execute(state))
+    fetch = out.get_stage_output("fetch")
+
+    assert len(fetch["items"]) == 3
+    assert fetch["items"][0].url.startswith("https://example.com/")
+    assert len(fetch["engagement_metrics"]) == 3
 ```
 
-Users then run:
-```bash
-srp config set-secret tiktok_api_key
-```
-The secret is written to `~/.social-research-probe/secrets.toml` with `0600` permissions.
+This test verifies the most important contract: a platform fetch stage writes `{"items": ..., "engagement_metrics": ...}` into `PipelineState`. Later stages depend on that exact key shape.
 
-### Step 6 — Register a test fake
+## 7. Decide Which Shared Stages To Reuse
 
-Follow the pattern in [`tests/fixtures/fake_youtube.py`](../tests/fixtures/fake_youtube.py). Create `tests/fixtures/fake_tiktok.py` with a `FakeTikTokAdapter` that returns deterministic items with no network calls. Opt in via env var:
+Reuse a shared stage when the platform can supply the data that stage expects.
 
-```python
-if os.environ.get("SRP_TEST_USE_FAKE_TIKTOK"):
-    @register
-    class FakeTikTokAdapter(PlatformAdapter):
-        name = "tiktok"
-        ...
-```
+| Stage | Reuse when | Avoid or delay when |
+| --- | --- | --- |
+| `score` | The adapter can produce enough metrics or text fields for useful ranking. | The platform only returns IDs and no useful ranking signals. |
+| `transcript` | The item is audio or video and has a transcript technology. | The platform is text-first, such as web search or RSS. |
+| `summary` | Items have transcript or excerpt text. | Items only have titles and URLs. |
+| `corroborate` | Items contain claims worth checking. | The platform result is only a navigation index. |
+| `stats` | Items have numeric metrics or scores. | All metrics are unavailable. |
+| `charts` | The dataset has enough numeric spread to visualize. | Every metric is missing or constant. |
+| `synthesis` | The run has enough text and evidence to summarize. | The run only fetched sparse metadata. |
+| `report` | Always useful once a report packet exists. | Rarely avoid this; without it the user has no artifact. |
 
-Add `SRP_TEST_USE_FAKE_TIKTOK=1` to the test environments that exercise your adapter. This keeps integration tests offline and deterministic.
+The tradeoff is speed versus completeness. Reusing every stage immediately produces a familiar report shape, but it can also create empty sections if the platform lacks the required data. Adding stages gradually keeps the first platform implementation honest and easier to debug.
 
-### Step 7 — Write tests
+## 8. Common Mistakes
 
-TDD workflow:
-
-1. **Unit tests** (`tests/unit/test_tiktok_adapter.py`) — exercise `search`, `enrich`, `to_signals`, `trust_hints`, `url_normalize`, and `health_check` independently with mocked HTTP via `respx`.
-2. **Pipeline integration test** (`tests/integration/test_research_tiktok.py`) — run `run_research` end-to-end with `SRP_TEST_USE_FAKE_TIKTOK=1` and assert the packet schema is produced.
-3. **Contract test** — the existing `tests/contract/test_registry_contract.py` already asserts every registered platform implements the full adapter interface; your adapter is checked automatically.
-
-Coverage gate is 100 % branch coverage — every branch of every method you write must be exercised by a test.
-
-### Step 8 — Run it
-
-```bash
-srp research tiktok "AI safety" "latest-news"
-srp config set platforms.tiktok.max_items 50
-```
-
----
-
-## What you don't have to do
-
-Once the adapter returns `RawItem` and `SignalSet` objects, the rest of the pipeline is fully generic:
-
-- **Scoring** — the trust/trend/opportunity formulas in [`scoring/`](../social_research_probe/scoring/) run against `SignalSet` directly.
-- **Statistics** — all 20 statistical models in [`stats/`](../social_research_probe/stats/) work on any numeric feature set; no platform-specific code needed.
-- **Charts** — the 10 chart renderers in [`viz/`](../social_research_probe/viz/) consume score-and-feature data, not platform data.
-- **Corroboration** — claim extraction runs on `item.text_excerpt` plus your optional `fetch_text_for_claim_extraction` override.
-- **Report generation** — the HTML/Markdown renderers (`render/`, `synthesize/`) consume the packet and do not look at the platform name.
-
-You only own fetching and normalisation. Everything downstream is already platform-agnostic.
-
----
-
-## Common pitfalls
-
-| Pitfall | Fix |
-|---|---|
-| Forgot `@register` decorator | The adapter loads but `srp research tiktok …` raises `unknown platform`. |
-| `name` class var empty or missing | `register` raises `ValueError`. |
-| `published_at` not timezone-aware | Score age computations produce NaT. Always construct with `datetime(..., tzinfo=UTC)`. |
-| Metrics stored as strings | `to_signals` gets division errors. Coerce to `int` inside `enrich`. |
-| Blocking HTTP calls in `async enrich` | Wrap sync clients with `asyncio.to_thread(...)` (YouTube does this) or switch to `httpx.AsyncClient`. |
-| Forgot to update `platforms/__init__.py` | Adapter is never imported, so `@register` never runs. |
-| Config key missing from `config.toml.example` | `srp config set platforms.tiktok.max_items` works, but users have no discoverable reference. |
-
----
-
-## Reference implementation
-
-Every method above is demonstrated in [`social_research_probe/platforms/youtube/adapter.py`](../social_research_probe/platforms/youtube/adapter.py). Read it top-to-bottom before writing your own — it handles duration parsing, shorts filtering, concurrent hydration via `asyncio.to_thread` + `asyncio.gather`, and graceful error paths. Your adapter does not need to be as complete as YouTube's, but that file is the canonical blueprint.
-
----
-
-## See also
-
-- [How It Works](how-it-works.md) — the pipeline stages your adapter plugs into
-- [Design Patterns](design-patterns.md) — the Adapter and Registry patterns explained
-- [Testing](testing.md) — the test tiers your adapter must satisfy
-- [Architecture](architecture.md) — system-wide view including where your adapter sits
+| Mistake | Why it hurts | Better approach |
+| --- | --- | --- |
+| Returning provider dictionaries directly. | Later stages become tied to provider field names. | Convert provider output into `RawItem`. |
+| Using `0` for unavailable metrics. | Scoring treats missing data as real zero performance. | Use `None` for unavailable counts. |
+| Forgetting to import the sourcing module. | The `@register` decorator never runs. | Import the module in pipeline setup or before `get_client`. |
+| Copying all YouTube stages blindly. | The new platform may generate empty summaries, charts, or reports. | Start with fetch, score, assemble, report. |
+| Hiding network calls inside tests. | Tests become slow, flaky, and credential-dependent. | Register a fake `SearchClient`. |
+| Writing platform-specific branches in shared services. | Every future platform makes shared services harder to maintain. | Normalize once at the adapter boundary. |

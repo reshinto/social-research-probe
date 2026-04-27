@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" role="img" aria-labelledby="title desc">
+  <title id="title">Chi-square test</title>
+  <desc id="desc">Compares observed category counts against counts expected under independence.</desc>
+  <rect width="860" height="360" fill="#ffffff"/>
+  <text x="28" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111111">Chi-square test</text>
+  <text x="28" y="66" font-family="Arial, sans-serif" font-size="15" fill="#334155">Compares observed category counts against counts expected under independence.</text>
+  <g font-family="Arial" font-size="16" text-anchor="middle"><rect x="180" y="105" width="110" height="70" fill="#dbeafe" stroke="#1d4ed8"/><text x="235" y="145">18</text><rect x="290" y="105" width="110" height="70" fill="#fee2e2" stroke="#dc2626"/><text x="345" y="145">6</text><rect x="180" y="175" width="110" height="70" fill="#fee2e2" stroke="#dc2626"/><text x="235" y="215">7</text><rect x="290" y="175" width="110" height="70" fill="#dbeafe" stroke="#1d4ed8"/><text x="345" y="215">19</text></g><text x="470" y="145" font-family="Arial" font-size="17" fill="#334155">Large gaps between observed</text><text x="470" y="170" font-family="Arial" font-size="17" fill="#334155">and expected counts increase χ².</text>
+</svg>
