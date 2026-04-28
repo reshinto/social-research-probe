@@ -127,21 +127,24 @@ class TestHost:
 
 
 class TestEnsemble:
-    def test_llm_enabled_callable(self):
+    def test_llm_enabled_callable(self, monkeypatch):
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
-        assert ensemble._llm_enabled(cfg) is True
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        assert ensemble._llm_enabled() is True
 
-    def test_llm_enabled_no_method(self):
+    def test_llm_enabled_no_method(self, monkeypatch):
         class Cfg:
             pass
 
-        assert ensemble._llm_enabled(Cfg()) is True
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: Cfg())
+        assert ensemble._llm_enabled() is True
 
-    def test_service_enabled_disabled(self):
+    def test_service_enabled_disabled(self, monkeypatch):
         cfg = MagicMock()
         cfg.service_enabled.return_value = False
-        assert ensemble._service_enabled(cfg, "claude") is False
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        assert ensemble._service_enabled("claude") is False
 
     def test_collect_responses_empty(self):
         out = asyncio.run(ensemble._collect_responses("p", providers=()))

@@ -134,12 +134,17 @@ def test_service_enabled_primary_runner(monkeypatch):
     cfg.service_enabled.return_value = True
     cfg.technology_enabled.return_value = False  # secondary disabled
     cfg.llm_runner = "claude"
+    monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
     # claude is primary; should be allowed
-    assert ensemble._service_enabled(cfg, "claude") is False  # tech disabled returns False
+    assert ensemble._service_enabled("claude") is False  # tech disabled returns False
 
 
-def test_service_enabled_no_method():
+def test_service_enabled_no_method(monkeypatch):
     class Cfg:
         llm_runner = "claude"
 
-    assert ensemble._service_enabled(Cfg(), "claude") is True
+        def service_enabled(self, name):
+            return True
+
+    monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: Cfg())
+    assert ensemble._service_enabled("claude") is True

@@ -140,10 +140,9 @@ class YouTubeScoreStage(BaseStage):
         merged = state.inputs.get("merged_purpose")
         if merged is None:
             return None
-        from social_research_probe.config import load_active_config
         from social_research_probe.services.scoring import resolve_scoring_weights
 
-        return resolve_scoring_weights(load_active_config(), merged)
+        return resolve_scoring_weights(merged)
 
     @staticmethod
     def _empty_score_output(items: list, limit: int) -> dict:

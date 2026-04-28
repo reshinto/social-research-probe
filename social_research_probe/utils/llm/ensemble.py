@@ -31,8 +31,9 @@ _TIMEOUT = 60
 _PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
 
 
-def _llm_enabled(cfg) -> bool:
+def _llm_enabled() -> bool:
     """Return True when the LLM service gate is enabled."""
+    cfg = load_active_config()
     service_enabled = getattr(cfg, "service_enabled", None)
     if callable(service_enabled):
         return bool(service_enabled("llm"))
@@ -118,7 +119,7 @@ def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> 
     )
 
 
-async def _synthesize(responses: dict[str, str], original_prompt: str, cfg=None) -> str | None:
+async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
     """Produce the final answer from collected responses.
 
     If only one provider responded, returns it directly.
@@ -133,9 +134,7 @@ async def _synthesize(responses: dict[str, str], original_prompt: str, cfg=None)
         return next(iter(responses.values()))
 
     synthesis_prompt = _build_synthesis_prompt(original_prompt, responses)
-    synth_providers = (
-        tuple(p for p in _PROVIDERS if _service_enabled(cfg, p)) if cfg is not None else _PROVIDERS
-    )
+    synth_providers = tuple(p for p in _PROVIDERS if _service_enabled(p))
     for provider in synth_providers:
         result = await _run_provider(
             provider, synthesis_prompt, task="synthesising ensemble responses"
@@ -147,15 +146,16 @@ async def _synthesize(responses: dict[str, str], original_prompt: str, cfg=None)
     return responses.get("claude") or responses.get("gemini") or responses.get("codex")
 
 
-def _service_enabled(cfg, provider: str) -> bool:
+def _service_enabled(provider: str) -> bool:
     """Return True iff provider is allowed to run as a non-primary service.
 
     The primary runner is always allowed; secondary providers are gated by
     their technology flags so users can disable one provider without
     disabling the rest of the LLM service.
     """
-    if not _llm_enabled(cfg):
+    if not _llm_enabled():
         return False
+    cfg = load_active_config()
     technology_enabled = getattr(cfg, "technology_enabled", None)
     if callable(technology_enabled):
         return bool(technology_enabled(provider))
@@ -172,9 +172,9 @@ async def multi_llm_prompt(prompt: str, task: str = "generating response") -> st
     Falls back to the ensemble fan-out only if preferred_free_text_runner
     returns None for an unrecognised runner value.
     """
-    cfg = load_active_config()
-    if not _llm_enabled(cfg):
+    if not _llm_enabled():
         return None
+    cfg = load_active_config()
     if cfg.llm_runner == "none":
         return None
     preferred = cfg.preferred_free_text_runner
@@ -185,9 +185,9 @@ async def multi_llm_prompt(prompt: str, task: str = "generating response") -> st
         candidates = (
             _PROVIDERS if preferred == "local" else tuple(p for p in _PROVIDERS if p != preferred)
         )
-        providers = tuple(p for p in candidates if _service_enabled(cfg, p))
+        providers = tuple(p for p in candidates if _service_enabled(p))
         responses = await _collect_responses(prompt, task, providers=providers)
-        return await _synthesize(responses, prompt, cfg)
-    providers = tuple(p for p in _PROVIDERS if _service_enabled(cfg, p))
+        return await _synthesize(responses, prompt)
+    providers = tuple(p for p in _PROVIDERS if _service_enabled(p))
     responses = await _collect_responses(prompt, task, providers=providers)
-    return await _synthesize(responses, prompt, cfg)
+    return await _synthesize(responses, prompt)

@@ -175,13 +175,14 @@ class TestSlopScoreEdge:
 
 
 class TestEnsembleSecondaryDisabled:
-    def test_service_enabled_secondary_disabled(self):
+    def test_service_enabled_secondary_disabled(self, monkeypatch):
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.technology_enabled.return_value = False
         cfg.llm_runner = "claude"
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
         # Secondary returns False because tech disabled
-        assert ensemble._service_enabled(cfg, "gemini") is False
+        assert ensemble._service_enabled("gemini") is False
 
 
 class TestTranscriptServiceWithStringInput:

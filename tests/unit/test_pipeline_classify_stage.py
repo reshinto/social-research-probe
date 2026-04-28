@@ -72,7 +72,9 @@ class TestStageDisabled:
 class TestStageEnabled:
     def test_classifies_via_service(self, enabled_state, monkeypatch):
         state, _ = enabled_state
-        state.set_stage_output("fetch", {"items": [{"id": "1", "channel": "BBC News", "title": "x"}]})
+        state.set_stage_output(
+            "fetch", {"items": [{"id": "1", "channel": "BBC News", "title": "x"}]}
+        )
 
         async def fake(self, data):
             return _mk_result("primary")
@@ -181,5 +183,3 @@ class TestStaticHelpers:
             ],
         )
         assert yt.YouTubeClassifyStage._output_class(result) == "unknown"
-
-
