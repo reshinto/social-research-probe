@@ -324,10 +324,12 @@ class YouTubeCorroborateStage(BaseStage):
 
         return providers[:FAST_MODE_MAX_PROVIDERS] if fast_mode_enabled() else providers
 
-    def _select_corroboration_providers(self) -> list[str]:
+    def _select_corroboration_providers(self, state: PipelineState) -> list[str]:
         from social_research_probe.config import load_active_config
         from social_research_probe.utils.display.progress import log
 
+        if not self._is_enabled(state):
+            return []
         cfg = load_active_config()
         configured = cfg.corroboration_provider
         if not cfg.service_enabled("corroboration") or configured == "none":
@@ -360,7 +362,7 @@ class YouTubeCorroborateStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
-        providers = self._select_corroboration_providers()
+        providers = self._select_corroboration_providers(state)
         if not providers:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
