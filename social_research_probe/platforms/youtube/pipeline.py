@@ -42,6 +42,89 @@ class YouTubeFetchStage(BaseStage):
         return state
 
 
+class YouTubeClassifyStage(BaseStage):
+    """Classify each fetched item's channel into a source_class enum value.
+
+    Runs between fetch and score so downstream stages (scoring, synthesis,
+    report) read a meaningful ``source_class`` instead of a hardcoded
+    ``"unknown"``. Per-channel caching, the title-level commentary
+    override, and the disabled-gate fallback live here so the service
+    stays a thin tech wrapper.
+
+    Falls back to ``"unknown"`` when the service gate is off or the chosen
+    provider returns no signal so the report still renders without
+    classification.
+    """
+
+    def stage_name(self) -> str:
+        return "classify"
+
+    @staticmethod
+    def _channel_of(item: dict) -> str:
+        return str(item.get("channel") or item.get("author_name") or "")
+
+    @staticmethod
+    def _output_class(result) -> str:
+        from social_research_probe.technologies.classifying import coerce_class
+
+        for tr in result.tech_results:
+            if tr.success and isinstance(tr.output, str):
+                return coerce_class(tr.output)
+        return "unknown"
+
+    @staticmethod
+    def _enrich(item: dict, base_class: str) -> dict:
+        from social_research_probe.technologies.classifying import classify_by_title_signal
+
+        enriched = dict(item)
+        title_signal = classify_by_title_signal(str(item.get("title") or ""))
+        enriched["source_class"] = "commentary" if title_signal == "commentary" else base_class
+        return enriched
+
+    async def _classify_one(self, service, item: dict, cache: dict[str, str]) -> dict:
+        from social_research_probe.technologies.classifying import coerce_class
+
+        existing = coerce_class(item.get("source_class"))
+        if existing != "unknown":
+            return self._enrich(item, existing)
+
+        channel = self._channel_of(item)
+        if channel in cache:
+            return self._enrich(item, cache[channel])
+
+        result = await service.execute_one(item)
+        cls = self._output_class(result)
+        cache[channel] = cls
+        return self._enrich(item, cls)
+
+    @log_with_time("[srp] youtube/classify: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.config import load_active_config
+        from social_research_probe.services.classifying.source_class import (
+            SourceClassService,
+        )
+
+        fetch = state.get_stage_output("fetch")
+        items = list(fetch.get("items", []))
+
+        if not self._is_enabled(state) or not items:
+            state.set_stage_output("classify", {"items": items})
+            return state
+
+        cfg = load_active_config()
+        if not cfg.service_enabled(SourceClassService.enabled_config_key):
+            classified = [self._enrich(it, "unknown") for it in items]
+        else:
+            service = SourceClassService()
+            cache: dict[str, str] = {}
+            classified = [await self._classify_one(service, it, cache) for it in items]
+
+        fetch["items"] = classified
+        state.set_stage_output("fetch", fetch)
+        state.set_stage_output("classify", {"items": classified})
+        return state
+
+
 class YouTubeScoreStage(BaseStage):
     """Score and rank fetched items."""
 
@@ -527,6 +610,7 @@ class YouTubePipeline(BaseResearchPlatform):
     def stages(self) -> list[list[BaseStage]]:
         return [
             [YouTubeFetchStage()],
+            [YouTubeClassifyStage()],
             [YouTubeScoreStage()],
             [YouTubeTranscriptStage(), YouTubeStatsStage(), YouTubeChartsStage()],
             [YouTubeSummaryStage()],

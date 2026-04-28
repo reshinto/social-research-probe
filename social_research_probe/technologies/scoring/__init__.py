@@ -127,7 +127,7 @@ def score_one(
     overall = overall_score(trust=trust, trend=trend, opportunity=opportunity, weights=weights)
     return {
         **item,
-        "source_class": "unknown",
+        "source_class": item.get("source_class") or "unknown",
         "scores": {
             "trust": trust,
             "trend": trend,

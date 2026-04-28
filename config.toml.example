@@ -98,6 +98,21 @@ narration = true             # Render audio narration through Voicebox or fallba
 # youtube_api_key secret when live YouTube fetching is used.
 youtube = true
 
+[services.youtube.classifying]
+# Enables source_class classification (primary | secondary | commentary |
+# unknown) for each fetched item before scoring. When false, every item
+# falls back to "unknown" without invoking any provider.
+source_class = true
+
+# Provider used for classification:
+#   "heuristic" — curated channel map plus channel-name and title regex,
+#                 zero cost. Items not in the map fall back to "unknown".
+#   "llm"       — single LLM call per unknown channel via the active
+#                 free-text runner. Requires the LLM service gate to be on
+#                 and a runner enabled in [technologies].
+#   "hybrid"    — heuristic first, LLM fallback for unknown channels.
+provider = "hybrid"
+
 [services.youtube.scoring]
 # Enables trust/trend/opportunity scoring through overall_score().
 score = true
