@@ -306,8 +306,6 @@ class YouTubeCorroborateStage(BaseStage):
         cfg = load_active_config()
         providers: list[str] = []
         for name in candidates:
-            if not cfg.technology_enabled(name):
-                continue
             if name == "llm_search" and not cfg.service_enabled("llm"):
                 continue
             try:
