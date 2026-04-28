@@ -1,20 +1,13 @@
-"""Deterministic YouTube-shaped adapter for tests. Registered on import."""
+"""Deterministic YouTube-shaped fixture data + service stub for tests."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import ClassVar
 
-from social_research_probe.platforms.base import (
-    FetchLimits,
-    RawItem,
-    SearchClient,
-)
-from social_research_probe.platforms.registry import register
-from social_research_probe.utils.core.types import AdapterConfig
+from social_research_probe.platforms import EngagementMetrics, RawItem
 
 
-def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
+def fixture_items(topic: str, n: int = 5) -> list[RawItem]:
     now = datetime.now(UTC)
     items = []
     for i in range(n):
@@ -39,19 +32,34 @@ def _fixture_items(topic: str, n: int = 5) -> list[RawItem]:
     return items
 
 
-@register
-class FakeYouTubeClient(SearchClient):
-    name: ClassVar[str] = "youtube"
-    default_limits: ClassVar[FetchLimits] = FetchLimits()
+def fixture_engagement(items: list[RawItem]) -> list[EngagementMetrics]:
+    now = datetime.now(UTC)
+    out = []
+    for it in items:
+        age_days = max(1, (now - it.published_at).days)
+        views = int(it.metrics.get("views", 0) or 0)
+        likes = int(it.metrics.get("likes", 0) or 0)
+        comments = int(it.metrics.get("comments", 0) or 0)
+        out.append(
+            EngagementMetrics(
+                views=views,
+                likes=likes,
+                comments=comments,
+                upload_date=it.published_at,
+                view_velocity=views / age_days,
+                engagement_ratio=(likes + comments) / max(1, views),
+                comment_velocity=comments / age_days,
+                cross_channel_repetition=0.0,
+                raw={},
+            )
+        )
+    return out
 
-    def __init__(self, config: AdapterConfig) -> None:
-        self.config = config
 
-    def health_check(self) -> bool:
-        return True
-
-    def find_by_topic(self, topic: str, limits: FetchLimits) -> list[RawItem]:
-        return _fixture_items(topic, n=min(5, limits.max_items))
-
-    async def fetch_item_details(self, items: list[RawItem]) -> list[RawItem]:
-        return items
+async def fake_run_youtube_sourcing(
+    topic: str,
+    config: dict | None = None,
+) -> tuple[list[RawItem], list[EngagementMetrics]]:
+    """Drop-in replacement for run_youtube_sourcing in tests."""
+    items = fixture_items(topic)
+    return items, fixture_engagement(items)

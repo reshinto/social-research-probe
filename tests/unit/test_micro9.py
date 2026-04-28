@@ -10,12 +10,12 @@ import pytest
 from social_research_probe import get_version
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.config import Config
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )
-from social_research_probe.technologies.corroborates._filters import _host
+from social_research_probe.technologies.corroborates import _host
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.report_render.html.raw_html import markdown_to_html
 from social_research_probe.technologies.report_render.html.raw_html import youtube as yt_html

@@ -82,7 +82,7 @@ def test_normalize_without_query():
 def test_classify_query_delegates(monkeypatch):
     fake = MagicMock(topic="T", purpose_name="P")
     with patch(
-        "social_research_probe.services.llm.classify_query.classify_query",
+        "social_research_probe.services.llm.core.classify_query.classify_query",
         return_value=fake,
     ):
         out = research._classify_query_to_topic_purposes("q")

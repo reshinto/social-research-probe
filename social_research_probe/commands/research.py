@@ -31,7 +31,7 @@ class _ResearchArgs:
 
 def _classify_query_to_topic_purposes(query: str) -> tuple[str, tuple[str, ...]]:
     """Classify a natural-language query into topic and purpose."""
-    from social_research_probe.services.llm.classify_query import classify_query
+    from social_research_probe.services.llm.core.classify_query import classify_query
 
     classified = classify_query(query)
     return classified.topic, (classified.purpose_name,)

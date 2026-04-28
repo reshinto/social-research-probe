@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from social_research_probe.platforms.base import PlatformClient
+from social_research_probe.platforms import PlatformClient
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.types import AdapterConfig
 

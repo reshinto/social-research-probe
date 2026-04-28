@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import asyncio
 
-from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
+from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.services.reporting.writer import write_final_report
-from social_research_probe.services.sourcing.youtube import compute_engagement_metrics
+from social_research_probe.services.reporting import write_final_report
 from social_research_probe.utils.display.progress import log_with_time
 
 
@@ -27,18 +26,9 @@ class YouTubeFetchStage(BaseStage):
         return topic
 
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
-        from importlib import import_module
+        from social_research_probe.services.sourcing import youtube as yt_sourcing
 
-        from social_research_probe.platforms.registry import get_client
-
-        import_module("social_research_probe.services.sourcing.youtube")
-        connector = get_client("youtube", config)
-        raw = await asyncio.to_thread(
-            connector.find_by_topic, search_topic, connector.default_limits
-        )
-        items = await connector.fetch_item_details(raw)
-        engagement_metrics = compute_engagement_metrics(items)
-        return items, engagement_metrics
+        return await yt_sourcing.run_youtube_sourcing(search_topic, config)
 
     @log_with_time("[srp] youtube/fetch: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
@@ -68,7 +58,7 @@ class YouTubeScoreStage(BaseStage):
         if merged is None:
             return None
         from social_research_probe.config import load_active_config
-        from social_research_probe.services.scoring.weights import resolve_scoring_weights
+        from social_research_probe.services.scoring import resolve_scoring_weights
 
         return resolve_scoring_weights(load_active_config(), merged)
 
@@ -172,13 +162,13 @@ class YouTubeCorroborateStage(BaseStage):
 
     @staticmethod
     def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
-        from social_research_probe.services.corroborating.providers import auto_mode_providers
+        from social_research_probe.services.corroborating import auto_mode_providers
 
         return auto_mode_providers(cfg) if configured == "auto" else (configured,)
 
     @staticmethod
     def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
-        from social_research_probe.services.corroborating.registry import get_provider
+        from social_research_probe.services.corroborating import get_provider
         from social_research_probe.utils.core.errors import ValidationError
 
         providers: list[str] = []
@@ -346,8 +336,10 @@ class YouTubeSynthesisStage(BaseStage):
 
     @staticmethod
     async def _run_synthesis(context: dict) -> str:
-        from social_research_probe.services.llm.ensemble import multi_llm_prompt
-        from social_research_probe.services.synthesizing.llm_contract import build_synthesis_prompt
+        from social_research_probe.technologies.synthesizing.llm_contract import (
+            build_synthesis_prompt,
+        )
+        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
         try:
             return await multi_llm_prompt(build_synthesis_prompt(context)) or ""
@@ -394,13 +386,15 @@ class YouTubeAssembleStage(BaseStage):
         chart_takeaways: list,
         warnings: list[str],
     ) -> dict:
-        from social_research_probe.services.synthesizing.evidence import (
+        from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize as summarize_evidence,
         )
-        from social_research_probe.services.synthesizing.evidence import (
+        from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize_engagement_metrics,
         )
-        from social_research_probe.services.synthesizing.formatter import build_report
+        from social_research_probe.utils.report.formatter import (
+            build_report,
+        )
 
         return build_report(
             topic=topic,
@@ -470,7 +464,7 @@ class YouTubeStructuredSynthesisStage(BaseStage):
         if not self._is_enabled(state):
             return state
 
-        from social_research_probe.services.synthesizing.runner import attach_synthesis
+        from social_research_probe.services.synthesizing.synthesis.runner import attach_synthesis
 
         report = state.outputs.get("report", {})
         await asyncio.to_thread(attach_synthesis, report)

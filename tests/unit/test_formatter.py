@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from social_research_probe.services.synthesizing import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
 
 
 def _basic_report(**overrides):

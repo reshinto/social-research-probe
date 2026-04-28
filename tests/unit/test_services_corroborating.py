@@ -7,8 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.services.corroborating import host, providers, registry
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.services import corroborating as providers
+from social_research_probe.services import corroborating as registry
+from social_research_probe.technologies import corroborates as host
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
 )

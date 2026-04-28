@@ -10,10 +10,10 @@ from social_research_probe.services.analyzing.statistics import StatisticsServic
 from social_research_probe.services.corroborating.corroborate import CorroborationService
 from social_research_probe.services.enriching.summary import SummaryService
 from social_research_probe.services.enriching.transcript import TranscriptService
-from social_research_probe.services.llm import schemas
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
+from social_research_probe.technologies.llms import schemas
 
 
 def test_schemas_present():
@@ -34,7 +34,7 @@ class TestChartsService:
         assert ChartsService._items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
 
     def test_serialise_roundtrip(self, tmp_path):
-        from social_research_probe.technologies.charts.base import ChartResult
+        from social_research_probe.technologies.charts import ChartResult
 
         png = tmp_path / "x.png"
         png.write_bytes(b"\x89PNG")
@@ -102,7 +102,7 @@ class TestStatisticsService:
         async def boom(items):
             raise RuntimeError("nope")
 
-        monkeypatch.setattr(StatisticsService, "_compute_async", staticmethod(boom))
+        monkeypatch.setattr("social_research_probe.technologies.statistics.compute_async", boom)
         out = asyncio.run(StatisticsService().execute_one({"scored_items": [{"x": 1}]}))
         assert out.tech_results[0].success is False
 
@@ -116,7 +116,9 @@ class TestSynthesisService:
         async def boom(prompt, task="generating response"):
             raise RuntimeError("nope")
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", boom)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", boom
+        )
         out = asyncio.run(SynthesisService().execute_one("not a dict"))
         assert out.tech_results[0].success is False
 
@@ -134,7 +136,7 @@ class TestCorroborationService:
             raise RuntimeError("x")
 
         monkeypatch.setattr(
-            "social_research_probe.services.corroborating.host.corroborate_claim", boom
+            "social_research_probe.technologies.corroborates.corroborate_claim", boom
         )
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
@@ -152,7 +154,9 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             return "summary text"
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
         assert out.tech_results[0].output == "summary text"
 
@@ -160,7 +164,9 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             raise RuntimeError("x")
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
         out = asyncio.run(SummaryService().execute_one({"title": "t"}))
         assert out.tech_results[0].success is False
 

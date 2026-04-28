@@ -13,7 +13,7 @@ from social_research_probe.commands import serve_report
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.llm import ensemble
+from social_research_probe.technologies.llms import ensemble
 from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
 
 
@@ -90,7 +90,7 @@ def test_ensemble_collect_responses(monkeypatch):
 def test_yt_score_full_path(enabled_state, monkeypatch):
     enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
     monkeypatch.setattr(
-        "social_research_probe.services.scoring.compute.score_items",
+        "social_research_probe.services.scoring.score_items",
         lambda items, em, weights: [{"id": "1", "overall_score": 0.5}],
     )
     out = asyncio.run(yt.YouTubeScoreStage().execute(enabled_state))
@@ -99,7 +99,7 @@ def test_yt_score_full_path(enabled_state, monkeypatch):
 
 def test_yt_score_full_path_failure(enabled_state, monkeypatch):
     enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
-    from social_research_probe.services.base import ServiceResult, TechResult
+    from social_research_probe.services import ServiceResult, TechResult
 
     async def fake_execute_one(self, data):
         return ServiceResult(

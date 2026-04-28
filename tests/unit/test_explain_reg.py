@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_huber,
     explain_multi_regression,
     explain_polynomial,

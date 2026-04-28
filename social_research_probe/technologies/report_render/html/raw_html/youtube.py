@@ -25,7 +25,6 @@ from functools import lru_cache
 from pathlib import Path
 
 from social_research_probe.config import load_active_config
-from social_research_probe.services.synthesizing.formatter import resolve_report_summary
 from social_research_probe.technologies.report_render.html.raw_html._assets import (
     CSS_STYLES,
     TTS_SCRIPT,
@@ -46,6 +45,9 @@ from social_research_probe.technologies.report_render.html.raw_html._sections im
 )
 from social_research_probe.utils.core.types import ResearchReport
 from social_research_probe.utils.display.service_log import service_log_sync
+from social_research_probe.utils.report.formatter import (
+    resolve_report_summary,
+)
 
 _SECTIONS = [
     ("s1", "1. Topic &amp; Purpose"),

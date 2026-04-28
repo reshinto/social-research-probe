@@ -115,10 +115,10 @@ def test_config_service_enabled_nested(tmp_path):
 
 
 def test_charts_suite_returns_already_annotated(tmp_path):
-    """services/analyzing/charts_suite.py:31 — annotation idempotency."""
+    """services/analyzing/__init__.py:31 — annotation idempotency."""
 
-    from social_research_probe.services.analyzing.charts_suite import _annotate
-    from social_research_probe.technologies.charts.base import ChartResult
+    from social_research_probe.services.analyzing import _annotate
+    from social_research_probe.technologies.charts import ChartResult
 
     r = ChartResult(path="/p.png", caption="cap\n_(see PNG: /p.png)_")
     out = _annotate(r)
@@ -134,8 +134,8 @@ def test_statistics_skip_empty_series():
 
 
 def test_scoring_skip_invalid_item():
-    """services/scoring/compute.py:68 — continue on bad item."""
-    from social_research_probe.services.scoring.compute import normalize_with_metrics
+    """services/scoring/__init__.py:68 — continue on bad item."""
+    from social_research_probe.services.scoring import normalize_with_metrics
 
     items = ["not-a-dict-or-rawitem", {"id": "ok", "url": "u", "channel": "c"}]
     norm, _eng = normalize_with_metrics(items, [None, None])
@@ -144,7 +144,9 @@ def test_scoring_skip_invalid_item():
 
 def test_evidence_source_class_mix_empty():
     """services/synthesizing/evidence.py:120 — empty top_n returns ''."""
-    from social_research_probe.services.synthesizing.evidence import _source_class_mix
+    from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
+        _source_class_mix,
+    )
 
     assert _source_class_mix([]) == ""
 
@@ -182,7 +184,7 @@ def test_corroborate_providers_list_branch(monkeypatch):
         return MagicMock(verdict="inconclusive", source_urls=[], runner_name="x")
 
     monkeypatch.setattr(
-        "social_research_probe.services.corroborating.host.corroborate_claim",
+        "social_research_probe.technologies.corroborates.corroborate_claim",
         fake_corroborate_claim,
     )
     svc = corroborate.CorroborationService()
@@ -215,8 +217,10 @@ def test_summary_cache_hit_branch(tmp_path, monkeypatch):
 
 def test_warnings_freshness_stale(monkeypatch):
     """services/synthesizing/warnings.py 86->exit — stale items branch."""
-    from social_research_probe.platforms.base import EngagementMetrics
-    from social_research_probe.services.synthesizing.warnings import _check_freshness
+    from social_research_probe.platforms import EngagementMetrics
+    from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
+        _check_freshness,
+    )
 
     notes: list[str] = []
     em = EngagementMetrics(
@@ -235,7 +239,7 @@ def test_warnings_freshness_stale(monkeypatch):
 
 def test_synthesis_context_skip_falsy_fields():
     """services/synthesizing/synthesis_context.py 79->81 etc — falsy fields skip output."""
-    from social_research_probe.services.synthesizing.synthesis_context import _build_item
+    from social_research_probe.services.synthesizing.synthesis.synthesis_context import _build_item
 
     out = _build_item(0, {"title": "t", "url": "u"})
     assert "scores" not in out
@@ -337,7 +341,7 @@ def test_hypothesis_tests_zero_expected():
 
 def test_synthesis_runner_attach_multi(monkeypatch):
     """services/synthesizing/runner.py 88->86 — multi-report skips None synth."""
-    from social_research_probe.services.synthesizing import runner
+    from social_research_probe.services.synthesizing.synthesis import runner
 
     monkeypatch.setattr(runner, "run_required_synthesis", lambda r: None)
     report = {"multi": [{"x": 1}, {"y": 2}]}
@@ -346,7 +350,7 @@ def test_synthesis_runner_attach_multi(monkeypatch):
 
 def test_formatter_source_validation_non_dict():
     """formatter.py 249->261 — source_validation falsy skip via build_synthesis_prompt."""
-    from social_research_probe.services.synthesizing.formatter import (
+    from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
         build_fallback_report_summary,
     )
 
@@ -374,7 +378,9 @@ def test_gemini_extract_citations_dict_with_nested(monkeypatch):
 
 def test_warnings_freshness_skips_when_no_dates():
     """warnings.py 86->exit — _check_freshness with no upload dates returns silently."""
-    from social_research_probe.services.synthesizing.warnings import _check_freshness
+    from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
+        _check_freshness,
+    )
 
     notes: list[str] = []
     _check_freshness([], datetime.now(UTC), notes)
@@ -411,7 +417,7 @@ def test_huber_regression_zero_max_iter():
 
 def test_synthesis_runner_status_healthy(monkeypatch):
     """runner.py 115->exit — runner healthy path."""
-    from social_research_probe.services.synthesizing import runner as srunner
+    from social_research_probe.services.synthesizing.synthesis import runner as srunner
 
     cfg = MagicMock()
     cfg.default_structured_runner = "claude"
@@ -425,8 +431,10 @@ def test_synthesis_runner_status_healthy(monkeypatch):
 
 def test_warnings_freshness_old_items():
     """warnings.py 86->exit — stale and fresh freshness branches."""
-    from social_research_probe.platforms.base import EngagementMetrics
-    from social_research_probe.services.synthesizing.warnings import _check_freshness
+    from social_research_probe.platforms import EngagementMetrics
+    from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
+        _check_freshness,
+    )
 
     now = datetime.now(UTC)
     stale = EngagementMetrics(
@@ -538,7 +546,7 @@ def test_youtube_renderer_voicebox_audio_path(tmp_path, monkeypatch):
 
 def test_formatter_plain_sentences_no_split_chars(monkeypatch):
     """formatter.py 332 — when split filters out all parts, fall back to raw cleaned."""
-    from social_research_probe.services.synthesizing import formatter as fmt
+    import social_research_probe.utils.report.formatter as fmt
 
     monkeypatch.setattr(fmt, "_markdown_to_plain_text", lambda t: "  ")
     out = fmt._plain_sentences("anything", limit=5)
@@ -559,8 +567,8 @@ def test_config_service_enabled_non_dict_category(tmp_path):
 
 def test_evidence_summarize_skips_none_branches():
     """services/synthesizing/evidence.py 51->54 etc — all metric helpers None."""
-    from social_research_probe.platforms.base import EngagementMetrics, RawItem
-    from social_research_probe.services.synthesizing.evidence import (
+    from social_research_probe.platforms import EngagementMetrics, RawItem
+    from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
         summarize,
         summarize_engagement_metrics,
     )
@@ -594,7 +602,7 @@ def test_evidence_summarize_skips_none_branches():
 
 
 def test_explanations_correlation_unknown_metric():
-    from social_research_probe.services.synthesizing.explanations.correlation import (
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
         explain_outliers,
         explain_tests,
     )
@@ -604,7 +612,7 @@ def test_explanations_correlation_unknown_metric():
 
 
 def test_explanations_descriptive_unknown():
-    from social_research_probe.services.synthesizing.explanations.descriptive import (
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
         explain_descriptive,
         explain_spread,
     )
@@ -614,7 +622,7 @@ def test_explanations_descriptive_unknown():
 
 
 def test_explanations_regression_unknown():
-    from social_research_probe.services.synthesizing.explanations.regression import (
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
         explain_regression,
     )
 
@@ -623,7 +631,9 @@ def test_explanations_regression_unknown():
 
 def test_formatter_plain_sentences_empty():
     """services/synthesizing/formatter.py:329,332 — empty / unsplit text."""
-    from social_research_probe.services.synthesizing.formatter import _plain_sentences
+    from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+        _plain_sentences,
+    )
 
     assert _plain_sentences("", limit=5) == []
     assert _plain_sentences("just a phrase no punctuation", limit=5) == [
@@ -632,14 +642,18 @@ def test_formatter_plain_sentences_empty():
 
 
 def test_formatter_plain_sentences_only_markdown():
-    from social_research_probe.services.synthesizing.formatter import _plain_sentences
+    from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+        _plain_sentences,
+    )
 
     assert _plain_sentences("```\n```", limit=5) == []
 
 
 def test_warnings_unknown_source_class():
     """services/synthesizing/warnings.py:74 — all-unknown branch."""
-    from social_research_probe.services.synthesizing.warnings import _check_top_n_quality
+    from social_research_probe.services.synthesizing.synthesis.helpers.warnings import (
+        _check_top_n_quality,
+    )
 
     notes: list[str] = []
     top_n = [{"source_class": "unknown", "scores": {"overall": 1.0}}]
@@ -649,7 +663,7 @@ def test_warnings_unknown_source_class():
 
 def test_ensemble_synthesis_fallback_to_codex(monkeypatch):
     """services/llm/ensemble.py:147 — last-line fallback returns codex."""
-    from social_research_probe.services.llm import ensemble
+    from social_research_probe.technologies.llms import ensemble
 
     async def fake_run_provider(name, *a, **kw):
         return None  # all synthesis attempts fail

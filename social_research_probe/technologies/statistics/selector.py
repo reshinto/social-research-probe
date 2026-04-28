@@ -7,7 +7,7 @@ to know the details of each individual module.
 
 from __future__ import annotations
 
-from social_research_probe.technologies.statistics.base import StatResult
+from social_research_probe.technologies.statistics import StatResult
 
 
 def select_and_run(data: list[float], label: str = "values") -> list[StatResult]:

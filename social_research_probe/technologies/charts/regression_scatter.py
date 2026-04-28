@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import tempfile
 
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 
 
 def _fit_line(x: list[float], y: list[float]) -> tuple[float, float, float]:
@@ -72,7 +72,7 @@ def render(
     try:
         _render_with_matplotlib(x, y, path, label, slope, intercept, r_squared)
     except Exception:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

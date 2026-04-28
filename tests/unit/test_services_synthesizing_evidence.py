@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from social_research_probe.platforms.base import EngagementMetrics, RawItem
-from social_research_probe.services.synthesizing import evidence, warnings
+from social_research_probe.platforms import EngagementMetrics, RawItem
+from social_research_probe.services.synthesizing.synthesis.helpers import evidence, warnings
 
 
 def _raw(idx, channel="A", title="t"):

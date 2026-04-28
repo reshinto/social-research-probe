@@ -10,10 +10,11 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
 from social_research_probe.utils.display.progress import log
+from social_research_probe.utils.llm import ensemble, registry, schemas
 
 # ---------------------------------------------------------------------------
 # Exception for capability checks
@@ -210,6 +211,29 @@ class JsonCliRunner(LLMRunner, BaseTechnology[str, dict]):
         return await asyncio.to_thread(self.run, data)
 
 
+class LLMTech(BaseTechnology[str, dict]):
+    """Technology adapter wrapping one registered LLM runner for structured JSON calls."""
+
+    enabled_config_key: ClassVar[str] = ""
+
+    def __init__(self, runner_name: str, schema: dict | None = None) -> None:
+        super().__init__()
+        self._runner_name = runner_name
+        self._schema = schema
+
+    @property
+    def name(self) -> str:  # type: ignore[override]
+        return f"llm.{self._runner_name}"
+
+    async def _execute(self, prompt: str) -> dict | None:
+        from social_research_probe.utils.llm.registry import get_runner
+
+        runner = get_runner(self._runner_name)
+        if not runner.health_check():
+            return None
+        return await asyncio.to_thread(runner.run, prompt, schema=self._schema)
+
+
 # ---------------------------------------------------------------------------
 # Data structures for search results
 # ---------------------------------------------------------------------------
@@ -251,3 +275,16 @@ class AgenticSearchResult:
     answer: str
     citations: list[AgenticSearchCitation] = field(default_factory=list)
     runner_name: str = ""
+
+
+__all__ = [
+    "AgenticSearchCitation",
+    "AgenticSearchResult",
+    "CapabilityUnavailableError",
+    "JsonCliRunner",
+    "LLMRunner",
+    "LLMTech",
+    "ensemble",
+    "registry",
+    "schemas",
+]

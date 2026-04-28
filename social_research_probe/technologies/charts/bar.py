@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import tempfile
 
+from social_research_probe.technologies.charts import ChartResult
 from social_research_probe.technologies.charts.ascii import render_bars as render_ascii_bars
-from social_research_probe.technologies.charts.base import ChartResult
 
 
 def _render_with_matplotlib(data: list[float], path: str, label: str) -> None:
@@ -71,7 +71,7 @@ def render(
         _render_with_matplotlib(data, path, label)
     except Exception:
         # Pure-Python fallback: write a minimal valid PNG placeholder.
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.technologies.corroborates as _filters
 from social_research_probe import get_version
 from social_research_probe.commands import install_skill
-from social_research_probe.technologies.corroborates import _filters
 from social_research_probe.technologies.media_fetch import yt_dlp
 from social_research_probe.technologies.report_render.html.raw_html import _sections
 from social_research_probe.technologies.statistics import (
@@ -179,7 +179,9 @@ def test_claim_extractor_execute(monkeypatch):
 
 
 def test_correlation_no_factors_finally():
-    from social_research_probe.services.synthesizing.explanations import explain_correlation
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+        explain_correlation,
+    )
 
     out = explain_correlation("Pearson r alone: 0.05")
     # weak case + no factors → should return weak strength
@@ -187,7 +189,9 @@ def test_correlation_no_factors_finally():
 
 
 def test_descriptive_no_match():
-    from social_research_probe.services.synthesizing.explanations import explain_descriptive
+    from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+        explain_descriptive,
+    )
 
     # Doesn't match Mean/Median/Min/Max → returns ""
     out = explain_descriptive("Std overall: 0.5")

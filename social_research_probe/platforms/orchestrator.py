@@ -26,7 +26,10 @@ def _maybe_register_fake() -> None:
     if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") == "1":
         import importlib
 
-        importlib.import_module("tests.fixtures.fake_youtube")
+        fake = importlib.import_module("tests.fixtures.fake_youtube")
+        from social_research_probe.services.sourcing import youtube as yt_sourcing
+
+        yt_sourcing.run_youtube_sourcing = fake.fake_run_youtube_sourcing
 
 
 def _build_platform_config(cmd: ParsedRunResearch) -> AdapterConfig:

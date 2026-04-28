@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.services.llm import classify_query as cq
-from social_research_probe.services.synthesizing import runner, synthesis_context
+from social_research_probe.services.llm.core import classify_query as cq
+from social_research_probe.services.synthesizing.synthesis import runner, synthesis_context
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 
 
@@ -203,7 +203,8 @@ class TestClassifyQuery:
         cfg = MagicMock()
         cfg.service_enabled.return_value = False
         with patch(
-            "social_research_probe.services.llm.classify_query.load_active_config", return_value=cfg
+            "social_research_probe.services.llm.core.classify_query.load_active_config",
+            return_value=cfg,
         ):
             with pytest.raises(ValidationError):
                 cq._validate_llm_config()
@@ -213,7 +214,8 @@ class TestClassifyQuery:
         cfg.service_enabled.return_value = True
         cfg.default_structured_runner = "none"
         with patch(
-            "social_research_probe.services.llm.classify_query.load_active_config", return_value=cfg
+            "social_research_probe.services.llm.core.classify_query.load_active_config",
+            return_value=cfg,
         ):
             with pytest.raises(ValidationError):
                 cq._validate_llm_config()
@@ -223,7 +225,8 @@ class TestClassifyQuery:
         cfg.service_enabled.return_value = True
         cfg.default_structured_runner = "claude"
         with patch(
-            "social_research_probe.services.llm.classify_query.load_active_config", return_value=cfg
+            "social_research_probe.services.llm.core.classify_query.load_active_config",
+            return_value=cfg,
         ):
             assert cq._validate_llm_config() == "claude"
 
@@ -292,7 +295,8 @@ class TestClassifyQuery:
         cfg.service_enabled.return_value = True
         cfg.default_structured_runner = "claude"
         with patch(
-            "social_research_probe.services.llm.classify_query.load_active_config", return_value=cfg
+            "social_research_probe.services.llm.core.classify_query.load_active_config",
+            return_value=cfg,
         ):
             with patch("social_research_probe.config.load_active_config", return_value=cfg):
                 monkeypatch.setattr(cq, "list_topics", lambda: [])

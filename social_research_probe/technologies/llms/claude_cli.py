@@ -8,8 +8,6 @@ import re
 from enum import StrEnum
 from typing import ClassVar
 
-from social_research_probe.services.llm.prompts import CLAUDE_SEARCH_PROMPT
-from social_research_probe.services.llm.registry import register
 from social_research_probe.technologies.llms import (
     AgenticSearchCitation,
     AgenticSearchResult,
@@ -17,6 +15,8 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
+from social_research_probe.utils.llm.prompts import CLAUDE_SEARCH_PROMPT
+from social_research_probe.utils.llm.registry import register
 
 
 class ClaudeCliFlag(StrEnum):

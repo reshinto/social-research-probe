@@ -8,18 +8,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.reporting as writer_svc
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
-from social_research_probe.services.reporting import writer as writer_svc
 from social_research_probe.services.scoring import score as scoring_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
     explain_spread,
     explain_tests,
 )
-from social_research_probe.technologies.corroborates._filters import _host, is_self_source
+from social_research_probe.technologies.corroborates import _host, is_self_source
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.statistics import (
     bayesian_linear,
@@ -130,7 +130,7 @@ class TestScoringServiceFailure:
     def test_failure_path(self, monkeypatch):
         # Force score_items to raise → exception branch
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.compute.score_items",
+            "social_research_probe.technologies.scoring.score_items",
             lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("nope")),
         )
         out = asyncio.run(
@@ -147,10 +147,10 @@ class TestSynthesisServiceSuccess:
             return "synthesized"
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda r: "p",
         )
         out = asyncio.run(synth_svc.SynthesisService().execute_one({"topic": "x"}))
@@ -196,10 +196,10 @@ class TestPipelineYtCorroborateLLMSearchGate:
         with (
             patch("social_research_probe.config.load_active_config", return_value=cfg),
             patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("llm_search", "exa"),
             ),
-            patch("social_research_probe.services.corroborating.registry.get_provider") as gp,
+            patch("social_research_probe.services.corroborating.get_provider") as gp,
         ):
             healthy = MagicMock()
             healthy.health_check.return_value = True

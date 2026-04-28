@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.platforms import base, registry
+from social_research_probe.platforms import (
+    BaseResearchPlatform,
+    BaseStage,
+    FetchClient,
+    FetchLimits,
+    PlatformClient,
+    SearchClient,
+    registry,
+)
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.utils.core.errors import ValidationError
 
@@ -27,6 +35,24 @@ class TestRegistry:
 
     def test_list_clients_excludes_all(self):
         assert "all" not in registry.list_clients()
+
+    def test_register_and_get_roundtrip(self, monkeypatch):
+        class FakeClient(PlatformClient):
+            name = "fake-test-platform"
+
+            def __init__(self, config):
+                self.config = config
+
+            def health_check(self) -> bool:
+                return True
+
+        monkeypatch.setitem(registry.CLIENTS, "fake-test-platform", None)
+        registry.register(FakeClient)
+        assert "fake-test-platform" in registry.list_clients()
+        out = registry.get_client("fake-test-platform", {"k": 1})
+        assert isinstance(out, FakeClient)
+        assert out.config == {"k": 1}
+        registry.CLIENTS.pop("fake-test-platform", None)
 
 
 class TestPipelineState:
@@ -57,19 +83,19 @@ class TestPipelineState:
 
 def test_base_classes_abstract():
     with pytest.raises(TypeError):
-        base.PlatformClient()  # type: ignore[abstract]
+        PlatformClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.SearchClient()  # type: ignore[abstract]
+        SearchClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.FetchClient()  # type: ignore[abstract]
+        FetchClient()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.BaseStage()  # type: ignore[abstract]
+        BaseStage()  # type: ignore[abstract]
     with pytest.raises(TypeError):
-        base.BaseResearchPlatform()  # type: ignore[abstract]
+        BaseResearchPlatform()  # type: ignore[abstract]
 
 
 def test_fetch_limits_defaults():
-    fl = base.FetchLimits()
+    fl = FetchLimits()
     assert fl.max_items == 20
     assert fl.recency_days == 90
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services.base import FallbackService, ServiceResult
+from social_research_probe.services import FallbackService, ServiceResult
 
 
 class AudioReportService(FallbackService):

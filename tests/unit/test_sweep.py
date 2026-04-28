@@ -8,17 +8,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.scoring as compute_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.services.analyzing import statistics as stats_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.reporting import html as html_svc
-from social_research_probe.services.scoring import compute as compute_mod
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )
-from social_research_probe.technologies.corroborates._filters import _host
+from social_research_probe.technologies.corroborates import _host
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.report_render.html.raw_html import (
     markdown_to_html,
@@ -80,7 +80,7 @@ def test_yt_api_fetch_channel_failure(monkeypatch):
 def test_compute_normalize_with_metrics_short_metrics():
     from datetime import UTC, datetime
 
-    from social_research_probe.platforms.base import RawItem
+    from social_research_probe.platforms import RawItem
 
     items = [
         RawItem(

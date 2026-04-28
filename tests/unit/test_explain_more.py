@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+    _baseline_action,
+    _purpose_focus,
     explain_bayesian,
     explain_bootstrap,
     explain_huber,
@@ -15,10 +17,6 @@ from social_research_probe.services.synthesizing.explanations import (
     explain_pca,
     explain_polynomial,
     explain_regression,
-)
-from social_research_probe.services.synthesizing.explanations.topic_hint import (
-    _baseline_action,
-    _purpose_focus,
     topic_action_hint,
 )
 

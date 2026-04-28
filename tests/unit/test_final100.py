@@ -8,15 +8,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.scoring as compute_mod
+import social_research_probe.technologies.corroborates as filters_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.corroborating import corroborate as corr_svc
 from social_research_probe.services.reporting import audio as audio_svc
-from social_research_probe.services.scoring import compute as compute_mod
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import explain_descriptive
-from social_research_probe.technologies.corroborates import _filters as filters_mod
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+    explain_descriptive,
+)
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.tavily import TavilyProvider
 from social_research_probe.technologies.llms import gemini_cli
@@ -42,7 +44,7 @@ def test_corroborate_svc_str_data(monkeypatch):
             return {"verdict": "x"}
 
         monkeypatch.setattr(
-            "social_research_probe.services.corroborating.host.corroborate_claim", fake
+            "social_research_probe.technologies.corroborates.corroborate_claim", fake
         )
         out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
@@ -205,7 +207,7 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
         patch(
-            "social_research_probe.services.corroborating.registry.get_provider",
+            "social_research_probe.services.corroborating.get_provider",
             side_effect=ValidationError("nope"),
         ),
     ):
@@ -214,7 +216,9 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
 
 
 def test_formatter_render_full_no_summary(monkeypatch):
-    monkeypatch.setattr(formatter, "resolve_report_summary", lambda r: None)
+    import social_research_probe.utils.report.formatter as _fmt_mod
+
+    monkeypatch.setattr(_fmt_mod, "resolve_report_summary", lambda r: None)
     report = {
         "topic": "ai",
         "platform": "youtube",

@@ -9,7 +9,7 @@ import pytest
 
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.base import ServiceResult, TechResult
+from social_research_probe.services import ServiceResult, TechResult
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ class TestFetchStage:
 class TestScoreStage:
     def test_enabled_with_items(self, enabled_state, monkeypatch):
         enabled_state.set_stage_output("fetch", {"items": [{"id": "1"}], "engagement_metrics": []})
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         async def fake_one(self, data):
             return ServiceResult(
@@ -89,7 +89,7 @@ class TestScoreStage:
             names=("c",), method="m", evidence_priorities=()
         )
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.weights.resolve_scoring_weights",
+            "social_research_probe.services.scoring.resolve_scoring_weights",
             lambda cfg, m: {"trust": 0.5},
         )
         out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
@@ -117,7 +117,7 @@ class TestTranscriptStage:
         assert out.get_stage_output("transcript")["top_n"] == []
 
     def test_merge_no_success(self):
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         sr = ServiceResult(
             service_name="t",
@@ -175,7 +175,7 @@ class TestCorroborateStage:
         provider.health_check.return_value = False
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 return_value=provider,
             ):
                 out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
@@ -190,11 +190,11 @@ class TestCorroborateStage:
         provider.health_check.return_value = True
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("exa",),
             ):
                 with patch(
-                    "social_research_probe.services.corroborating.registry.get_provider",
+                    "social_research_probe.services.corroborating.get_provider",
                     return_value=provider,
                 ):
                     out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
@@ -209,7 +209,7 @@ class TestCorroborateStage:
         cfg.technology_enabled.return_value = True
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
             with patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 side_effect=ValidationError("x"),
             ):
                 out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
@@ -250,7 +250,7 @@ class TestCorroborateStage:
             lambda self: ["exa"],
         )
 
-        from social_research_probe.services.base import ServiceResult, TechResult
+        from social_research_probe.services import ServiceResult, TechResult
 
         async def fake_batch(self, items):
             return [
@@ -334,10 +334,10 @@ class TestSynthesisStage:
             return "synth"
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
         out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
@@ -348,10 +348,10 @@ class TestSynthesisStage:
             raise RuntimeError("x")
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
         out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))

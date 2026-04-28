@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.services.synthesizing.explanations._dispatch import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_explain import (
     contextual_explanation,
 )
 

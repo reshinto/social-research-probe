@@ -8,13 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.technologies.corroborates as _filters
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.all import pipeline as all_pipeline
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.services.synthesizing.explanations import explain_kmeans
-from social_research_probe.services.synthesizing.explanations.clustering import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_kaplan_meier,
+    explain_kmeans,
 )
 from social_research_probe.technologies.charts import (
     bar,
@@ -24,7 +25,6 @@ from social_research_probe.technologies.charts import (
     scatter,
     table,
 )
-from social_research_probe.technologies.corroborates import _filters
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.exa import ExaProvider
 from social_research_probe.technologies.corroborates.tavily import TavilyProvider
@@ -187,17 +187,9 @@ class TestAllPipelineRunFull:
                 state.outputs["report"] = {"k": 1}
                 return state
 
-        with (
-            patch.object(all_pipeline, "PIPELINES", create=True)
-            if False
-            else patch(
-                "social_research_probe.platforms.PIPELINES",
-                {"all": object, "youtube": FakePipeline},
-            ),
-            patch(
-                "social_research_probe.platforms.registry.get_client",
-                return_value=MagicMock(),
-            ),
+        with patch(
+            "social_research_probe.platforms.PIPELINES",
+            {"all": object, "youtube": FakePipeline},
         ):
             state = PipelineState(
                 platform_type="all",

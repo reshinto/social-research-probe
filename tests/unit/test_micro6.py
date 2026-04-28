@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock, patch
 
+import social_research_probe.services.scoring as compute_mod
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
-from social_research_probe.services.scoring import compute as compute_mod
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.exa import ExaProvider
 from social_research_probe.technologies.corroborates.llm_search import LLMSearchProvider
@@ -38,10 +38,10 @@ class TestYtTechnologyLogsException:
 
 
 class TestYtFetchItemsAsync:
-    def test_fetch_items_uses_connector(self, monkeypatch):
+    def test_fetch_items_calls_sourcing_service(self, monkeypatch):
         from datetime import UTC, datetime
 
-        from social_research_probe.platforms.base import RawItem
+        from social_research_probe.platforms import RawItem
 
         item = RawItem(
             id="1",
@@ -56,24 +56,12 @@ class TestYtFetchItemsAsync:
             extras={},
         )
 
-        class FakeConn:
-            default_limits = MagicMock()
+        async def fake_run(topic, config):
+            assert topic == "topic"
+            return [item], []
 
-            def __init__(self, cfg):
-                pass
-
-            def find_by_topic(self, topic, limits):
-                return [item]
-
-            async def fetch_item_details(self, items):
-                return items
-
-        from social_research_probe.platforms.registry import CLIENTS
-
-        monkeypatch.setitem(CLIENTS, "youtube", FakeConn)
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.compute_engagement_metrics",
-            lambda items: [],
+            "social_research_probe.services.sourcing.youtube.run_youtube_sourcing", fake_run
         )
         items, _em = asyncio.run(yt.YouTubeFetchStage()._fetch_items("topic", {}))
         assert len(items) == 1
@@ -99,7 +87,7 @@ class TestChartsRenderViaSuite:
             return []
 
         monkeypatch.setattr(
-            "social_research_probe.services.analyzing.charts_suite.render_all",
+            "social_research_probe.technologies.charts.render.render_all",
             fake_render_all,
         )
         out = asyncio.run(charts_svc.ChartsService._render([{"id": "1"}], tmp_path))

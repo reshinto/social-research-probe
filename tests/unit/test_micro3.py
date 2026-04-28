@@ -10,8 +10,8 @@ from social_research_probe.config import Config, _collect_service_names
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
-from social_research_probe.services.synthesizing import formatter
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers import formatter
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )
@@ -79,6 +79,9 @@ def test_orchestrator_fake_youtube_register(monkeypatch):
         captured.append(name)
         return MagicMock()
 
+    import social_research_probe.services.sourcing.youtube as yt_sourcing
+
+    monkeypatch.setattr(yt_sourcing, "run_youtube_sourcing", yt_sourcing.run_youtube_sourcing)
     monkeypatch.setattr("importlib.import_module", fake_import)
     orchestrator._maybe_register_fake()
     assert any("fake_youtube" in n for n in captured)
@@ -126,7 +129,7 @@ def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
         patch(
-            "social_research_probe.services.corroborating.registry.get_provider",
+            "social_research_probe.services.corroborating.get_provider",
             side_effect=ValidationError("nope"),
         ),
     ):

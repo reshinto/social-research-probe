@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_explain import (
     contextual_explanation,
+    infer_model,
+    parse_numeric,
+)
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_bayesian,
     explain_bootstrap,
     explain_correlation,
@@ -22,9 +26,7 @@ from social_research_probe.services.synthesizing.explanations import (
     explain_spearman,
     explain_spread,
     explain_tests,
-    infer_model,
 )
-from social_research_probe.services.synthesizing.explanations._common import parse_numeric
 
 
 class TestCommon:

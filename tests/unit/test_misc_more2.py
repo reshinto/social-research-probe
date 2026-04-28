@@ -8,13 +8,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.platforms.base import RawItem
+from social_research_probe.platforms import RawItem
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.analyzing import statistics as stats_svc
-from social_research_probe.services.sourcing.youtube import YouTubeConnector, _recency_cutoff
 from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
 from social_research_probe.technologies.transcript_fetch import (
     youtube_transcript_api as yt_api,
+)
+from social_research_probe.technologies.web_search import (
+    YouTubeHydrateTech,
+    YouTubeSearchTech,
+    _recency_cutoff,
 )
 
 
@@ -110,31 +114,11 @@ class TestSourcingYouTube:
     def test_recency_cutoff_zero(self):
         assert _recency_cutoff(0) is None
 
-    def test_init_uses_config(self, monkeypatch):
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {"max_items": 7, "recency_days": 14}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert conn.default_limits.max_items == 7
+    def test_search_tech_calls_search_youtube(self, monkeypatch):
+        from social_research_probe.platforms import FetchLimits
 
-    def test_health_check(self, monkeypatch):
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.youtube_health_check",
-            lambda: True,
-        )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert conn.health_check() is True
-
-    def test_find_by_topic(self, monkeypatch):
-        monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.search_youtube",
+            "social_research_probe.technologies.media_fetch.youtube_api.search_youtube",
             lambda topic, max_items, published_after: [
                 {
                     "id": {"videoId": "v"},
@@ -147,27 +131,13 @@ class TestSourcingYouTube:
                 }
             ],
         )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-            from social_research_probe.platforms.base import FetchLimits
-
-            out = conn.find_by_topic("t", FetchLimits())
+        out = asyncio.run(YouTubeSearchTech()._execute(("t", FetchLimits())))
         assert out[0].title == "T"
 
-    def test_fetch_item_details_empty(self):
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
-        assert asyncio.run(conn.fetch_item_details([])) == []
+    def test_hydrate_tech_empty(self):
+        assert asyncio.run(YouTubeHydrateTech()._execute(([], True))) == []
 
-    def test_fetch_item_details_basic(self, monkeypatch):
+    def test_hydrate_tech_merges(self, monkeypatch):
         async def fake_hydrate(vids, chids):
             return [
                 {
@@ -184,14 +154,9 @@ class TestSourcingYouTube:
             ]
 
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.hydrate_youtube", fake_hydrate
+            "social_research_probe.technologies.media_fetch.youtube_api.hydrate_youtube",
+            fake_hydrate,
         )
-        cfg = MagicMock()
-        cfg.platform_defaults.return_value = {}
-        with patch(
-            "social_research_probe.services.sourcing.youtube.load_active_config", return_value=cfg
-        ):
-            conn = YouTubeConnector({})
         item = RawItem(
             id="1",
             url="u",
@@ -204,7 +169,7 @@ class TestSourcingYouTube:
             thumbnail=None,
             extras={},
         )
-        out = asyncio.run(conn.fetch_item_details([item]))
+        out = asyncio.run(YouTubeHydrateTech()._execute(([item], True)))
         assert out[0].metrics["views"] == 100
         assert out[0].extras["channel_subscribers"] == 5
 
@@ -230,7 +195,8 @@ class TestChartsService:
         assert out and out[0].caption == "cap"
 
     def test_render_with_cache_miss_writes(self, monkeypatch, tmp_path):
-        from social_research_probe.technologies.charts.base import ChartResult
+        import social_research_probe.technologies.charts as charts_tech
+        from social_research_probe.technologies.charts import ChartResult
 
         monkeypatch.setattr(
             "social_research_probe.utils.caching.pipeline_cache.get_json",
@@ -245,10 +211,75 @@ class TestChartsService:
         async def fake_render(items, out):
             return [ChartResult(path=str(tmp_path / "y.png"), caption="c")]
 
+        # Cover both service and tech paths
         monkeypatch.setattr(charts_svc.ChartsService, "_render", staticmethod(fake_render))
         out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
         assert out[0].caption == "c"
         assert captured["v"]["captions"] == ["c"]
+
+        captured.clear()
+        monkeypatch.setattr(charts_tech, "_render", fake_render)
+        out2 = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out2[0].caption == "c"
+
+    def test_render_with_cache_tech_hits(self, monkeypatch, tmp_path):
+        """Cover technologies/charts/__init__.render_with_cache cache-hit branch (lines 106-108)."""
+        import social_research_probe.technologies.charts as charts_tech
+
+        png = tmp_path / "x.png"
+        png.write_bytes(b"x")
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.get_json",
+            lambda c, k: {"filenames": ["x.png"], "captions": ["cap"]},
+        )
+        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out and out[0].caption == "cap"
+
+    def test_render_with_cache_tech_hit_empty_restore(self, monkeypatch, tmp_path):
+        """Cover branch 107->109: cache hit but restore returns empty list → fall through to render."""
+        import social_research_probe.technologies.charts as charts_tech
+        from social_research_probe.technologies.charts import ChartResult
+
+        get_calls = [0]
+
+        def fake_get_json(c, k):
+            if get_calls[0] == 0:
+                get_calls[0] += 1
+                # Cache returns payload but png file missing → _restore_results returns []
+                return {"filenames": ["missing.png"], "captions": ["c"]}
+            return None
+
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.get_json",
+            fake_get_json,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.set_json",
+            lambda c, k, v: None,
+        )
+        monkeypatch.setattr(
+            charts_tech, "_render", lambda items, out: asyncio.coroutine(lambda: [])()
+        )
+
+        async def fake_render(items, out):
+            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
+
+        monkeypatch.setattr(charts_tech, "_render", fake_render)
+        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out[0].caption == "r"
+
+    def test_render_fn_uses_thread(self, monkeypatch, tmp_path):
+        """Cover technologies/charts/__init__._render lines directly."""
+        import social_research_probe.technologies.charts as charts_tech
+        import social_research_probe.technologies.charts.render as render_mod
+        from social_research_probe.technologies.charts import ChartResult
+
+        def fake_render_all(items, out):
+            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
+
+        monkeypatch.setattr(render_mod, "render_all", fake_render_all)
+        out = asyncio.run(charts_tech._render([{"id": "1"}], tmp_path))
+        assert out[0].caption == "r"
 
 
 class TestStatisticsService:

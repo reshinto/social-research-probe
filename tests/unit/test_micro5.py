@@ -7,19 +7,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.services.reporting as writer_svc
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
-from social_research_probe.services.llm import ensemble
-from social_research_probe.services.reporting import writer as writer_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
     explain_descriptive,
 )
+from social_research_probe.technologies.llms import ensemble
 from social_research_probe.technologies.llms.gemini_cli import GeminiRunner
 from social_research_probe.technologies.media_fetch import youtube_api
 from social_research_probe.technologies.statistics import (
@@ -118,7 +118,7 @@ class TestSynthesisServiceFailure:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         out = asyncio.run(synth_svc.SynthesisService().execute_one({"topic": "x"}))
         assert out.tech_results[0].success is False
@@ -259,7 +259,7 @@ class TestChartsSvcRestoredEmpty:
         captured = {}
 
         async def fake_render(items, out):
-            from social_research_probe.technologies.charts.base import ChartResult
+            from social_research_probe.technologies.charts import ChartResult
 
             png = tmp_path / "fresh.png"
             png.write_bytes(b"x")

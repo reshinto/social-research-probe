@@ -10,8 +10,6 @@ from enum import StrEnum
 from typing import ClassVar, TypedDict
 
 from social_research_probe.config import load_active_config
-from social_research_probe.services.llm.prompts import GEMINI_MEDIA_PROMPT
-from social_research_probe.services.llm.registry import register
 from social_research_probe.technologies.llms import (
     AgenticSearchCitation,
     AgenticSearchResult,
@@ -19,6 +17,8 @@ from social_research_probe.technologies.llms import (
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as subprocess_run
+from social_research_probe.utils.llm.prompts import GEMINI_MEDIA_PROMPT
+from social_research_probe.utils.llm.registry import register
 
 
 class GeminiCliFlag(StrEnum):

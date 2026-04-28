@@ -14,7 +14,7 @@ class TestScoringService:
 
     def test_execute_one_basic(self, monkeypatch):
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.compute.score_items",
+            "social_research_probe.technologies.scoring.score_items",
             lambda i, m, w: [{"overall_score": 1.0}, {"overall_score": 0.5}],
         )
         svc = ScoringService()
@@ -26,7 +26,7 @@ class TestScoringService:
 
     def test_execute_one_with_weights(self, monkeypatch):
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.compute.score_items",
+            "social_research_probe.technologies.scoring.score_items",
             lambda i, m, w: [{"overall_score": w.get("trust", 0.0)}],
         )
         svc = ScoringService()

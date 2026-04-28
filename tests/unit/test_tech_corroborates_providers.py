@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
 )

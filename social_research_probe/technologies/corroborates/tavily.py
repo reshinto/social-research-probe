@@ -17,11 +17,11 @@ from typing import ClassVar
 
 import httpx
 
-from social_research_probe.services.corroborating.registry import register
-from social_research_probe.technologies.corroborates._filters import filter_results
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
+    filter_results,
+    register,
 )
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.display.progress import log

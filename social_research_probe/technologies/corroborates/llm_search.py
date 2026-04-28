@@ -18,10 +18,10 @@ from __future__ import annotations
 import asyncio
 from typing import ClassVar
 
-from social_research_probe.services.corroborating.registry import register
-from social_research_probe.technologies.corroborates.base import (
+from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
+    register,
 )
 from social_research_probe.utils.display.progress import log
 
@@ -48,7 +48,9 @@ def _format_origin_sources(urls: list[str]) -> str:
 
 
 def _build_prompt(claim_text: str, origin_urls: list[str]) -> str:
-    from social_research_probe.services.llm.prompts import LLM_SEARCH_CORROBORATION_PROMPT
+    from social_research_probe.utils.llm.prompts import (
+        LLM_SEARCH_CORROBORATION_PROMPT,
+    )
 
     return LLM_SEARCH_CORROBORATION_PROMPT.format(
         claim_text=claim_text,
@@ -97,7 +99,10 @@ class LLMSearchProvider(CorroborationProvider):
 
     def health_check(self) -> bool:
         """Return True when at least one registered LLM runner is healthy."""
-        from social_research_probe.services.llm.registry import get_runner, list_runners
+        from social_research_probe.utils.llm.registry import (
+            get_runner,
+            list_runners,
+        )
 
         for name in list_runners():
             try:
@@ -115,7 +120,7 @@ class LLMSearchProvider(CorroborationProvider):
 
     @classmethod
     def _run_llm(cls, prompt: str) -> dict:
-        from social_research_probe.services.llm.registry import run_with_fallback
+        from social_research_probe.utils.llm.registry import run_with_fallback
 
         return run_with_fallback(prompt, schema=_RESPONSE_SCHEMA, preferred=cls._preferred_runner())
 

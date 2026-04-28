@@ -15,7 +15,7 @@ from social_research_probe.commands import ConfigSubcommand
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.config import _active_data_dir
-from social_research_probe.platforms.base import (
+from social_research_probe.platforms import (
     BaseResearchPlatform,
     BaseStage,
     run_stages,
@@ -23,7 +23,7 @@ from social_research_probe.platforms.base import (
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
-from social_research_probe.services.synthesizing.explanations import (
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_kaplan_meier,
 )
 from social_research_probe.technologies.charts import histogram
@@ -297,9 +297,8 @@ class TestChartsServiceFailures:
             raise RuntimeError("nope")
 
         monkeypatch.setattr(
-            charts_svc.ChartsService,
-            "_render_with_cache",
-            classmethod(lambda cls, i, d: boom(i, d)),
+            "social_research_probe.technologies.charts.render_with_cache",
+            boom,
         )
         cfg = MagicMock()
         cfg.data_dir = Path("/tmp/test-charts-failures")

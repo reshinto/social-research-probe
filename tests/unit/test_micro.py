@@ -9,10 +9,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.technologies.corroborates as _filters
 from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.synthesizing.explanations import explain_spearman
+from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+    explain_spearman,
+)
 from social_research_probe.technologies.charts import histogram
-from social_research_probe.technologies.corroborates import _filters
 from social_research_probe.technologies.media_fetch import yt_dlp
 from social_research_probe.technologies.statistics import (
     bayesian_linear,
@@ -105,11 +107,11 @@ class TestPipelineYtCorroborateExecuteFastMode:
         with (
             patch("social_research_probe.config.load_active_config", return_value=cfg),
             patch(
-                "social_research_probe.services.corroborating.providers.auto_mode_providers",
+                "social_research_probe.services.corroborating.auto_mode_providers",
                 return_value=("exa", "brave"),
             ),
             patch(
-                "social_research_probe.services.corroborating.registry.get_provider",
+                "social_research_probe.services.corroborating.get_provider",
                 side_effect=[provider, ValidationError("x")],
             ),
         ):

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import tempfile
 
-from social_research_probe.technologies.charts.base import ChartResult
+from social_research_probe.technologies.charts import ChartResult
 
 
 def _fit_and_residuals(x: list[float], y: list[float]) -> tuple[list[float], list[float]]:
@@ -62,11 +62,11 @@ def render(
         try:
             _render_with_matplotlib(fitted, residuals, path, label)
         except Exception:
-            from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+            from social_research_probe.technologies.charts import write_placeholder_png
 
             write_placeholder_png(path)
     else:
-        from social_research_probe.technologies.charts._png_writer import write_placeholder_png
+        from social_research_probe.technologies.charts import write_placeholder_png
 
         write_placeholder_png(path)
 

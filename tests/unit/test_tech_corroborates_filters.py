@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from social_research_probe.technologies.corroborates import _filters
+import social_research_probe.technologies.corroborates as _filters
 
 
 class TestHost:
