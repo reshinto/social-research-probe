@@ -25,9 +25,7 @@ def auto_mode_providers() -> tuple[str, ...]:
     cfg = load_active_config()
     if not cfg.service_enabled("corroborating"):
         return ()
-    return tuple(
-        name for name in ("exa", "brave", "tavily", "llm_search") if cfg.technology_enabled(name)
-    )
+    return ("exa", "brave", "tavily", "llm_search")
 
 
 __all__ = [
