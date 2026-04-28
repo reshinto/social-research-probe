@@ -132,7 +132,7 @@ class HeuristicClassifier(BaseTechnology[dict, SourceClass]):
     """Curated channel map plus title/name regex signals; zero cost."""
 
     name: ClassVar[str] = "classifying.heuristic"
-    enabled_config_key: ClassVar[str] = ""
+    enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
         channel = str(data.get("channel") or data.get("author_name") or "")
@@ -173,7 +173,7 @@ class LLMClassifier(BaseTechnology[dict, SourceClass]):
     """Asks the configured LLM runner to classify the channel into the enum."""
 
     name: ClassVar[str] = "classifying.llm"
-    enabled_config_key: ClassVar[str] = ""
+    enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
         from social_research_probe.config import load_active_config
@@ -197,7 +197,7 @@ class HybridClassifier(BaseTechnology[dict, SourceClass]):
     """Heuristic first, LLM fallback when curated map yields ``unknown``."""
 
     name: ClassVar[str] = "classifying.hybrid"
-    enabled_config_key: ClassVar[str] = ""
+    enabled_config_key: ClassVar[str] = "classifying"
 
     def __init__(self) -> None:
         super().__init__()

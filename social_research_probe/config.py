@@ -54,6 +54,7 @@ DEFAULT_CONFIG: AppConfig = {
     "stages": {
         "youtube": {
             "fetch": True,
+            "classify": True,
             "score": True,
             "transcript": True,
             "summary": True,
@@ -70,6 +71,7 @@ DEFAULT_CONFIG: AppConfig = {
     "services": {
         "youtube": {
             "sourcing": {"youtube": True},
+            "classifying": {"source_class": True},
             "scoring": {"score": True},
             "enriching": {"transcript": True, "summary": True},
             "corroborating": {"corroborate": True},
@@ -82,6 +84,7 @@ DEFAULT_CONFIG: AppConfig = {
         "enrich": {"llm": True},
     },
     "technologies": {
+        "classifying": True,
         "youtube_api": True,
         "youtube_transcript_api": True,
         "whisper": True,

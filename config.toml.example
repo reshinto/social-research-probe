@@ -81,6 +81,7 @@ cache_ttl_channel_hours = 24
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
 fetch = true                 # Fetch YouTube search results and metadata.
+classify = true              # Classify each item's channel into a source_class label before scoring.
 score = true                 # Rank items by trust, trend, and opportunity.
 transcript = true            # Fetch captions or fallback transcripts.
 summary = true               # Generate per-item LLM summaries.
@@ -156,6 +157,10 @@ corroboration = true
 llm = true
 
 [technologies]
+# Enables source-class classification technologies (heuristic, LLM, hybrid).
+# Set to false to skip all classification and leave source_class as "unknown".
+classifying = true
+
 # Enables YouTube Data API v3 calls for search and metadata. This requires a
 # YouTube API key and consumes Google quota units.
 youtube_api = true
