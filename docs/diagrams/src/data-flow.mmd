@@ -1,6 +1,6 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Query["topic + purpose"] --> Fetch["fetch items"] --> Score["score and rank"]
+  Query["topic + purpose"] --> Fetch["fetch items"] --> Classify["classify source type"] --> Score["score and rank"]
   Score --> Parallel["parallel analysis"]
   Parallel --> Transcript["transcripts"]
   Parallel --> Stats["statistics"]
@@ -16,6 +16,6 @@ flowchart LR
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
   class Query input;
-  class Fetch,Score,Transcript,Summary,Corroborate,Synthesis,Assemble process;
+  class Fetch,Classify,Score,Transcript,Summary,Corroborate,Synthesis,Assemble process;
   class Parallel,Stats,Charts analysis;
   class Render output;

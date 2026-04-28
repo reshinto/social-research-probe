@@ -34,16 +34,17 @@ Each scored item receives:
 
 | Field | Meaning |
 | --- | --- |
-| `trust` | Reliability-oriented score from source and credibility signals. |
-| `trend` | Momentum score from velocity, engagement, repetition, and recency. |
-| `opportunity` | Usefulness/opportunity score from market gap, monetization proxy, feasibility, and novelty. |
-| `overall_score` | Weighted combination of trust, trend, and opportunity. |
+| `source_class` | Source type label: `primary`, `secondary`, `commentary`, or `unknown`. Set by the classify stage before scoring. |
+| `scores.trust` | Reliability-oriented score from source and credibility signals. |
+| `scores.trend` | Momentum score from velocity, engagement, repetition, and recency. |
+| `scores.opportunity` | Usefulness/opportunity score from market gap, monetization proxy, feasibility, and novelty. |
+| `scores.overall` | Weighted combination of trust, trend, and opportunity. |
 | `features.view_velocity` | Views per day or equivalent platform velocity signal. |
 | `features.engagement_ratio` | Engagement divided by views, with safe handling for zero views. |
 | `features.age_days` | Age of the item in days. |
 | `features.subscriber_count` | Source/channel size when available. |
 
-After these fields are added, items are sorted by `overall_score` descending.
+After these fields are added, items are sorted by `scores.overall` descending.
 The top items become the main candidates for transcript fetching, summarization,
 corroboration, and deeper report work.
 
@@ -206,7 +207,7 @@ may be useful, under-covered, or worth deeper review.
 The final score is:
 
 ```text
-overall_score =
+scores.overall =
   0.45 * trust
 + 0.30 * trend
 + 0.25 * opportunity

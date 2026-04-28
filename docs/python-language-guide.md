@@ -157,7 +157,7 @@ A dictionary maps keys to values:
 item = {
     "title": "Understanding AI agents",
     "url": "https://example.com/video",
-    "overall_score": 0.84,
+    "scores": {"overall": 0.84, "trust": 0.75, "trend": 0.91, "opportunity": 0.62},
 }
 ```
 
@@ -819,10 +819,10 @@ consumer can iterate without storing everything first.
 Python can sort values:
 
 ```python
-items = sorted(items, key=lambda item: item["overall_score"], reverse=True)
+items = sorted(items, key=lambda item: item["scores"]["overall"], reverse=True)
 ```
 
-`lambda item: item["overall_score"]` is a small anonymous function used only for
+`lambda item: item["scores"]["overall"]` is a small anonymous function used only for
 sorting.
 
 Use named functions instead of lambdas when the logic is more than one simple

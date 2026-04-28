@@ -11,12 +11,13 @@ A research run starts with `srp research` and ends with a report path or local s
 1. The CLI parses the topic and purpose names.
 2. The orchestrator loads purposes, merges the selected purpose definitions, and builds platform config.
 3. The platform pipeline fetches items and engagement metrics. Today this is the YouTube adapter.
-4. The scorer ranks items by trust, trend, opportunity, and overall score.
-5. Transcript fetching, statistics, and chart rendering run in parallel.
-6. The summary service summarizes the transcript-enriched top-N items when an LLM runner is available.
-7. Corroboration checks extracted claims through healthy configured providers.
-8. Synthesis and assembly build the report dictionary.
-9. Reporting writes Markdown, HTML, chart PNGs, and optional narration.
+4. The classifier assigns a `source_class` label (`primary`, `secondary`, `commentary`, or `unknown`) to each fetched item.
+5. The scorer ranks items by trust, trend, opportunity, and overall score stored under `scores.*`.
+6. Transcript fetching, statistics, and chart rendering run in parallel.
+7. The summary service summarizes the transcript-enriched top-N items when an LLM runner is available.
+8. Corroboration checks extracted claims through healthy configured providers.
+9. Synthesis and assembly build the report dictionary.
+10. Reporting writes Markdown, HTML, chart PNGs, and optional narration.
 
 The topic is the subject being investigated. The purpose is the lens used to interpret that subject. For example, the same topic can be researched as `latest-news`, `trend-analysis`, or `risk-review`; the platform fetch may start from similar search results, but the ranking and final narrative should emphasize different evidence.
 
@@ -45,6 +46,7 @@ Imagine the topic is `"AI agents"` and the purpose is `"latest-news"`.
 | Stage | What it contributes |
 | --- | --- |
 | Fetch | Candidate platform items about AI agents. |
+| Classify | Source type labels (`primary`, `secondary`, `commentary`, or `unknown`) for each item. |
 | Score | A ranked list based on the configured purpose and available features. |
 | Enrich | Extra text and metadata for the strongest items. |
 | Summarize | Short item-level summaries when a runner is available. |
