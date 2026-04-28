@@ -30,7 +30,7 @@ class YouTubeSourcingService(BaseService[str, dict]):
     """Bundle search → hydrate → engagement metrics for one topic."""
 
     service_name: ClassVar[str] = "youtube.sourcing"
-    enabled_config_key: ClassVar[str] = "services.youtube.sourcing"
+    enabled_config_key: ClassVar[str] = "services.youtube.sourcing.youtube"
 
     def __init__(self, config: dict | None = None) -> None:
         self.config = config or {}
@@ -43,6 +43,8 @@ class YouTubeSourcingService(BaseService[str, dict]):
 
     async def execute_one(self, data: str) -> ServiceResult:
         """Run the three techs sequentially: search → hydrate → engagement."""
+        if not self.is_enabled():
+            return ServiceResult(service_name=self.service_name, input_key=data, tech_results=[])
         topic = data
         limits = _resolve_default_limits()
         include_shorts = bool(self.config.get("include_shorts", True))
