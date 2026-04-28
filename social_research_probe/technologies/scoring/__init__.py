@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
-from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS, overall_score
+from social_research_probe.technologies.scoring.combine import overall_score
 from social_research_probe.technologies.scoring.opportunity import opportunity_score
 from social_research_probe.technologies.scoring.trend import trend_score
 from social_research_probe.technologies.scoring.trust import trust_score
