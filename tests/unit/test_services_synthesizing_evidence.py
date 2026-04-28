@@ -50,6 +50,26 @@ class TestEvidenceSummarize:
         assert "top-N source mix" in out
 
 
+class TestAuthorNameOf:
+    def test_dict_author_name(self):
+        assert evidence._author_name_of({"author_name": "X"}) == "X"
+
+    def test_dict_falls_back_to_channel(self):
+        assert evidence._author_name_of({"channel": "Y"}) == "Y"
+
+    def test_dict_empty(self):
+        assert evidence._author_name_of({}) == ""
+
+    def test_object_author_name(self):
+        assert evidence._author_name_of(_raw(1, "Z")) == "Z"
+
+    def test_object_missing_attr(self):
+        class Bare:
+            pass
+
+        assert evidence._author_name_of(Bare()) == ""
+
+
 class TestEvidenceEngagementSummary:
     def test_no_data(self):
         assert evidence.summarize_engagement_metrics([]) == "no data"

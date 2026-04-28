@@ -25,10 +25,10 @@ same item.
 | `rank` | Ordinal | Zero-based index in the scored list. | Lower rank means the item appears earlier in the final ranking. |
 | `is_top_n` | Binary | `1` when `rank < 5`, otherwise `0`. | Useful for models that ask what separates the top five from the rest. |
 | `is_top_tenth` | Binary | `1` when the item is inside the top tenth of the list, with a minimum cutoff of two. | Useful for larger result sets where "top five" is too blunt. |
-| `overall` | Continuous score | `overall_score` from the scoring stage. | Final ranking score. Higher means the item is more useful for the query. |
-| `trust` | Continuous score | `trust` from the scoring stage. | Higher means stronger source or reliability signal. |
-| `trend` | Continuous score | `trend` from the scoring stage. | Higher means stronger recency or momentum signal. |
-| `opportunity` | Continuous score | `opportunity` from the scoring stage. | Higher means the item may be useful despite not being obvious from popularity alone. |
+| `overall` | Continuous score | `scores.overall` from the scoring stage. | Final ranking score. Higher means the item is more useful for the query. |
+| `trust` | Continuous score | `scores.trust` from the scoring stage. | Higher means stronger source or reliability signal. |
+| `trend` | Continuous score | `scores.trend` from the scoring stage. | Higher means stronger recency or momentum signal. |
+| `opportunity` | Continuous score | `scores.opportunity` from the scoring stage. | Higher means the item may be useful despite not being obvious from popularity alone. |
 | `view_velocity` | Continuous feature | `features.view_velocity`. | Approximate views per day. High values mean fast audience growth. |
 | `engagement_ratio` | Continuous feature | `features.engagement_ratio`. | Engagement relative to views. High values mean viewers interact more often. |
 | `age_days` | Continuous feature | `features.age_days`. | Days since upload. Larger values mean older items. |

@@ -150,9 +150,6 @@ def write_html_report(
     """Write an HTML report to data_dir/reports/ and return its path."""
     cfg = load_active_config()
     data_dir = cfg.data_dir
-    if not cfg.stage_enabled("youtube", "report") or not cfg.service_enabled("html"):
-        raise RuntimeError("HTML report generation is disabled by config")
-
     reports_dir = data_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -332,10 +329,9 @@ def _fetch_voicebox_profiles(api_base: str) -> list[dict[str, str]]:
 
 
 def _audio_report_enabled() -> bool:
-    """Return whether pre-rendered Voicebox audio is enabled."""
+    """Return whether pre-rendered Voicebox audio is enabled (technology gate only)."""
     try:
-        cfg = load_active_config()
-        return cfg.stage_enabled("youtube", "report") and cfg.service_enabled("audio")
+        return load_active_config().technology_enabled("voicebox")
     except Exception:
         return True
 

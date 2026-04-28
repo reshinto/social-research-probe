@@ -37,7 +37,8 @@ class TestEnsembleSynthesize:
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.technology_enabled.return_value = True
-        out = asyncio.run(ensemble._synthesize({"a": "x", "b": "y"}, "orig", cfg))
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        out = asyncio.run(ensemble._synthesize({"a": "x", "b": "y"}, "orig"))
         assert out == "out"
 
     def test_synthesize_falls_back_to_best(self, monkeypatch):
@@ -48,7 +49,10 @@ class TestEnsembleSynthesize:
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.technology_enabled.return_value = True
-        out = asyncio.run(ensemble._synthesize({"claude": "ans"}, "orig", cfg))
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        # Two responses → enters synthesis loop, all providers fail, falls
+        # back to priority-ordered single response.
+        out = asyncio.run(ensemble._synthesize({"claude": "ans", "gemini": "alt"}, "orig"))
         assert out == "ans"
 
 

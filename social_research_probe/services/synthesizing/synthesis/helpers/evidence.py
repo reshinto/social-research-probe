@@ -69,8 +69,14 @@ def summarize_engagement_metrics(engagement_metrics: list[EngagementMetrics]) ->
     return "; ".join(parts)
 
 
-def _unique_channels(items: list[RawItem]) -> int:
-    return len({it.author_name for it in items if it.author_name})
+def _author_name_of(item: object) -> str:
+    if isinstance(item, dict):
+        return str(item.get("author_name") or item.get("channel") or "")
+    return str(getattr(item, "author_name", "") or "")
+
+
+def _unique_channels(items: list) -> int:
+    return len({name for it in items if (name := _author_name_of(it))})
 
 
 def _median_age_days(engagement_metrics: list[EngagementMetrics], now: datetime) -> float | None:

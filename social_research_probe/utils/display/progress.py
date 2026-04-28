@@ -123,7 +123,7 @@ def _summarize_sequence(value: list[object] | tuple[object, ...]) -> dict[str, o
 def _summarize_container_value(value: object) -> object:
     if isinstance(value, dict):
         summary: dict[str, object] = {"type": "dict", "keys": sorted(str(k) for k in value)}
-        for key in ("id", "title", "url", "overall_score", "report_path"):
+        for key in ("id", "title", "url", "report_path"):
             if key in value:
                 summary[key] = value[key]
         return summary

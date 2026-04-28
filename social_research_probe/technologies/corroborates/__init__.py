@@ -131,16 +131,24 @@ def register(cls: type[CorroborationProvider]) -> type[CorroborationProvider]:
 
 
 def get_provider(name: str) -> CorroborationProvider:
-    """Instantiate and return the named provider."""
+    """Instantiate and return the named provider if its technology is enabled."""
+    from social_research_probe.config import load_active_config
+
     if name not in _REGISTRY:
         known = sorted(_REGISTRY.keys())
         raise ValidationError(f"unknown corroboration provider: {name!r} (registered: {known})")
+    cfg = load_active_config()
+    if not cfg.technology_enabled(name):
+        raise ValidationError(f"corroboration provider {name!r} is not enabled")
     return _REGISTRY[name]()
 
 
 def list_providers() -> list[str]:
-    """Return a sorted list of registered provider names."""
-    return sorted(_REGISTRY.keys())
+    """Return a sorted list of registered provider names that are technology-enabled."""
+    from social_research_probe.config import load_active_config
+
+    cfg = load_active_config()
+    return sorted(name for name in _REGISTRY if cfg.technology_enabled(name))
 
 
 def ensure_providers_registered() -> None:

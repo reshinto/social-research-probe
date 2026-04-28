@@ -47,10 +47,6 @@ def run_required_synthesis(report: dict) -> dict | None:
     failures: list[str] = []
     runners = structured_runner_order(preferred)
     for i, runner_name in enumerate(runners, start=1):
-        if not cfg.technology_enabled(runner_name):
-            log(f"[srp] synthesis: runner={runner_name} outcome=disabled_by_config")
-            failures.append(f"{runner_name}: disabled by technologies.{runner_name}")
-            continue
         log(f"[srp] synthesis: attempting runner {i}/{len(runners)} ({runner_name})")
         try:
             runner = get_runner(runner_name)

@@ -81,6 +81,7 @@ cache_ttl_channel_hours = 24
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
 fetch = true                 # Fetch YouTube search results and metadata.
+classify = true              # Classify each item's channel into a source_class label before scoring.
 score = true                 # Rank items by trust, trend, and opportunity.
 transcript = true            # Fetch captions or fallback transcripts.
 summary = true               # Generate per-item LLM summaries.
@@ -97,6 +98,21 @@ narration = true             # Render audio narration through Voicebox or fallba
 # Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
 # youtube_api_key secret when live YouTube fetching is used.
 youtube = true
+
+[services.youtube.classifying]
+# Enables source_class classification (primary | secondary | commentary |
+# unknown) for each fetched item before scoring. When false, every item
+# falls back to "unknown" without invoking any provider.
+source_class = true
+
+# Provider used for classification:
+#   "heuristic" — curated channel map plus channel-name and title regex,
+#                 zero cost. Items not in the map fall back to "unknown".
+#   "llm"       — single LLM call per unknown channel via the active
+#                 free-text runner. Requires the LLM service gate to be on
+#                 and a runner enabled in [technologies].
+#   "hybrid"    — heuristic first, LLM fallback for unknown channels.
+provider = "hybrid"
 
 [services.youtube.scoring]
 # Enables trust/trend/opportunity scoring through overall_score().
@@ -141,6 +157,10 @@ corroboration = true
 llm = true
 
 [technologies]
+# Enables source-class classification technologies (heuristic, LLM, hybrid).
+# Set to false to skip all classification and leave source_class as "unknown".
+classifying = true
+
 # Enables YouTube Data API v3 calls for search and metadata. This requires a
 # YouTube API key and consumes Google quota units.
 youtube_api = true

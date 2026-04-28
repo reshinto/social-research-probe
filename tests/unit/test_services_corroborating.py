@@ -59,7 +59,7 @@ class TestRegistry:
         with pytest.raises(ValidationError):
             registry.get_provider("def-missing")
 
-    def test_register_get(self):
+    def test_register_get(self, monkeypatch):
         class P(CorroborationProvider):
             name = "test_register_get_p"
 
@@ -69,6 +69,9 @@ class TestRegistry:
             async def corroborate(self, claim):
                 return _result("supported", 0.5)
 
+        cfg = MagicMock()
+        cfg.technology_enabled.return_value = True
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
         registry.register(P)
         assert isinstance(registry.get_provider("test_register_get_p"), P)
         assert "test_register_get_p" in registry.list_providers()
@@ -78,11 +81,19 @@ class TestRegistry:
 
 
 class TestProviders:
-    def test_auto_mode_filters(self):
+    def test_auto_mode_returns_all_when_service_enabled(self, monkeypatch):
         cfg = MagicMock()
-        cfg.technology_enabled.side_effect = lambda n: n in {"exa", "tavily"}
-        out = providers.auto_mode_providers(cfg)
-        assert out == ("exa", "tavily")
+        cfg.service_enabled.return_value = True
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = providers.auto_mode_providers()
+        assert out == ("exa", "brave", "tavily", "llm_search")
+
+    def test_auto_mode_returns_empty_when_service_disabled(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.service_enabled.return_value = False
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = providers.auto_mode_providers()
+        assert out == ()
 
 
 class TestCorroborateClaim:

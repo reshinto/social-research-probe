@@ -7,7 +7,7 @@ _VIEW_EVENT_THRESHOLD = 100_000
 
 
 def _score(items: list[dict], field: str) -> list[float]:
-    return [float(d.get(field, 0.0)) for d in items]
+    return [float((d.get("scores") or {}).get(field, 0.0)) for d in items]
 
 
 def _feature(items: list[dict], field: str) -> list[float]:
@@ -49,7 +49,7 @@ def build_targets(scored_items: list[dict]) -> dict[str, list]:
         "rank": [float(r) for r in ranks],
         "is_top_n": _binary(ranks, _TOP_N_CUTOFF),
         "is_top_tenth": _binary(ranks, _top_tenth_cutoff(len(scored_items))),
-        "overall": _score(scored_items, "overall_score"),
+        "overall": _score(scored_items, "overall"),
         "trust": _score(scored_items, "trust"),
         "trend": _score(scored_items, "trend"),
         "opportunity": _score(scored_items, "opportunity"),

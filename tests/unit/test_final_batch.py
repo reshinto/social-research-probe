@@ -74,7 +74,8 @@ def test_ensemble_synthesize_only_codex(monkeypatch):
         return None
 
     monkeypatch.setattr(ensemble, "_run_provider", fake_run)
-    out = asyncio.run(ensemble._synthesize({"codex": "x"}, "p", cfg))
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+    out = asyncio.run(ensemble._synthesize({"codex": "x"}, "p"))
     assert out == "x"
 
 

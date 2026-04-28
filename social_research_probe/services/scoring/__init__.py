@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from social_research_probe.config import Config
 from social_research_probe.technologies.scoring import (
     _metric_values,
     age_days,
@@ -38,13 +37,16 @@ __all__ = [
 ]
 
 
-def resolve_scoring_weights(cfg: Config, merged: MergedPurpose) -> dict[str, float]:
+def resolve_scoring_weights(merged: MergedPurpose) -> dict[str, float]:
     """Merge spec §6 defaults with config-wide overrides, then purpose-specific overrides.
 
     Precedence (later wins): DEFAULT_WEIGHTS → [scoring.weights] in config.toml →
     merged purpose ``scoring_overrides``. Only keys ``trust``, ``trend``, and
     ``opportunity`` are recognised; unknown keys are silently ignored.
     """
+    from social_research_probe.config import load_active_config
+
+    cfg = load_active_config()
     resolved: dict[str, float] = dict(DEFAULT_WEIGHTS)
     config_weights = cfg.raw.get("scoring", {}).get("weights", {})
     for key in ("trust", "trend", "opportunity"):

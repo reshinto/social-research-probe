@@ -360,3 +360,12 @@ def test_run_youtube_sourcing_returns_items_and_engagement(monkeypatch):
     items, em = asyncio.run(run_youtube_sourcing("topic"))
     assert len(items) == 1
     assert len(em) == 1
+
+
+def test_service_execute_one_disabled(monkeypatch):
+    cfg = MagicMock()
+    cfg.service_enabled.return_value = False
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+    service = YouTubeSourcingService()
+    result = asyncio.run(service.execute_one("topic"))
+    assert result.tech_results == []

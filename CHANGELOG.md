@@ -65,6 +65,11 @@ Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current document
 - Expanded architecture, design-pattern, configuration, corroboration, cost, data-directory, security, synthesis, testing, runtime-dependency, model-applicability, module-reference, usage, and platform-extension documentation with more context, tradeoffs, and practical guidance.
 - Updated diagram styling across generated SVGs to use white canvases with meaningful colored nodes for dark-mode readability.
 - Updated `config.toml.example` and `.env.example` so every active setting has a comment and stale runner model examples are removed.
+- Updated `docs/scoring.md` scored-item field table to reflect nested `scores.*` structure (`scores.trust`, `scores.trend`, `scores.opportunity`, `scores.overall`) and added `source_class` field.
+- Updated `docs/charts.md` and `docs/statistics.md` to reference `scores.*` fields instead of flat field names.
+- Updated `docs/python-language-guide.md` example dict and sorting lambda to use nested `scores` structure.
+- Updated `docs/how-it-works.md` to add the classify stage (step 4) and mental model table row between fetch and score.
+- Updated `docs/diagrams/src/data-flow.mmd` to add Classify node between Fetch and Score; regenerated `data-flow.svg`.
 
 ### Fixed
 
@@ -78,6 +83,7 @@ Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current document
 - Fixed research CLI ambiguity by requiring or resolving platform arguments through the current parser rules.
 - Fixed stale `.env.example` corroboration wording that still referred to backend selection and outdated Brave pricing assumptions.
 - Fixed test suite `PermissionError`s on macOS by mocking HTTP server binds and restricting file writes inside `~/.claude` during local test sandbox execution.
+- Fixed `YouTubeSourcingService.execute_one()` to gate on service-level feature flag; updated `enabled_config_key` to use correct config leaf name.
 
 ### Removed
 

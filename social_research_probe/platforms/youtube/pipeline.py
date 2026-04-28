@@ -42,6 +42,121 @@ class YouTubeFetchStage(BaseStage):
         return state
 
 
+class YouTubeClassifyStage(BaseStage):
+    """Classify each fetched item's channel into a source_class enum value.
+
+    Runs between fetch and score so downstream stages read a meaningful
+    ``source_class`` instead of a hardcoded ``"unknown"``. Falls back to
+    ``"unknown"`` when the service gate is off or the chosen provider
+    returns no signal so the report still renders.
+    """
+
+    def stage_name(self) -> str:
+        return "classify"
+
+    @staticmethod
+    def _channel_of(item: dict) -> str:
+        return str(item.get("channel") or item.get("author_name") or "")
+
+    @staticmethod
+    def _to_dict(item: object) -> dict | None:
+        from social_research_probe.technologies.scoring import normalize_item
+
+        return normalize_item(item)
+
+    @staticmethod
+    def _normalize_items(raw_items: list) -> list[dict]:
+        cls = YouTubeClassifyStage
+        return [d for d in (cls._to_dict(it) for it in raw_items) if d is not None]
+
+    @staticmethod
+    def _existing_class(item: dict) -> str:
+        from social_research_probe.technologies.classifying import coerce_class
+
+        return coerce_class(item.get("source_class"))
+
+    @staticmethod
+    def _output_class(result) -> str:
+        from social_research_probe.technologies.classifying import coerce_class
+
+        for tr in result.tech_results:
+            if tr.success and isinstance(tr.output, str):
+                return coerce_class(tr.output)
+        return "unknown"
+
+    @staticmethod
+    def _title_overrides_to_commentary(item: dict) -> bool:
+        from social_research_probe.technologies.classifying import (
+            classify_by_title_signal,
+        )
+
+        return classify_by_title_signal(str(item.get("title") or "")) == "commentary"
+
+    @classmethod
+    def _enrich(cls, item: dict, base_class: str) -> dict:
+        enriched = dict(item)
+        enriched["source_class"] = (
+            "commentary" if cls._title_overrides_to_commentary(item) else base_class
+        )
+        return enriched
+
+    @classmethod
+    async def _resolve_class_for(cls, service, item: dict, cache: dict[str, str]) -> str:
+        existing = cls._existing_class(item)
+        if existing != "unknown":
+            return existing
+
+        channel = cls._channel_of(item)
+        if channel in cache:
+            return cache[channel]
+
+        result = await service.execute_one(item)
+        resolved = cls._output_class(result)
+        cache[channel] = resolved
+        return resolved
+
+    @classmethod
+    async def _classify(cls, items: list[dict]) -> list[dict]:
+        from social_research_probe.services.classifying.source_class import (
+            SourceClassService,
+        )
+
+        service = SourceClassService()
+        cache: dict[str, str] = {}
+        return [
+            cls._enrich(item, await cls._resolve_class_for(service, item, cache)) for item in items
+        ]
+
+    @staticmethod
+    def _store_passthrough(state: PipelineState, raw_items: list) -> PipelineState:
+        state.set_stage_output("classify", {"items": raw_items})
+        return state
+
+    @staticmethod
+    def _store_classified(
+        state: PipelineState, fetch: dict, classified: list[dict]
+    ) -> PipelineState:
+        fetch["items"] = classified
+        state.set_stage_output("fetch", fetch)
+        state.set_stage_output("classify", {"items": classified})
+        return state
+
+    @log_with_time("[srp] youtube/classify: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        fetch = state.get_stage_output("fetch")
+        raw_items = list(fetch.get("items", []))
+
+        if not self._is_enabled(state) or not raw_items:
+            return self._store_passthrough(state, raw_items)
+
+        items = self._normalize_items(raw_items)
+        if not items:
+            return self._store_passthrough(state, raw_items)
+
+        classified = await self._classify(items)
+        return self._store_classified(state, fetch, classified)
+
+
 class YouTubeScoreStage(BaseStage):
     """Score and rank fetched items."""
 
@@ -57,10 +172,9 @@ class YouTubeScoreStage(BaseStage):
         merged = state.inputs.get("merged_purpose")
         if merged is None:
             return None
-        from social_research_probe.config import load_active_config
         from social_research_probe.services.scoring import resolve_scoring_weights
 
-        return resolve_scoring_weights(load_active_config(), merged)
+        return resolve_scoring_weights(merged)
 
     @staticmethod
     def _empty_score_output(items: list, limit: int) -> dict:
@@ -104,16 +218,25 @@ class YouTubeTranscriptStage(BaseStage):
     @staticmethod
     def _merge_transcripts(top_n: list, results: list) -> list:
         return [
-            {**item, "transcript": t}
-            if (t := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
-            else dict(item)
+            (
+                {**item, "transcript": t}
+                if (
+                    t := next(
+                        (tr.output for tr in r.tech_results if tr.success and tr.output),
+                        None,
+                    )
+                )
+                else dict(item)
+            )
             for item, r in zip(top_n, results, strict=True)
             if isinstance(item, dict)
         ]
 
     @log_with_time("[srp] youtube/transcript: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.enriching.transcript import TranscriptService
+        from social_research_probe.services.enriching.transcript import (
+            TranscriptService,
+        )
 
         top_n = list(state.get_stage_output("score").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
@@ -134,9 +257,16 @@ class YouTubeSummaryStage(BaseStage):
     @staticmethod
     def _merge_summaries(top_n: list, results: list) -> list:
         return [
-            {**item, "summary": s, "one_line_takeaway": s}
-            if (s := next((tr.output for tr in r.tech_results if tr.success and tr.output), None))
-            else dict(item)
+            (
+                {**item, "summary": s, "one_line_takeaway": s}
+                if (
+                    s := next(
+                        (tr.output for tr in r.tech_results if tr.success and tr.output),
+                        None,
+                    )
+                )
+                else dict(item)
+            )
             for item, r in zip(top_n, results, strict=True)
         ]
 
@@ -161,30 +291,6 @@ class YouTubeCorroborateStage(BaseStage):
         return "corroborate"
 
     @staticmethod
-    def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
-        from social_research_probe.services.corroborating import auto_mode_providers
-
-        return auto_mode_providers(cfg) if configured == "auto" else (configured,)
-
-    @staticmethod
-    def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
-        from social_research_probe.services.corroborating import get_provider
-        from social_research_probe.utils.core.errors import ValidationError
-
-        providers: list[str] = []
-        for name in candidates:
-            if not cfg.technology_enabled(name):
-                continue
-            if name == "llm_search" and not cfg.service_enabled("llm"):
-                continue
-            try:
-                if get_provider(name).health_check():
-                    providers.append(name)
-            except ValidationError:
-                pass
-        return providers
-
-    @staticmethod
     def _cap_corroboration_providers_in_fast_mode(providers: list[str]) -> list[str]:
         from social_research_probe.utils.display.fast_mode import (
             FAST_MODE_MAX_PROVIDERS,
@@ -195,15 +301,14 @@ class YouTubeCorroborateStage(BaseStage):
 
     def _select_corroboration_providers(self) -> list[str]:
         from social_research_probe.config import load_active_config
+        from social_research_probe.services.corroborating import (
+            select_healthy_providers,
+        )
         from social_research_probe.utils.display.progress import log
 
-        cfg = load_active_config()
-        configured = cfg.corroboration_provider
-        if not cfg.service_enabled("corroboration") or configured == "none":
-            return []
-        candidates = self._list_corroboration_provider_candidates(cfg, configured)
-        providers = self._select_healthy_corroboration_providers(candidates, cfg)
-        if not providers:
+        configured = load_active_config().corroboration_provider
+        providers, candidates = select_healthy_providers(configured)
+        if not providers and candidates:
             checked = ", ".join(candidates)
             log(
                 f"[srp] corroboration: provider '{configured}' configured but no provider usable"
@@ -214,11 +319,16 @@ class YouTubeCorroborateStage(BaseStage):
     @staticmethod
     def _merge_corroborations(top_n: list, results: list) -> list:
         return [
-            {**item, "corroboration": corr}
-            if (
-                corr := next((tr.output for tr in r.tech_results if tr.success and tr.output), None)
+            (
+                {**item, "corroboration": corr}
+                if (
+                    corr := next(
+                        (tr.output for tr in r.tech_results if tr.success and tr.output),
+                        None,
+                    )
+                )
+                else dict(item)
             )
-            else dict(item)
             for item, r in zip(top_n, results, strict=True)
             if isinstance(item, dict)
         ]
@@ -234,7 +344,9 @@ class YouTubeCorroborateStage(BaseStage):
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
 
-        from social_research_probe.services.corroborating.corroborate import CorroborationService
+        from social_research_probe.services.corroborating.corroborate import (
+            CorroborationService,
+        )
 
         results = await CorroborationService(providers).execute_batch(top_n)
         corroborated = self._merge_corroborations(top_n, results)
@@ -251,7 +363,9 @@ class YouTubeStatsStage(BaseStage):
 
     @log_with_time("[srp] youtube/stats: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.analyzing.statistics import StatisticsService
+        from social_research_probe.services.analyzing.statistics import (
+            StatisticsService,
+        )
 
         if not self._is_enabled(state):
             state.set_stage_output("stats", {"stats_summary": {}})
@@ -464,7 +578,9 @@ class YouTubeStructuredSynthesisStage(BaseStage):
         if not self._is_enabled(state):
             return state
 
-        from social_research_probe.services.synthesizing.synthesis.runner import attach_synthesis
+        from social_research_probe.services.synthesizing.synthesis.runner import (
+            attach_synthesis,
+        )
 
         report = state.outputs.get("report", {})
         await asyncio.to_thread(attach_synthesis, report)
@@ -527,6 +643,7 @@ class YouTubePipeline(BaseResearchPlatform):
     def stages(self) -> list[list[BaseStage]]:
         return [
             [YouTubeFetchStage()],
+            [YouTubeClassifyStage()],
             [YouTubeScoreStage()],
             [YouTubeTranscriptStage(), YouTubeStatsStage(), YouTubeChartsStage()],
             [YouTubeSummaryStage()],

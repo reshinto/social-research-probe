@@ -111,7 +111,7 @@ def test_score_items_with_dicts():
     metrics = [_em(1.0, 0.05, 0.1), _em(0.5, 0.02, 0.0)]
     out = compute.score_items(items, metrics)
     assert len(out) == 2
-    assert out[0]["overall_score"] >= out[1]["overall_score"]
+    assert out[0]["scores"]["overall"] >= out[1]["scores"]["overall"]
 
 
 class TestResolveScoringWeights:
@@ -123,18 +123,21 @@ class TestResolveScoringWeights:
             scoring_overrides=overrides or {},
         )
 
-    def test_defaults(self):
+    def test_defaults(self, monkeypatch):
         cfg = MagicMock()
         cfg.raw = {}
-        out = weights.resolve_scoring_weights(cfg, self._purpose())
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = weights.resolve_scoring_weights(self._purpose())
         assert set(out.keys()) == {"trust", "trend", "opportunity"}
 
-    def test_config_override(self):
+    def test_config_override(self, monkeypatch):
         cfg = SimpleNamespace(raw={"scoring": {"weights": {"trust": 0.9}}})
-        out = weights.resolve_scoring_weights(cfg, self._purpose())
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = weights.resolve_scoring_weights(self._purpose())
         assert out["trust"] == 0.9
 
-    def test_purpose_override_wins(self):
+    def test_purpose_override_wins(self, monkeypatch):
         cfg = SimpleNamespace(raw={"scoring": {"weights": {"trust": 0.9}}})
-        out = weights.resolve_scoring_weights(cfg, self._purpose({"trust": 0.5}))
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = weights.resolve_scoring_weights(self._purpose({"trust": 0.5}))
         assert out["trust"] == 0.5

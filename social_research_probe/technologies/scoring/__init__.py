@@ -46,7 +46,7 @@ def normalize_item(item: object) -> dict | None:
         "author_id": item.author_id,
         "author_name": item.author_name,
         "published_at": item.published_at,
-        "extras": {},
+        "extras": dict(item.extras) if item.extras else {},
     }
 
 
@@ -127,11 +127,13 @@ def score_one(
     overall = overall_score(trust=trust, trend=trend, opportunity=opportunity, weights=weights)
     return {
         **item,
-        "source_class": "unknown",
-        "trust": trust,
-        "trend": trend,
-        "opportunity": opportunity,
-        "overall_score": overall,
+        "source_class": item.get("source_class") or "unknown",
+        "scores": {
+            "trust": trust,
+            "trend": trend,
+            "opportunity": opportunity,
+            "overall": overall,
+        },
         "features": build_features(velocity, engagement, age, extras.get("channel_subscribers")),
     }
 
@@ -146,7 +148,7 @@ def score_items(items: list, engagement_metrics: list, weights=None) -> list[dic
     zv = zscores(velocities)
     ze = zscores(engagements)
     scored = [score_one(n, aligned[i], zv[i], ze[i], weights) for i, n in enumerate(normalized)]
-    scored.sort(key=lambda d: d["overall_score"], reverse=True)
+    scored.sort(key=lambda d: d.get("scores", {}).get("overall", 0.0), reverse=True)
     return scored
 
 

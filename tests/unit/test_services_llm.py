@@ -44,7 +44,7 @@ class TestRegistry:
         with pytest.raises(ValueError):
             registry.register(Bad)
 
-    def test_register_and_get(self):
+    def test_register_and_get(self, monkeypatch):
         class A(LLMRunner):
             name = "test_register_and_get_a"
 
@@ -54,6 +54,9 @@ class TestRegistry:
             def run(self, p, *, schema=None):
                 return {"ok": True}
 
+        cfg = MagicMock()
+        cfg.technology_enabled.return_value = True
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
         registry.register(A)
         assert isinstance(registry.get_runner("test_register_and_get_a"), A)
 
@@ -99,6 +102,14 @@ class TestRegistry:
         with pytest.raises(ValidationError):
             registry.run_with_fallback("p", schema={}, preferred="a")
 
+    def test_run_with_fallback_preferred_disabled(self, monkeypatch):
+        """Preferred runner not in enabled candidates falls back to enabled list."""
+        b = _FakeRunner(healthy=True, payload={"r": "b"})
+        monkeypatch.setattr(registry, "list_runners", lambda: ["b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: b)
+        out = registry.run_with_fallback("p", schema={}, preferred="a")
+        assert out == {"r": "b"}
+
     def test_ensure_runners_registered_runs(self):
         registry.ensure_runners_registered()
 
@@ -119,21 +130,24 @@ class TestHost:
 
 
 class TestEnsemble:
-    def test_llm_enabled_callable(self):
+    def test_llm_enabled_callable(self, monkeypatch):
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
-        assert ensemble._llm_enabled(cfg) is True
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        assert ensemble._llm_enabled() is True
 
-    def test_llm_enabled_no_method(self):
+    def test_llm_enabled_no_method(self, monkeypatch):
         class Cfg:
             pass
 
-        assert ensemble._llm_enabled(Cfg()) is True
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: Cfg())
+        assert ensemble._llm_enabled() is True
 
-    def test_service_enabled_disabled(self):
+    def test_service_enabled_disabled(self, monkeypatch):
         cfg = MagicMock()
         cfg.service_enabled.return_value = False
-        assert ensemble._service_enabled(cfg, "claude") is False
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: cfg)
+        assert ensemble._service_enabled("claude") is False
 
     def test_collect_responses_empty(self):
         out = asyncio.run(ensemble._collect_responses("p", providers=()))

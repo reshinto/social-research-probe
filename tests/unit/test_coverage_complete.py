@@ -672,10 +672,11 @@ def test_ensemble_synthesis_fallback_to_codex(monkeypatch):
     cfg = MagicMock()
     cfg.service_enabled = lambda *_a, **_k: True
     cfg.technology_enabled = lambda *_a, **_k: True
-    out = asyncio.run(ensemble._synthesize({"codex": "answer"}, "p", cfg))
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+    out = asyncio.run(ensemble._synthesize({"codex": "answer"}, "p"))
     assert out == "answer"
 
-    out = asyncio.run(ensemble._synthesize({"codex": "x", "gemini": "y"}, "p", cfg))
+    out = asyncio.run(ensemble._synthesize({"codex": "x", "gemini": "y"}, "p"))
     assert out in ("x", "y")
 
 

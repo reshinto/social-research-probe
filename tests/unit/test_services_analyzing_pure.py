@@ -13,15 +13,18 @@ from social_research_probe.services.analyzing import (
 
 
 def test_dataset_key_stable():
-    items = [{"id": "1", "overall_score": 0.5}, {"id": "2", "overall_score": 0.4}]
+    items = [
+        {"id": "1", "scores": {"overall": 0.5}},
+        {"id": "2", "scores": {"overall": 0.4}},
+    ]
     a = dataset_key(items, namespace="ns")
     b = dataset_key(items, namespace="ns")
     assert a == b
 
 
 def test_dataset_key_distinct_on_change():
-    a = dataset_key([{"id": "1", "overall_score": 0.5}], namespace="x")
-    b = dataset_key([{"id": "1", "overall_score": 0.6}], namespace="x")
+    a = dataset_key([{"id": "1", "scores": {"overall": 0.5}}], namespace="x")
+    b = dataset_key([{"id": "1", "scores": {"overall": 0.6}}], namespace="x")
     assert a != b
 
 
@@ -29,10 +32,12 @@ class TestDerivedTargets:
     def test_basic(self):
         items = [
             {
-                "overall_score": 0.9,
-                "trust": 0.8,
-                "trend": 0.7,
-                "opportunity": 0.6,
+                "scores": {
+                    "overall": 0.9,
+                    "trust": 0.8,
+                    "trend": 0.7,
+                    "opportunity": 0.6,
+                },
                 "features": {
                     "view_velocity": 1.0,
                     "engagement_ratio": 0.05,
@@ -42,10 +47,12 @@ class TestDerivedTargets:
                 "source_class": "primary",
             },
             {
-                "overall_score": 0.5,
-                "trust": 0.4,
-                "trend": 0.3,
-                "opportunity": 0.2,
+                "scores": {
+                    "overall": 0.5,
+                    "trust": 0.4,
+                    "trend": 0.3,
+                    "opportunity": 0.2,
+                },
                 "features": {
                     "view_velocity": 2.0,
                     "engagement_ratio": 0.02,
@@ -71,18 +78,22 @@ class TestChartsSuite:
     def test_render_all_with_items(self, tmp_path: Path):
         items = [
             {
-                "trust": 0.5,
-                "trend": 0.4,
-                "opportunity": 0.3,
-                "overall_score": 0.5,
+                "scores": {
+                    "trust": 0.5,
+                    "trend": 0.4,
+                    "opportunity": 0.3,
+                    "overall": 0.5,
+                },
                 "features": {"view_velocity": 1.0, "engagement_ratio": 0.05, "age_days": 5.0},
                 "channel": "C1",
             },
             {
-                "trust": 0.4,
-                "trend": 0.3,
-                "opportunity": 0.2,
-                "overall_score": 0.4,
+                "scores": {
+                    "trust": 0.4,
+                    "trend": 0.3,
+                    "opportunity": 0.2,
+                    "overall": 0.4,
+                },
                 "features": {"view_velocity": 2.0, "engagement_ratio": 0.04, "age_days": 10.0},
                 "channel": "C2",
             },

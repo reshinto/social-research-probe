@@ -90,7 +90,7 @@ class TestScoreStage:
         )
         monkeypatch.setattr(
             "social_research_probe.services.scoring.resolve_scoring_weights",
-            lambda cfg, m: {"trust": 0.5},
+            lambda m: {"trust": 0.5},
         )
         out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
         assert out["trust"] == 0.5

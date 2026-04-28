@@ -153,7 +153,7 @@ class TestWriterRenderFailure:
 
 
 class TestEnsembleServiceEnabledFallback:
-    def test_no_technology_method(self):
+    def test_no_technology_method(self, monkeypatch):
         # Cfg has no technology_enabled attribute → returns True branch
         class Cfg:
             llm_runner = "claude"
@@ -161,7 +161,8 @@ class TestEnsembleServiceEnabledFallback:
             def service_enabled(self, name):
                 return True
 
-        assert ensemble._service_enabled(Cfg(), "anything") is True
+        monkeypatch.setattr(ensemble, "load_active_config", lambda *a, **k: Cfg())
+        assert ensemble._service_enabled("anything") is True
 
 
 class TestCmdConfigOrderEdge:
