@@ -23,6 +23,8 @@ def auto_mode_providers() -> tuple[str, ...]:
     from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
+    if not cfg.service_enabled("corroborating"):
+        return ()
     return tuple(
         name for name in ("exa", "brave", "tavily", "llm_search") if cfg.technology_enabled(name)
     )
