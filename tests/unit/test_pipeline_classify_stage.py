@@ -153,6 +153,19 @@ class TestStageEnabled:
         assert items[0]["source_class"] == "commentary"
 
 
+class TestNormalizeFiltersUnclassifiable:
+    def test_passthrough_when_all_items_fail_to_normalize(self, enabled_state):
+        state, _ = enabled_state
+        # Strings are neither dicts nor RawItems → normalize_item returns None
+        # for each → _normalize_items returns []. Stage should pass through
+        # the original raw_items list without invoking the service.
+        state.set_stage_output("fetch", {"items": ["not-a-dict-or-RawItem", 42]})
+
+        out = asyncio.run(yt.YouTubeClassifyStage().execute(state))
+        items = out.get_stage_output("classify")["items"]
+        assert items == ["not-a-dict-or-RawItem", 42]
+
+
 class TestStaticHelpers:
     def test_channel_of_prefers_channel(self):
         assert yt.YouTubeClassifyStage._channel_of({"channel": "A", "author_name": "B"}) == "A"
