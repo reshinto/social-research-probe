@@ -13,7 +13,7 @@ class SynthesisTech(BaseTechnology[object, str]):
     name: ClassVar[str] = "llm_synthesis"
 
     async def _execute(self, input_data: object) -> str | None:
-        from social_research_probe.technologies.llms.ensemble import multi_llm_prompt
+        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
         from social_research_probe.technologies.synthesizing.llm_contract import (
             build_synthesis_prompt,
         )

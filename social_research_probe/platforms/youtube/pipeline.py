@@ -336,7 +336,7 @@ class YouTubeSynthesisStage(BaseStage):
 
     @staticmethod
     async def _run_synthesis(context: dict) -> str:
-        from social_research_probe.technologies.llms.ensemble import multi_llm_prompt
+        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
         from social_research_probe.technologies.synthesizing.llm_contract import (
             build_synthesis_prompt,
         )

@@ -15,8 +15,8 @@ from social_research_probe.technologies.llms import (
     AgenticSearchResult,
     JsonCliRunner,
 )
-from social_research_probe.technologies.llms.prompts import CODEX_SEARCH_PROMPT
-from social_research_probe.technologies.llms.registry import register
+from social_research_probe.utils.llm.prompts import CODEX_SEARCH_PROMPT
+from social_research_probe.utils.llm.registry import register
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
 

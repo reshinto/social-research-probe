@@ -225,7 +225,7 @@ class LLMTech(BaseTechnology[str, dict]):
         return f"llm.{self._runner_name}"
 
     async def _execute(self, prompt: str) -> dict | None:
-        from social_research_probe.technologies.llms.registry import get_runner
+        from social_research_probe.utils.llm.registry import get_runner
 
         runner = get_runner(self._runner_name)
         if not runner.health_check():
@@ -274,3 +274,19 @@ class AgenticSearchResult:
     answer: str
     citations: list[AgenticSearchCitation] = field(default_factory=list)
     runner_name: str = ""
+
+
+# Backward-compat re-exports from utils/llm
+from social_research_probe.utils.llm import ensemble, registry, schemas  # noqa: F401
+
+__all__ = [
+    "AgenticSearchCitation",
+    "AgenticSearchResult",
+    "CapabilityUnavailableError",
+    "JsonCliRunner",
+    "LLMRunner",
+    "LLMTech",
+    "ensemble",
+    "registry",
+    "schemas",
+]

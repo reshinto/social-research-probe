@@ -36,7 +36,7 @@ def _seed_drafts(existing: list[str], count: int) -> list[dict]:
 
 def _build_prompt(existing: list[str], count: int) -> str:
     """Format the suggest-topics LLM prompt."""
-    from social_research_probe.technologies.llms.prompts import SUGGEST_TOPICS_PROMPT
+    from social_research_probe.utils.llm.prompts import SUGGEST_TOPICS_PROMPT
 
     return SUGGEST_TOPICS_PROMPT.format(
         existing_topics=", ".join(existing) if existing else "(none yet)",
@@ -46,8 +46,8 @@ def _build_prompt(existing: list[str], count: int) -> str:
 
 def _call_llm(prompt: str, runner: str) -> dict:
     """Call the LLM and return the raw result dict."""
-    from social_research_probe.technologies.llms.registry import run_with_fallback
-    from social_research_probe.technologies.llms.schemas import TOPIC_SUGGESTIONS_SCHEMA
+    from social_research_probe.utils.llm.registry import run_with_fallback
+    from social_research_probe.utils.llm.schemas import TOPIC_SUGGESTIONS_SCHEMA
 
     return run_with_fallback(prompt, TOPIC_SUGGESTIONS_SCHEMA, runner)
 

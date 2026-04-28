@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     from social_research_probe.services.corroborating import (
         ensure_providers_registered,
     )
-    from social_research_probe.technologies.llms.registry import ensure_runners_registered
+    from social_research_probe.utils.llm.registry import ensure_runners_registered
 
     ensure_runners_registered()
     ensure_providers_registered()

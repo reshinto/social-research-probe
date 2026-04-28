@@ -20,7 +20,7 @@ class LLMService(FallbackService[str, dict]):
         self._schema = schema
 
     def _get_technologies(self) -> list[LLMTech]:
-        from social_research_probe.technologies.llms.registry import list_runners
+        from social_research_probe.utils.llm.registry import list_runners
 
         names = [self._preferred, *[n for n in list_runners() if n != self._preferred]]
         return [LLMTech(n, self._schema) for n in names]

@@ -13,7 +13,7 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
     name: ClassVar[str] = "llm_ensemble"
 
     async def _execute(self, data: object) -> str | None:
-        from social_research_probe.technologies.llms.ensemble import multi_llm_prompt
+        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
         from social_research_probe.utils.caching.pipeline_cache import (
             get_str,
             hash_key,
