@@ -78,6 +78,7 @@ Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current document
 - Fixed research CLI ambiguity by requiring or resolving platform arguments through the current parser rules.
 - Fixed stale `.env.example` corroboration wording that still referred to backend selection and outdated Brave pricing assumptions.
 - Fixed test suite `PermissionError`s on macOS by mocking HTTP server binds and restricting file writes inside `~/.claude` during local test sandbox execution.
+- Fixed `YouTubeSourcingService.execute_one()` to gate on service-level feature flag; updated `enabled_config_key` to use correct config leaf name.
 
 ### Removed
 
