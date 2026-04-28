@@ -8,7 +8,7 @@ A **Service** in the Social Research Probe coordinates a specific task (e.g., sc
 
 ![Add service interaction](diagrams/add_service_interaction.svg)
 
-A Service extends `BaseService[TInput, TOutput]` from `social_research_probe.services.base`.
+A Service extends `BaseService[TInput, TOutput]` from `social_research_probe.services`.
 
 ## Implementation Checklist
 
@@ -31,8 +31,8 @@ Create `social_research_probe/services/image_analysis/__init__.py` and `service.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from social_research_probe.services.base import BaseService
-from social_research_probe.technologies.base import BaseTechnology
+from social_research_probe.services import BaseService
+from social_research_probe.technologies import BaseTechnology
 from social_research_probe.technologies.vision.model_a import ModelATech
 from social_research_probe.technologies.vision.model_b import ModelBTech
 

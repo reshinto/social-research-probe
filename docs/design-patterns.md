@@ -74,7 +74,7 @@ def register(cls):
     return cls
 ```
 
-A registry is a small lookup table with a clear contract. It is better than importing every concrete class everywhere. It also makes error messages clearer: if a user configures an unknown runner name, the registry can report the available names.
+A registry is a small lookup table with a clear contract. It is better than importing every concrete class everywhere. It also makes error messages clearer: if a user configures an unknown runner name, the registry can report the available names. The LLM runner registry lives in `utils/llm/registry.py`; the corroboration provider registry lives in `technologies/corroborates/__init__.py`.
 
 ## Service and technology result objects
 

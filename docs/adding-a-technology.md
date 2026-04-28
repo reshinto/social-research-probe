@@ -8,7 +8,7 @@ Technologies are orchestrated by **Services**. They do not know about the CLI, t
 
 ## Architecture
 
-A Technology extends `BaseTechnology[TInput, TOutput]` from `social_research_probe.technologies.base`. 
+A Technology extends `BaseTechnology[TInput, TOutput]` from `social_research_probe.technologies`.
 
 The base class provides:
 - **Error isolation**: Exceptions are caught and logged so one failing API doesn't crash the run.
@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import httpx
-from social_research_probe.technologies.base import BaseTechnology, HealthCheckResult
+from social_research_probe.technologies import BaseTechnology, HealthCheckResult
 
 @dataclass
 class RedditSearchInput:

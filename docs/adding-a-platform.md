@@ -73,7 +73,7 @@ from datetime import UTC, datetime
 from typing import ClassVar
 
 from social_research_probe.config import load_active_config
-from social_research_probe.platforms.base import (
+from social_research_probe.platforms import (
     EngagementMetrics,
     FetchLimits,
     RawItem,
@@ -178,7 +178,7 @@ from __future__ import annotations
 import asyncio
 from importlib import import_module
 
-from social_research_probe.platforms.base import BaseResearchPlatform, BaseStage
+from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.services.reporting.writer import write_final_report
 from social_research_probe.services.sourcing.web import compute_engagement_metrics
@@ -443,7 +443,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import ClassVar
 
-from social_research_probe.platforms.base import FetchLimits, RawItem, SearchClient
+from social_research_probe.platforms import FetchLimits, RawItem, SearchClient
 from social_research_probe.platforms.registry import register
 from social_research_probe.utils.core.types import AdapterConfig
 

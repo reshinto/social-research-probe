@@ -19,7 +19,7 @@ workflow files, and example config files, see [Root Files](root-files.md).
 | `social_research_probe/platforms` | Platform contracts, registry, orchestrator, and pipelines. |
 | `social_research_probe/services` | Task orchestration such as scoring, enrichment, analysis, synthesis, reporting. |
 | `social_research_probe/technologies` | Atomic adapters and pure algorithms. |
-| `social_research_probe/utils` | Cache, state, parsing, display, secrets, IO, and validation helpers. |
+| `social_research_probe/utils` | Cache, state, parsing, display, secrets, IO, and validation helpers. `utils/llm/` holds the LLM registry, prompts, schemas, and ensemble infrastructure shared across services and technologies. |
 | `tests` | Unit, integration, contract, and eval tests. |
 | `docs` | Human documentation and diagram sources. |
 
@@ -42,3 +42,4 @@ Avoid putting product behavior in `utils`. A utility should be reusable support 
 | Add a new corroboration provider. | `technologies/corroboration/*`, `services/corroborating/*`, config gates, secret handling tests. |
 | Change chart output. | `services/reporting/charts.py`, chart technology helpers, chart docs, diagram/docs tests. |
 | Change report assembly. | analysis/synthesis/reporting services and packet contract tests. |
+| Add or change an LLM runner. | `technologies/llms/*`, `utils/llm/registry.py`, `utils/llm/prompts.py`, runner health-check tests. |
