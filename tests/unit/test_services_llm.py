@@ -44,7 +44,7 @@ class TestRegistry:
         with pytest.raises(ValueError):
             registry.register(Bad)
 
-    def test_register_and_get(self):
+    def test_register_and_get(self, monkeypatch):
         class A(LLMRunner):
             name = "test_register_and_get_a"
 
@@ -54,6 +54,9 @@ class TestRegistry:
             def run(self, p, *, schema=None):
                 return {"ok": True}
 
+        cfg = MagicMock()
+        cfg.technology_enabled.return_value = True
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
         registry.register(A)
         assert isinstance(registry.get_runner("test_register_and_get_a"), A)
 

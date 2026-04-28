@@ -41,6 +41,16 @@ class BaseService(ABC, Generic[TInput, TOutput]):
     service_name: ClassVar[str] = ""
     enabled_config_key: ClassVar[str] = ""
 
+    @classmethod
+    def is_enabled(cls) -> bool:
+        """Return True iff this service's feature flag is enabled."""
+        from social_research_probe.config import load_active_config
+
+        if not cls.enabled_config_key:
+            return True
+        leaf = cls.enabled_config_key.rsplit(".", 1)[-1]
+        return load_active_config().service_enabled(leaf)
+
     async def execute_batch(
         self,
         inputs: list[TInput],
@@ -57,6 +67,12 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         data: TInput,
     ) -> ServiceResult:
         """Run all technologies for one input; isolate per-technology errors."""
+        if not self.is_enabled():
+            return ServiceResult(
+                service_name=self.service_name,
+                input_key=repr(data),
+                tech_results=[],
+            )
         techs = self._get_technologies()
 
         async def _run(tech: object) -> TechResult:

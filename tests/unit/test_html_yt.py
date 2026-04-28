@@ -283,25 +283,27 @@ def test_render_html_smoke(isolated, monkeypatch):
     assert "<html" in out and "ai" in out
 
 
-def test_write_html_disabled(tmp_path):
+def test_write_html_runs_without_stage_or_service_gates(tmp_path):
+    """HTML technology no longer gates on stage/service flags — caller's job."""
     cfg = MagicMock()
     cfg.data_dir = tmp_path
     cfg.stage_enabled.return_value = False
+    cfg.technology_enabled.return_value = False
     with patch.object(yt_html, "load_active_config", return_value=cfg, create=True):
-        with pytest.raises(RuntimeError):
-            yt_html.write_html_report(
-                {
-                    "topic": "x",
-                    "platform": "y",
-                    "purpose_set": [],
-                    "items_top_n": [],
-                    "stats_summary": {},
-                    "platform_engagement_summary": "",
-                    "evidence_summary": "",
-                    "chart_captions": [],
-                    "warnings": [],
-                }
-            )
+        path = yt_html.write_html_report(
+            {
+                "topic": "x",
+                "platform": "y",
+                "purpose_set": [],
+                "items_top_n": [],
+                "stats_summary": {},
+                "platform_engagement_summary": "",
+                "evidence_summary": "",
+                "chart_captions": [],
+                "warnings": [],
+            }
+        )
+    assert path.exists()
 
 
 def test_write_html_success(isolated, monkeypatch):

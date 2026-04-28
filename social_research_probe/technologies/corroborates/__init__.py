@@ -148,7 +148,7 @@ def list_providers() -> list[str]:
     from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
-    return sorted(name for name in _REGISTRY.keys() if cfg.technology_enabled(name))
+    return sorted(name for name in _REGISTRY if cfg.technology_enabled(name))
 
 
 def ensure_providers_registered() -> None:

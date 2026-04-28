@@ -62,9 +62,13 @@ def get_runner(name: str) -> LLMRunner:
     Raises:
         ValidationError: If no runner has been registered with that name.
     """
+    from social_research_probe.config import load_active_config
+
     if name not in _REGISTRY:
         known = sorted(_REGISTRY.keys())
         raise ValidationError(f"unknown LLM runner: {name!r} (registered: {known})")
+    if not load_active_config().technology_enabled(name):
+        raise ValidationError(f"LLM runner {name!r} is not enabled in [technologies]")
     return _REGISTRY[name]()
 
 

@@ -16,8 +16,15 @@ from social_research_probe.technologies.classifying import (
 
 
 class FakeConfig:
-    def __init__(self, *, provider: str = "hybrid") -> None:
+    def __init__(self, *, provider: str = "hybrid", enabled: bool = True) -> None:
         self.raw = {"services": {"youtube": {"classifying": {"provider": provider}}}}
+        self._enabled = enabled
+
+    def service_enabled(self, name: str) -> bool:
+        return self._enabled
+
+    def technology_enabled(self, name: str) -> bool:
+        return self._enabled
 
 
 def _patch_cfg(monkeypatch, cfg: FakeConfig) -> None:
