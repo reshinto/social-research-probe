@@ -27,7 +27,7 @@ def _annotate(result: ChartResult) -> ChartResult:
 
 
 def _scores_field(items: list[dict], field: str) -> list[float]:
-    return [float(d.get(field, 0.0)) for d in items]
+    return [float((d.get("scores") or {}).get(field, 0.0)) for d in items]
 
 
 def _feature_field(items: list[dict], field: str) -> list[float]:
@@ -39,7 +39,7 @@ def _heatmap_features(items: list[dict]) -> dict[str, list[float]]:
         "trust": _scores_field(items, "trust"),
         "trend": _scores_field(items, "trend"),
         "opportunity": _scores_field(items, "opportunity"),
-        "overall": _scores_field(items, "overall_score"),
+        "overall": _scores_field(items, "overall"),
         "velocity": _feature_field(items, "view_velocity"),
         "engagement": _feature_field(items, "engagement_ratio"),
         "age_days": _feature_field(items, "age_days"),
@@ -47,13 +47,14 @@ def _heatmap_features(items: list[dict]) -> dict[str, list[float]]:
 
 
 def _table_row(rank: int, item: dict) -> dict:
+    scores = item.get("scores", {})
     return {
         "rank": rank + 1,
         "channel": str(item.get("channel") or item.get("author_name") or "")[:25],
-        "trust": f"{float(item.get('trust', 0.0)):.2f}",
-        "trend": f"{float(item.get('trend', 0.0)):.2f}",
-        "opp": f"{float(item.get('opportunity', 0.0)):.2f}",
-        "overall": f"{float(item.get('overall_score', 0.0)):.2f}",
+        "trust": f"{float(scores.get('trust', 0.0)):.2f}",
+        "trend": f"{float(scores.get('trend', 0.0)):.2f}",
+        "opp": f"{float(scores.get('opportunity', 0.0)):.2f}",
+        "overall": f"{float(scores.get('overall', 0.0)):.2f}",
     }
 
 
@@ -68,7 +69,7 @@ def _ranks_for(items: list[dict]) -> list[float]:
 def render_bar(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
         bar.render(
-            _scores_field(items, "overall_score"), label="overall_score", output_dir=str(out)
+            _scores_field(items, "overall"), label="overall_score", output_dir=str(out)
         )
     )
 
@@ -76,7 +77,7 @@ def render_bar(items: list[dict], out: Path) -> ChartResult:
 def render_line(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
         line.render(
-            _scores_field(items, "overall_score"), label="overall_by_rank", output_dir=str(out)
+            _scores_field(items, "overall"), label="overall_by_rank", output_dir=str(out)
         )
     )
 
@@ -84,7 +85,7 @@ def render_line(items: list[dict], out: Path) -> ChartResult:
 def render_histogram(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
         histogram.render(
-            _scores_field(items, "overall_score"), label="overall_score", output_dir=str(out)
+            _scores_field(items, "overall"), label="overall_score", output_dir=str(out)
         )
     )
 
@@ -125,7 +126,7 @@ def render_residuals(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
         residuals.render(
             _ranks_for(items),
-            _scores_field(items, "overall_score"),
+            _scores_field(items, "overall"),
             label="overall_by_rank",
             output_dir=str(out),
         )

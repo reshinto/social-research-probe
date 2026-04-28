@@ -10,12 +10,13 @@ _ROUND_DIGITS = 6
 
 
 def _fingerprint(item: dict) -> dict:
+    scores = item.get("scores") or {}
     return {
         "id": item.get("id"),
-        "overall_score": round(float(item.get("overall_score", 0.0)), _ROUND_DIGITS),
-        "trust": round(float(item.get("trust", 0.0)), _ROUND_DIGITS),
-        "trend": round(float(item.get("trend", 0.0)), _ROUND_DIGITS),
-        "opportunity": round(float(item.get("opportunity", 0.0)), _ROUND_DIGITS),
+        "overall": round(float(scores.get("overall", 0.0)), _ROUND_DIGITS),
+        "trust": round(float(scores.get("trust", 0.0)), _ROUND_DIGITS),
+        "trend": round(float(scores.get("trend", 0.0)), _ROUND_DIGITS),
+        "opportunity": round(float(scores.get("opportunity", 0.0)), _ROUND_DIGITS),
     }
 
 
