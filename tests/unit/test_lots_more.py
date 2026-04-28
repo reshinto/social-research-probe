@@ -297,9 +297,8 @@ class TestChartsServiceFailures:
             raise RuntimeError("nope")
 
         monkeypatch.setattr(
-            charts_svc.ChartsService,
-            "_render_with_cache",
-            classmethod(lambda cls, i, d: boom(i, d)),
+            "social_research_probe.technologies.charts.render_with_cache",
+            boom,
         )
         cfg = MagicMock()
         cfg.data_dir = Path("/tmp/test-charts-failures")

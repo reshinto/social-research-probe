@@ -11,9 +11,9 @@ from dataclasses import dataclass
 
 from social_research_probe.commands import add_purpose, add_topics, list_topics
 from social_research_probe.config import load_active_config
-from social_research_probe.services.llm.core.helpers.prompts import CLASSIFICATION_PROMPT
-from social_research_probe.services.llm.core.helpers.registry import run_with_fallback
-from social_research_probe.services.llm.core.helpers.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
+from social_research_probe.technologies.llms.prompts import CLASSIFICATION_PROMPT
+from social_research_probe.technologies.llms.registry import run_with_fallback
+from social_research_probe.technologies.llms.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 from social_research_probe.utils.caching.pipeline_cache import (
     classification_cache,
     get_json,

@@ -12,14 +12,14 @@ import html
 import re
 from pathlib import Path
 
-from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
+from social_research_probe.utils.core.types import ResearchReport, ScoredItem
+from social_research_probe.utils.report.contextual_models import (
     topic_action_hint,
 )
-from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+from social_research_probe.utils.report.formatter import (
     _contextual_explanation,
     _infer_model,
 )
-from social_research_probe.utils.core.types import ResearchReport, ScoredItem
 
 
 def _esc(text: str) -> str:

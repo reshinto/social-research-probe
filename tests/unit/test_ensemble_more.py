@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.services.llm.core import ensemble
+from social_research_probe.technologies.llms import ensemble
 
 
 class _FakeProc:

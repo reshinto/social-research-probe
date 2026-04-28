@@ -10,10 +10,10 @@ from social_research_probe.services.analyzing.statistics import StatisticsServic
 from social_research_probe.services.corroborating.corroborate import CorroborationService
 from social_research_probe.services.enriching.summary import SummaryService
 from social_research_probe.services.enriching.transcript import TranscriptService
-from social_research_probe.services.llm.core.helpers import schemas
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
+from social_research_probe.technologies.llms import schemas
 
 
 def test_schemas_present():
@@ -102,7 +102,7 @@ class TestStatisticsService:
         async def boom(items):
             raise RuntimeError("nope")
 
-        monkeypatch.setattr(StatisticsService, "_compute_async", staticmethod(boom))
+        monkeypatch.setattr("social_research_probe.technologies.statistics.compute_async", boom)
         out = asyncio.run(StatisticsService().execute_one({"scored_items": [{"x": 1}]}))
         assert out.tech_results[0].success is False
 
@@ -116,7 +116,7 @@ class TestSynthesisService:
         async def boom(prompt, task="generating response"):
             raise RuntimeError("nope")
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", boom)
+        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", boom)
         out = asyncio.run(SynthesisService().execute_one("not a dict"))
         assert out.tech_results[0].success is False
 
@@ -133,7 +133,7 @@ class TestCorroborationService:
         async def boom(claim, providers):
             raise RuntimeError("x")
 
-        monkeypatch.setattr("social_research_probe.services.corroborating.corroborate_claim", boom)
+        monkeypatch.setattr("social_research_probe.technologies.corroborates.corroborate_claim", boom)
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
@@ -150,7 +150,7 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             return "summary text"
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake)
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
         assert out.tech_results[0].output == "summary text"
 
@@ -158,7 +158,7 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             raise RuntimeError("x")
 
-        monkeypatch.setattr("social_research_probe.services.llm.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake)
         out = asyncio.run(SummaryService().execute_one({"title": "t"}))
         assert out.tech_results[0].success is False
 

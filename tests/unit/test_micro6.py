@@ -87,7 +87,7 @@ class TestChartsRenderViaSuite:
             return []
 
         monkeypatch.setattr(
-            "social_research_probe.services.analyzing.render_all",
+            "social_research_probe.technologies.charts.render.render_all",
             fake_render_all,
         )
         out = asyncio.run(charts_svc.ChartsService._render([{"id": "1"}], tmp_path))

@@ -130,7 +130,7 @@ class TestScoringServiceFailure:
     def test_failure_path(self, monkeypatch):
         # Force score_items to raise → exception branch
         monkeypatch.setattr(
-            "social_research_probe.services.scoring.score_items",
+            "social_research_probe.technologies.scoring.score_items",
             lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("nope")),
         )
         out = asyncio.run(
@@ -147,10 +147,10 @@ class TestSynthesisServiceSuccess:
             return "synthesized"
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda r: "p",
         )
         out = asyncio.run(synth_svc.SynthesisService().execute_one({"topic": "x"}))

@@ -8,10 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.services.llm.core import ensemble
-from social_research_probe.services.llm.core.helpers import registry
 from social_research_probe.services.llm.core.output import emit_report
-from social_research_probe.technologies.llms import LLMRunner
+from social_research_probe.technologies.llms import LLMRunner, ensemble, registry
 from social_research_probe.utils.core.errors import ValidationError
 
 
@@ -192,7 +190,7 @@ class TestLLMTech:
 
         runner = _FakeRunner(healthy=True, payload={"ok": True})
         monkeypatch.setattr(
-            "social_research_probe.services.llm.core.helpers.registry.get_runner",
+            "social_research_probe.technologies.llms.registry.get_runner",
             lambda name: runner,
         )
         tech = LLMTech("claude", schema={})
@@ -206,7 +204,7 @@ class TestLLMTech:
 
         runner = _FakeRunner(healthy=False)
         monkeypatch.setattr(
-            "social_research_probe.services.llm.core.helpers.registry.get_runner",
+            "social_research_probe.technologies.llms.registry.get_runner",
             lambda name: runner,
         )
         tech = LLMTech("claude", schema={})
@@ -219,7 +217,7 @@ class TestLLMService:
         from social_research_probe.services.llm.core import LLMService, LLMTech
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.core.helpers.registry.list_runners",
+            "social_research_probe.technologies.llms.registry.list_runners",
             lambda: ["claude", "gemini"],
         )
         svc = LLMService(preferred="gemini", schema={})

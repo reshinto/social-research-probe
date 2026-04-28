@@ -334,10 +334,10 @@ class TestSynthesisStage:
             return "synth"
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
         out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
@@ -348,10 +348,10 @@ class TestSynthesisStage:
             raise RuntimeError("x")
 
         monkeypatch.setattr(
-            "social_research_probe.services.llm.ensemble.multi_llm_prompt", fake_multi
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake_multi
         )
         monkeypatch.setattr(
-            "social_research_probe.services.synthesizing.llm_contract.build_synthesis_prompt",
+            "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
         out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))

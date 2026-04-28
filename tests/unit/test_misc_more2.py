@@ -195,6 +195,7 @@ class TestChartsService:
         assert out and out[0].caption == "cap"
 
     def test_render_with_cache_miss_writes(self, monkeypatch, tmp_path):
+        import social_research_probe.technologies.charts as charts_tech
         from social_research_probe.technologies.charts import ChartResult
 
         monkeypatch.setattr(
@@ -210,10 +211,73 @@ class TestChartsService:
         async def fake_render(items, out):
             return [ChartResult(path=str(tmp_path / "y.png"), caption="c")]
 
+        # Cover both service and tech paths
         monkeypatch.setattr(charts_svc.ChartsService, "_render", staticmethod(fake_render))
         out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
         assert out[0].caption == "c"
         assert captured["v"]["captions"] == ["c"]
+
+        captured.clear()
+        monkeypatch.setattr(charts_tech, "_render", fake_render)
+        out2 = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out2[0].caption == "c"
+
+    def test_render_with_cache_tech_hits(self, monkeypatch, tmp_path):
+        """Cover technologies/charts/__init__.render_with_cache cache-hit branch (lines 106-108)."""
+        import social_research_probe.technologies.charts as charts_tech
+
+        png = tmp_path / "x.png"
+        png.write_bytes(b"x")
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.get_json",
+            lambda c, k: {"filenames": ["x.png"], "captions": ["cap"]},
+        )
+        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out and out[0].caption == "cap"
+
+    def test_render_with_cache_tech_hit_empty_restore(self, monkeypatch, tmp_path):
+        """Cover branch 107->109: cache hit but restore returns empty list → fall through to render."""
+        import social_research_probe.technologies.charts as charts_tech
+        from social_research_probe.technologies.charts import ChartResult
+
+        get_calls = [0]
+
+        def fake_get_json(c, k):
+            if get_calls[0] == 0:
+                get_calls[0] += 1
+                # Cache returns payload but png file missing → _restore_results returns []
+                return {"filenames": ["missing.png"], "captions": ["c"]}
+            return None
+
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.get_json",
+            fake_get_json,
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.caching.pipeline_cache.set_json",
+            lambda c, k, v: None,
+        )
+        monkeypatch.setattr(charts_tech, "_render", lambda items, out: asyncio.coroutine(lambda: [])())
+
+        async def fake_render(items, out):
+            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
+
+        monkeypatch.setattr(charts_tech, "_render", fake_render)
+        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
+        assert out[0].caption == "r"
+
+    def test_render_fn_uses_thread(self, monkeypatch, tmp_path):
+        """Cover technologies/charts/__init__._render lines directly."""
+        import social_research_probe.technologies.charts as charts_tech
+        import social_research_probe.technologies.charts.render as render_mod
+        from social_research_probe.technologies.charts import ChartResult
+
+        def fake_render_all(items, out):
+            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
+
+        monkeypatch.setattr(render_mod, "render_all", fake_render_all)
+        out = asyncio.run(charts_tech._render([{"id": "1"}], tmp_path))
+        assert out[0].caption == "r"
 
 
 class TestStatisticsService:

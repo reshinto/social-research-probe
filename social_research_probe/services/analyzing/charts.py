@@ -6,7 +6,18 @@ from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.services import BaseService, ServiceResult
-from social_research_probe.technologies.charts import ChartsTech
+from social_research_probe.technologies.charts import (
+    ChartsTech,
+    _restore_results,
+    _serialise_results,
+    items_from,
+)
+from social_research_probe.technologies.charts import (
+    _cache_key as _cache_key_fn,
+)
+from social_research_probe.technologies.charts import (
+    _charts_cache as _charts_cache_fn,
+)
 
 _INPUT_KEY = "scored_items"
 
@@ -15,7 +26,7 @@ class ChartsService(BaseService):
     """Render the full chart suite from scored items.
 
     Input: dict with 'scored_items' key.
-    Delegates rendering to services/analyzing/charts_suite.render_all.
+    Delegates rendering to technologies/charts render_with_cache.
     """
 
     service_name: ClassVar[str] = "youtube.analyzing.charts"
@@ -25,78 +36,37 @@ class ChartsService(BaseService):
         return [ChartsTech()]
 
     @staticmethod
-    def _data_charts_dir() -> Path:
-        from social_research_probe.config import load_active_config
-
-        return load_active_config().data_dir / "charts"
-
-    @classmethod
-    def _ensure_charts_dir(cls) -> Path:
-        path = cls._data_charts_dir()
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+    def _items_from(data: object) -> list[dict]:
+        return items_from(data)
 
     @staticmethod
-    def _items_from(data: object) -> list[dict]:
-        if not isinstance(data, dict):
-            return []
-        return [d for d in data.get("scored_items", []) if isinstance(d, dict)]
+    def _charts_cache():
+        return _charts_cache_fn()
+
+    @staticmethod
+    def _serialise_results(charts: list, charts_dir: Path) -> dict:
+        return _serialise_results(charts, charts_dir)
+
+    @staticmethod
+    def _restore_results(payload: dict, charts_dir: Path) -> list:
+        return _restore_results(payload, charts_dir)
 
     @staticmethod
     async def _render(items: list[dict], out: Path) -> list:
         import asyncio
 
-        from social_research_probe.services.analyzing import render_all
+        import social_research_probe.technologies.charts.render as _render_mod
 
-        return await asyncio.to_thread(render_all, items, out)
-
-    @staticmethod
-    def _cache_key(items: list[dict]) -> str:
-        from social_research_probe.services.analyzing import dataset_key
-
-        return dataset_key(items, namespace="charts")
-
-    @staticmethod
-    def _charts_cache():
-        from social_research_probe.utils.caching.pipeline_cache import stage_cache
-
-        return stage_cache("analyze")
-
-    @staticmethod
-    def _serialise_results(charts: list, charts_dir: Path) -> dict:
-        return {
-            "filenames": [Path(c.path).name for c in charts],
-            "captions": [c.caption for c in charts],
-            "charts_dir": str(charts_dir),
-        }
-
-    @staticmethod
-    def _restore_results(payload: dict, charts_dir: Path) -> list:
-        from social_research_probe.technologies.charts import ChartResult
-
-        filenames = payload.get("filenames", [])
-        captions = payload.get("captions", [])
-        if len(filenames) != len(captions):
-            return []
-        restored: list = []
-        for filename, caption in zip(filenames, captions, strict=True):
-            png_path = charts_dir / filename
-            if not png_path.exists():
-                return []
-            restored.append(ChartResult(path=str(png_path), caption=caption))
-        return restored
+        return await asyncio.to_thread(_render_mod.render_all, items, out)
 
     @classmethod
     async def _render_with_cache(cls, items: list[dict], charts_dir: Path) -> list:
-        from social_research_probe.utils.caching.pipeline_cache import (
-            get_json,
-            set_json,
-        )
+        from social_research_probe.utils.caching.pipeline_cache import get_json, set_json
 
         if not items:
             return []
         cache = cls._charts_cache()
-        key = cls._cache_key(items)
+        key = _cache_key_fn(items)
         cached = get_json(cache, key)
         if cached is not None:
             restored = cls._restore_results(cached, charts_dir)

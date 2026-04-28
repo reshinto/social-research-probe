@@ -8,13 +8,13 @@ import re
 from enum import StrEnum
 from typing import ClassVar
 
-from social_research_probe.services.llm.core.helpers.prompts import CLAUDE_SEARCH_PROMPT
-from social_research_probe.services.llm.core.helpers.registry import register
 from social_research_probe.technologies.llms import (
     AgenticSearchCitation,
     AgenticSearchResult,
     JsonCliRunner,
 )
+from social_research_probe.technologies.llms.prompts import CLAUDE_SEARCH_PROMPT
+from social_research_probe.technologies.llms.registry import register
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as sp_run
 

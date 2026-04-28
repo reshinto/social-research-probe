@@ -184,7 +184,7 @@ def test_corroborate_providers_list_branch(monkeypatch):
         return MagicMock(verdict="inconclusive", source_urls=[], runner_name="x")
 
     monkeypatch.setattr(
-        "social_research_probe.services.corroborating.corroborate_claim",
+        "social_research_probe.technologies.corroborates.corroborate_claim",
         fake_corroborate_claim,
     )
     svc = corroborate.CorroborationService()
@@ -546,7 +546,7 @@ def test_youtube_renderer_voicebox_audio_path(tmp_path, monkeypatch):
 
 def test_formatter_plain_sentences_no_split_chars(monkeypatch):
     """formatter.py 332 — when split filters out all parts, fall back to raw cleaned."""
-    from social_research_probe.services.synthesizing.synthesis.helpers import formatter as fmt
+    import social_research_probe.utils.report.formatter as fmt
 
     monkeypatch.setattr(fmt, "_markdown_to_plain_text", lambda t: "  ")
     out = fmt._plain_sentences("anything", limit=5)
@@ -663,7 +663,7 @@ def test_warnings_unknown_source_class():
 
 def test_ensemble_synthesis_fallback_to_codex(monkeypatch):
     """services/llm/ensemble.py:147 — last-line fallback returns codex."""
-    from social_research_probe.services.llm.core import ensemble
+    from social_research_probe.technologies.llms import ensemble
 
     async def fake_run_provider(name, *a, **kw):
         return None  # all synthesis attempts fail

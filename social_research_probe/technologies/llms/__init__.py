@@ -225,7 +225,7 @@ class LLMTech(BaseTechnology[str, dict]):
         return f"llm.{self._runner_name}"
 
     async def _execute(self, prompt: str) -> dict | None:
-        from social_research_probe.services.llm.core.helpers.registry import get_runner
+        from social_research_probe.technologies.llms.registry import get_runner
 
         runner = get_runner(self._runner_name)
         if not runner.health_check():

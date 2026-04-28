@@ -43,7 +43,7 @@ def test_corroborate_svc_str_data(monkeypatch):
         async def fake(claim, providers):
             return {"verdict": "x"}
 
-        monkeypatch.setattr("social_research_probe.services.corroborating.corroborate_claim", fake)
+        monkeypatch.setattr("social_research_probe.technologies.corroborates.corroborate_claim", fake)
         out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
 
@@ -214,7 +214,8 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
 
 
 def test_formatter_render_full_no_summary(monkeypatch):
-    monkeypatch.setattr(formatter, "resolve_report_summary", lambda r: None)
+    import social_research_probe.utils.report.formatter as _fmt_mod
+    monkeypatch.setattr(_fmt_mod, "resolve_report_summary", lambda r: None)
     report = {
         "topic": "ai",
         "platform": "youtube",
