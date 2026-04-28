@@ -57,25 +57,18 @@ def _parse_args() -> argparse.Namespace:
 
 async def _summarize_with_active_runner(transcript: str, word_limit: int) -> str:
     """Ask the configured runner for a summary. Imports lazily so --help is fast."""
-    from social_research_probe.llm.registry import get_runner
-    from social_research_probe.pipeline.enrichment import _build_summary_prompt
-
     from social_research_probe.config import load_active_config
+    from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
     cfg = load_active_config()
     if cfg.llm_runner == "none":
         raise SystemExit("config.llm_runner is 'none' — cannot run real-LLM eval")
-    runner = get_runner(cfg.llm_runner)
-    prompt = _build_summary_prompt(
-        title="Corpus transcript",
-        channel="test",
-        transcript=transcript,
-        word_limit=word_limit,
+    prompt = (
+        f"Summarise this YouTube video in at most {word_limit} words.\n"
+        f"Title: Corpus transcript\nTranscript: {transcript[:3000]}"
     )
-    result = runner.run(prompt)
-    if isinstance(result, dict):
-        return str(result.get("summary") or next(iter(result.values()), ""))
-    return str(result)
+    result = await multi_llm_prompt(prompt)
+    return str(result or "")
 
 
 def main() -> int:
