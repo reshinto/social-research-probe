@@ -68,17 +68,13 @@ def _ranks_for(items: list[dict]) -> list[float]:
 
 def render_bar(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
-        bar.render(
-            _scores_field(items, "overall"), label="overall_score", output_dir=str(out)
-        )
+        bar.render(_scores_field(items, "overall"), label="overall_score", output_dir=str(out))
     )
 
 
 def render_line(items: list[dict], out: Path) -> ChartResult:
     return _annotate(
-        line.render(
-            _scores_field(items, "overall"), label="overall_by_rank", output_dir=str(out)
-        )
+        line.render(_scores_field(items, "overall"), label="overall_by_rank", output_dir=str(out))
     )
 
 

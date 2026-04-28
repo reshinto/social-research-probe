@@ -111,7 +111,7 @@ def test_score_items_with_dicts():
     metrics = [_em(1.0, 0.05, 0.1), _em(0.5, 0.02, 0.0)]
     out = compute.score_items(items, metrics)
     assert len(out) == 2
-    assert out[0]["overall_score"] >= out[1]["overall_score"]
+    assert out[0]["scores"]["overall"] >= out[1]["scores"]["overall"]
 
 
 class TestResolveScoringWeights:
