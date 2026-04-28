@@ -116,7 +116,9 @@ class TestSynthesisService:
         async def boom(prompt, task="generating response"):
             raise RuntimeError("nope")
 
-        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", boom)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", boom
+        )
         out = asyncio.run(SynthesisService().execute_one("not a dict"))
         assert out.tech_results[0].success is False
 
@@ -133,7 +135,9 @@ class TestCorroborationService:
         async def boom(claim, providers):
             raise RuntimeError("x")
 
-        monkeypatch.setattr("social_research_probe.technologies.corroborates.corroborate_claim", boom)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.corroborates.corroborate_claim", boom
+        )
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
@@ -150,7 +154,9 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             return "summary text"
 
-        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
         assert out.tech_results[0].output == "summary text"
 
@@ -158,7 +164,9 @@ class TestSummaryService:
         async def fake(prompt, task="generating response"):
             raise RuntimeError("x")
 
-        monkeypatch.setattr("social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
         out = asyncio.run(SummaryService().execute_one({"title": "t"}))
         assert out.tech_results[0].success is False
 

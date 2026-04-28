@@ -257,7 +257,9 @@ class TestChartsService:
             "social_research_probe.utils.caching.pipeline_cache.set_json",
             lambda c, k, v: None,
         )
-        monkeypatch.setattr(charts_tech, "_render", lambda items, out: asyncio.coroutine(lambda: [])())
+        monkeypatch.setattr(
+            charts_tech, "_render", lambda items, out: asyncio.coroutine(lambda: [])()
+        )
 
         async def fake_render(items, out):
             return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
