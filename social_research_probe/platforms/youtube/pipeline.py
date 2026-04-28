@@ -244,16 +244,18 @@ class YouTubeCorroborateStage(BaseStage):
         return "corroborate"
 
     @staticmethod
-    def _list_corroboration_provider_candidates(cfg, configured: str) -> tuple:
+    def _list_corroboration_provider_candidates(configured: str) -> tuple:
         from social_research_probe.services.corroborating import auto_mode_providers
 
-        return auto_mode_providers(cfg) if configured == "auto" else (configured,)
+        return auto_mode_providers() if configured == "auto" else (configured,)
 
     @staticmethod
-    def _select_healthy_corroboration_providers(candidates: tuple, cfg) -> list[str]:
+    def _select_healthy_corroboration_providers(candidates: tuple) -> list[str]:
+        from social_research_probe.config import load_active_config
         from social_research_probe.services.corroborating import get_provider
         from social_research_probe.utils.core.errors import ValidationError
 
+        cfg = load_active_config()
         providers: list[str] = []
         for name in candidates:
             if not cfg.technology_enabled(name):
@@ -284,8 +286,8 @@ class YouTubeCorroborateStage(BaseStage):
         configured = cfg.corroboration_provider
         if not cfg.service_enabled("corroboration") or configured == "none":
             return []
-        candidates = self._list_corroboration_provider_candidates(cfg, configured)
-        providers = self._select_healthy_corroboration_providers(candidates, cfg)
+        candidates = self._list_corroboration_provider_candidates(configured)
+        providers = self._select_healthy_corroboration_providers(candidates)
         if not providers:
             checked = ", ".join(candidates)
             log(

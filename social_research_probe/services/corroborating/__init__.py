@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from social_research_probe.config import Config
 from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
@@ -19,8 +18,11 @@ from social_research_probe.technologies.corroborates import (
 # ---------------------------------------------------------------------------
 
 
-def auto_mode_providers(cfg: Config) -> tuple[str, ...]:
+def auto_mode_providers() -> tuple[str, ...]:
     """Return ordered provider names to try in auto mode."""
+    from social_research_probe.config import load_active_config
+
+    cfg = load_active_config()
     return tuple(
         name for name in ("exa", "brave", "tavily", "llm_search") if cfg.technology_enabled(name)
     )

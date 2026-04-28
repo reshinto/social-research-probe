@@ -78,10 +78,13 @@ class TestRegistry:
 
 
 class TestProviders:
-    def test_auto_mode_filters(self):
+    def test_auto_mode_filters(self, monkeypatch):
         cfg = MagicMock()
         cfg.technology_enabled.side_effect = lambda n: n in {"exa", "tavily"}
-        out = providers.auto_mode_providers(cfg)
+        monkeypatch.setattr(
+            "social_research_probe.config.load_active_config", lambda *a, **k: cfg
+        )
+        out = providers.auto_mode_providers()
         assert out == ("exa", "tavily")
 
 
