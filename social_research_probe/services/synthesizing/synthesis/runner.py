@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from social_research_probe.utils.llm.registry import get_runner
 from social_research_probe.utils.core.errors import ValidationError
 from social_research_probe.utils.core.flags import service_flag, stage_flag
 from social_research_probe.utils.core.types import RunnerName
 from social_research_probe.utils.display.progress import log
+from social_research_probe.utils.llm.registry import get_runner
 
 from .llm_contract import (
     SYNTHESIS_JSON_SCHEMA,

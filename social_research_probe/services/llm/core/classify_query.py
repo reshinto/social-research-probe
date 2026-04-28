@@ -11,9 +11,6 @@ from dataclasses import dataclass
 
 from social_research_probe.commands import add_purpose, add_topics, list_topics
 from social_research_probe.config import load_active_config
-from social_research_probe.utils.llm.prompts import CLASSIFICATION_PROMPT
-from social_research_probe.utils.llm.registry import run_with_fallback
-from social_research_probe.utils.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 from social_research_probe.utils.caching.pipeline_cache import (
     classification_cache,
     get_json,
@@ -24,6 +21,9 @@ from social_research_probe.utils.core.errors import DuplicateError, ValidationEr
 from social_research_probe.utils.core.strings import normalize_whitespace
 from social_research_probe.utils.core.types import RunnerName
 from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.utils.llm.prompts import CLASSIFICATION_PROMPT
+from social_research_probe.utils.llm.registry import run_with_fallback
+from social_research_probe.utils.llm.schemas import NL_QUERY_CLASSIFICATION_SCHEMA
 from social_research_probe.utils.purposes.registry import load
 
 

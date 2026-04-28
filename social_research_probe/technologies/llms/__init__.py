@@ -14,6 +14,7 @@ from social_research_probe.technologies import BaseTechnology
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject
 from social_research_probe.utils.display.progress import log
+from social_research_probe.utils.llm import ensemble, registry, schemas
 
 # ---------------------------------------------------------------------------
 # Exception for capability checks
@@ -275,9 +276,6 @@ class AgenticSearchResult:
     citations: list[AgenticSearchCitation] = field(default_factory=list)
     runner_name: str = ""
 
-
-# Backward-compat re-exports from utils/llm
-from social_research_probe.utils.llm import ensemble, registry, schemas  # noqa: F401
 
 __all__ = [
     "AgenticSearchCitation",

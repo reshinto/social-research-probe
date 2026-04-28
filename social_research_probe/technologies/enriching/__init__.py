@@ -13,13 +13,13 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
     name: ClassVar[str] = "llm_ensemble"
 
     async def _execute(self, data: object) -> str | None:
-        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
         from social_research_probe.utils.caching.pipeline_cache import (
             get_str,
             hash_key,
             set_str,
             summary_cache,
         )
+        from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
         title = data.get("title", "") if isinstance(data, dict) else ""
         url = data.get("url", "") if isinstance(data, dict) else ""

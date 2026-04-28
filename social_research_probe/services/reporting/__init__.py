@@ -1,11 +1,11 @@
 """Reporting services."""
 
-from social_research_probe.utils.report.formatter import render_full
 from social_research_probe.technologies.report_render.html.raw_html.youtube import (
     serve_report_command,
     write_html_report,
 )
 from social_research_probe.utils.core.flags import service_flag, stage_flag
+from social_research_probe.utils.report.formatter import render_full
 
 
 def write_final_report(report: dict, *, allow_html: bool) -> str:

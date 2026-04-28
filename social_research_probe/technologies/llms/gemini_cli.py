@@ -15,10 +15,10 @@ from social_research_probe.technologies.llms import (
     AgenticSearchResult,
     JsonCliRunner,
 )
-from social_research_probe.utils.llm.prompts import GEMINI_MEDIA_PROMPT
-from social_research_probe.utils.llm.registry import register
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.io.subprocess_runner import run as subprocess_run
+from social_research_probe.utils.llm.prompts import GEMINI_MEDIA_PROMPT
+from social_research_probe.utils.llm.registry import register
 
 
 class GeminiCliFlag(StrEnum):

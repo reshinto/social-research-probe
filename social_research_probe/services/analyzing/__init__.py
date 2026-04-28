@@ -22,6 +22,8 @@ from social_research_probe.utils.analyzing.targets import build_targets
 __all__ = [
     "_annotate",
     "_safe_render",
+    "build_targets",
+    "dataset_key",
     "render_all",
     "render_bar",
     "render_heatmap",
@@ -31,6 +33,4 @@ __all__ = [
     "render_residuals",
     "render_scatter",
     "render_table",
-    "dataset_key",
-    "build_targets",
 ]
