@@ -69,16 +69,20 @@ def get_runner(name: str) -> LLMRunner:
 
 
 def list_runners() -> list[str]:
-    """Return runner names in the order they should be tried.
+    """Return enabled runner names in the order they should be tried.
 
-    The preferred runner is placed first so callers can attempt it before
-    falling back to the remaining registered runners. The preferred runner is
-    excluded from the fallback portion to avoid trying it twice.
+    Filters the registry against the active config's ``technology_enabled``
+    gate so only runners explicitly enabled in ``[technologies]`` are
+    returned. The preferred runner is placed first so callers can attempt it
+    before falling back to the remaining enabled runners.
 
     Returns:
-        Ordered list of runner name strings.
+        Ordered list of enabled runner name strings.
     """
-    return sorted(_REGISTRY.keys())
+    from social_research_probe.config import load_active_config
+
+    cfg = load_active_config()
+    return sorted(name for name in _REGISTRY if cfg.technology_enabled(name))
 
 
 def prioritize_runner(candidates: list[RunnerName], preferred: RunnerName) -> list[RunnerName]:
@@ -107,7 +111,10 @@ def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
         ValidationError: If every runner is unhealthy or fails execution.
     """
     candidates = list_runners()
-    runner_order = [preferred, *[n for n in candidates if n != preferred]]
+    if preferred in candidates:
+        runner_order = [preferred, *[n for n in candidates if n != preferred]]
+    else:
+        runner_order = candidates
 
     for name in runner_order:
         runner = get_runner(name)

@@ -99,6 +99,14 @@ class TestRegistry:
         with pytest.raises(ValidationError):
             registry.run_with_fallback("p", schema={}, preferred="a")
 
+    def test_run_with_fallback_preferred_disabled(self, monkeypatch):
+        """Preferred runner not in enabled candidates falls back to enabled list."""
+        b = _FakeRunner(healthy=True, payload={"r": "b"})
+        monkeypatch.setattr(registry, "list_runners", lambda: ["b"])
+        monkeypatch.setattr(registry, "get_runner", lambda n: b)
+        out = registry.run_with_fallback("p", schema={}, preferred="a")
+        assert out == {"r": "b"}
+
     def test_ensure_runners_registered_runs(self):
         registry.ensure_runners_registered()
 
