@@ -392,7 +392,7 @@ class YouTubeAssembleStage(BaseStage):
         from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize_engagement_metrics,
         )
-        from social_research_probe.services.synthesizing.synthesis.helpers.formatter import (
+        from social_research_probe.utils.report.formatter import (
             build_report,
         )
 
