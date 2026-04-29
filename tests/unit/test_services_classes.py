@@ -8,11 +8,16 @@ from unittest.mock import MagicMock, patch
 from social_research_probe.services.analyzing.charts import ChartsService
 from social_research_probe.services.analyzing.statistics import StatisticsService
 from social_research_probe.services.corroborating.corroborate import CorroborationService
-from social_research_probe.services.enriching.summary import SummaryService
+from social_research_probe.services.enriching.summary import (
+    SummaryService,
+    _configured_word_limit,
+    _with_summary_word_limit,
+)
 from social_research_probe.services.enriching.transcript import TranscriptService
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
+from social_research_probe.technologies.enriching import _coerce_word_limit
 from social_research_probe.technologies.llms import schemas
 
 
@@ -32,27 +37,6 @@ class TestChartsService:
 
     def test_items_from_dict(self):
         assert ChartsService._items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
-
-    def test_serialise_roundtrip(self, tmp_path):
-        from social_research_probe.technologies.charts import ChartResult
-
-        png = tmp_path / "x.png"
-        png.write_bytes(b"\x89PNG")
-        ch = ChartResult(path=str(png), caption="cap")
-        out = ChartsService._serialise_results([ch], tmp_path)
-        restored = ChartsService._restore_results(out, tmp_path)
-        assert len(restored) == 1
-        assert restored[0].caption == "cap"
-
-    def test_restore_mismatch(self, tmp_path):
-        out = ChartsService._restore_results({"filenames": ["x"], "captions": []}, tmp_path)
-        assert out == []
-
-    def test_restore_missing_file(self, tmp_path):
-        out = ChartsService._restore_results(
-            {"filenames": ["missing.png"], "captions": ["c"]}, tmp_path
-        )
-        assert out == []
 
     def test_execute_one_empty(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
@@ -159,6 +143,46 @@ class TestSummaryService:
         )
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
         assert out.tech_results[0].output == "summary text"
+
+    def test_execute_uses_configured_word_limit(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": 3}
+        cfg.service_enabled.return_value = True
+        cfg.technology_enabled.return_value = True
+        cfg.debug_enabled.return_value = False
+
+        prompts = []
+
+        async def fake(prompt, task="generating response"):
+            prompts.append(prompt)
+            return "one two three four five"
+
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
+
+        assert "at most 3 words" in prompts[0]
+        assert out.tech_results[0].output == "one two three"
+
+    def test_configured_word_limit_falls_back_on_bad_config(self):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": object()}
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            assert _configured_word_limit() == 100
+
+    def test_configured_word_limit_falls_back_on_non_positive_config(self):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": 0}
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            assert _configured_word_limit() == 100
+
+    def test_with_summary_word_limit_passes_through_non_dict(self):
+        assert _with_summary_word_limit("raw") == "raw"
+
+    def test_coerce_word_limit_falls_back_for_invalid_value(self):
+        assert _coerce_word_limit("not-int") == 100
 
     def test_execute_failure(self, monkeypatch):
         async def fake(prompt, task="generating response"):

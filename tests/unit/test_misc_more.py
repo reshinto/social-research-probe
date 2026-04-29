@@ -231,20 +231,6 @@ class TestYouTubeApi:
         monkeypatch.setenv("SRP_YOUTUBE_API_KEY", "x")
         assert youtube_api.youtube_health_check() is True
 
-    def test_search_youtube_cached(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
-        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
-        with patch.object(youtube_api, "get_json", return_value={"items": [{"a": 1}]}):
-            with patch.object(youtube_api, "set_json"):
-                out = youtube_api.search_youtube("topic", max_items=5)
-        assert out == [{"a": 1}]
-
-    def test_search_youtube_cached_invalid(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
-        with patch.object(youtube_api, "get_json", return_value={"items": "bad"}):
-            out = youtube_api.search_youtube("topic", max_items=5)
-        assert out == []
-
     def test_search_videos_failure(self, monkeypatch):
         with patch.object(youtube_api, "_build_client") as bc:
             bc.return_value.search.return_value.list.return_value.execute.side_effect = (
@@ -268,12 +254,6 @@ class TestYouTubeApi:
             )
             with pytest.raises(AdapterError):
                 youtube_api._fetch_channel_details("k", channel_ids=["c"])
-
-    def test_hydrate_youtube_cached(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
-        with patch.object(youtube_api, "get_json", return_value={"videos": [{}], "channels": [{}]}):
-            v, c = asyncio.run(youtube_api.hydrate_youtube(["v1"], ["c1"]))
-        assert v == [{}] and c == [{}]
 
 
 class TestReportingWriter:

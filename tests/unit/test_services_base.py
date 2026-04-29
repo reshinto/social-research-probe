@@ -94,3 +94,75 @@ def test_execute_batch():
 def test_base_service_abstract():
     with pytest.raises(TypeError):
         BaseService()  # type: ignore[abstract]
+
+
+class _CacheableTech(BaseTechnology[str, str]):
+    name = "cacheable_tech"
+
+    async def _execute(self, data):
+        return {"result": f"computed({data})"}
+
+
+class _NonCacheableTech(BaseTechnology[str, str]):
+    name = "noncacheable_tech"
+    cacheable = False
+
+    async def _execute(self, data):
+        return {"result": f"computed({data})"}
+
+
+class _NonSerializableTech(BaseTechnology[str, str]):
+    name = "nonserializable_tech"
+
+    async def _execute(self, data):
+        return object()
+
+
+class _NoneResultTech(BaseTechnology[str, str]):
+    name = "none_tech"
+
+    async def _execute(self, data):
+        return None
+
+
+class TestTechnologyCachedExecute:
+    def test_not_cacheable_skips_cache(self, monkeypatch):
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        tech = _NonCacheableTech()
+        result = asyncio.run(tech.execute("x"))
+        assert result == {"result": "computed(x)"}
+
+    def test_cache_disabled_skips_cache(self, monkeypatch):
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        tech = _CacheableTech()
+        result = asyncio.run(tech.execute("x"))
+        assert result == {"result": "computed(x)"}
+
+    def test_cache_miss_stores_result(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        tech = _CacheableTech()
+        result = asyncio.run(tech.execute("x"))
+        assert result == {"result": "computed(x)"}
+
+    def test_cache_hit_returns_cached(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        tech = _CacheableTech()
+        asyncio.run(tech.execute("x"))
+        result = asyncio.run(tech.execute("x"))
+        assert result == {"result": "computed(x)"}
+
+    def test_non_serializable_result_swallowed(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        tech = _NonSerializableTech()
+        result = asyncio.run(tech.execute("x"))
+        assert result is not None
+
+    def test_none_result_not_cached(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        tech = _NoneResultTech()
+        result = asyncio.run(tech.execute("x"))
+        assert result is None

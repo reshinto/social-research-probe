@@ -7,7 +7,6 @@ from typing import ClassVar
 from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.statistics import (
     StatisticsTech,
-    _cached_or_compute,
     _compute,
     _stats_per_target,
     compute_async,
@@ -39,10 +38,6 @@ class StatisticsService(BaseService):
     @staticmethod
     def _compute(items: list[dict]) -> dict:
         return _compute(items)
-
-    @staticmethod
-    def _cached_or_compute(items: list[dict]) -> dict:
-        return _cached_or_compute(items)
 
     @staticmethod
     async def _compute_async(items: list[dict]) -> dict:

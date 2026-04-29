@@ -49,6 +49,8 @@ from social_research_probe.utils.report.formatter import (
     resolve_report_summary,
 )
 
+_IMPORTED_LOAD_ACTIVE_CONFIG = load_active_config
+
 _SECTIONS = [
     ("s1", "1. Topic &amp; Purpose"),
     ("s2", "2. Platform"),
@@ -339,7 +341,13 @@ def _audio_report_enabled() -> bool:
 def _technology_logs_enabled() -> bool:
     """Return whether technology lifecycle logs are enabled."""
     try:
-        return bool(load_active_config().debug.get("technology_logs_enabled", False))
+        if load_active_config is not _IMPORTED_LOAD_ACTIVE_CONFIG:
+            cfg = load_active_config()
+        else:
+            from social_research_probe import config as srp_config
+
+            cfg = srp_config.load_active_config()
+        return bool(cfg.debug.get("technology_logs_enabled", False))
     except Exception:
         return False
 

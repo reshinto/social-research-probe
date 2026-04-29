@@ -149,7 +149,7 @@ def test_technology_enabled(tmp_path):
 
 def test_debug_enabled(tmp_path):
     cfg = Config.load(tmp_path)
-    assert cfg.debug_enabled("technology_logs_enabled") is False
+    assert cfg.debug_enabled("technology_logs_enabled") is True
     assert cfg.debug_enabled("missing") is False
 
 

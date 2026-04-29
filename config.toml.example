@@ -71,12 +71,6 @@ max_items = 20
 # enrichment. This controls most of the expensive or slow downstream work.
 enrich_top_n = 5
 
-# Cache time-to-live for YouTube search responses.
-cache_ttl_search_hours = 6
-
-# Cache time-to-live for YouTube channel metadata responses.
-cache_ttl_channel_hours = 24
-
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
@@ -219,7 +213,7 @@ per_item_summary_words = 100
 [debug]
 # Enables stderr start/end logs around concrete technology calls. SRP_LOGS=1
 # can enable the same logs at runtime without editing this file.
-technology_logs_enabled = false
+technology_logs_enabled = true
 
 [voicebox]
 # Preferred Voicebox profile name for generated HTML reports and narration.

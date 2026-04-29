@@ -267,20 +267,12 @@ class TestClassifyQuery:
         out = cq._build_classification_prompt("q", ["t"], ["p"])
         assert "t" in out and "p" in out
 
-    def test_run_classification_cached(self, monkeypatch):
-        monkeypatch.setattr(cq, "get_json", lambda c, k: {"result": {"a": 1}})
-        out = cq._run_classification("p", preferred="claude")
-        assert out == {"a": 1}
-
     def test_run_classification_invalid_raises(self, monkeypatch):
-        monkeypatch.setattr(cq, "get_json", lambda c, k: None)
         monkeypatch.setattr(cq, "run_with_fallback", lambda p, s, r: {})
         with pytest.raises(ValidationError):
             cq._run_classification("p", preferred="claude")
 
     def test_run_classification_valid(self, monkeypatch):
-        monkeypatch.setattr(cq, "get_json", lambda c, k: None)
-        monkeypatch.setattr(cq, "set_json", lambda *a, **k: None)
         monkeypatch.setattr(
             cq,
             "run_with_fallback",

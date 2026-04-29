@@ -683,7 +683,7 @@ class YouTubePipeline(BaseResearchPlatform):
     async def run(self, state: PipelineState) -> PipelineState:
         for group in self.stages():
             if len(group) == 1:
-                state = await group[0].execute(state)
+                state = await group[0].run(state)
             else:
-                await asyncio.gather(*(s.execute(state) for s in group))
+                await asyncio.gather(*(s.run(state) for s in group))
         return state

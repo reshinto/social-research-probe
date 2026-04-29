@@ -15,11 +15,6 @@ from social_research_probe.commands import ConfigSubcommand
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.config import _active_data_dir
-from social_research_probe.platforms import (
-    BaseResearchPlatform,
-    BaseStage,
-    run_stages,
-)
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
@@ -129,19 +124,14 @@ class TestCorroborateProviders:
 
 
 class TestYoutubeApiHydrate:
-    def test_hydrate_no_cache(self, monkeypatch, tmp_path):
+    def test_hydrate_calls_details(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
-        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
-        with patch.object(youtube_api, "get_json", return_value=None):
-            with patch.object(youtube_api, "set_json"):
-                with patch.object(youtube_api, "resolve_youtube_api_key", return_value="k"):
-                    with patch.object(
-                        youtube_api, "_fetch_video_details", return_value=[{"id": "v"}]
-                    ):
-                        with patch.object(
-                            youtube_api, "_fetch_channel_details", return_value=[{"id": "c"}]
-                        ):
-                            v, _c = asyncio.run(youtube_api.hydrate_youtube(["v"], ["c"]))
+        with patch.object(youtube_api, "resolve_youtube_api_key", return_value="k"):
+            with patch.object(youtube_api, "_fetch_video_details", return_value=[{"id": "v"}]):
+                with patch.object(
+                    youtube_api, "_fetch_channel_details", return_value=[{"id": "c"}]
+                ):
+                    v, _c = asyncio.run(youtube_api.hydrate_youtube(["v"], ["c"]))
         assert v == [{"id": "v"}]
 
 
@@ -211,44 +201,6 @@ class TestMacTtsExecute:
         assert out.exists()
 
 
-class TestPlatformsBase:
-    def test_run_stages(self, monkeypatch):
-        captured = []
-
-        class StageA(BaseStage):
-            def stage_name(self):
-                return "a"
-
-            def _is_enabled(self, state):
-                return True
-
-            async def execute(self, state):
-                captured.append("a")
-                return state
-
-        class StageB(BaseStage):
-            def stage_name(self):
-                return "b"
-
-            def _is_enabled(self, state):
-                return False
-
-            async def execute(self, state):
-                captured.append("b")
-                return state
-
-        class P(BaseResearchPlatform):
-            def stages(self):
-                return [StageA(), StageB()]
-
-            async def run(self, state):
-                return state
-
-        state = PipelineState(platform_type="x", cmd=None, cache=None)
-        asyncio.run(run_stages(P(), state))
-        assert captured == ["a"]
-
-
 class TestStatsExtras:
     def test_normality_too_few(self):
         assert normality.run([1.0]) == []
@@ -297,7 +249,7 @@ class TestChartsServiceFailures:
             raise RuntimeError("nope")
 
         monkeypatch.setattr(
-            "social_research_probe.technologies.charts.render_with_cache",
+            "social_research_probe.technologies.charts.render_charts",
             boom,
         )
         cfg = MagicMock()

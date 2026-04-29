@@ -191,30 +191,6 @@ def test_corroborate_providers_list_branch(monkeypatch):
     asyncio.run(svc.execute_one(MagicMock()))
 
 
-def test_summary_cache_hit_branch(tmp_path, monkeypatch):
-    """services/enriching/summary.py 46->49 — cache hit branch."""
-    from social_research_probe.services.enriching import summary as smod
-
-    cache_called = []
-
-    def fake_get_str(*a, **kw):
-        cache_called.append("get")
-        return "cached"
-
-    def fake_set_str(*a, **kw):
-        cache_called.append("set")
-
-    from social_research_probe.utils.caching import pipeline_cache
-
-    monkeypatch.setattr(pipeline_cache, "get_str", fake_get_str)
-    monkeypatch.setattr(pipeline_cache, "set_str", fake_set_str)
-    monkeypatch.setattr(pipeline_cache, "summary_cache", lambda: object())
-    monkeypatch.setattr(pipeline_cache, "hash_key", lambda *a, **kw: "k")
-
-    asyncio.run(smod.SummaryService().execute_one({"title": "t", "url": "u", "transcript": "x"}))
-    assert "set" not in cache_called
-
-
 def test_warnings_freshness_stale(monkeypatch):
     """services/synthesizing/warnings.py 86->exit — stale items branch."""
     from social_research_probe.platforms import EngagementMetrics

@@ -7,35 +7,40 @@ from typing import ClassVar
 from social_research_probe.technologies import BaseTechnology
 
 
+def _coerce_word_limit(value: object, default: int = 100) -> int:
+    """Return a positive integer word limit."""
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return limit if limit > 0 else default
+
+
+def _limit_words(text: str, word_limit: int) -> str:
+    """Cap text to at most word_limit whitespace-delimited words."""
+    words = text.split()
+    return " ".join(words[:word_limit])
+
+
 class SummaryEnsembleTech(BaseTechnology[object, str]):
     """Technology using the LLM ensemble to generate summaries."""
 
     name: ClassVar[str] = "llm_ensemble"
 
     async def _execute(self, data: object) -> str | None:
-        from social_research_probe.utils.caching.pipeline_cache import (
-            get_str,
-            hash_key,
-            set_str,
-            summary_cache,
-        )
         from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
         title = data.get("title", "") if isinstance(data, dict) else ""
-        url = data.get("url", "") if isinstance(data, dict) else ""
         transcript = data.get("transcript", "") if isinstance(data, dict) else ""
-        word_limit = 200
+        configured_limit = data.get("summary_word_limit") if isinstance(data, dict) else None
+        word_limit = _coerce_word_limit(configured_limit)
         prompt = (
             f"Summarise this YouTube video in at most {word_limit} words.\n"
             f"Title: {title}\nTranscript: {transcript[:3000]}"
         )
-        cache_key = hash_key(str(url or title), prompt)
 
-        summary = get_str(summary_cache(), cache_key)
-        if summary is None:
-            summary = await multi_llm_prompt(prompt) or ""
-            set_str(summary_cache(), cache_key, summary, input_key=prompt)
-
+        summary = await multi_llm_prompt(prompt) or ""
+        summary = _limit_words(summary, word_limit)
         return summary if summary else None
 
 

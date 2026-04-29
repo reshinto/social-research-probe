@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import social_research_probe.services.scoring as compute_mod
 from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.exa import ExaProvider
@@ -80,6 +79,8 @@ class TestGeminiRunSearchSync:
 
 class TestChartsRenderViaSuite:
     def test_render_calls_suite(self, monkeypatch, tmp_path):
+        from social_research_probe.technologies.charts import render_charts
+
         captured = {}
 
         def fake_render_all(items, out):
@@ -90,7 +91,7 @@ class TestChartsRenderViaSuite:
             "social_research_probe.technologies.charts.render.render_all",
             fake_render_all,
         )
-        out = asyncio.run(charts_svc.ChartsService._render([{"id": "1"}], tmp_path))
+        out = asyncio.run(render_charts([{"id": "1"}], tmp_path))
         assert out == [] and captured["called"]
 
 

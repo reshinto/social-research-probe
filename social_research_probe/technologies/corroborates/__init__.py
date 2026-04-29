@@ -8,12 +8,6 @@ from typing import ClassVar
 from urllib.parse import urlparse
 
 from social_research_probe.technologies import BaseTechnology
-from social_research_probe.utils.caching.pipeline_cache import (
-    corroboration_cache,
-    get_json,
-    hash_key,
-    set_json,
-)
 from social_research_probe.utils.core.errors import ValidationError
 
 
@@ -193,20 +187,12 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
 
 
 async def corroborate_claim(claim, provider_names: list[str]) -> dict:
-    """Run a claim through multiple providers concurrently and aggregate results.
-
-    Results cached by (claim_text, sorted_providers).
-    """
+    """Run a claim through multiple providers concurrently and aggregate results."""
     import asyncio
     import dataclasses
     import sys
 
     normalized_providers = list(dict.fromkeys(provider_names))
-    cache = corroboration_cache()
-    cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_providers)))
-    cached = get_json(cache, cache_key)
-    if cached is not None:
-        return cached
 
     async def _call_provider(provider_name: str) -> CorroborationResult | None:
         try:
@@ -223,14 +209,12 @@ async def corroborate_claim(claim, provider_names: list[str]) -> dict:
     collected = [r for r in outcomes if r is not None]
     verdict, confidence = aggregate_verdict(collected)
 
-    result = {
+    return {
         "claim_text": claim.text,
         "results": [dataclasses.asdict(r) for r in collected],
         "aggregate_verdict": verdict,
         "aggregate_confidence": confidence,
     }
-    set_json(cache, cache_key, result)
-    return result
 
 
 class CorroborationHostTech(BaseTechnology[object, dict]):

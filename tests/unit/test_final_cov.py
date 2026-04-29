@@ -79,11 +79,9 @@ class TestPipelineYtChartsExecuteWithFailure:
 
 
 class TestYoutubeApiSearch:
-    def test_search_youtube_no_cache(self, monkeypatch, tmp_path):
+    def test_search_youtube_calls_search_videos(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
         with (
-            patch.object(youtube_api, "get_json", return_value=None),
-            patch.object(youtube_api, "set_json"),
             patch.object(youtube_api, "_search_videos", return_value=[{"id": "v"}]),
             patch.object(youtube_api, "resolve_youtube_api_key", return_value="k"),
         ):
