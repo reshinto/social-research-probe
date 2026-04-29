@@ -394,6 +394,39 @@ class TestAssembleStage:
         assert out.outputs["report"]["topic"] == "ai"
 
 
+class TestBuildSourceValidationSummary:
+    def test_counts_verdicts_and_classes(self):
+        top_n = [
+            {
+                "source_class": "primary",
+                "corroboration": {"aggregate_verdict": "supported"},
+            },
+            {
+                "source_class": "secondary",
+                "corroboration": {"aggregate_verdict": "refuted"},
+            },
+            {
+                "source_class": "commentary",
+                "corroboration": {"aggregate_verdict": "inconclusive"},
+            },
+            {"source_class": "unknown"},
+        ]
+        stage = yt.YouTubeAssembleStage()
+        svs = stage._build_source_validation_summary(top_n)
+        assert svs["validated"] == 1
+        assert svs["low_trust"] == 1
+        assert svs["unverified"] == 2
+        assert svs["partially"] == 0
+        assert svs["primary"] == 1
+        assert svs["secondary"] == 1
+        assert svs["commentary"] == 1
+
+    def test_empty_list(self):
+        svs = yt.YouTubeAssembleStage()._build_source_validation_summary([])
+        assert svs["validated"] == 0
+        assert svs["primary"] == 0
+
+
 class TestStructuredSynthesisStage:
     def test_enabled(self, enabled_state, monkeypatch):
         enabled_state.outputs["report"] = {}

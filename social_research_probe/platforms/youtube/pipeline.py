@@ -487,8 +487,33 @@ class YouTubeAssembleStage(BaseStage):
                 warnings.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
         return warnings
 
-    @staticmethod
+    def _build_source_validation_summary(self, top_n: list) -> dict:
+        from collections import Counter
+
+        verdict_map = {"supported": "validated", "refuted": "low_trust"}
+        verdict_counts: Counter[str] = Counter()
+        class_counts: Counter[str] = Counter()
+        for item in top_n:
+            sc = item.get("source_class", "unknown")
+            if sc in ("primary", "secondary", "commentary"):
+                class_counts[sc] += 1
+            corr = item.get("corroboration", {})
+            raw = corr.get("aggregate_verdict", "inconclusive") if corr else "inconclusive"
+            mapped = verdict_map.get(raw, "unverified")
+            verdict_counts[mapped] += 1
+        return {
+            "validated": verdict_counts.get("validated", 0),
+            "partially": verdict_counts.get("partially", 0),
+            "unverified": verdict_counts.get("unverified", 0),
+            "low_trust": verdict_counts.get("low_trust", 0),
+            "primary": class_counts.get("primary", 0),
+            "secondary": class_counts.get("secondary", 0),
+            "commentary": class_counts.get("commentary", 0),
+            "notes": "",
+        }
+
     def _compose_research_report_data(
+        self,
         topic: str,
         platform: str,
         purpose_names: list,
@@ -515,7 +540,7 @@ class YouTubeAssembleStage(BaseStage):
             platform=platform,
             purpose_set=list(purpose_names),
             items_top_n=top_n,
-            source_validation_summary={},
+            source_validation_summary=self._build_source_validation_summary(top_n),
             platform_engagement_summary=summarize_engagement_metrics(engagement_metrics),
             evidence_summary=summarize_evidence(items, engagement_metrics, top_n),
             stats_summary=stats_summary,
