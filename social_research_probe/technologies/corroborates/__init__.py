@@ -221,6 +221,7 @@ class CorroborationHostTech(BaseTechnology[object, dict]):
     """Technology wrapper for corroborating a single item's claim."""
 
     name: ClassVar[str] = "corroboration_host"
+    enabled_config_key: ClassVar[str] = "corroboration_host"
 
     def __init__(self, providers: list[str]):
         super().__init__()

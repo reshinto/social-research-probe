@@ -102,6 +102,7 @@ class YouTubeSearchTech(BaseTechnology[tuple[str, FetchLimits], list[RawItem]]):
     """Search YouTube by topic and parse the raw API response into RawItems."""
 
     name: ClassVar[str] = "youtube_search"
+    enabled_config_key: ClassVar[str] = "youtube_search"
 
     async def _execute(self, data: tuple[str, FetchLimits]) -> list[RawItem]:
         from social_research_probe.technologies.media_fetch.youtube_api import (
@@ -122,6 +123,7 @@ class YouTubeHydrateTech(BaseTechnology[tuple[list[RawItem], bool], list[RawItem
     """Hydrate RawItems with video + channel statistics; optionally filter shorts."""
 
     name: ClassVar[str] = "youtube_hydrate"
+    enabled_config_key: ClassVar[str] = "youtube_hydrate"
 
     async def _execute(self, data: tuple[list[RawItem], bool]) -> list[RawItem]:
         from social_research_probe.technologies.media_fetch.youtube_api import (
@@ -147,6 +149,7 @@ class YouTubeEngagementTech(BaseTechnology[list[RawItem], list[EngagementMetrics
     """Compute engagement metrics from hydrated items. Pure calculation."""
 
     name: ClassVar[str] = "youtube_engagement"
+    enabled_config_key: ClassVar[str] = "youtube_engagement"
 
     async def _execute(self, items: list[RawItem]) -> list[EngagementMetrics]:
         now = datetime.now(UTC)

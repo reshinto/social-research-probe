@@ -26,6 +26,7 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
     """Technology using the LLM ensemble to generate summaries."""
 
     name: ClassVar[str] = "llm_ensemble"
+    enabled_config_key: ClassVar[str] = "llm_ensemble"
 
     async def _execute(self, data: object) -> str | None:
         from social_research_probe.utils.llm.ensemble import multi_llm_prompt
@@ -48,6 +49,7 @@ class TranscriptWhisperTech(BaseTechnology[str, str]):
     """Fallback technology using yt-dlp to download audio and Whisper to transcribe."""
 
     name: ClassVar[str] = "whisper_fallback"
+    enabled_config_key: ClassVar[str] = "whisper"
 
     async def _execute(self, input_data: str) -> str | None:
         import asyncio

@@ -66,6 +66,7 @@ class ChartsTech(BaseTechnology[object, list]):
     """Technology wrapper for generating the full chart suite."""
 
     name: ClassVar[str] = "charts_suite"
+    enabled_config_key: ClassVar[str] = "charts_suite"
 
     async def _execute(self, input_data: object) -> list:
         chart_items = items_from(input_data)

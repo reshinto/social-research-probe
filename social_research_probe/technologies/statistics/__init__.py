@@ -95,6 +95,7 @@ class StatisticsTech(BaseTechnology[object, dict]):
     """Technology wrapper for computing statistics across all targets."""
 
     name: ClassVar[str] = "stats_per_target"
+    enabled_config_key: ClassVar[str] = "stats_per_target"
 
     async def _execute(self, input_data: object) -> dict:
         return await compute_async(items_from_data(input_data))
