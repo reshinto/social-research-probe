@@ -77,6 +77,7 @@ class BaseService(ABC, Generic[TInput, TOutput]):
 
         async def _run(tech: object) -> TechResult:
             tech.caller_service = self.service_name
+
             try:
                 output = await tech.execute(data)
                 return TechResult(
@@ -121,6 +122,7 @@ class FallbackService(BaseService[TInput, TOutput]):
 
         for tech in techs:
             tech.caller_service = self.service_name
+
             try:
                 output = await tech.execute(data)
                 tr = TechResult(

@@ -26,14 +26,36 @@ def _render_with_matplotlib(rows: list[dict], path: str, label: str) -> None:
     col_labels = list(rows[0].keys()) if rows else []
     cell_text = [[str(row.get(col, "")) for col in col_labels] for row in rows]
 
-    fig, ax = plt.subplots()
-    ax.axis("off")  # Hide axes — only the table should be visible.
-    ax.set_title(label)
+    num_cols = max(len(col_labels), 1)
+    num_rows = len(cell_text)
+    col_width = 3.2
+    row_height = 0.7
+    fig_width = max(num_cols * col_width, 6)
+    fig_height = max((num_rows + 2) * row_height, 3)
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    ax.axis("off")
+    ax.set_title(label, fontsize=14, fontweight="bold", pad=12)
 
     if col_labels:
-        ax.table(cellText=cell_text, colLabels=col_labels, loc="center")
+        tbl = ax.table(
+            cellText=cell_text,
+            colLabels=col_labels,
+            loc="center",
+            cellLoc="center",
+        )
+        tbl.auto_set_font_size(False)
+        tbl.set_fontsize(13)
+        tbl.scale(1.0, 2.0)
 
-    plt.savefig(path, bbox_inches="tight")
+        for (row_idx, _col_idx), cell in tbl.get_celld().items():
+            if row_idx == 0:
+                cell.set_facecolor("#4472C4")
+                cell.set_text_props(color="white", fontweight="bold")
+            elif row_idx % 2 == 0:
+                cell.set_facecolor("#D9E2F3")
+
+    plt.savefig(path, bbox_inches="tight", dpi=150)
     plt.close(fig)
 
 

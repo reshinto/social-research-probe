@@ -127,9 +127,9 @@ def test_charts_suite_returns_already_annotated(tmp_path):
 
 def test_statistics_skip_empty_series():
     """services/analyzing/statistics.py:64 — continue on empty series."""
-    from social_research_probe.services.analyzing.statistics import StatisticsService
+    from social_research_probe.technologies.statistics import _stats_per_target
 
-    out = StatisticsService._stats_per_target({})
+    out = _stats_per_target({})
     assert out == {}
 
 
@@ -172,13 +172,21 @@ def test_merge_purposes_duplicate_evidence_and_overrides():
     assert out.scoring_overrides["k"] == 0.5
 
 
-def test_corroborate_providers_list_branch(monkeypatch):
-    """services/corroborating/corroborate.py 36->38 — providers already list."""
+def test_corroborate_providers_auto_init(monkeypatch):
+    """services/corroborating/corroborate.py — auto-init selects healthy providers."""
     from social_research_probe.services.corroborating import corroborate
 
     cfg = MagicMock()
-    cfg.corroboration_provider = ["brave", "exa"]
+    cfg.corroboration_provider = "exa"
     monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+    monkeypatch.setattr(
+        "social_research_probe.services.corroborating.select_healthy_providers",
+        lambda configured: (["exa"], ("exa",)),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+        lambda: False,
+    )
 
     async def fake_corroborate_claim(claim, providers):
         return MagicMock(verdict="inconclusive", source_urls=[], runner_name="x")
@@ -188,31 +196,8 @@ def test_corroborate_providers_list_branch(monkeypatch):
         fake_corroborate_claim,
     )
     svc = corroborate.CorroborationService()
+    assert svc.providers == ["exa"]
     asyncio.run(svc.execute_one(MagicMock()))
-
-
-def test_summary_cache_hit_branch(tmp_path, monkeypatch):
-    """services/enriching/summary.py 46->49 — cache hit branch."""
-    from social_research_probe.services.enriching import summary as smod
-
-    cache_called = []
-
-    def fake_get_str(*a, **kw):
-        cache_called.append("get")
-        return "cached"
-
-    def fake_set_str(*a, **kw):
-        cache_called.append("set")
-
-    from social_research_probe.utils.caching import pipeline_cache
-
-    monkeypatch.setattr(pipeline_cache, "get_str", fake_get_str)
-    monkeypatch.setattr(pipeline_cache, "set_str", fake_set_str)
-    monkeypatch.setattr(pipeline_cache, "summary_cache", lambda: object())
-    monkeypatch.setattr(pipeline_cache, "hash_key", lambda *a, **kw: "k")
-
-    asyncio.run(smod.SummaryService().execute_one({"title": "t", "url": "u", "transcript": "x"}))
-    assert "set" not in cache_called
 
 
 def test_warnings_freshness_stale(monkeypatch):

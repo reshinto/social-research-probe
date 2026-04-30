@@ -9,8 +9,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import social_research_probe.services.reporting as writer_svc
-from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.scoring import score as scoring_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
@@ -189,6 +187,8 @@ class TestWriterHtmlNoFallback:
 
 class TestPipelineYtCorroborateLLMSearchGate:
     def test_skips_llm_search(self, monkeypatch):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.side_effect = lambda n: n == "corroboration"  # llm disabled
         cfg.corroboration_provider = "auto"
@@ -204,20 +204,8 @@ class TestPipelineYtCorroborateLLMSearchGate:
             healthy = MagicMock()
             healthy.health_check.return_value = True
             gp.return_value = healthy
-            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-        assert "llm_search" not in out
-
-
-class TestChartsServiceCacheRestoreSuccess:
-    def test_cache_hit_returns_restored(self, monkeypatch, tmp_path):
-        png = tmp_path / "x.png"
-        png.write_bytes(b"x")
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: {"filenames": ["x.png"], "captions": ["cap"]},
-        )
-        out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
-        assert out and out[0].caption == "cap"
+            svc = CorroborationService()
+        assert "llm_search" not in svc.providers
 
 
 def test_youtube_api_resolve_no_secret_raises(monkeypatch):

@@ -19,7 +19,7 @@ def auto_mode_providers() -> tuple[str, ...]:
     from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
-    if not cfg.service_enabled("corroborating"):
+    if not cfg.service_enabled("corroboration"):
         return ()
     return ("exa", "brave", "tavily", "llm_search")
 
@@ -48,6 +48,7 @@ def select_healthy_providers(configured: str) -> tuple[list[str], tuple[str, ...
     cfg = load_active_config()
     if configured == "none" or not cfg.service_enabled("corroboration"):
         return [], ()
+    ensure_providers_registered()
     candidates = _candidates(configured)
     healthy: list[str] = []
     for name in candidates:

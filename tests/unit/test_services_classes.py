@@ -8,12 +8,19 @@ from unittest.mock import MagicMock, patch
 from social_research_probe.services.analyzing.charts import ChartsService
 from social_research_probe.services.analyzing.statistics import StatisticsService
 from social_research_probe.services.corroborating.corroborate import CorroborationService
-from social_research_probe.services.enriching.summary import SummaryService
+from social_research_probe.services.enriching.summary import (
+    SummaryService,
+    _configured_word_limit,
+    _with_summary_word_limit,
+)
 from social_research_probe.services.enriching.transcript import TranscriptService
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
+from social_research_probe.technologies.charts import items_from
+from social_research_probe.technologies.enriching import _coerce_word_limit
 from social_research_probe.technologies.llms import schemas
+from social_research_probe.technologies.statistics import _compute, items_from_data
 
 
 def test_schemas_present():
@@ -28,31 +35,10 @@ class TestChartsService:
         assert techs[0].name == "charts_suite"
 
     def test_items_from_non_dict(self):
-        assert ChartsService._items_from(None) == []
+        assert items_from(None) == []
 
     def test_items_from_dict(self):
-        assert ChartsService._items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
-
-    def test_serialise_roundtrip(self, tmp_path):
-        from social_research_probe.technologies.charts import ChartResult
-
-        png = tmp_path / "x.png"
-        png.write_bytes(b"\x89PNG")
-        ch = ChartResult(path=str(png), caption="cap")
-        out = ChartsService._serialise_results([ch], tmp_path)
-        restored = ChartsService._restore_results(out, tmp_path)
-        assert len(restored) == 1
-        assert restored[0].caption == "cap"
-
-    def test_restore_mismatch(self, tmp_path):
-        out = ChartsService._restore_results({"filenames": ["x"], "captions": []}, tmp_path)
-        assert out == []
-
-    def test_restore_missing_file(self, tmp_path):
-        out = ChartsService._restore_results(
-            {"filenames": ["missing.png"], "captions": ["c"]}, tmp_path
-        )
-        assert out == []
+        assert items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
 
     def test_execute_one_empty(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
@@ -62,6 +48,48 @@ class TestChartsService:
             out = asyncio.run(ChartsService().execute_one({"scored_items": []}))
         assert out.tech_results[0].success is True
 
+    def test_render_charts_no_success(self, monkeypatch):
+        from social_research_probe.services import ServiceResult, TechResult
+
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        failed_tr = TechResult(
+            tech_name="charts_suite", input={}, output=None, success=False, error="err"
+        )
+        svc_result = ServiceResult(
+            service_name="charts", input_key="scored_items", tech_results=[failed_tr]
+        )
+        with (
+            patch.object(ChartsService, "is_enabled", return_value=True),
+            patch.object(ChartsService, "execute_one", return_value=svc_result),
+        ):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    def test_render_charts_disabled(self, monkeypatch):
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        with patch.object(ChartsService, "is_enabled", return_value=False):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    def test_render_charts_success(self, tmp_path, monkeypatch):
+        from social_research_probe.technologies.charts import ChartResult
+
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        cr = ChartResult(path=str(tmp_path / "bar.png"), caption="Bar chart")
+        cfg = MagicMock()
+        cfg.data_dir = tmp_path
+        with (
+            patch("social_research_probe.config.load_active_config", return_value=cfg),
+            patch(
+                "social_research_probe.technologies.charts.render_charts",
+                return_value=[cr],
+            ),
+        ):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out["chart_outputs"] == [cr]
+        assert out["chart_captions"] == ["Bar chart"]
+        assert out["chart_takeaways"] == []
+
 
 class TestStatisticsService:
     def test_techs(self):
@@ -69,11 +97,11 @@ class TestStatisticsService:
         assert techs[0].name == "stats_per_target"
 
     def test_items_filter(self):
-        assert StatisticsService._items({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
-        assert StatisticsService._items("notdict") == []
+        assert items_from_data({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
+        assert items_from_data("notdict") == []
 
     def test_compute_empty(self):
-        assert StatisticsService._compute([]) == {"highlights": [], "low_confidence": True}
+        assert _compute([]) == {"highlights": [], "low_confidence": True}
 
     def test_compute_basic(self):
         items = [
@@ -86,7 +114,7 @@ class TestStatisticsService:
             }
             for v in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6)
         ]
-        out = StatisticsService._compute(items)
+        out = _compute(items)
         assert out["low_confidence"] is False
         assert out["highlights"]
 
@@ -124,24 +152,34 @@ class TestSynthesisService:
 
 
 class TestCorroborationService:
-    def test_techs(self):
+    def _patch_auto_init(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
-        with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            techs = CorroborationService()._get_technologies()
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+        monkeypatch.setattr(
+            "social_research_probe.services.corroborating.select_healthy_providers",
+            lambda configured: (["exa"], ("exa",)),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+            lambda: False,
+        )
+
+    def test_techs(self, monkeypatch):
+        self._patch_auto_init(monkeypatch)
+        techs = CorroborationService()._get_technologies()
         assert techs[0].name == "corroboration_host"
 
     def test_execute_failure(self, monkeypatch):
+        self._patch_auto_init(monkeypatch)
+
         async def boom(claim, providers):
             raise RuntimeError("x")
 
         monkeypatch.setattr(
             "social_research_probe.technologies.corroborates.corroborate_claim", boom
         )
-        cfg = MagicMock()
-        cfg.corroboration_provider = "exa"
-        with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            out = asyncio.run(CorroborationService().execute_one({"title": "t"}))
+        out = asyncio.run(CorroborationService().execute_one({"title": "t"}))
         assert out.tech_results[0].success is False
 
 
@@ -159,6 +197,46 @@ class TestSummaryService:
         )
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
         assert out.tech_results[0].output == "summary text"
+
+    def test_execute_uses_configured_word_limit(self, monkeypatch):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": 3}
+        cfg.service_enabled.return_value = True
+        cfg.technology_enabled.return_value = True
+        cfg.debug_enabled.return_value = False
+
+        prompts = []
+
+        async def fake(prompt, task="generating response"):
+            prompts.append(prompt)
+            return "one two three four five"
+
+        monkeypatch.setattr(
+            "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
+        )
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
+
+        assert "at most 3 words" in prompts[0]
+        assert out.tech_results[0].output == "one two three"
+
+    def test_configured_word_limit_falls_back_on_bad_config(self):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": object()}
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            assert _configured_word_limit() == 100
+
+    def test_configured_word_limit_falls_back_on_non_positive_config(self):
+        cfg = MagicMock()
+        cfg.tunables = {"per_item_summary_words": 0}
+        with patch("social_research_probe.config.load_active_config", return_value=cfg):
+            assert _configured_word_limit() == 100
+
+    def test_with_summary_word_limit_passes_through_non_dict(self):
+        assert _with_summary_word_limit("raw") == "raw"
+
+    def test_coerce_word_limit_falls_back_for_invalid_value(self):
+        assert _coerce_word_limit("not-int") == 100
 
     def test_execute_failure(self, monkeypatch):
         async def fake(prompt, task="generating response"):

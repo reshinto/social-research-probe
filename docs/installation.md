@@ -154,6 +154,21 @@ cd social-research-probe
 ./install.sh
 ```
 
+`install.sh` also configures the repository's Git hooks directory (`.githooks/`). This enables a **pre-push hook** that runs automatically before every `git push` and blocks the push if:
+
+- `ruff check --fix` or `ruff format` produce any auto-formatting changes (commit the fixes first)
+- `ruff check` reports unfixable lint errors
+- Any test in `tests/integration`, `tests/unit`, or `tests/contract` fails
+- Unit test coverage of `social_research_probe/` is below 100%
+
+If you already cloned the repo before this hook existed, run:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+or `make setup` to activate it manually.
+
 ---
 
 ## Step 2 — Set your YouTube API key
@@ -231,7 +246,14 @@ claude auth
 srp config set llm.runner claude
 ```
 
-See [llm-runners.md](llm-runners.md) for the full comparison, ensemble behaviour, and troubleshooting.
+Each runner pins a default model via `extra_flags` (e.g. `--model claude-haiku-4-5` for Claude). Override in `config.toml`:
+
+```toml
+[llm.claude]
+extra_flags = ["--model", "claude-sonnet-4-6"]
+```
+
+See [llm-runners.md](llm-runners.md) for the full comparison, pinned model table, ensemble behaviour, and troubleshooting.
 
 ---
 

@@ -1,0 +1,30 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TD
+  Input["Channel name + video title"] --> Curated{"Curated channel map?"}
+  Curated -- "match" --> Result["source_class label"]
+  Curated -- "no match" --> NameSignal{"Channel name regex?"}
+  NameSignal -- "match" --> Result
+  NameSignal -- "unknown" --> TitleSignal{"Title signal regex?"}
+  TitleSignal -- "commentary" --> Result
+  TitleSignal -- "unknown" --> LLM["LLM classifier"]
+  LLM --> Parse["Parse structured_output from CLI envelope"]
+  Parse --> Coerce["Coerce to valid class"]
+  Coerce --> Result
+
+  Result --> Output["primary | secondary | commentary | unknown"]
+
+  subgraph Heuristic ["HeuristicClassifier (zero cost)"]
+    Curated
+    NameSignal
+    TitleSignal
+  end
+
+  classDef input fill:#dbeafe,stroke:#2563eb,color:#111111,stroke-width:2px;
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef process fill:#f3f4f6,stroke:#6b7280,color:#111111,stroke-width:1px;
+  classDef output fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+
+  class Input input
+  class Curated,NameSignal,TitleSignal decision
+  class LLM,Parse,Coerce process
+  class Result,Output output

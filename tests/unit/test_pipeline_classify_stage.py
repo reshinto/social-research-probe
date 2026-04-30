@@ -156,43 +156,9 @@ class TestStageEnabled:
 class TestNormalizeFiltersUnclassifiable:
     def test_passthrough_when_all_items_fail_to_normalize(self, enabled_state):
         state, _ = enabled_state
-        # Strings are neither dicts nor RawItems → normalize_item returns None
-        # for each → _normalize_items returns []. Stage should pass through
-        # the original raw_items list without invoking the service.
+        # Strings are neither dicts nor RawItems — classify_batch returns them unchanged.
         state.set_stage_output("fetch", {"items": ["not-a-dict-or-RawItem", 42]})
 
         out = asyncio.run(yt.YouTubeClassifyStage().execute(state))
         items = out.get_stage_output("classify")["items"]
         assert items == ["not-a-dict-or-RawItem", 42]
-
-
-class TestStaticHelpers:
-    def test_channel_of_prefers_channel(self):
-        assert yt.YouTubeClassifyStage._channel_of({"channel": "A", "author_name": "B"}) == "A"
-
-    def test_channel_of_falls_back_to_author_name(self):
-        assert yt.YouTubeClassifyStage._channel_of({"author_name": "B"}) == "B"
-
-    def test_channel_of_empty(self):
-        assert yt.YouTubeClassifyStage._channel_of({}) == ""
-
-    def test_output_class_picks_first_success(self):
-        result = ServiceResult(
-            service_name="s",
-            input_key="x",
-            tech_results=[
-                TechResult(tech_name="a", input=None, output=None, success=False),
-                TechResult(tech_name="b", input=None, output="primary", success=True),
-            ],
-        )
-        assert yt.YouTubeClassifyStage._output_class(result) == "primary"
-
-    def test_output_class_unknown_when_no_success(self):
-        result = ServiceResult(
-            service_name="s",
-            input_key="x",
-            tech_results=[
-                TechResult(tech_name="a", input=None, output=None, success=False),
-            ],
-        )
-        assert yt.YouTubeClassifyStage._output_class(result) == "unknown"

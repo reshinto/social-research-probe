@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar
 from urllib.parse import urlparse
 
 from social_research_probe.technologies import BaseTechnology
-from social_research_probe.utils.caching.pipeline_cache import (
-    corroboration_cache,
-    get_json,
-    hash_key,
-    set_json,
-)
 from social_research_probe.utils.core.errors import ValidationError
 
 
@@ -28,7 +22,7 @@ class CorroborationResult:
     provider_name: str = ""
 
 
-class CorroborationProvider(ABC):
+class CorroborationProvider(BaseTechnology[object, CorroborationResult]):
     """Abstract base class that all corroboration providers must implement."""
 
     name: ClassVar[str]
@@ -38,6 +32,10 @@ class CorroborationProvider(ABC):
 
     @abstractmethod
     async def corroborate(self, claim) -> CorroborationResult: ...
+
+    async def _execute(self, data: object) -> CorroborationResult:
+        """Bridge BaseTechnology._execute → self.corroborate(data)."""
+        return await self.corroborate(data)
 
 
 VIDEO_HOST_DOMAINS: frozenset[str] = frozenset(
@@ -193,25 +191,17 @@ def aggregate_verdict(results: list[CorroborationResult]) -> tuple[str, float]:
 
 
 async def corroborate_claim(claim, provider_names: list[str]) -> dict:
-    """Run a claim through multiple providers concurrently and aggregate results.
-
-    Results cached by (claim_text, sorted_providers).
-    """
+    """Run a claim through multiple providers concurrently and aggregate results."""
     import asyncio
     import dataclasses
     import sys
 
     normalized_providers = list(dict.fromkeys(provider_names))
-    cache = corroboration_cache()
-    cache_key = hash_key("claim", claim.text, ",".join(sorted(normalized_providers)))
-    cached = get_json(cache, cache_key)
-    if cached is not None:
-        return cached
 
     async def _call_provider(provider_name: str) -> CorroborationResult | None:
         try:
             provider = get_provider(provider_name)
-            return await provider.corroborate(claim)
+            return await provider.execute(claim)
         except Exception as exc:
             print(f"[corroboration] provider {provider_name!r} failed: {exc}", file=sys.stderr)
             return None
@@ -223,20 +213,19 @@ async def corroborate_claim(claim, provider_names: list[str]) -> dict:
     collected = [r for r in outcomes if r is not None]
     verdict, confidence = aggregate_verdict(collected)
 
-    result = {
+    return {
         "claim_text": claim.text,
         "results": [dataclasses.asdict(r) for r in collected],
         "aggregate_verdict": verdict,
         "aggregate_confidence": confidence,
     }
-    set_json(cache, cache_key, result)
-    return result
 
 
 class CorroborationHostTech(BaseTechnology[object, dict]):
     """Technology wrapper for corroborating a single item's claim."""
 
     name: ClassVar[str] = "corroboration_host"
+    enabled_config_key: ClassVar[str] = "corroboration_host"
 
     def __init__(self, providers: list[str]):
         super().__init__()

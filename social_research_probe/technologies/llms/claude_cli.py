@@ -72,6 +72,27 @@ class ClaudeRunner(JsonCliRunner):
     enabled_config_key: ClassVar[str] = "claude"
     supports_agentic_search: ClassVar[bool] = True
 
+    def _parse_response(self, stdout: str) -> dict:
+        """Unwrap the Claude CLI envelope to extract structured output."""
+        try:
+            envelope = json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            raise AdapterError(f"claude returned non-JSON: {stdout[:200]!r}") from exc
+        if not isinstance(envelope, dict):
+            raise AdapterError(f"claude returned non-object: {stdout[:200]!r}")
+        structured = envelope.get("structured_output")
+        if isinstance(structured, dict):
+            return structured
+        inner = envelope.get("result", "")
+        if isinstance(inner, str) and inner.strip():
+            try:
+                parsed = json.loads(inner)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+        return envelope
+
     def _prompt_args(self, prompt: str) -> list[str]:
         """Claude expects the prompt as a positional arg in print mode."""
         return [prompt]

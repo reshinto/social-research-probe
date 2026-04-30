@@ -11,8 +11,6 @@ import social_research_probe.services.reporting as writer_svc
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
-from social_research_probe.platforms.youtube import pipeline as yt
-from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
@@ -61,13 +59,15 @@ class TestHtmlVoiceoverPlainSkip:
 
 class TestPipelineYtCorroborateFastModeOnPath:
     def test_skips_when_tech_disabled(self):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.corroboration_provider = "exa"
         cfg.technology_enabled.return_value = False  # exa disabled
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-        assert out == []
+            svc = CorroborationService()
+        assert svc.providers == []
 
 
 class TestConfigAllowsTechnology:
@@ -248,28 +248,3 @@ class TestTranscriptStringInput:
         )
         out = asyncio.run(transcript_svc.TranscriptService().execute_one("u-string"))
         assert out.input_key == "u-string"
-
-
-class TestChartsSvcRestoredEmpty:
-    def test_render_with_cache_empty_restored(self, monkeypatch, tmp_path):
-        # Cache returned but restored=[] (file missing) → falls through to render
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: {"filenames": ["nonexistent.png"], "captions": ["c"]},
-        )
-        captured = {}
-
-        async def fake_render(items, out):
-            from social_research_probe.technologies.charts import ChartResult
-
-            png = tmp_path / "fresh.png"
-            png.write_bytes(b"x")
-            return [ChartResult(path=str(png), caption="fresh")]
-
-        monkeypatch.setattr(charts_svc.ChartsService, "_render", staticmethod(fake_render))
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.set_json",
-            lambda c, k, v: captured.update({"v": v}),
-        )
-        out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
-        assert out and out[0].caption == "fresh"

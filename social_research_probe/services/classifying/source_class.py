@@ -55,3 +55,52 @@ class SourceClassService(BaseService[dict, str]):
 
     def _get_technologies(self) -> list[ClassifierTech]:
         return [_PROVIDER_MAP[resolve_provider_name()]()]
+
+    async def classify_batch(self, raw_items: list) -> list[dict]:
+        """Normalize, classify, and return enriched items with source_class."""
+        from social_research_probe.technologies.classifying import (
+            classify_by_title_signal,
+            coerce_class,
+        )
+        from social_research_probe.technologies.scoring import normalize_item
+
+        def _normalize(items: list) -> list[dict]:
+            return [d for d in (normalize_item(it) for it in items) if d is not None]
+
+        def _existing_class(item: dict) -> str:
+            return coerce_class(item.get("source_class"))
+
+        def _channel_of(item: dict) -> str:
+            return str(item.get("channel") or item.get("author_name") or "")
+
+        def _output_class(result) -> str:
+            for tr in result.tech_results:
+                if tr.success and isinstance(tr.output, str):
+                    return coerce_class(tr.output)
+            return "unknown"
+
+        def _title_override(item: dict) -> bool:
+            return classify_by_title_signal(str(item.get("title") or "")) == "commentary"
+
+        def _enrich(item: dict, base_class: str) -> dict:
+            enriched = dict(item)
+            enriched["source_class"] = "commentary" if _title_override(item) else base_class
+            return enriched
+
+        async def _resolve(item: dict, cache: dict[str, str]) -> str:
+            existing = _existing_class(item)
+            if existing != "unknown":
+                return existing
+            channel = _channel_of(item)
+            if channel in cache:
+                return cache[channel]
+            result = await self.execute_one(item)
+            resolved = _output_class(result)
+            cache[channel] = resolved
+            return resolved
+
+        items = _normalize(raw_items)
+        if not items:
+            return list(raw_items)
+        channel_cache: dict[str, str] = {}
+        return [_enrich(item, await _resolve(item, channel_cache)) for item in items]

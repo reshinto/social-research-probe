@@ -13,6 +13,7 @@ stage that wants transparent memoisation across runs.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import time
@@ -83,7 +84,7 @@ class FilesystemCache:
         """
         return self._cache_dir / f"{_sanitise_key(key)}.json"
 
-    def get(self, key: str) -> dict | None:
+    def get(self, key: str) -> object | None:
         """Return the cached value for *key*, or ``None`` if missing or expired.
 
         The entry is considered expired when
@@ -93,7 +94,7 @@ class FilesystemCache:
             key: Cache key to look up.
 
         Returns:
-            The cached ``dict`` if the entry exists and is within TTL, otherwise
+            The cached value if the entry exists and is within TTL, otherwise
             ``None``.
 
         Why this exists:
@@ -113,12 +114,12 @@ class FilesystemCache:
 
         return read_json(path)
 
-    def set(self, key: str, value: dict) -> None:
+    def set(self, key: str, value: object) -> None:
         """Persist *value* to disk under *key*.
 
         Args:
             key: Cache key.
-            value: JSON-serialisable dict to cache.
+            value: JSON-serialisable value to cache.
 
         Returns:
             None
@@ -144,7 +145,5 @@ class FilesystemCache:
             even within the TTL window.
         """
         path = self._path_for(key)
-        import contextlib
-
         with contextlib.suppress(FileNotFoundError):
             path.unlink()

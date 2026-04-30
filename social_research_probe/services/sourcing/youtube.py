@@ -6,16 +6,12 @@ from typing import ClassVar
 
 from social_research_probe.config import load_active_config
 from social_research_probe.services import BaseService, ServiceResult, TechResult
-from social_research_probe.technologies.web_search import (
+from social_research_probe.technologies.media_fetch import (
     YouTubeEngagementTech,
     YouTubeHydrateTech,
     YouTubeSearchTech,
 )
-from social_research_probe.utils.core.types import (
-    EngagementMetrics,
-    FetchLimits,
-    RawItem,
-)
+from social_research_probe.utils.core.types import FetchLimits
 
 
 def _resolve_default_limits() -> FetchLimits:
@@ -100,20 +96,3 @@ class YouTubeSourcingService(BaseService[str, dict]):
                 )
             )
             return None
-
-
-async def run_youtube_sourcing(
-    topic: str,
-    config: dict | None = None,
-) -> tuple[list[RawItem], list[EngagementMetrics]]:
-    """Run YouTubeSourcingService and return (items, engagement_metrics)."""
-    service = YouTubeSourcingService(config)
-    result = await service.execute_one(topic)
-    items: list[RawItem] = []
-    engagement: list[EngagementMetrics] = []
-    for tr in result.tech_results:
-        if tr.tech_name == YouTubeHydrateTech.name and isinstance(tr.output, list):
-            items = tr.output
-        elif tr.tech_name == YouTubeEngagementTech.name and isinstance(tr.output, list):
-            engagement = tr.output
-    return items, engagement

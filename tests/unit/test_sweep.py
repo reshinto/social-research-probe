@@ -10,7 +10,6 @@ import pytest
 
 import social_research_probe.services.scoring as compute_mod
 from social_research_probe.commands import install_skill
-from social_research_probe.services.analyzing import statistics as stats_svc
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.reporting import html as html_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
@@ -26,7 +25,12 @@ from social_research_probe.technologies.report_render.html.raw_html import (
 from social_research_probe.technologies.report_render.html.raw_html import (
     youtube as yt_html,
 )
-from social_research_probe.technologies.statistics import bayesian_linear, growth, normality
+from social_research_probe.technologies.statistics import (
+    _compute,
+    bayesian_linear,
+    growth,
+    normality,
+)
 from social_research_probe.technologies.validation.ai_slop_detector import score
 
 
@@ -173,7 +177,7 @@ def test_html_svc_run_success(monkeypatch):
 
 
 def test_stats_svc_compute_with_low_confidence():
-    out = stats_svc.StatisticsService._compute([{"x": 1}])
+    out = _compute([{"x": 1}])
     assert out["low_confidence"] is True
 
 

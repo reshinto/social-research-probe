@@ -12,7 +12,6 @@ import social_research_probe.services.scoring as compute_mod
 import social_research_probe.technologies.corroborates as filters_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.corroborating import corroborate as corr_svc
 from social_research_probe.services.reporting import audio as audio_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
@@ -38,15 +37,21 @@ def test_corroborate_svc_str_data(monkeypatch):
     """Pass non-dict data → uses str(data) for url branch."""
     cfg = MagicMock()
     cfg.corroboration_provider = "exa"
-    with patch("social_research_probe.config.load_active_config", return_value=cfg):
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+    monkeypatch.setattr(
+        "social_research_probe.services.corroborating.select_healthy_providers",
+        lambda configured: (["exa"], ("exa",)),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+        lambda: False,
+    )
 
-        async def fake(claim, providers):
-            return {"verdict": "x"}
+    async def fake(claim, providers):
+        return {"verdict": "x"}
 
-        monkeypatch.setattr(
-            "social_research_probe.technologies.corroborates.corroborate_claim", fake
-        )
-        out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
+    monkeypatch.setattr("social_research_probe.technologies.corroborates.corroborate_claim", fake)
+    out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
 
 
@@ -202,6 +207,7 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
     cfg.service_enabled.return_value = True
     cfg.corroboration_provider = "exa"
     cfg.technology_enabled.return_value = True
+    from social_research_probe.services.corroborating.corroborate import CorroborationService
     from social_research_probe.utils.core.errors import ValidationError
 
     with (
@@ -211,8 +217,8 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
             side_effect=ValidationError("nope"),
         ),
     ):
-        out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-    assert out == []
+        svc = CorroborationService()
+    assert svc.providers == []
 
 
 def test_formatter_render_full_no_summary(monkeypatch):

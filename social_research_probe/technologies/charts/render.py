@@ -50,7 +50,7 @@ def _table_row(rank: int, item: dict) -> dict:
     scores = item.get("scores", {})
     return {
         "rank": rank + 1,
-        "channel": str(item.get("channel") or item.get("author_name") or "")[:25],
+        "channel": str(item.get("channel") or item.get("author_name") or "")[:35],
         "trust": f"{float(scores.get('trust', 0.0)):.2f}",
         "trend": f"{float(scores.get('trend', 0.0)):.2f}",
         "opp": f"{float(scores.get('opportunity', 0.0)):.2f}",

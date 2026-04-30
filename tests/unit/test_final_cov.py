@@ -11,7 +11,6 @@ import pytest
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import suggest_purposes, suggest_topics
 from social_research_probe.config import load_active_config, reset_config_cache
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
@@ -60,8 +59,9 @@ class TestCmdConfigInvalidSection:
 
 
 class TestPipelineYtChartsExecuteWithFailure:
-    def test_render_outputs_no_success(self, monkeypatch):
+    def test_render_charts_no_success(self, monkeypatch):
         from social_research_probe.services import ServiceResult, TechResult
+        from social_research_probe.services.analyzing.charts import ChartsService
 
         async def fake_one(self, data):
             return ServiceResult(
@@ -70,20 +70,15 @@ class TestPipelineYtChartsExecuteWithFailure:
                 tech_results=[TechResult("t", None, None, success=False)],
             )
 
-        monkeypatch.setattr(
-            "social_research_probe.services.analyzing.charts.ChartsService.execute_one",
-            fake_one,
-        )
-        out = asyncio.run(yt.YouTubeChartsStage._render_outputs([{"x": 1}]))
-        assert out == []
+        monkeypatch.setattr(ChartsService, "execute_one", fake_one)
+        out = asyncio.run(ChartsService().render_charts([{"x": 1}]))
+        assert out["chart_outputs"] == []
 
 
 class TestYoutubeApiSearch:
-    def test_search_youtube_no_cache(self, monkeypatch, tmp_path):
+    def test_search_youtube_calls_search_videos(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
         with (
-            patch.object(youtube_api, "get_json", return_value=None),
-            patch.object(youtube_api, "set_json"),
             patch.object(youtube_api, "_search_videos", return_value=[{"id": "v"}]),
             patch.object(youtube_api, "resolve_youtube_api_key", return_value="k"),
         ):

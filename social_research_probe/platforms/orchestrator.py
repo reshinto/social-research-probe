@@ -27,9 +27,9 @@ def _maybe_register_fake() -> None:
         import importlib
 
         fake = importlib.import_module("tests.fixtures.fake_youtube")
-        from social_research_probe.services.sourcing import youtube as yt_sourcing
+        from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
 
-        yt_sourcing.run_youtube_sourcing = fake.fake_run_youtube_sourcing
+        YouTubeSourcingService.execute_one = fake.fake_execute_one
 
 
 def _build_platform_config(cmd: ParsedRunResearch) -> AdapterConfig:

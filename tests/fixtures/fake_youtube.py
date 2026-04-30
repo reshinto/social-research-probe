@@ -56,10 +56,22 @@ def fixture_engagement(items: list[RawItem]) -> list[EngagementMetrics]:
     return out
 
 
-async def fake_run_youtube_sourcing(
-    topic: str,
-    config: dict | None = None,
-) -> tuple[list[RawItem], list[EngagementMetrics]]:
-    """Drop-in replacement for run_youtube_sourcing in tests."""
+async def fake_execute_one(self, topic: str):
+    from social_research_probe.services import ServiceResult, TechResult
+    from social_research_probe.technologies.media_fetch import (
+        YouTubeEngagementTech,
+        YouTubeHydrateTech,
+        YouTubeSearchTech,
+    )
+
     items = fixture_items(topic)
-    return items, fixture_engagement(items)
+    engagement = fixture_engagement(items)
+    return ServiceResult(
+        service_name="youtube_sourcing",
+        input_key=topic,
+        tech_results=[
+            TechResult(YouTubeSearchTech.name, topic, items, True),
+            TechResult(YouTubeHydrateTech.name, items, items, True),
+            TechResult(YouTubeEngagementTech.name, items, engagement, True),
+        ],
+    )

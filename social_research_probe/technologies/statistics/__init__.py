@@ -86,42 +86,16 @@ def _compute(items: list[dict]) -> dict:
     }
 
 
-def _cache_key(items: list[dict]) -> str:
-    from social_research_probe.utils.analyzing.keys import dataset_key
-
-    return dataset_key(items, namespace="stats")
-
-
-def _stats_cache():
-    from social_research_probe.utils.caching.pipeline_cache import stage_cache
-
-    return stage_cache("analyze")
-
-
-def _cached_or_compute(items: list[dict]) -> dict:
-    from social_research_probe.utils.caching.pipeline_cache import get_json, set_json
-
-    if not items:
-        return _compute(items)
-    cache = _stats_cache()
-    key = _cache_key(items)
-    cached = get_json(cache, key)
-    if cached is not None:
-        return cached
-    result = _compute(items)
-    set_json(cache, key, result)
-    return result
-
-
 async def compute_async(items: list[dict]) -> dict:
     """Run stats computation in a thread to avoid blocking the event loop."""
-    return await asyncio.to_thread(_cached_or_compute, items)
+    return await asyncio.to_thread(_compute, items)
 
 
 class StatisticsTech(BaseTechnology[object, dict]):
     """Technology wrapper for computing statistics across all targets."""
 
     name: ClassVar[str] = "stats_per_target"
+    enabled_config_key: ClassVar[str] = "stats_per_target"
 
     async def _execute(self, input_data: object) -> dict:
         return await compute_async(items_from_data(input_data))

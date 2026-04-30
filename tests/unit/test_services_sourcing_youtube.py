@@ -6,12 +6,10 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import social_research_probe.platforms.youtube.pipeline as yt_pipeline
 from social_research_probe.platforms import FetchLimits, RawItem
-from social_research_probe.services.sourcing.youtube import (
-    YouTubeSourcingService,
-    run_youtube_sourcing,
-)
-from social_research_probe.technologies.web_search import (
+from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
+from social_research_probe.technologies.media_fetch import (
     YouTubeEngagementTech,
     YouTubeHydrateTech,
     YouTubeSearchTech,
@@ -328,7 +326,7 @@ def _resolve_default_limits_stub():
     return FetchLimits(max_items=1, recency_days=1)
 
 
-def test_run_youtube_sourcing_returns_items_and_engagement(monkeypatch):
+def test_fetch_items_extracts_hydrate_and_engagement(monkeypatch):
     item = RawItem(
         id="1",
         url="u",
@@ -357,7 +355,7 @@ def test_run_youtube_sourcing_returns_items_and_engagement(monkeypatch):
         )
 
     monkeypatch.setattr(YouTubeSourcingService, "execute_one", fake_execute)
-    items, em = asyncio.run(run_youtube_sourcing("topic"))
+    items, em = asyncio.run(yt_pipeline.YouTubeFetchStage()._fetch_items("topic", {}))
     assert len(items) == 1
     assert len(em) == 1
 

@@ -42,6 +42,7 @@ class ExaProvider(CorroborationProvider):
     """
 
     name: ClassVar[str] = "exa"
+    enabled_config_key: ClassVar[str] = "exa"
 
     def health_check(self) -> bool:
         """Return True if an Exa API key is available.

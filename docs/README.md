@@ -23,6 +23,7 @@ After those six pages, read the reference pages only when you need the matching 
 | --- | --- |
 | Install | [Installation](installation.md) |
 | Commands | [Commands](commands.md) |
+| Classification | [Source classification](classifying.md) |
 | Corroboration | [Corroboration](corroboration.md) |
 | LLM runners | [LLM runners](llm-runners.md) |
 | API costs and keys | [API costs and keys](api-costs-and-keys.md) |
@@ -87,3 +88,5 @@ These SVGs are rendered from `docs/diagrams/src/*.mmd` with a white background f
 | ![API cost map](diagrams/api-cost-map.svg) | API keys, free paths, and paid paths |
 | ![Architecture interaction](diagrams/architecture_interaction.svg) | Platform/Service/Technology flow |
 | ![Add service interaction](diagrams/add_service_interaction.svg) | Adding a new service |
+| ![Classification flow](diagrams/classifying_flow.svg) | Source classification pipeline |
+| ![Narration flow](diagrams/narration_flow.svg) | TTS narration pipeline |

@@ -37,6 +37,7 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
     name: ClassVar[str] = ""
     health_check_key: ClassVar[str] = ""
     enabled_config_key: ClassVar[str] = ""
+    cacheable: ClassVar[bool] = True
 
     def __init__(self) -> None:
         self.caller_service: str | None = None
@@ -55,12 +56,66 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
             log(f"{label} called_by={caller} -- starting")
         start = time.monotonic()
         try:
-            result = await self._execute(data)
+            result = await self._cached_execute(data)
         except Exception as exc:
             log(f"{label} error: {exc}")
             return None
         if cfg.debug_enabled("pipeline"):
             log(f"{label} done in {time.monotonic() - start:.2f}s")
+        return result
+
+    async def _cached_execute(self, data: TInput) -> TOutput:
+        """Wrap _execute with transparent disk caching.
+
+        Cache resolution: stage disable list → technology default → global disable.
+        """
+        from social_research_probe.utils.caching.pipeline_cache import (
+            DEFAULT_TTL,
+            TTL_OVERRIDES,
+            cache_disabled,
+            disable_cache_for_technologies,
+            get_json,
+            make_cache,
+            set_json,
+        )
+
+        cfg = load_active_config()
+        debug = cfg.debug_enabled("pipeline")
+
+        disabled = disable_cache_for_technologies.get() or []
+        if self.name in disabled:
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: stage disabled")
+            return await self._execute(data)
+        if not self.cacheable:
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: not cacheable")
+            return await self._execute(data)
+        if cache_disabled():
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: SRP_DISABLE_CACHE")
+            return await self._execute(data)
+
+        key = self._cache_key(data)
+        ttl = TTL_OVERRIDES.get(self.name, DEFAULT_TTL)
+        cache = make_cache(f"technologies/{self.name}", ttl)
+
+        cached = get_json(cache, key)
+        if isinstance(cached, dict) and "output" in cached:
+            log(f"[TECH][{self.name}] cache hit")
+            return cached["output"]
+        if debug:
+            log(f"[TECH][{self.name}] cache miss — calling _execute")
+
+        result = await self._execute(data)
+
+        if result is not None:
+            set_json(cache, key, {"input": repr(data), "output": result})
+            if debug:
+                log(f"[TECH][{self.name}] cache write ok")
+        elif debug:
+            log(f"[TECH][{self.name}] _execute returned None — not cached")
+
         return result
 
     @abstractmethod

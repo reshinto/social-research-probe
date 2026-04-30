@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -108,20 +108,11 @@ class TestCorroborateClaim:
                 return _result("supported", 0.7)
 
         monkeypatch.setattr(host, "get_provider", lambda n: P())
-
-        with patch.object(host, "get_json", return_value=None), patch.object(host, "set_json"):
-            claim = MagicMock()
-            claim.text = "the claim"
-            out = asyncio.run(host.corroborate_claim(claim, ["fake1"]))
-            assert out["aggregate_verdict"] == "supported"
-            assert out["claim_text"] == "the claim"
-
-    def test_cached_returned(self):
-        with patch.object(host, "get_json", return_value={"cached": True}):
-            claim = MagicMock()
-            claim.text = "x"
-            out = asyncio.run(host.corroborate_claim(claim, ["a"]))
-            assert out == {"cached": True}
+        claim = MagicMock()
+        claim.text = "the claim"
+        out = asyncio.run(host.corroborate_claim(claim, ["fake1"]))
+        assert out["aggregate_verdict"] == "supported"
+        assert out["claim_text"] == "the claim"
 
     def test_provider_error_skipped(self, monkeypatch):
         class P(CorroborationProvider):
@@ -134,8 +125,7 @@ class TestCorroborateClaim:
                 raise RuntimeError("boom")
 
         monkeypatch.setattr(host, "get_provider", lambda n: P())
-        with patch.object(host, "get_json", return_value=None), patch.object(host, "set_json"):
-            claim = MagicMock()
-            claim.text = "x"
-            out = asyncio.run(host.corroborate_claim(claim, ["fakefail"]))
-            assert out["results"] == []
+        claim = MagicMock()
+        claim.text = "x"
+        out = asyncio.run(host.corroborate_claim(claim, ["fakefail"]))
+        assert out["results"] == []

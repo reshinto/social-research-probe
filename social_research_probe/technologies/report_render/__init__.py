@@ -11,6 +11,7 @@ class HtmlRenderTech(BaseTechnology[object, str]):
     """Technology for generating the final HTML report."""
 
     name: ClassVar[str] = "html_render"
+    enabled_config_key: ClassVar[str] = "html_render"
 
     async def _execute(self, input_data: object) -> str:
         import asyncio

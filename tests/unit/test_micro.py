@@ -96,6 +96,7 @@ class TestHistogramEmpty:
 
 class TestPipelineYtCorroborateExecuteFastMode:
     def test_select_skips_unhealthy(self, monkeypatch):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
         from social_research_probe.utils.core.errors import ValidationError
 
         cfg = MagicMock()
@@ -115,10 +116,9 @@ class TestPipelineYtCorroborateExecuteFastMode:
                 side_effect=[provider, ValidationError("x")],
             ),
         ):
-            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-        # provider raises (not ValidationError) so loop continues, second is ValidationError
-        # both fail, returns []
-        assert out == []
+            svc = CorroborationService()
+        # first provider health_check returns False, second raises ValidationError — both fail
+        assert svc.providers == []
 
 
 class TestPipelineYtBuildContextSkipsNonTopN:
@@ -136,5 +136,5 @@ class TestPipelineYtBuildContextSkipsNonTopN:
         state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
         state.set_stage_output("stats", {"stats_summary": {}})
         state.set_stage_output("charts", {"chart_outputs": []})
-        ctx = yt.YouTubeSynthesisStage._build_synthesis_context(state)
+        ctx = yt.YouTubeSynthesisStage()._build_synthesis_context(state)
         assert ctx["top_n"] == [{"id": "1"}]

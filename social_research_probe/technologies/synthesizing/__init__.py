@@ -11,6 +11,7 @@ class SynthesisTech(BaseTechnology[object, str]):
     """Technology for generating the final research synthesis."""
 
     name: ClassVar[str] = "llm_synthesis"
+    enabled_config_key: ClassVar[str] = "llm_synthesis"
 
     async def _execute(self, input_data: object) -> str | None:
         from social_research_probe.technologies.synthesizing.llm_contract import (

@@ -11,12 +11,6 @@ from dataclasses import dataclass
 
 from social_research_probe.commands import add_purpose, add_topics, list_topics
 from social_research_probe.config import load_active_config
-from social_research_probe.utils.caching.pipeline_cache import (
-    classification_cache,
-    get_json,
-    hash_key,
-    set_json,
-)
 from social_research_probe.utils.core.errors import DuplicateError, ValidationError
 from social_research_probe.utils.core.strings import normalize_whitespace
 from social_research_probe.utils.core.types import RunnerName
@@ -93,16 +87,9 @@ def classify_query(query: str) -> ClassifiedQuery:
 @log_with_time("[srp] _run_classification: classifying query")
 def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
     """Try each runner in order and return the first valid classification result."""
-    cache_key = hash_key(prompt)
-    cached = get_json(classification_cache(), cache_key)
-    if cached is not None:
-        return cached["result"]
-
     result = run_with_fallback(prompt, NL_QUERY_CLASSIFICATION_SCHEMA, preferred)
 
     if _is_valid_result(result):
-        cache_entry = {"prompt": prompt, "result": result}
-        set_json(classification_cache(), cache_key, cache_entry)
         return result
 
     raise ValidationError(

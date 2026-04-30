@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from social_research_probe.platforms.state import PipelineState
 
-from social_research_probe.utils.core.types import EngagementMetrics, FetchLimits, RawItem
+from social_research_probe.utils.core.types import (
+    EngagementMetrics,
+    FetchLimits,
+    RawItem,
+)
 
 
 class PlatformClient(ABC):
@@ -43,6 +46,17 @@ class FetchClient(PlatformClient):
 class BaseStage(ABC):
     """A single named stage in a research pipeline."""
 
+    disable_cache_for_technologies: ClassVar[list[str]] = []
+
+    async def run(self, state: PipelineState) -> PipelineState:
+        """Set stage cache overrides, then execute."""
+        from social_research_probe.utils.caching.pipeline_cache import (
+            disable_cache_for_technologies,
+        )
+
+        disable_cache_for_technologies.set(self.disable_cache_for_technologies)
+        return await self.execute(state)
+
     @abstractmethod
     async def execute(self, state: PipelineState) -> PipelineState: ...
 
@@ -63,20 +77,6 @@ class BaseResearchPlatform(ABC):
 
     @abstractmethod
     async def run(self, state: PipelineState) -> PipelineState: ...
-
-
-async def run_stages(platform: BaseResearchPlatform, state: PipelineState) -> PipelineState:
-    """Execute all enabled stages of a platform pipeline in order."""
-    start = time.monotonic()
-    name = type(platform).__name__
-    from social_research_probe.utils.display.progress import log
-
-    log(f"[PLATFORM][{name}] starting")
-    for stage in platform.stages():
-        if stage._is_enabled(state):
-            state = await stage.execute(state)
-    log(f"[PLATFORM][{name}] done in {time.monotonic() - start:.2f}s")
-    return state
 
 
 _concrete_pipelines: dict[str, type] | None = None
@@ -109,5 +109,4 @@ __all__ = [
     "PlatformClient",
     "RawItem",
     "SearchClient",
-    "run_stages",
 ]

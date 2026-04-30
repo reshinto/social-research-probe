@@ -16,12 +16,12 @@ timeout_seconds = 60
 # Extra arguments appended to every Claude CLI call. Use this for CLI-specific
 # options such as model, permission, or profile flags supported by your local
 # Claude Code installation.
-extra_flags = []
+extra_flags = ["--model", "claude-haiku-4-5"]
 
 [llm.gemini]
 # Extra arguments appended to every Gemini CLI call. Use this for CLI-specific
 # options such as model or project flags supported by your local Gemini CLI.
-extra_flags = []
+extra_flags = ["--model", "gemini-2.5-flash-lite"]
 
 [llm.codex]
 # Codex CLI executable name or absolute path. The binary must support
@@ -31,7 +31,7 @@ binary = "codex"
 # Extra arguments appended after "codex exec" and before the prompt. Use this
 # for Codex-specific options such as model or sandbox flags supported by your
 # installed Codex CLI.
-extra_flags = []
+extra_flags = ["--model", "gpt-5.4"]
 
 [llm.local]
 # No file-based defaults are used for the local runner yet. Set
@@ -70,12 +70,6 @@ max_items = 20
 # Number of top-scored videos that receive transcripts, summaries, and deeper
 # enrichment. This controls most of the expensive or slow downstream work.
 enrich_top_n = 5
-
-# Cache time-to-live for YouTube search responses.
-cache_ttl_search_hours = 6
-
-# Cache time-to-live for YouTube channel metadata responses.
-cache_ttl_channel_hours = 24
 
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
@@ -209,6 +203,45 @@ codex = false
 # Allows the local free-text runner. Set SRP_LOCAL_LLM_BIN before enabling.
 local = false
 
+# Enables the LLM ensemble enrichment technology for per-item summaries.
+llm_ensemble = true
+
+# Enables the LLM synthesis technology for generating the final research report.
+llm_synthesis = true
+
+# Enables the HTML report rendering technology.
+html_render = true
+
+# Enables per-target statistical analysis technology.
+stats_per_target = true
+
+# Enables the full chart suite generation technology.
+charts_suite = true
+
+# Enables the scoring computation technology for ranking items.
+scoring_compute = true
+
+# Enables the YouTube search technology (API-backed topic search).
+youtube_search = true
+
+# Enables the YouTube hydration technology (fetches video and channel statistics).
+youtube_hydrate = true
+
+# Enables the YouTube engagement metrics computation technology.
+youtube_engagement = true
+
+# Enables the corroboration host technology that runs all corroboration providers.
+corroboration_host = true
+
+# Enables macOS TTS narration for generated reports.
+mac_tts = true
+
+# Enables the claim extractor technology for identifying verifiable claims.
+claim_extractor = true
+
+# Enables the AI slop detector technology for filtering low-quality AI-generated content.
+ai_slop_detector = true
+
 [tunables]
 # Transcript-vs-URL summary divergence threshold that triggers a warning.
 summary_divergence_threshold = 0.4
@@ -219,7 +252,7 @@ per_item_summary_words = 100
 [debug]
 # Enables stderr start/end logs around concrete technology calls. SRP_LOGS=1
 # can enable the same logs at runtime without editing this file.
-technology_logs_enabled = false
+technology_logs_enabled = true
 
 [voicebox]
 # Preferred Voicebox profile name for generated HTML reports and narration.

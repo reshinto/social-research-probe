@@ -9,16 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from social_research_probe.platforms import RawItem
-from social_research_probe.services.analyzing import charts as charts_svc
-from social_research_probe.services.analyzing import statistics as stats_svc
-from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
-from social_research_probe.technologies.transcript_fetch import (
-    youtube_transcript_api as yt_api,
-)
-from social_research_probe.technologies.web_search import (
+from social_research_probe.technologies.media_fetch import (
     YouTubeHydrateTech,
     YouTubeSearchTech,
     _recency_cutoff,
+)
+from social_research_probe.technologies.statistics import compute_async
+from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
+from social_research_probe.technologies.transcript_fetch import (
+    youtube_transcript_api as yt_api,
 )
 
 
@@ -33,20 +32,9 @@ class TestYouTubeTranscriptApi:
         monkeypatch.setattr(yt_api, "_API_AVAILABLE", True)
         assert yt_api.fetch_transcript("https://nope.com") is None
 
-    def test_fetch_transcript_cached(self, monkeypatch):
-        monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
-        monkeypatch.setattr(yt_api, "_API_AVAILABLE", True)
-        monkeypatch.setattr(yt_api, "get_str", lambda c, k: "cached transcript")
-        assert (
-            yt_api.fetch_transcript("https://youtube.com/watch?v=abcDEF12345")
-            == "cached transcript"
-        )
-
     def test_fetch_transcript_api_success(self, monkeypatch):
         monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
         monkeypatch.setattr(yt_api, "_API_AVAILABLE", True)
-        monkeypatch.setattr(yt_api, "get_str", lambda c, k: None)
-        monkeypatch.setattr(yt_api, "set_str", lambda *a, **kw: None)
 
         class Snip:
             def __init__(self, t):
@@ -61,7 +49,6 @@ class TestYouTubeTranscriptApi:
     def test_fetch_transcript_api_empty(self, monkeypatch):
         monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
         monkeypatch.setattr(yt_api, "_API_AVAILABLE", True)
-        monkeypatch.setattr(yt_api, "get_str", lambda c, k: None)
         fake_api = MagicMock()
         fake_api.return_value.fetch.return_value = []
         monkeypatch.setattr(yt_api, "YouTubeTranscriptApi", fake_api)
@@ -70,7 +57,6 @@ class TestYouTubeTranscriptApi:
     def test_fetch_transcript_api_exception(self, monkeypatch):
         monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)
         monkeypatch.setattr(yt_api, "_API_AVAILABLE", True)
-        monkeypatch.setattr(yt_api, "get_str", lambda c, k: None)
         fake_api = MagicMock()
         fake_api.return_value.fetch.side_effect = RuntimeError("net")
         monkeypatch.setattr(yt_api, "YouTubeTranscriptApi", fake_api)
@@ -174,150 +160,11 @@ class TestSourcingYouTube:
         assert out[0].extras["channel_subscribers"] == 5
 
 
-class TestChartsService:
-    def test_charts_cache(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
-        cache = charts_svc.ChartsService._charts_cache()
-        assert cache is not None
-
-    def test_render_with_cache_empty(self, tmp_path):
-        out = asyncio.run(charts_svc.ChartsService._render_with_cache([], tmp_path))
-        assert out == []
-
-    def test_render_with_cache_hits(self, monkeypatch, tmp_path):
-        png = tmp_path / "x.png"
-        png.write_bytes(b"x")
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: {"filenames": ["x.png"], "captions": ["cap"]},
-        )
-        out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
-        assert out and out[0].caption == "cap"
-
-    def test_render_with_cache_miss_writes(self, monkeypatch, tmp_path):
-        import social_research_probe.technologies.charts as charts_tech
-        from social_research_probe.technologies.charts import ChartResult
-
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: None,
-        )
-        captured = {}
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.set_json",
-            lambda c, k, v: captured.update({"v": v}),
-        )
-
-        async def fake_render(items, out):
-            return [ChartResult(path=str(tmp_path / "y.png"), caption="c")]
-
-        # Cover both service and tech paths
-        monkeypatch.setattr(charts_svc.ChartsService, "_render", staticmethod(fake_render))
-        out = asyncio.run(charts_svc.ChartsService._render_with_cache([{"id": "1"}], tmp_path))
-        assert out[0].caption == "c"
-        assert captured["v"]["captions"] == ["c"]
-
-        captured.clear()
-        monkeypatch.setattr(charts_tech, "_render", fake_render)
-        out2 = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
-        assert out2[0].caption == "c"
-
-    def test_render_with_cache_tech_hits(self, monkeypatch, tmp_path):
-        """Cover technologies/charts/__init__.render_with_cache cache-hit branch (lines 106-108)."""
-        import social_research_probe.technologies.charts as charts_tech
-
-        png = tmp_path / "x.png"
-        png.write_bytes(b"x")
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: {"filenames": ["x.png"], "captions": ["cap"]},
-        )
-        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
-        assert out and out[0].caption == "cap"
-
-    def test_render_with_cache_tech_hit_empty_restore(self, monkeypatch, tmp_path):
-        """Cover branch 107->109: cache hit but restore returns empty list → fall through to render."""
-        import social_research_probe.technologies.charts as charts_tech
-        from social_research_probe.technologies.charts import ChartResult
-
-        get_calls = [0]
-
-        def fake_get_json(c, k):
-            if get_calls[0] == 0:
-                get_calls[0] += 1
-                # Cache returns payload but png file missing → _restore_results returns []
-                return {"filenames": ["missing.png"], "captions": ["c"]}
-            return None
-
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            fake_get_json,
-        )
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.set_json",
-            lambda c, k, v: None,
-        )
-        monkeypatch.setattr(
-            charts_tech, "_render", lambda items, out: asyncio.coroutine(lambda: [])()
-        )
-
-        async def fake_render(items, out):
-            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
-
-        monkeypatch.setattr(charts_tech, "_render", fake_render)
-        out = asyncio.run(charts_tech.render_with_cache([{"id": "1"}], tmp_path))
-        assert out[0].caption == "r"
-
-    def test_render_fn_uses_thread(self, monkeypatch, tmp_path):
-        """Cover technologies/charts/__init__._render lines directly."""
-        import social_research_probe.technologies.charts as charts_tech
-        import social_research_probe.technologies.charts.render as render_mod
-        from social_research_probe.technologies.charts import ChartResult
-
-        def fake_render_all(items, out):
-            return [ChartResult(path=str(tmp_path / "r.png"), caption="r")]
-
-        monkeypatch.setattr(render_mod, "render_all", fake_render_all)
-        out = asyncio.run(charts_tech._render([{"id": "1"}], tmp_path))
-        assert out[0].caption == "r"
-
-
 class TestStatisticsService:
     def test_compute_async(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
-        out = asyncio.run(stats_svc.StatisticsService._compute_async([]))
+        out = asyncio.run(compute_async([]))
         assert out["highlights"] == []
-
-    def test_cached_or_compute_hit(self, monkeypatch):
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: {"highlights": ["h"], "low_confidence": False},
-        )
-        out = stats_svc.StatisticsService._cached_or_compute([{"id": "1"}])
-        assert out["highlights"] == ["h"]
-
-    def test_cached_or_compute_miss(self, monkeypatch):
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.get_json",
-            lambda c, k: None,
-        )
-        captured = {}
-        monkeypatch.setattr(
-            "social_research_probe.utils.caching.pipeline_cache.set_json",
-            lambda c, k, v: captured.update({"v": v}),
-        )
-        items = [
-            {
-                "overall_score": v,
-                "trust": v,
-                "trend": v,
-                "opportunity": v,
-                "features": {"view_velocity": v, "engagement_ratio": v, "age_days": v},
-            }
-            for v in (0.1, 0.2, 0.3, 0.4, 0.5)
-        ]
-        out = stats_svc.StatisticsService._cached_or_compute(items)
-        assert out["highlights"]
 
 
 class TestLLMSearchProvider:
@@ -367,7 +214,9 @@ class TestLLMSearchProvider:
         cfg = MagicMock()
         cfg.llm_runner = "claude"
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            from social_research_probe.technologies.corroborates.llm_search import LLMSearchProvider
+            from social_research_probe.technologies.corroborates.llm_search import (
+                _run_llm,
+            )
 
-            out = LLMSearchProvider._run_llm("p")
+            out = _run_llm("p")
         assert out == {"verdict": "supported"}

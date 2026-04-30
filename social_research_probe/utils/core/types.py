@@ -97,8 +97,6 @@ class YouTubePlatformConfig(TypedDict, total=False):
     recency_days: int
     max_items: int
     enrich_top_n: int
-    cache_ttl_search_hours: int
-    cache_ttl_channel_hours: int
 
 
 class PlatformsConfigSection(TypedDict):
@@ -218,8 +216,6 @@ class AdapterConfig(TypedDict, total=False):
     recency_days: int
     max_items: int
     enrich_top_n: int
-    cache_ttl_search_hours: int
-    cache_ttl_channel_hours: int
 
 
 class PurposeEntry(TypedDict):

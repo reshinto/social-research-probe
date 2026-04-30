@@ -10,14 +10,19 @@ A research run starts with `srp research` and ends with a report path or local s
 
 1. The CLI parses the topic and purpose names.
 2. The orchestrator loads purposes, merges the selected purpose definitions, and builds platform config.
-3. The platform pipeline fetches items and engagement metrics. Today this is the YouTube adapter.
-4. The classifier assigns a `source_class` label (`primary`, `secondary`, `commentary`, or `unknown`) to each fetched item.
-5. The scorer ranks items by trust, trend, opportunity, and overall score stored under `scores.*`.
-6. Transcript fetching, statistics, and chart rendering run in parallel.
-7. The summary service summarizes the transcript-enriched top-N items when an LLM runner is available.
-8. Corroboration checks extracted claims through healthy configured providers.
-9. Synthesis and assembly build the report dictionary.
-10. Reporting writes Markdown, HTML, chart PNGs, and optional narration.
+3. **Fetch** — pulls candidate items and engagement metrics from the platform adapter.
+4. **Classify** — assigns a `source_class` label (`primary`, `secondary`, `commentary`, or `unknown`) to each item.
+5. **Score** — ranks items by trust, trend, opportunity, and overall score stored under `scores.*`.
+6. **Transcript** — fetches transcripts for the top-N scored items.
+7. **Summary** — generates LLM summaries of transcript-enriched items when a runner is available.
+8. **Corroborate** — checks extracted claims through healthy configured search providers.
+9. **Stats** — computes aggregate statistics on the scored dataset.
+10. **Charts** — renders visualisations of score distributions and engagement metrics.
+11. **Synthesis** — produces a free-form LLM narrative combining all evidence.
+12. **Assemble** — merges every stage output into the final report dictionary.
+13. **Structured Synthesis** — runs a structured LLM pass over the assembled report.
+14. **Report** — writes Markdown and HTML files to disk.
+15. **Narration** — reads the evidence summary aloud via TTS when enabled.
 
 The topic is the subject being investigated. The purpose is the lens used to interpret that subject. For example, the same topic can be researched as `latest-news`, `trend-analysis`, or `risk-review`; the platform fetch may start from similar search results, but the ranking and final narrative should emphasize different evidence.
 
@@ -45,14 +50,18 @@ Imagine the topic is `"AI agents"` and the purpose is `"latest-news"`.
 
 | Stage | What it contributes |
 | --- | --- |
-| Fetch | Candidate platform items about AI agents. |
-| Classify | Source type labels (`primary`, `secondary`, `commentary`, or `unknown`) for each item. |
-| Score | A ranked list based on the configured purpose and available features. |
-| Enrich | Extra text and metadata for the strongest items. |
-| Summarize | Short item-level summaries when a runner is available. |
+| Fetch | Candidate platform items and engagement metrics. |
+| Classify | Source type labels (`primary`, `secondary`, `commentary`, or `unknown`) per item. |
+| Score | A ranked list based on trust, trend, opportunity, and overall score. |
+| Transcript | Full transcripts for the top-N scored items. |
+| Summary | Short item-level summaries when a runner is available. |
 | Corroborate | External evidence checks for extracted claims. |
-| Analyze | Statistics and charts that explain the shape of the result set. |
-| Synthesize | Human-readable sections that combine evidence and caveats. |
-| Report | Markdown, HTML, chart files, and optional derived outputs. |
+| Stats | Aggregate statistics across the scored dataset. |
+| Charts | Visualisations of score distributions and engagement metrics. |
+| Synthesis | Free-form LLM narrative combining all evidence. |
+| Assemble | Merged report dictionary from every stage output. |
+| Structured Synthesis | Structured LLM pass over the assembled report. |
+| Report | Markdown, HTML, and chart PNG files. |
+| Narration | Audio readout of the evidence summary via TTS. |
 
 If you understand those stages, you can usually diagnose any run. Missing charts point to analysis or rendering. Missing summaries point to transcript or runner configuration. Weak final synthesis points to missing source text, weak summaries, or limited corroboration evidence.

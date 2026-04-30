@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - Unreleased
+
+### Added
+
+- Added `docs/classifying.md` documenting the three-tier source classification system.
+- Added `classifying_flow.svg` and `narration_flow.svg` diagrams with Mermaid sources.
+- Added pinned model flags section to `docs/llm-runners.md`.
+- Added CLAUDE.md, runtests.sh, .graphifyignore, and graphify-out/ to `docs/root-files.md`.
+
+### Changed
+
+- Pinned default LLM runner models: Claude → `claude-haiku-4-5`, Gemini → `gemini-2.5-flash-lite`, Codex → `gpt-5.4`.
+- Updated `docs/how-it-works.md` pipeline walkthrough from 10 steps to 15 steps covering all 13 stages.
+- Updated mental model table to list all 13 pipeline stages with accurate descriptions.
+- Updated `docs/configuration.md` with classifying service gates, technology gates, and debug section.
+- Updated `docs/installation.md` with pinned model override instructions.
+- Updated `docs/adding-a-technology.md` with diagram reference, disk caching feature, and `cacheable` class var.
+- Updated `docs/README.md` index with classification doc and two new diagrams.
+
+### Fixed
+
+- Fixed Claude CLI envelope parsing in `ClaudeRunner._parse_response` to extract `structured_output` field, resolving LLM classification returning "unknown" for all channels.
+- Fixed corroboration gate typo in `auto_mode_providers` service key.
+- Fixed missing `ensure_providers_registered()` call in `select_healthy_providers`.
+- Fixed source validation summary showing zeros by adding defensive recomputation.
+- Fixed report table column sizing for readability.
+
+## [0.0.9] - Unreleased
+
+### Added
+
+- Added `source_class` classification stage between fetch and score, with heuristic and LLM-based classifiers.
+- Added `enabled_config_key` to technology classes and expanded `DEFAULT_CONFIG` for granular feature flags.
+- Added `enrich_batch` to `TranscriptService` and `SummaryService`.
+- Added `classify_batch` to `SourceClassService` to absorb pipeline orchestration logic.
+- Added `ScoringService.score_and_rank`, `ChartsService.render_charts`, and `ReportService` public methods.
+- Added `CorroborationService` provider selection and merge logic.
+- Added web search techs wired into `LLMSearchProvider` as agentic fallback.
+- Added `utils/pipeline/helpers.py` for pipeline utility functions.
+
+### Changed
+
+- Nested scores under `scores` dict with `trust`, `trend`, `opportunity`, `overall` fields instead of flat `overall_score`.
+- Purged all module-level helpers from `pipeline.py` and delegated to service methods.
+- Enforced strict feature-flag layering across pipeline, services, and technologies.
+- Dropped `cfg` parameter from scoring/ensemble and corroboration helpers; load from singleton.
+- Updated `docs/scoring.md`, `docs/charts.md`, `docs/statistics.md`, and `docs/python-language-guide.md` for nested `scores.*` structure.
+- Updated `docs/how-it-works.md` to add classify stage (step 4) and mental model table row.
+- Updated `docs/diagrams/src/data-flow.mmd` to add Classify node between Fetch and Score; regenerated SVG.
+
+### Fixed
+
+- Fixed `RawItem` normalization to dict in classify stage.
+- Fixed LLM runners filtered by `technology_enabled` config flag.
+- Fixed `YouTubeSourcingService.execute_one()` to gate on service-level feature flag.
+- Fixed cache infrastructure with custom serialiser, widened types, and input+output envelope.
+- Fixed `type: ignore` removals, widened `read_json` types, and hoisted contextlib imports.
+- Fixed `eval_summary_quality` to use current LLM ensemble path.
+
 ## [0.0.8] - Unreleased
 
 Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current documentation updates in this working tree.
@@ -188,7 +247,9 @@ Derived from `git log v0.0.7..HEAD` through `4cfd9c7`, plus the current document
 - Late-binding closure bug in pipeline `asyncio.to_thread` lambda
 - `strict=True` added to `zip()` in LLM ensemble response collection
 
-[0.0.8]: https://github.com/reshinto/social-research-probe/compare/v0.0.7...HEAD
+[0.0.10]: https://github.com/reshinto/social-research-probe/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/reshinto/social-research-probe/compare/v0.0.8...v0.0.9
+[0.0.8]: https://github.com/reshinto/social-research-probe/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/reshinto/social-research-probe/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/reshinto/social-research-probe/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/reshinto/social-research-probe/compare/v0.0.3...v0.0.5

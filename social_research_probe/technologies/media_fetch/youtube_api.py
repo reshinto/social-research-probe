@@ -4,12 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from social_research_probe.utils.caching.pipeline_cache import (
-    get_json,
-    hash_key,
-    set_json,
-    stage_cache,
-)
 from social_research_probe.utils.core.errors import AdapterError
 from social_research_probe.utils.core.types import JSONObject, JSONValue
 from social_research_probe.utils.display.progress import log_with_time
@@ -196,21 +190,12 @@ def search_youtube(
     Raises:
         AdapterError: If credentials are missing or the API request fails.
     """
-    cache = stage_cache("youtube_search")
-    cache_key = hash_key(topic, str(max_items), str(published_after or ""))
-    cached = get_json(cache, cache_key)
-    if cached is not None:
-        items = cached.get("items", [])
-        return items if isinstance(items, list) else []
-
-    items = _search_videos(
+    return _search_videos(
         resolve_youtube_api_key(),
         topic=topic,
         max_items=max_items,
         published_after=published_after,
     )
-    set_json(cache, cache_key, {"items": items})
-    return items
 
 
 @log_with_time("[srp] youtube: hydrate")
@@ -234,21 +219,9 @@ async def hydrate_youtube(
     """
     import asyncio
 
-    cache = stage_cache("youtube_hydrate")
-    cache_key = hash_key(",".join(sorted(video_ids)), ",".join(sorted(channel_ids)))
-    cached = get_json(cache, cache_key)
-    if cached is not None:
-        videos = cached.get("videos", [])
-        channels = cached.get("channels", [])
-        return (
-            videos if isinstance(videos, list) else [],
-            channels if isinstance(channels, list) else [],
-        )
-
     api_key = resolve_youtube_api_key()
     videos, channels = await asyncio.gather(
         asyncio.to_thread(_fetch_video_details, api_key, video_ids=video_ids),
         asyncio.to_thread(_fetch_channel_details, api_key, channel_ids=channel_ids),
     )
-    set_json(cache, cache_key, {"videos": videos, "channels": channels})
     return videos, channels

@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config, _collect_service_names
 from social_research_probe.platforms import orchestrator
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
@@ -79,9 +78,9 @@ def test_orchestrator_fake_youtube_register(monkeypatch):
         captured.append(name)
         return MagicMock()
 
-    import social_research_probe.services.sourcing.youtube as yt_sourcing
+    from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
 
-    monkeypatch.setattr(yt_sourcing, "run_youtube_sourcing", yt_sourcing.run_youtube_sourcing)
+    monkeypatch.setattr(YouTubeSourcingService, "execute_one", YouTubeSourcingService.execute_one)
     monkeypatch.setattr("importlib.import_module", fake_import)
     orchestrator._maybe_register_fake()
     assert any("fake_youtube" in n for n in captured)
@@ -120,11 +119,13 @@ def test_install_skill_run_writes_skill(monkeypatch, tmp_path):
 
 
 def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
+    from social_research_probe.services.corroborating.corroborate import CorroborationService
+    from social_research_probe.utils.core.errors import ValidationError
+
     cfg = MagicMock()
     cfg.service_enabled.return_value = True
     cfg.corroboration_provider = "exa"
     cfg.technology_enabled.return_value = True
-    from social_research_probe.utils.core.errors import ValidationError
 
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
@@ -133,8 +134,8 @@ def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
             side_effect=ValidationError("nope"),
         ),
     ):
-        out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-    assert out == []
+        svc = CorroborationService()
+    assert svc.providers == []
 
 
 def test_yt_dlp_log_failure_with_first_line(capsys, monkeypatch):

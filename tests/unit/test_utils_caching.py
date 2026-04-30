@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 from social_research_probe.utils.caching.cache import FilesystemCache, _sanitise_key
-from social_research_probe.utils.caching.hashing import stable_hash
 
 
 class TestSanitiseKey:
@@ -49,16 +48,3 @@ class TestFilesystemCacheRoundtrip:
         cache = FilesystemCache(tmp_path)
         cache.set("foo/bar", {"x": 1})
         assert cache.get("foo/bar") == {"x": 1}
-
-
-class TestStableHash:
-    def test_dict_order_independent(self):
-        assert stable_hash({"a": 1, "b": 2}) == stable_hash({"b": 2, "a": 1})
-
-    def test_distinct_inputs_distinct_hashes(self):
-        assert stable_hash({"a": 1}) != stable_hash({"a": 2})
-
-    def test_returns_hex_64(self):
-        h = stable_hash([1, 2, 3])
-        assert len(h) == 64
-        assert all(c in "0123456789abcdef" for c in h)

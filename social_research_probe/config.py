@@ -31,9 +31,9 @@ DEFAULT_CONFIG: AppConfig = {
     "llm": {
         "runner": "none",
         "timeout_seconds": 60,
-        "claude": {"extra_flags": []},
-        "gemini": {"extra_flags": []},
-        "codex": {"binary": "codex", "extra_flags": []},
+        "claude": {"extra_flags": ["--model", "claude-haiku-4-5"]},
+        "gemini": {"extra_flags": ["--model", "gemini-2.5-flash-lite"]},
+        "codex": {"binary": "codex", "extra_flags": ["--model", "gpt-5.4"]},
         "local": {},
     },
     "corroboration": {
@@ -46,8 +46,6 @@ DEFAULT_CONFIG: AppConfig = {
             "recency_days": 90,
             "max_items": 20,
             "enrich_top_n": 5,
-            "cache_ttl_search_hours": 6,
-            "cache_ttl_channel_hours": 24,
         },
     },
     "scoring": {"weights": {}},
@@ -98,13 +96,26 @@ DEFAULT_CONFIG: AppConfig = {
         "exa": True,
         "brave": True,
         "tavily": True,
+        "llm_ensemble": True,
+        "llm_synthesis": True,
+        "html_render": True,
+        "stats_per_target": True,
+        "charts_suite": True,
+        "scoring_compute": True,
+        "youtube_search": True,
+        "youtube_hydrate": True,
+        "youtube_engagement": True,
+        "corroboration_host": True,
+        "mac_tts": True,
+        "claim_extractor": True,
+        "ai_slop_detector": True,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,
         "per_item_summary_words": 100,
     },
     "debug": {
-        "technology_logs_enabled": False,
+        "technology_logs_enabled": True,
     },
     "voicebox": {
         "default_profile_name": "Jarvis",
@@ -204,9 +215,12 @@ class Config:
         """Return the configured free-text runner, or None when LLM is disabled."""
         if not self.service_enabled("llm"):
             return None
-        if self.llm_runner in {"claude", "gemini", "codex", "local"} and self.technology_enabled(
-            self.llm_runner
-        ):
+        if self.llm_runner in {
+            "claude",
+            "gemini",
+            "codex",
+            "local",
+        } and self.technology_enabled(self.llm_runner):
             return self.llm_runner
         return None
 

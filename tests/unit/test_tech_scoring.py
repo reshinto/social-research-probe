@@ -83,3 +83,48 @@ class TestTrust:
             corroboration_score=0.0,
         )
         assert s == 0.0
+
+
+class TestZscores:
+    def test_two_values_produces_nonzero(self):
+        result = __import__(
+            "social_research_probe.technologies.scoring", fromlist=["zscores"]
+        ).zscores([1.0, 3.0])
+        assert len(result) == 2
+        assert result[0] < 0 and result[1] > 0
+
+    def test_single_value_returns_zero(self):
+        from social_research_probe.technologies.scoring import zscores
+
+        assert zscores([5.0]) == [0.0]
+
+
+class TestChannelCredibility:
+    def test_with_subscribers_returns_scaled(self):
+        from social_research_probe.technologies.scoring import channel_credibility
+
+        assert channel_credibility(1_000_000) > 0.3
+
+    def test_none_returns_default(self):
+        from social_research_probe.technologies.scoring import channel_credibility
+
+        assert channel_credibility(None) == 0.3
+
+
+class TestMetricValues:
+    def test_with_metrics_returns_values(self):
+        from social_research_probe.technologies.scoring import _metric_values
+        from social_research_probe.utils.core.types import EngagementMetrics
+
+        m = EngagementMetrics(
+            views=None,
+            likes=None,
+            comments=None,
+            upload_date=None,
+            view_velocity=1.0,
+            engagement_ratio=0.5,
+            comment_velocity=None,
+            cross_channel_repetition=0.2,
+        )
+        result = _metric_values(m)
+        assert result == (1.0, 0.5, 0.2)

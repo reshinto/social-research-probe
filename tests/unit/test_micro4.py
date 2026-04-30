@@ -10,7 +10,6 @@ import pytest
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_correlation,
@@ -78,6 +77,8 @@ class TestCmdConfigFormatSecretsSection:
 
 class TestPipelineYtCorroborateValidationError:
     def test_provider_health_error(self, monkeypatch):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.corroboration_provider = "exa"
@@ -91,9 +92,8 @@ class TestPipelineYtCorroborateValidationError:
                 return_value=provider,
             ),
         ):
-            # health_check raises non-ValidationError → propagates? No, only catches ValidationError
             with pytest.raises(RuntimeError):
-                yt.YouTubeCorroborateStage()._select_corroboration_providers()
+                CorroborationService()
 
 
 class TestNormalitySkewVerdict:

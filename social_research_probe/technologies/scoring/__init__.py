@@ -156,6 +156,7 @@ class ScoringComputeTech(BaseTechnology[object, list]):
     """Technology wrapper for computing full scores for a batch of items."""
 
     name: ClassVar[str] = "scoring.compute"
+    enabled_config_key: ClassVar[str] = "scoring_compute"
 
     async def _execute(self, input_data: object) -> list:
         items = input_data.get("items", []) if isinstance(input_data, dict) else []

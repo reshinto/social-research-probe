@@ -41,6 +41,7 @@ class BraveProvider(CorroborationProvider):
     """
 
     name: ClassVar[str] = "brave"
+    enabled_config_key: ClassVar[str] = "brave"
 
     def health_check(self) -> bool:
         """Return True if a Brave API key is available.
