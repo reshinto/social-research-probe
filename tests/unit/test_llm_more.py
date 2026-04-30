@@ -96,6 +96,47 @@ class TestClaudeAgenticSearch:
         assert out.answer == ""
 
 
+class TestClaudeParseResponse:
+    def test_structured_output_extracted(self):
+        envelope = json.dumps(
+            {
+                "type": "result",
+                "result": "",
+                "structured_output": {"source_class": "primary"},
+            }
+        )
+        assert ClaudeRunner()._parse_response(envelope) == {"source_class": "primary"}
+
+    def test_result_field_json_fallback(self):
+        envelope = json.dumps(
+            {
+                "type": "result",
+                "result": '{"source_class": "commentary"}',
+            }
+        )
+        assert ClaudeRunner()._parse_response(envelope) == {"source_class": "commentary"}
+
+    def test_result_field_non_json_returns_envelope(self):
+        raw = {"type": "result", "result": "plain text"}
+        assert ClaudeRunner()._parse_response(json.dumps(raw)) == raw
+
+    def test_non_json_raises(self):
+        with pytest.raises(AdapterError):
+            ClaudeRunner()._parse_response("not json")
+
+    def test_non_dict_raises(self):
+        with pytest.raises(AdapterError):
+            ClaudeRunner()._parse_response(json.dumps([1, 2]))
+
+    def test_empty_result_no_structured_returns_envelope(self):
+        raw = {"type": "result", "result": ""}
+        assert ClaudeRunner()._parse_response(json.dumps(raw)) == raw
+
+    def test_result_json_non_dict_returns_envelope(self):
+        raw = {"type": "result", "result": "[1, 2]"}
+        assert ClaudeRunner()._parse_response(json.dumps(raw)) == raw
+
+
 class TestGeminiSummarizeMedia:
     def test_success(self, monkeypatch):
         cfg = MagicMock()
