@@ -46,3 +46,20 @@ class SummaryService(BaseService):
         title = data.get("title", "") if isinstance(data, dict) else repr(data)
         result.input_key = title
         return result
+
+    async def enrich_batch(self, top_n: list) -> list[dict]:
+        """Generate summaries and merge into items. Returns enriched item list."""
+        results = await self.execute_batch(top_n)
+        return [
+            (
+                {**item, "summary": s, "one_line_takeaway": s}
+                if (
+                    s := next(
+                        (tr.output for tr in r.tech_results if tr.success and tr.output),
+                        None,
+                    )
+                )
+                else dict(item)
+            )
+            for item, r in zip(top_n, results, strict=True)
+        ]
