@@ -110,24 +110,36 @@ class TestSynthesisService:
 
 
 class TestCorroborationService:
-    def test_techs(self):
+    def _patch_auto_init(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
-        with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            techs = CorroborationService()._get_technologies()
+        monkeypatch.setattr(
+            "social_research_probe.config.load_active_config", lambda: cfg
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.corroborating.select_healthy_providers",
+            lambda configured: (["exa"], ("exa",)),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+            lambda: False,
+        )
+
+    def test_techs(self, monkeypatch):
+        self._patch_auto_init(monkeypatch)
+        techs = CorroborationService()._get_technologies()
         assert techs[0].name == "corroboration_host"
 
     def test_execute_failure(self, monkeypatch):
+        self._patch_auto_init(monkeypatch)
+
         async def boom(claim, providers):
             raise RuntimeError("x")
 
         monkeypatch.setattr(
             "social_research_probe.technologies.corroborates.corroborate_claim", boom
         )
-        cfg = MagicMock()
-        cfg.corroboration_provider = "exa"
-        with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            out = asyncio.run(CorroborationService().execute_one({"title": "t"}))
+        out = asyncio.run(CorroborationService().execute_one({"title": "t"}))
         assert out.tech_results[0].success is False
 
 

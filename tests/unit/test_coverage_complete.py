@@ -172,13 +172,21 @@ def test_merge_purposes_duplicate_evidence_and_overrides():
     assert out.scoring_overrides["k"] == 0.5
 
 
-def test_corroborate_providers_list_branch(monkeypatch):
-    """services/corroborating/corroborate.py 36->38 — providers already list."""
+def test_corroborate_providers_auto_init(monkeypatch):
+    """services/corroborating/corroborate.py — auto-init selects healthy providers."""
     from social_research_probe.services.corroborating import corroborate
 
     cfg = MagicMock()
-    cfg.corroboration_provider = ["brave", "exa"]
+    cfg.corroboration_provider = "exa"
     monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+    monkeypatch.setattr(
+        "social_research_probe.services.corroborating.select_healthy_providers",
+        lambda configured: (["exa"], ("exa",)),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+        lambda: False,
+    )
 
     async def fake_corroborate_claim(claim, providers):
         return MagicMock(verdict="inconclusive", source_urls=[], runner_name="x")
@@ -188,6 +196,7 @@ def test_corroborate_providers_list_branch(monkeypatch):
         fake_corroborate_claim,
     )
     svc = corroborate.CorroborationService()
+    assert svc.providers == ["exa"]
     asyncio.run(svc.execute_one(MagicMock()))
 
 

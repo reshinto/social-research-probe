@@ -38,15 +38,23 @@ def test_corroborate_svc_str_data(monkeypatch):
     """Pass non-dict data → uses str(data) for url branch."""
     cfg = MagicMock()
     cfg.corroboration_provider = "exa"
-    with patch("social_research_probe.config.load_active_config", return_value=cfg):
+    monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
+    monkeypatch.setattr(
+        "social_research_probe.services.corroborating.select_healthy_providers",
+        lambda configured: (["exa"], ("exa",)),
+    )
+    monkeypatch.setattr(
+        "social_research_probe.utils.display.fast_mode.fast_mode_enabled",
+        lambda: False,
+    )
 
-        async def fake(claim, providers):
-            return {"verdict": "x"}
+    async def fake(claim, providers):
+        return {"verdict": "x"}
 
-        monkeypatch.setattr(
-            "social_research_probe.technologies.corroborates.corroborate_claim", fake
-        )
-        out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
+    monkeypatch.setattr(
+        "social_research_probe.technologies.corroborates.corroborate_claim", fake
+    )
+    out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
 
 
