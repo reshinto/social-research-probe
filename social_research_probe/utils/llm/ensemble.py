@@ -48,18 +48,22 @@ async def _run_provider(name: str, prompt: str, task: str = "generating response
     """
     log(f"[srp] LLM ({name}): {task}")
     try:
+        runner_cfg = load_active_config().raw.get("llm", {}).get(name, {})
+        extra = list(runner_cfg.get("extra_flags", []))
+
         stdin_data: bytes | None = None
         if name == "claude":
-            cmd = ["claude", "-p", prompt]
+            cmd = ["claude", *extra, "-p", prompt]
         elif name == "gemini":
-            cmd = ["gemini", "-p", prompt]
+            cmd = ["gemini", *extra, "-p", prompt]
         elif name == "codex":
-            cmd = ["codex", "exec", prompt]
+            binary = runner_cfg.get("binary", "codex")
+            cmd = [binary, "exec", *extra, prompt]
         elif name == "local":
             bin_path = os.environ.get("SRP_LOCAL_LLM_BIN", "")
             if not bin_path:
                 return None
-            cmd = [bin_path]
+            cmd = [bin_path, *extra]
             stdin_data = prompt.encode()
         else:
             return None

@@ -288,7 +288,8 @@ class YouTubeAssembleStage(BaseStage):
         from social_research_probe.config import load_active_config
 
         cfg = load_active_config()
-        if cfg.debug_enabled("pipeline"):
+        debug = cfg.debug_enabled("pipeline")
+        if debug:
             log(f"[srp] assemble: _build_source_validation_summary len(top_n)={len(top_n)}")
 
         verdict_map = {"supported": "validated", "refuted": "low_trust"}
@@ -312,7 +313,7 @@ class YouTubeAssembleStage(BaseStage):
             "commentary": class_counts.get("commentary", 0),
             "notes": "",
         }
-        if cfg.debug_enabled("pipeline"):
+        if debug:
             log(f"[srp] assemble: source_validation_summary={result}")
         return result
 

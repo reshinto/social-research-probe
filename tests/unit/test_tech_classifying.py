@@ -120,6 +120,9 @@ class TestLLMClassifier:
         class FakeCfg:
             preferred_free_text_runner = None
 
+            def debug_enabled(self, _: str) -> bool:
+                return False
+
         monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
         out = await LLMClassifier()._execute({"channel": "X", "title": "Y"})
         assert out == "unknown"
@@ -131,6 +134,9 @@ class TestLLMClassifier:
 
         class FakeCfg:
             preferred_free_text_runner = "claude"
+
+            def debug_enabled(self, _: str) -> bool:
+                return False
 
         monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
         monkeypatch.setattr(
@@ -146,6 +152,9 @@ class TestLLMClassifier:
 
         class FakeCfg:
             preferred_free_text_runner = "claude"
+
+            def debug_enabled(self, _: str) -> bool:
+                return False
 
         def boom(*a, **kw):
             raise RuntimeError("nope")
@@ -163,12 +172,106 @@ class TestLLMClassifier:
         class FakeCfg:
             preferred_free_text_runner = "claude"
 
+            def debug_enabled(self, _: str) -> bool:
+                return False
+
         monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
         monkeypatch.setattr(
             registry, "run_with_fallback", lambda p, schema, preferred: "not-a-dict"
         )
         out = await LLMClassifier()._execute({"channel": "X", "title": "Y"})
         assert out == "unknown"
+
+
+class TestChannelNameSignalExtended:
+    def test_secondary_pattern_tech(self):
+        assert classify_by_channel_name_signal("AI Tech Daily") == "secondary"
+
+    def test_secondary_pattern_review(self):
+        assert classify_by_channel_name_signal("Gadget Reviews") == "secondary"
+
+    def test_commentary_pattern_podcast(self):
+        assert classify_by_channel_name_signal("The AI Podcast") == "commentary"
+
+    def test_commentary_pattern_show(self):
+        assert classify_by_channel_name_signal("Morning Show") == "commentary"
+
+    def test_primary_pattern_reporting(self):
+        assert classify_by_channel_name_signal("Daily Reporting") == "primary"
+
+
+class TestLLMClassifierDebugLogging:
+    @pytest.mark.asyncio
+    async def test_debug_log_no_runner(self, monkeypatch):
+        from social_research_probe import config as cfg_mod
+
+        class FakeCfg:
+            preferred_free_text_runner = None
+
+            def debug_enabled(self, _: str) -> bool:
+                return True
+
+        logged: list[str] = []
+        monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
+        monkeypatch.setattr(
+            "social_research_probe.utils.display.progress.log",
+            lambda msg: logged.append(msg),
+        )
+        out = await LLMClassifier()._execute({"channel": "X", "title": "Y"})
+        assert out == "unknown"
+        assert any("no runner configured" in m for m in logged)
+
+    @pytest.mark.asyncio
+    async def test_debug_log_runner_failure(self, monkeypatch):
+        from social_research_probe import config as cfg_mod
+        from social_research_probe.utils.llm import registry
+
+        class FakeCfg:
+            preferred_free_text_runner = "claude"
+
+            def debug_enabled(self, _: str) -> bool:
+                return True
+
+        logged: list[str] = []
+        monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
+        monkeypatch.setattr(
+            registry,
+            "run_with_fallback",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.display.progress.log",
+            lambda msg: logged.append(msg),
+        )
+        out = await LLMClassifier()._execute({"channel": "X", "title": "Y"})
+        assert out == "unknown"
+        assert any("runner failed" in m for m in logged)
+
+    @pytest.mark.asyncio
+    async def test_debug_log_success(self, monkeypatch):
+        from social_research_probe import config as cfg_mod
+        from social_research_probe.utils.llm import registry
+
+        class FakeCfg:
+            preferred_free_text_runner = "claude"
+
+            def debug_enabled(self, _: str) -> bool:
+                return True
+
+        logged: list[str] = []
+        monkeypatch.setattr(cfg_mod, "load_active_config", lambda: FakeCfg())
+        monkeypatch.setattr(
+            registry,
+            "run_with_fallback",
+            lambda p, schema, preferred: {"source_class": "secondary"},
+        )
+        monkeypatch.setattr(
+            "social_research_probe.utils.display.progress.log",
+            lambda msg: logged.append(msg),
+        )
+        out = await LLMClassifier()._execute({"channel": "TechGuru", "title": "AI"})
+        assert out == "secondary"
+        assert any("TechGuru" in m and "secondary" in m for m in logged)
 
 
 class TestHybridClassifier:

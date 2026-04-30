@@ -81,6 +81,31 @@ _PRIMARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     for p in (
         r"\bnews\b",
         r"\bofficial\b",
+        r"\breport(s|ing)?\b",
+    )
+)
+
+_SECONDARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bexplain(s|ed|er)?\b",
+        r"\banalys[it]s\b",
+        r"\breview(s)?\b",
+        r"\btech\b",
+        r"\bacademy\b",
+        r"\blearning\b",
+        r"\btutorial(s)?\b",
+    )
+)
+
+_COMMENTARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bpodcast\b",
+        r"\breact(s|ion)?\b",
+        r"\bshow\b",
+        r"\btalk(s)?\b",
+        r"\brant(s)?\b",
     )
 )
 
@@ -112,12 +137,18 @@ def classify_by_title_signal(title: str) -> SourceClass:
 
 
 def classify_by_channel_name_signal(channel: str) -> SourceClass:
-    """Return ``"primary"`` for channels whose name contains news/official tokens."""
+    """Return a class when channel name contains recognisable tokens."""
     if not channel:
         return "unknown"
     for pattern in _PRIMARY_NAME_PATTERNS:
         if pattern.search(channel):
             return "primary"
+    for pattern in _SECONDARY_NAME_PATTERNS:
+        if pattern.search(channel):
+            return "secondary"
+    for pattern in _COMMENTARY_NAME_PATTERNS:
+        if pattern.search(channel):
+            return "commentary"
     return "unknown"
 
 
@@ -177,20 +208,29 @@ class LLMClassifier(BaseTechnology[dict, SourceClass]):
 
     async def _execute(self, data: dict) -> SourceClass:
         from social_research_probe.config import load_active_config
+        from social_research_probe.utils.display.progress import log
         from social_research_probe.utils.llm.registry import run_with_fallback
 
         cfg = load_active_config()
+        debug = cfg.debug_enabled("pipeline")
         runner = cfg.preferred_free_text_runner
         if runner is None:
+            if debug:
+                log("[TECH][classifying.llm] no runner configured")
             return "unknown"
         channel = str(data.get("channel") or data.get("author_name") or "")
         title = str(data.get("title") or "")
         prompt = _LLM_PROMPT_TEMPLATE.format(channel=channel, title=title)
         try:
             payload = run_with_fallback(prompt, schema=_LLM_RESPONSE_SCHEMA, preferred=runner)
-        except Exception:
+        except Exception as exc:
+            if debug:
+                log(f"[TECH][classifying.llm] runner failed: {exc}")
             return "unknown"
-        return coerce_class(payload.get("source_class") if isinstance(payload, dict) else None)
+        result = coerce_class(payload.get("source_class") if isinstance(payload, dict) else None)
+        if debug:
+            log(f"[TECH][classifying.llm] {channel!r} → {result}")
+        return result
 
 
 class HybridClassifier(BaseTechnology[dict, SourceClass]):

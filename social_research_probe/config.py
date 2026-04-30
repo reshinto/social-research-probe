@@ -33,7 +33,7 @@ DEFAULT_CONFIG: AppConfig = {
         "timeout_seconds": 60,
         "claude": {"extra_flags": []},
         "gemini": {"extra_flags": []},
-        "codex": {"binary": "codex", "extra_flags": []},
+        "codex": {"binary": "codex", "extra_flags": ["--model", "gpt-5.4"]},
         "local": {},
     },
     "corroboration": {

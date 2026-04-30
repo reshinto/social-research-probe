@@ -31,7 +31,7 @@ binary = "codex"
 # Extra arguments appended after "codex exec" and before the prompt. Use this
 # for Codex-specific options such as model or sandbox flags supported by your
 # installed Codex CLI.
-extra_flags = []
+extra_flags = ["--model", "gpt-5.4"]
 
 [llm.local]
 # No file-based defaults are used for the local runner yet. Set

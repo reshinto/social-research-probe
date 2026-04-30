@@ -85,7 +85,7 @@ if not args or args[0] != "exec":
 args = args[1:]
 output_path = None
 i = 0
-while i < len(args) and args[i].startswith("--"):
+while i < len(args) and args[i].startswith("-"):
     flag = args[i]
     if flag in ("--output-last-message", "--output-schema"):
         if i + 1 >= len(args):
@@ -95,8 +95,11 @@ while i < len(args) and args[i].startswith("--"):
             output_path = Path(args[i + 1])
         i += 2
         continue
-    sys.stderr.write(f"unexpected flag: {{flag}}\\n")
-    sys.exit(2)
+    if i + 1 < len(args) and not args[i + 1].startswith("-"):
+        i += 2
+        continue
+    i += 1
+    continue
 
 if output_path is not None:
     output_path.write_text(json.dumps(SYNTHESIS), encoding="utf-8")
