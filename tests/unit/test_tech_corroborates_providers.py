@@ -11,6 +11,7 @@ import pytest
 from social_research_probe.technologies.corroborates import (
     CorroborationProvider,
     CorroborationResult,
+    corroborate_claim,
 )
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.exa import ExaProvider
@@ -227,3 +228,18 @@ class TestLLMSearchProvider:
 
         result = asyncio.run(provider._try_agentic_search("some claim"))
         assert result is None
+
+
+def test_call_provider_exception_returns_none_and_logs_stderr(capsys):
+    from unittest.mock import AsyncMock, MagicMock
+    import social_research_probe.technologies.corroborates as mod
+
+    failing_provider = MagicMock()
+    failing_provider.execute = AsyncMock(side_effect=RuntimeError("boom"))
+
+    with patch.object(mod, "get_provider", return_value=failing_provider):
+        claim = _Claim(text="test claim")
+        result = asyncio.run(corroborate_claim(claim, ["fake_provider"]))
+
+    assert result["results"] == []
+    assert "fake_provider" in capsys.readouterr().err
