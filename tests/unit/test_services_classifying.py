@@ -87,3 +87,57 @@ class TestServiceExecuteOne:
             {"channel": "Random Indie", "title": "behind the scenes"}
         )
         assert result.tech_results[0].output == "unknown"
+
+
+class TestClassifyBatch:
+    @pytest.mark.asyncio
+    async def test_empty_items_returns_original(self, monkeypatch):
+        _patch_cfg(monkeypatch, FakeConfig(provider="heuristic"))
+        result = await SourceClassService().classify_batch([])
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_existing_source_class_skips_service(self, monkeypatch):
+        _patch_cfg(monkeypatch, FakeConfig(provider="heuristic"))
+        call_count = 0
+        svc = SourceClassService()
+        original_execute = svc.execute_one
+
+        async def _spy(item):
+            nonlocal call_count
+            call_count += 1
+            return await original_execute(item)
+
+        svc.execute_one = _spy
+        items = [{"id": "1", "channel": "SomeChannel", "title": "news", "source_class": "primary"}]
+        result = await svc.classify_batch(items)
+        assert call_count == 0
+        assert result[0]["source_class"] == "primary"
+
+    @pytest.mark.asyncio
+    async def test_channel_dedup_cache(self, monkeypatch):
+        _patch_cfg(monkeypatch, FakeConfig(provider="heuristic"))
+        call_count = 0
+        svc = SourceClassService()
+        original_execute = svc.execute_one
+
+        async def _spy(item):
+            nonlocal call_count
+            call_count += 1
+            return await original_execute(item)
+
+        svc.execute_one = _spy
+        items = [
+            {"id": "1", "channel": "RandomChan", "title": "video one"},
+            {"id": "2", "channel": "RandomChan", "title": "video two"},
+        ]
+        result = await svc.classify_batch(items)
+        assert call_count == 1
+        assert result[0]["source_class"] == result[1]["source_class"]
+
+    @pytest.mark.asyncio
+    async def test_title_override_commentary(self, monkeypatch):
+        _patch_cfg(monkeypatch, FakeConfig(provider="heuristic"))
+        items = [{"id": "1", "channel": "BBC News", "title": "REACTING to the latest news"}]
+        result = await SourceClassService().classify_batch(items)
+        assert result[0]["source_class"] == "commentary"
