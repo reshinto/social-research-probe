@@ -60,8 +60,9 @@ class TestCmdConfigInvalidSection:
 
 
 class TestPipelineYtChartsExecuteWithFailure:
-    def test_render_outputs_no_success(self, monkeypatch):
+    def test_render_charts_no_success(self, monkeypatch):
         from social_research_probe.services import ServiceResult, TechResult
+        from social_research_probe.services.analyzing.charts import ChartsService
 
         async def fake_one(self, data):
             return ServiceResult(
@@ -70,12 +71,9 @@ class TestPipelineYtChartsExecuteWithFailure:
                 tech_results=[TechResult("t", None, None, success=False)],
             )
 
-        monkeypatch.setattr(
-            "social_research_probe.services.analyzing.charts.ChartsService.execute_one",
-            fake_one,
-        )
-        out = asyncio.run(yt.YouTubeChartsStage()._render_outputs([{"x": 1}]))
-        assert out == []
+        monkeypatch.setattr(ChartsService, "execute_one", fake_one)
+        out = asyncio.run(ChartsService().render_charts([{"x": 1}]))
+        assert out["chart_outputs"] == []
 
 
 class TestYoutubeApiSearch:

@@ -120,11 +120,13 @@ def test_install_skill_run_writes_skill(monkeypatch, tmp_path):
 
 
 def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
+    from social_research_probe.services.corroborating.corroborate import CorroborationService
+    from social_research_probe.utils.core.errors import ValidationError
+
     cfg = MagicMock()
     cfg.service_enabled.return_value = True
     cfg.corroboration_provider = "exa"
     cfg.technology_enabled.return_value = True
-    from social_research_probe.utils.core.errors import ValidationError
 
     with (
         patch("social_research_probe.config.load_active_config", return_value=cfg),
@@ -133,8 +135,8 @@ def test_pipeline_yt_corroborate_health_check_validation_error(monkeypatch):
             side_effect=ValidationError("nope"),
         ),
     ):
-        out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-    assert out == []
+        svc = CorroborationService()
+    assert svc.providers == []
 
 
 def test_yt_dlp_log_failure_with_first_line(capsys, monkeypatch):

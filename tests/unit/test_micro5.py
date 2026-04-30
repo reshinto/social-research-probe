@@ -60,13 +60,15 @@ class TestHtmlVoiceoverPlainSkip:
 
 class TestPipelineYtCorroborateFastModeOnPath:
     def test_skips_when_tech_disabled(self):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.corroboration_provider = "exa"
         cfg.technology_enabled.return_value = False  # exa disabled
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-        assert out == []
+            svc = CorroborationService()
+        assert svc.providers == []
 
 
 class TestConfigAllowsTechnology:

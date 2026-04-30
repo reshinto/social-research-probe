@@ -210,6 +210,7 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
     cfg.service_enabled.return_value = True
     cfg.corroboration_provider = "exa"
     cfg.technology_enabled.return_value = True
+    from social_research_probe.services.corroborating.corroborate import CorroborationService
     from social_research_probe.utils.core.errors import ValidationError
 
     with (
@@ -219,8 +220,8 @@ def test_yt_corroborate_provider_validation_error_caught(monkeypatch):
             side_effect=ValidationError("nope"),
         ),
     ):
-        out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-    assert out == []
+        svc = CorroborationService()
+    assert svc.providers == []
 
 
 def test_formatter_render_full_no_summary(monkeypatch):

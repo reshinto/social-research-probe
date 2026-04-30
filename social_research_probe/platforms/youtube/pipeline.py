@@ -6,173 +6,7 @@ import asyncio
 
 from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.services.reporting import write_final_report
 from social_research_probe.utils.display.progress import log_with_time
-
-
-def _channel_of(item: dict) -> str:
-    return str(item.get("channel") or item.get("author_name") or "")
-
-
-def _to_dict(item: object) -> dict | None:
-    from social_research_probe.technologies.scoring import normalize_item
-
-    return normalize_item(item)
-
-
-def _normalize_items(raw_items: list) -> list[dict]:
-    return [d for d in (_to_dict(it) for it in raw_items) if d is not None]
-
-
-def _existing_class(item: dict) -> str:
-    from social_research_probe.technologies.classifying import coerce_class
-
-    return coerce_class(item.get("source_class"))
-
-
-def _output_class(result) -> str:
-    from social_research_probe.technologies.classifying import coerce_class
-
-    for tr in result.tech_results:
-        if tr.success and isinstance(tr.output, str):
-            return coerce_class(tr.output)
-    return "unknown"
-
-
-def _title_overrides_to_commentary(item: dict) -> bool:
-    from social_research_probe.technologies.classifying import (
-        classify_by_title_signal,
-    )
-
-    return classify_by_title_signal(str(item.get("title") or "")) == "commentary"
-
-
-def _enrich(item: dict, base_class: str) -> dict:
-    enriched = dict(item)
-    enriched["source_class"] = "commentary" if _title_overrides_to_commentary(item) else base_class
-    return enriched
-
-
-async def _resolve_class_for(service, item: dict, cache: dict[str, str]) -> str:
-    existing = _existing_class(item)
-    if existing != "unknown":
-        return existing
-
-    channel = _channel_of(item)
-    if channel in cache:
-        return cache[channel]
-
-    result = await service.execute_one(item)
-    resolved = _output_class(result)
-    cache[channel] = resolved
-    return resolved
-
-
-def _empty_score_output(items: list, limit: int) -> dict:
-    return {"all_scored": items, "top_n": items[:limit]}
-
-
-def _merge_transcripts(top_n: list, results: list) -> list:
-    return [
-        (
-            {**item, "transcript": t}
-            if (
-                t := next(
-                    (tr.output for tr in r.tech_results if tr.success and tr.output),
-                    None,
-                )
-            )
-            else dict(item)
-        )
-        for item, r in zip(top_n, results, strict=True)
-        if isinstance(item, dict)
-    ]
-
-
-def _merge_summaries(top_n: list, results: list) -> list:
-    return [
-        (
-            {**item, "summary": s, "one_line_takeaway": s}
-            if (
-                s := next(
-                    (tr.output for tr in r.tech_results if tr.success and tr.output),
-                    None,
-                )
-            )
-            else dict(item)
-        )
-        for item, r in zip(top_n, results, strict=True)
-    ]
-
-
-def _cap_corroboration_providers(providers: list[str]) -> list[str]:
-    from social_research_probe.utils.display.fast_mode import (
-        FAST_MODE_MAX_PROVIDERS,
-        fast_mode_enabled,
-    )
-
-    return providers[:FAST_MODE_MAX_PROVIDERS] if fast_mode_enabled() else providers
-
-
-def _merge_corroborations(top_n: list, results: list) -> list:
-    return [
-        (
-            {**item, "corroboration": corr}
-            if (
-                corr := next(
-                    (tr.output for tr in r.tech_results if tr.success and tr.output),
-                    None,
-                )
-            )
-            else dict(item)
-        )
-        for item, r in zip(top_n, results, strict=True)
-        if isinstance(item, dict)
-    ]
-
-
-def _charts_empty_output() -> dict:
-    return {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
-
-
-def _build_chart_output(chart_outputs: list) -> dict:
-    return {
-        "chart_outputs": chart_outputs,
-        "chart_captions": [c.caption for c in chart_outputs],
-        "chart_takeaways": [],
-    }
-
-
-async def _run_synthesis(context: dict) -> str:
-    from social_research_probe.technologies.synthesizing.llm_contract import (
-        build_synthesis_prompt,
-    )
-    from social_research_probe.utils.llm.ensemble import multi_llm_prompt
-
-    try:
-        return await multi_llm_prompt(build_synthesis_prompt(context)) or ""
-    except Exception:
-        return ""
-
-
-def _collect_divergence_warnings(top_n: list, threshold: float) -> list[str]:
-    warnings: list[str] = []
-    for item in top_n:
-        divergence = item.get("summary_divergence") if isinstance(item, dict) else None
-        if divergence is not None and divergence > threshold:
-            title = (item.get("title") or "untitled")[:80]
-            warnings.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
-    return warnings
-
-
-def _write_text_report(report: dict, allow_html: bool) -> str:
-    return write_final_report(report, allow_html=allow_html)
-
-
-async def _write_html_report(report: dict) -> None:
-    from social_research_probe.services.reporting.html import HtmlReportService
-
-    await HtmlReportService().execute_one({"report": report})
 
 
 class YouTubeFetchStage(BaseStage):
@@ -192,18 +26,14 @@ class YouTubeFetchStage(BaseStage):
 
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
         from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
-        from social_research_probe.technologies.media_fetch import (
-            YouTubeEngagementTech,
-            YouTubeHydrateTech,
-        )
 
         result = await YouTubeSourcingService(config).execute_one(search_topic)
         items: list = []
         engagement: list = []
         for tr in result.tech_results:
-            if tr.tech_name == YouTubeHydrateTech.name and isinstance(tr.output, list):
+            if tr.tech_name == "youtube_hydrate" and isinstance(tr.output, list):
                 items = tr.output
-            elif tr.tech_name == YouTubeEngagementTech.name and isinstance(tr.output, list):
+            elif tr.tech_name == "youtube_engagement" and isinstance(tr.output, list):
                 engagement = tr.output
         return items, engagement
 
@@ -231,14 +61,10 @@ class YouTubeClassifyStage(BaseStage):
     def stage_name(self) -> str:
         return "classify"
 
-    async def _classify(self, items: list[dict]) -> list[dict]:
-        from social_research_probe.services.classifying.source_class import (
-            SourceClassService,
-        )
+    async def _classify(self, items: list) -> list[dict]:
+        from social_research_probe.services.classifying.source_class import SourceClassService
 
-        service = SourceClassService()
-        cache: dict[str, str] = {}
-        return [_enrich(item, await _resolve_class_for(service, item, cache)) for item in items]
+        return await SourceClassService().classify_batch(items)
 
     def _store_passthrough(self, state: PipelineState, raw_items: list) -> PipelineState:
         state.set_stage_output("classify", {"items": raw_items})
@@ -260,11 +86,7 @@ class YouTubeClassifyStage(BaseStage):
         if not self._is_enabled(state) or not raw_items:
             return self._store_passthrough(state, raw_items)
 
-        items = _normalize_items(raw_items)
-        if not items:
-            return self._store_passthrough(state, raw_items)
-
-        classified = await self._classify(items)
+        classified = await self._classify(raw_items)
         return self._store_classified(state, fetch, classified)
 
 
@@ -290,27 +112,19 @@ class YouTubeScoreStage(BaseStage):
         fetch = state.get_stage_output("fetch")
         items = fetch.get("items", [])
         limit = self._top_n_limit(state)
-        if not self._is_enabled(state) or not items:
-            state.set_stage_output("score", _empty_score_output(items, limit))
+
+        if not self._is_enabled(state):
+            state.set_stage_output("score", {"all_scored": items, "top_n": items[:limit]})
             return state
+
         weights = self._resolve_purpose_scoring_weights(state)
 
         from social_research_probe.services.scoring.score import ScoringService
 
-        data = {
-            "items": items,
-            "engagement_metrics": fetch.get("engagement_metrics", []),
-            "weights": weights,
-        }
-        result = await ScoringService().execute_one(data)
-
-        scored = []
-        for tr in result.tech_results:
-            if tr.success and isinstance(tr.output, list):
-                scored = tr.output
-                break
-
-        state.set_stage_output("score", {"all_scored": scored, "top_n": scored[:limit]})
+        result = await ScoringService().score_and_rank(
+            items, fetch.get("engagement_metrics", []), weights, limit
+        )
+        state.set_stage_output("score", result)
         return state
 
 
@@ -322,16 +136,13 @@ class YouTubeTranscriptStage(BaseStage):
 
     @log_with_time("[srp] youtube/transcript: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.enriching.transcript import (
-            TranscriptService,
-        )
+        from social_research_probe.services.enriching.transcript import TranscriptService
 
         top_n = list(state.get_stage_output("score").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("transcript", {"top_n": top_n})
             return state
-        results = await TranscriptService().execute_batch(top_n)
-        enriched = _merge_transcripts(top_n, results)
+        enriched = await TranscriptService().enrich_batch(top_n)
         state.set_stage_output("transcript", {"top_n": enriched})
         return state
 
@@ -350,9 +161,8 @@ class YouTubeSummaryStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
-        results = await SummaryService().execute_batch(top_n)
-        final = _merge_summaries(top_n, results)
-        state.set_stage_output("summary", {"top_n": final})
+        enriched = await SummaryService().enrich_batch(top_n)
+        state.set_stage_output("summary", {"top_n": enriched})
         return state
 
 
@@ -362,41 +172,15 @@ class YouTubeCorroborateStage(BaseStage):
     def stage_name(self) -> str:
         return "corroborate"
 
-    def _select_corroboration_providers(self) -> list[str]:
-        from social_research_probe.config import load_active_config
-        from social_research_probe.services.corroborating import (
-            select_healthy_providers,
-        )
-        from social_research_probe.utils.display.progress import log
-
-        configured = load_active_config().corroboration_provider
-        providers, candidates = select_healthy_providers(configured)
-        if not providers and candidates:
-            checked = ", ".join(candidates)
-            log(
-                f"[srp] corroboration: provider '{configured}' configured but no provider usable"
-                f" (checked: {checked}). Hint: run 'srp config check-secrets --corroboration {configured}'."
-            )
-        return _cap_corroboration_providers(providers)
-
     @log_with_time("[srp] youtube/corroborate: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         top_n = list(state.get_stage_output("summary").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
-        providers = self._select_corroboration_providers()
-        if not providers:
-            state.set_stage_output("corroborate", {"top_n": top_n})
-            return state
-
-        from social_research_probe.services.corroborating.corroborate import (
-            CorroborationService,
-        )
-
-        results = await CorroborationService(providers).execute_batch(top_n)
-        corroborated = _merge_corroborations(top_n, results)
-
+        corroborated = await CorroborationService().corroborate_batch(top_n)
         state.set_stage_output("corroborate", {"top_n": corroborated})
         return state
 
@@ -409,9 +193,7 @@ class YouTubeStatsStage(BaseStage):
 
     @log_with_time("[srp] youtube/stats: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
-        from social_research_probe.services.analyzing.statistics import (
-            StatisticsService,
-        )
+        from social_research_probe.services.analyzing.statistics import StatisticsService
 
         if not self._is_enabled(state):
             state.set_stage_output("stats", {"stats_summary": {}})
@@ -437,23 +219,18 @@ class YouTubeChartsStage(BaseStage):
         score = state.get_stage_output("score")
         return list(score.get("all_scored") or score.get("top_n", []))
 
-    async def _render_outputs(self, items: list) -> list:
-        from social_research_probe.services.analyzing.charts import ChartsService
-
-        result = await ChartsService().execute_one({"scored_items": items})
-        for tr in result.tech_results:
-            if tr.success and isinstance(tr.output, list):
-                return tr.output
-        return []
-
     @log_with_time("[srp] youtube/charts: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.services.analyzing.charts import ChartsService
+
         if not self._is_enabled(state):
-            state.set_stage_output("charts", _charts_empty_output())
+            state.set_stage_output(
+                "charts", {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+            )
             return state
         items = self._scored_dataset(state)
-        outputs = await self._render_outputs(items)
-        state.set_stage_output("charts", _build_chart_output(outputs))
+        charts = await ChartsService().render_charts(items)
+        state.set_stage_output("charts", charts)
         return state
 
 
@@ -481,11 +258,17 @@ class YouTubeSynthesisStage(BaseStage):
 
     @log_with_time("[srp] youtube/synthesis: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.services.synthesizing.synthesis import SynthesisService
+
         if not self._is_enabled(state):
             state.set_stage_output("synthesis", {"synthesis": ""})
             return state
         context = self._build_synthesis_context(state)
-        synthesis_text = await _run_synthesis(context)
+        result = await SynthesisService().execute_one(context)
+        synthesis_text = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, str)),
+            "",
+        )
         state.set_stage_output("synthesis", {"synthesis": synthesis_text})
         return state
 
@@ -540,9 +323,7 @@ class YouTubeAssembleStage(BaseStage):
         from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize_engagement_metrics,
         )
-        from social_research_probe.utils.report.formatter import (
-            build_report,
-        )
+        from social_research_probe.utils.report.formatter import build_report
 
         return build_report(
             topic=topic,
@@ -560,6 +341,8 @@ class YouTubeAssembleStage(BaseStage):
 
     @log_with_time("[srp] youtube/assemble: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.utils.pipeline.helpers import collect_divergence_warnings
+
         if not self._is_enabled(state):
             return state
 
@@ -581,7 +364,7 @@ class YouTubeAssembleStage(BaseStage):
         from social_research_probe.config import load_active_config
 
         threshold = float(load_active_config().tunables.get("summary_divergence_threshold", 0.4))
-        warnings = _collect_divergence_warnings(top_n, threshold)
+        warnings = collect_divergence_warnings(top_n, threshold)
 
         report = self._compose_research_report_data(
             topic=topic,
@@ -612,9 +395,7 @@ class YouTubeStructuredSynthesisStage(BaseStage):
         if not self._is_enabled(state):
             return state
 
-        from social_research_probe.services.synthesizing.synthesis.runner import (
-            attach_synthesis,
-        )
+        from social_research_probe.services.synthesizing.synthesis.runner import attach_synthesis
 
         report = state.outputs.get("report", {})
         await asyncio.to_thread(attach_synthesis, report)
@@ -630,14 +411,15 @@ class YouTubeReportStage(BaseStage):
 
     @log_with_time("[srp] youtube/report: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.services.reporting.report import ReportService
+
         if not self._is_enabled(state):
             return state
 
         report = state.outputs.get("report", {})
         allow_html = bool(state.platform_config.get("allow_html", True))
-        report_path = _write_text_report(report, allow_html)
+        report_path = await ReportService().write_report(report, allow_html=allow_html)
         report["report_path"] = report_path
-        await _write_html_report(report)
         state.outputs["report"] = report
         return state
 

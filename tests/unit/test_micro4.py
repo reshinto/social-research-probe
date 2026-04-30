@@ -78,6 +78,8 @@ class TestCmdConfigFormatSecretsSection:
 
 class TestPipelineYtCorroborateValidationError:
     def test_provider_health_error(self, monkeypatch):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.return_value = True
         cfg.corroboration_provider = "exa"
@@ -91,9 +93,8 @@ class TestPipelineYtCorroborateValidationError:
                 return_value=provider,
             ),
         ):
-            # health_check raises non-ValidationError → propagates? No, only catches ValidationError
             with pytest.raises(RuntimeError):
-                yt.YouTubeCorroborateStage()._select_corroboration_providers()
+                CorroborationService()
 
 
 class TestNormalitySkewVerdict:

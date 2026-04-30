@@ -188,6 +188,8 @@ class TestWriterHtmlNoFallback:
 
 class TestPipelineYtCorroborateLLMSearchGate:
     def test_skips_llm_search(self, monkeypatch):
+        from social_research_probe.services.corroborating.corroborate import CorroborationService
+
         cfg = MagicMock()
         cfg.service_enabled.side_effect = lambda n: n == "corroboration"  # llm disabled
         cfg.corroboration_provider = "auto"
@@ -203,8 +205,8 @@ class TestPipelineYtCorroborateLLMSearchGate:
             healthy = MagicMock()
             healthy.health_check.return_value = True
             gp.return_value = healthy
-            out = yt.YouTubeCorroborateStage()._select_corroboration_providers()
-        assert "llm_search" not in out
+            svc = CorroborationService()
+        assert "llm_search" not in svc.providers
 
 
 def test_youtube_api_resolve_no_secret_raises(monkeypatch):
