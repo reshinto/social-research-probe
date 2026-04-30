@@ -144,8 +144,31 @@ class LLMSearchProvider(CorroborationProvider):
             provider_name=self.name,
         )
 
+    async def _try_agentic_search(self, claim_text: str) -> CorroborationResult | None:
+        """Try each web search tech in order; return first successful result or None."""
+        from social_research_probe.technologies.web_search import (
+            ClaudeWebSearch,
+            CodexWebSearch,
+            GeminiWebSearch,
+        )
+
+        for technology in (ClaudeWebSearch(), GeminiWebSearch(), CodexWebSearch()):
+            result = await technology.execute(claim_text)
+            if result:
+                return CorroborationResult(
+                    verdict="inconclusive",
+                    confidence=0.5,
+                    reasoning=result,
+                    sources=[],
+                    provider_name=self.name,
+                )
+        return None
+
     async def corroborate(self, claim) -> CorroborationResult:
         """Ask the active LLM runner to assess ``claim`` and return a verdict."""
         log(f"[srp] llm_search: assessing claim: {claim.text[:80]!r}")
+        agentic = await self._try_agentic_search(claim.text)
+        if agentic is not None:
+            return agentic
         payload = await self._ask_llm(claim.text, _origin_urls_for(claim))
         return self._build_result(payload)

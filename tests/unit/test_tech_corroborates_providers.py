@@ -165,10 +165,65 @@ class TestLLMSearchProvider:
     def test_corroborate_calls_llm(self, monkeypatch):
         provider = LLMSearchProvider()
 
+        async def fake_agentic(self, claim_text):
+            return None
+
         async def fake_ask(self, text, urls):
             return {"verdict": "refuted", "confidence": 0.3, "reasoning": "no", "sources": []}
 
+        monkeypatch.setattr(LLMSearchProvider, "_try_agentic_search", fake_agentic)
         monkeypatch.setattr(LLMSearchProvider, "_ask_llm", fake_ask)
         result = asyncio.run(provider.corroborate(_Claim("the claim text")))
         assert result.verdict == "refuted"
         assert result.confidence == 0.3
+
+    def test_corroborate_uses_agentic_result_when_available(self, monkeypatch):
+        provider = LLMSearchProvider()
+        agentic_result = CorroborationResult(
+            verdict="inconclusive",
+            confidence=0.5,
+            reasoning="web search says so",
+            sources=[],
+            provider_name="llm_search",
+        )
+
+        async def fake_agentic(self, claim_text):
+            return agentic_result
+
+        monkeypatch.setattr(LLMSearchProvider, "_try_agentic_search", fake_agentic)
+        result = asyncio.run(provider.corroborate(_Claim("the claim text")))
+        assert result is agentic_result
+
+    def test_try_agentic_search_returns_result_on_success(self, monkeypatch):
+        from social_research_probe.technologies.web_search.claude_search import ClaudeWebSearch
+
+        provider = LLMSearchProvider()
+
+        async def fake_execute(self, data):
+            return "web search reasoning text"
+
+        monkeypatch.setattr(ClaudeWebSearch, "execute", fake_execute)
+        result = asyncio.run(provider._try_agentic_search("some claim"))
+
+        assert result is not None
+        assert result.verdict == "inconclusive"
+        assert result.confidence == 0.5
+        assert result.reasoning == "web search reasoning text"
+        assert result.provider_name == "llm_search"
+
+    def test_try_agentic_search_falls_through_on_empty_result(self, monkeypatch):
+        from social_research_probe.technologies.web_search.claude_search import ClaudeWebSearch
+        from social_research_probe.technologies.web_search.codex_search import CodexWebSearch
+        from social_research_probe.technologies.web_search.gemini_search import GeminiWebSearch
+
+        provider = LLMSearchProvider()
+
+        async def fake_execute_none(self, data):
+            return None
+
+        monkeypatch.setattr(ClaudeWebSearch, "execute", fake_execute_none)
+        monkeypatch.setattr(GeminiWebSearch, "execute", fake_execute_none)
+        monkeypatch.setattr(CodexWebSearch, "execute", fake_execute_none)
+
+        result = asyncio.run(provider._try_agentic_search("some claim"))
+        assert result is None
