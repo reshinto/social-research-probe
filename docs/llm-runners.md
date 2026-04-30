@@ -22,6 +22,23 @@ For account setup, key behavior, and cost implications, read [API costs and keys
 
 ![Runner registry](diagrams/dp_registry.svg)
 
+## Pinned model flags
+
+Each runner pins a default model via `extra_flags` in `DEFAULT_CONFIG` to avoid incompatibility when CLIs auto-select newer models.
+
+| Runner | Default flag | Model |
+| --- | --- | --- |
+| `claude` | `--model claude-haiku-4-5` | Claude Haiku 4.5 |
+| `gemini` | `--model gemini-2.5-flash-lite` | Gemini 2.5 Flash Lite |
+| `codex` | `--model gpt-5.4` | GPT-5.4 |
+
+Override per-runner in `config.toml`:
+
+```toml
+[llm.claude]
+extra_flags = ["--model", "claude-sonnet-4-6"]
+```
+
 ## How it works
 
 Runner modules register concrete classes. Callers ask the registry for a runner by name. The runner builds an argv list, sends the prompt through stdin or args, enforces timeout through the subprocess helper, and parses JSON output.

@@ -31,8 +31,8 @@ DEFAULT_CONFIG: AppConfig = {
     "llm": {
         "runner": "none",
         "timeout_seconds": 60,
-        "claude": {"extra_flags": []},
-        "gemini": {"extra_flags": []},
+        "claude": {"extra_flags": ["--model", "claude-haiku-4-5"]},
+        "gemini": {"extra_flags": ["--model", "gemini-2.5-flash-lite"]},
         "codex": {"binary": "codex", "extra_flags": ["--model", "gpt-5.4"]},
         "local": {},
     },

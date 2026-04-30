@@ -6,6 +6,8 @@ A **Technology** is the most granular, atomic unit of work in the Social Researc
 
 Technologies are orchestrated by **Services**. They do not know about the CLI, the reporting logic, or the platforms. They take a specific input, do one thing, and return an output.
 
+![Service–Technology relationship](diagrams/service-technology.svg)
+
 ## Architecture
 
 A Technology extends `BaseTechnology[TInput, TOutput]` from `social_research_probe.technologies`.
@@ -15,13 +17,14 @@ The base class provides:
 - **Timing metrics**: Execution time is automatically logged.
 - **Feature flags**: The technology won't run if its `enabled_config_key` is set to `false`.
 - **Health Checks**: A standard interface to verify credentials or dependencies.
+- **Disk caching**: Transparent caching via `_cached_execute` when the class variable `cacheable` is `True`.
 
 ## Implementation Checklist
 
 | Step | Action | Why |
 | --- | --- | --- |
 | 1 | Create the class | Inherit from `BaseTechnology[Input, Output]`. |
-| 2 | Set class variables | Define `name`, `health_check_key`, and `enabled_config_key`. |
+| 2 | Set class variables | Define `name`, `health_check_key`, `enabled_config_key`, and optionally `cacheable`. |
 | 3 | Implement `_execute()` | Put the actual network request, parsing, or algorithm here. |
 | 4 | Implement `health_check()` | Check for CLI dependencies or API keys. |
 

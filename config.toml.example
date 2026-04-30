@@ -16,12 +16,12 @@ timeout_seconds = 60
 # Extra arguments appended to every Claude CLI call. Use this for CLI-specific
 # options such as model, permission, or profile flags supported by your local
 # Claude Code installation.
-extra_flags = []
+extra_flags = ["--model", "claude-haiku-4-5"]
 
 [llm.gemini]
 # Extra arguments appended to every Gemini CLI call. Use this for CLI-specific
 # options such as model or project flags supported by your local Gemini CLI.
-extra_flags = []
+extra_flags = ["--model", "gemini-2.5-flash-lite"]
 
 [llm.codex]
 # Codex CLI executable name or absolute path. The binary must support

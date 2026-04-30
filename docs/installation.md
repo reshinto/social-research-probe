@@ -231,7 +231,14 @@ claude auth
 srp config set llm.runner claude
 ```
 
-See [llm-runners.md](llm-runners.md) for the full comparison, ensemble behaviour, and troubleshooting.
+Each runner pins a default model via `extra_flags` (e.g. `--model claude-haiku-4-5` for Claude). Override in `config.toml`:
+
+```toml
+[llm.claude]
+extra_flags = ["--model", "claude-sonnet-4-6"]
+```
+
+See [llm-runners.md](llm-runners.md) for the full comparison, pinned model table, ensemble behaviour, and troubleshooting.
 
 ---
 

@@ -28,10 +28,11 @@ Use `--data-dir` when you want one command to use a specific workspace. Use `SRP
 | `[platforms.youtube]` | Search result count, recency, top-N enrichment, cache TTLs. |
 | `[scoring.weights]` | Optional trust/trend/opportunity weight overrides. |
 | `[stages.youtube]` | Stage-level gates. |
-| `[services.youtube.*]` | Service-level gates. |
-| `[technologies]` | Provider and adapter gates. |
+| `[services.youtube.*]` | Service-level gates (e.g. `classifying.provider`, `corroborating`). |
+| `[technologies]` | Provider and adapter gates (e.g. `classifying`, `tavily`, `exa`). |
 | `[tunables]` | Summary divergence and summary word limits. |
 | `[voicebox]` | Optional narration defaults. |
+| `[debug]` | Debug gates (e.g. `technology_logs_enabled`). |
 
 ## Gates
 
