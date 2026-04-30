@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 from social_research_probe.services import ServiceResult, TechResult
 from social_research_probe.services.corroborating.corroborate import (
@@ -30,9 +28,7 @@ class TestCorroborationServiceInit:
     def test_auto_init_uses_select_healthy_providers(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
-        monkeypatch.setattr(
-            "social_research_probe.config.load_active_config", lambda: cfg
-        )
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.select_healthy_providers",
             lambda configured: (["exa"], ("exa",)),
@@ -47,9 +43,7 @@ class TestCorroborationServiceInit:
     def test_auto_init_fast_mode_caps_providers(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "auto"
-        monkeypatch.setattr(
-            "social_research_probe.config.load_active_config", lambda: cfg
-        )
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.select_healthy_providers",
             lambda configured: (["exa", "brave", "tavily"], ("exa", "brave", "tavily")),
@@ -68,9 +62,7 @@ class TestCorroborationServiceInit:
     def test_auto_init_logs_when_no_healthy_providers(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
-        monkeypatch.setattr(
-            "social_research_probe.config.load_active_config", lambda: cfg
-        )
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.select_healthy_providers",
             lambda configured: ([], ("exa",)),

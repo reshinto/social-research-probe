@@ -245,7 +245,9 @@ class TestSynthesisStage:
             return ServiceResult(
                 service_name="synthesis",
                 input_key="context",
-                tech_results=[TechResult(tech_name="t", input=None, output="synth-text", success=True)],
+                tech_results=[
+                    TechResult(tech_name="t", input=None, output="synth-text", success=True)
+                ],
             )
 
         monkeypatch.setattr(

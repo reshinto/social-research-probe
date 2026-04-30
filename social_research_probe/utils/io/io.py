@@ -20,7 +20,6 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
 
 
 def _srp_json_default(obj: object) -> object:
@@ -30,7 +29,7 @@ def _srp_json_default(obj: object) -> object:
     anything else so serialisation never raises TypeError.
     """
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-        return dataclasses.asdict(cast(Any, obj))
+        return dataclasses.asdict(obj)  # is_dataclass() confirms this is safe
     if isinstance(obj, (Path, datetime)):
         return str(obj)
     return repr(obj)

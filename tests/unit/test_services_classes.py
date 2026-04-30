@@ -52,8 +52,12 @@ class TestChartsService:
         from social_research_probe.services import ServiceResult, TechResult
 
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
-        failed_tr = TechResult(tech_name="charts_suite", input={}, output=None, success=False, error="err")
-        svc_result = ServiceResult(service_name="charts", input_key="scored_items", tech_results=[failed_tr])
+        failed_tr = TechResult(
+            tech_name="charts_suite", input={}, output=None, success=False, error="err"
+        )
+        svc_result = ServiceResult(
+            service_name="charts", input_key="scored_items", tech_results=[failed_tr]
+        )
         with (
             patch.object(ChartsService, "is_enabled", return_value=True),
             patch.object(ChartsService, "execute_one", return_value=svc_result),
@@ -151,9 +155,7 @@ class TestCorroborationService:
     def _patch_auto_init(self, monkeypatch):
         cfg = MagicMock()
         cfg.corroboration_provider = "exa"
-        monkeypatch.setattr(
-            "social_research_probe.config.load_active_config", lambda: cfg
-        )
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda: cfg)
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.select_healthy_providers",
             lambda configured: (["exa"], ("exa",)),

@@ -11,7 +11,6 @@ import social_research_probe.services.reporting as writer_svc
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing import synthesis as synth_svc
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (

@@ -12,7 +12,6 @@ import social_research_probe.services.scoring as compute_mod
 import social_research_probe.technologies.corroborates as filters_mod
 from social_research_probe.commands import install_skill
 from social_research_probe.config import Config
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.corroborating import corroborate as corr_svc
 from social_research_probe.services.reporting import audio as audio_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
@@ -51,9 +50,7 @@ def test_corroborate_svc_str_data(monkeypatch):
     async def fake(claim, providers):
         return {"verdict": "x"}
 
-    monkeypatch.setattr(
-        "social_research_probe.technologies.corroborates.corroborate_claim", fake
-    )
+    monkeypatch.setattr("social_research_probe.technologies.corroborates.corroborate_claim", fake)
     out = asyncio.run(corr_svc.CorroborationService().execute_one("not-a-dict"))
     assert out.tech_results[0].success is True
 

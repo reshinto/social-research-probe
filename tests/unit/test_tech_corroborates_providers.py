@@ -232,6 +232,7 @@ class TestLLMSearchProvider:
 
 def test_call_provider_exception_returns_none_and_logs_stderr(capsys):
     from unittest.mock import AsyncMock, MagicMock
+
     import social_research_probe.technologies.corroborates as mod
 
     failing_provider = MagicMock()

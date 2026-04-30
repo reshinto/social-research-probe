@@ -11,7 +11,6 @@ import pytest
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import suggest_purposes, suggest_topics
 from social_research_probe.config import load_active_config, reset_config_cache
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.services.synthesizing.synthesis.helpers import formatter
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (

@@ -39,7 +39,9 @@ class TestTranscriptServiceEnrichBatch:
         results = [_ok_result(svc.service_name, "transcript text")]
         with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
             out = await svc.enrich_batch(items)
-        assert out == [{"url": "https://youtu.be/abc", "title": "Vid", "transcript": "transcript text"}]
+        assert out == [
+            {"url": "https://youtu.be/abc", "title": "Vid", "transcript": "transcript text"}
+        ]
 
     @pytest.mark.asyncio
     async def test_no_transcript_on_failure(self, svc):
