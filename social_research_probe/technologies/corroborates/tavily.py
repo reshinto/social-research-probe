@@ -42,6 +42,7 @@ class TavilyProvider(CorroborationProvider):
     """
 
     name: ClassVar[str] = "tavily"
+    enabled_config_key: ClassVar[str] = "tavily"
 
     def health_check(self) -> bool:
         """Return True if a Tavily API key is available.

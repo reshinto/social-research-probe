@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar
 from urllib.parse import urlparse
@@ -22,7 +22,7 @@ class CorroborationResult:
     provider_name: str = ""
 
 
-class CorroborationProvider(ABC):
+class CorroborationProvider(BaseTechnology[object, CorroborationResult]):
     """Abstract base class that all corroboration providers must implement."""
 
     name: ClassVar[str]
@@ -32,6 +32,10 @@ class CorroborationProvider(ABC):
 
     @abstractmethod
     async def corroborate(self, claim) -> CorroborationResult: ...
+
+    async def _execute(self, data: object) -> CorroborationResult:
+        """Bridge BaseTechnology._execute → self.corroborate(data)."""
+        return await self.corroborate(data)
 
 
 VIDEO_HOST_DOMAINS: frozenset[str] = frozenset(
@@ -197,7 +201,7 @@ async def corroborate_claim(claim, provider_names: list[str]) -> dict:
     async def _call_provider(provider_name: str) -> CorroborationResult | None:
         try:
             provider = get_provider(provider_name)
-            return await provider.corroborate(claim)
+            return await provider.execute(claim)
         except Exception as exc:
             print(f"[corroboration] provider {provider_name!r} failed: {exc}", file=sys.stderr)
             return None

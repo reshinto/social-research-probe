@@ -113,6 +113,7 @@ class LLMSearchProvider(CorroborationProvider):
     """
 
     name: ClassVar[str] = "llm_search"
+    enabled_config_key: ClassVar[str] = "llm_search"
 
     def health_check(self) -> bool:
         """Return True when at least one registered LLM runner is healthy."""
