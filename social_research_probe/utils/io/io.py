@@ -14,11 +14,13 @@ persists or reads structured data from disk.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
 
 def _srp_json_default(obj: object) -> object:
@@ -28,13 +30,13 @@ def _srp_json_default(obj: object) -> object:
     anything else so serialisation never raises TypeError.
     """
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-        return dataclasses.asdict(obj)  # type: ignore[arg-type]
+        return dataclasses.asdict(cast(Any, obj))
     if isinstance(obj, (Path, datetime)):
         return str(obj)
     return repr(obj)
 
 
-def read_json(path: Path, default: dict | None = None) -> dict:
+def read_json(path: Path, default: object | None = None) -> object:
     """Read a JSON file and return its contents as a dict.
 
     If the file does not exist the function returns a *copy* of ``default``
@@ -97,8 +99,6 @@ def write_json(path: Path, data: object) -> None:
         ``.tmp`` sibling and renaming over the target is the standard POSIX
         idiom for atomic file replacement.
     """
-    import contextlib
-
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 

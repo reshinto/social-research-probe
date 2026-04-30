@@ -13,6 +13,7 @@ stage that wants transparent memoisation across runs.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import time
@@ -144,7 +145,5 @@ class FilesystemCache:
             even within the TTL window.
         """
         path = self._path_for(key)
-        import contextlib
-
         with contextlib.suppress(FileNotFoundError):
             path.unlink()
