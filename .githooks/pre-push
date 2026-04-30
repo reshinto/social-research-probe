@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "=== Pre-push: Ruff lint + format ==="
+
+# Snapshot working tree state before ruff
+git stash list > /dev/null 2>&1
+BEFORE_HASH=$(git diff --stat)
+
+.venv/bin/ruff check social_research_probe/ tests/ --fix
+.venv/bin/ruff format social_research_probe/ tests/
+
+AFTER_HASH=$(git diff --stat)
+
+if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
+    echo ""
+    echo "ERROR: Ruff auto-fixed or reformatted files."
+    echo "Changed files:"
+    git diff --name-only
+    echo ""
+    echo "Review changes, stage them, amend your commit, then push again."
+    exit 1
+fi
+
+echo "Ruff: clean."
+echo ""
+echo "=== Pre-push: Tests + coverage ==="
+
+.venv/bin/pytest tests/integration tests/unit tests/contract \
+    -n auto --dist=loadfile \
+    --cov=social_research_probe \
+    --cov-fail-under=100
+
+echo ""
+echo "All checks passed."
