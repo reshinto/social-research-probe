@@ -79,9 +79,21 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
             set_json,
         )
 
+        cfg = load_active_config()
+        debug = cfg.debug_enabled("pipeline")
+
         disabled = disable_cache_for_technologies.get() or []
-        should_cache = False if self.name in disabled else self.cacheable
-        if not should_cache or cache_disabled():
+        if self.name in disabled:
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: stage disabled")
+            return await self._execute(data)
+        if not self.cacheable:
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: not cacheable")
+            return await self._execute(data)
+        if cache_disabled():
+            if debug:
+                log(f"[TECH][{self.name}] cache bypass: SRP_DISABLE_CACHE")
             return await self._execute(data)
 
         key = self._cache_key(data)
@@ -92,11 +104,17 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
         if isinstance(cached, dict) and "output" in cached:
             log(f"[TECH][{self.name}] cache hit")
             return cached["output"]
+        if debug:
+            log(f"[TECH][{self.name}] cache miss — calling _execute")
 
         result = await self._execute(data)
 
         if result is not None:
             set_json(cache, key, {"input": repr(data), "output": result})
+            if debug:
+                log(f"[TECH][{self.name}] cache write ok")
+        elif debug:
+            log(f"[TECH][{self.name}] _execute returned None — not cached")
 
         return result
 

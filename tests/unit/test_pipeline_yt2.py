@@ -314,6 +314,88 @@ class TestBuildSourceValidationSummary:
         assert svs["validated"] == 0
         assert svs["primary"] == 0
 
+    def test_compose_research_report_data_non_zero_validation(self, monkeypatch):
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.synthesis.helpers.evidence.summarize",
+            lambda items, metrics, top_n: "evidence",
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.synthesis.helpers.evidence.summarize_engagement_metrics",
+            lambda metrics: "engagement",
+        )
+        top_n = [
+            {"source_class": "primary", "corroboration": {"aggregate_verdict": "supported"}},
+            {"source_class": "secondary", "corroboration": {"aggregate_verdict": "inconclusive"}},
+        ]
+        report = yt.YouTubeAssembleStage()._compose_research_report_data(
+            topic="test",
+            platform="youtube",
+            purpose_names=["explore"],
+            top_n=top_n,
+            items=[],
+            engagement_metrics=[],
+            stats_summary={},
+            chart_captions=[],
+            chart_takeaways=[],
+            warnings=[],
+        )
+        svs = report["source_validation_summary"]
+        assert svs["validated"] == 1
+        assert svs["unverified"] == 1
+        assert svs["primary"] == 1
+        assert svs["secondary"] == 1
+
+    def test_compose_defensive_recomputation_fires(self, monkeypatch):
+        zero_svs = {
+            "validated": 0,
+            "partially": 0,
+            "unverified": 0,
+            "low_trust": 0,
+            "primary": 0,
+            "secondary": 0,
+            "commentary": 0,
+            "notes": "",
+        }
+        fake_report = {
+            "topic": "test",
+            "platform": "youtube",
+            "purpose_set": [],
+            "items_top_n": [],
+            "source_validation_summary": zero_svs,
+            "platform_engagement_summary": "",
+            "evidence_summary": "",
+            "stats_summary": {},
+            "chart_captions": [],
+            "chart_takeaways": [],
+            "warnings": [],
+        }
+        monkeypatch.setattr(
+            "social_research_probe.utils.report.formatter.build_report",
+            lambda **kwargs: dict(fake_report),
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.synthesis.helpers.evidence.summarize",
+            lambda items, metrics, top_n: "",
+        )
+        monkeypatch.setattr(
+            "social_research_probe.services.synthesizing.synthesis.helpers.evidence.summarize_engagement_metrics",
+            lambda metrics: "",
+        )
+        top_n = [{"source_class": "primary", "corroboration": {"aggregate_verdict": "supported"}}]
+        report = yt.YouTubeAssembleStage()._compose_research_report_data(
+            topic="test",
+            platform="youtube",
+            purpose_names=[],
+            top_n=top_n,
+            items=[],
+            engagement_metrics=[],
+            stats_summary={},
+            chart_captions=[],
+            chart_takeaways=[],
+            warnings=[],
+        )
+        assert report["source_validation_summary"]["validated"] == 1
+
 
 class TestStructuredSynthesisStage:
     def test_enabled(self, enabled_state, monkeypatch):

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+from typing import ClassVar
 
 from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.utils.display.progress import log_with_time
+from social_research_probe.utils.display.progress import log, log_with_time
 
 
 class YouTubeFetchStage(BaseStage):
     """Fetch YouTube search results and compute engagement metrics."""
+
+    disable_cache_for_technologies: ClassVar[list[str]] = ["youtube_search", "youtube_hydrate"]
 
     def stage_name(self) -> str:
         return "fetch"
@@ -282,6 +285,12 @@ class YouTubeAssembleStage(BaseStage):
     def _build_source_validation_summary(self, top_n: list) -> dict:
         from collections import Counter
 
+        from social_research_probe.config import load_active_config
+
+        cfg = load_active_config()
+        if cfg.debug_enabled("pipeline"):
+            log(f"[srp] assemble: _build_source_validation_summary len(top_n)={len(top_n)}")
+
         verdict_map = {"supported": "validated", "refuted": "low_trust"}
         verdict_counts: Counter[str] = Counter()
         class_counts: Counter[str] = Counter()
@@ -293,7 +302,7 @@ class YouTubeAssembleStage(BaseStage):
             raw = corr.get("aggregate_verdict", "inconclusive") if corr else "inconclusive"
             mapped = verdict_map.get(raw, "unverified")
             verdict_counts[mapped] += 1
-        return {
+        result = {
             "validated": verdict_counts.get("validated", 0),
             "partially": verdict_counts.get("partially", 0),
             "unverified": verdict_counts.get("unverified", 0),
@@ -303,6 +312,9 @@ class YouTubeAssembleStage(BaseStage):
             "commentary": class_counts.get("commentary", 0),
             "notes": "",
         }
+        if cfg.debug_enabled("pipeline"):
+            log(f"[srp] assemble: source_validation_summary={result}")
+        return result
 
     def _compose_research_report_data(
         self,
@@ -325,12 +337,13 @@ class YouTubeAssembleStage(BaseStage):
         )
         from social_research_probe.utils.report.formatter import build_report
 
-        return build_report(
+        svs = self._build_source_validation_summary(top_n)
+        report = build_report(
             topic=topic,
             platform=platform,
             purpose_set=list(purpose_names),
             items_top_n=top_n,
-            source_validation_summary=self._build_source_validation_summary(top_n),
+            source_validation_summary=svs,
             platform_engagement_summary=summarize_engagement_metrics(engagement_metrics),
             evidence_summary=summarize_evidence(items, engagement_metrics, top_n),
             stats_summary=stats_summary,
@@ -338,6 +351,14 @@ class YouTubeAssembleStage(BaseStage):
             chart_takeaways=chart_takeaways,
             warnings=warnings,
         )
+        reported_svs = report.get("source_validation_summary", {})
+        verdict_keys = ("validated", "partially", "unverified", "low_trust")
+        if top_n and all(reported_svs.get(k, 0) == 0 for k in verdict_keys):
+            log(
+                "[srp] assemble: WARNING all validation counts zero despite non-empty top_n — recomputing"
+            )
+            report["source_validation_summary"] = self._build_source_validation_summary(top_n)
+        return report
 
     @log_with_time("[srp] youtube/assemble: execute")
     async def execute(self, state: PipelineState) -> PipelineState:

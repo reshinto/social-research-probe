@@ -28,8 +28,8 @@ def _render_with_matplotlib(rows: list[dict], path: str, label: str) -> None:
 
     num_cols = max(len(col_labels), 1)
     num_rows = len(cell_text)
-    col_width = 2.4
-    row_height = 0.5
+    col_width = 3.2
+    row_height = 0.7
     fig_width = max(num_cols * col_width, 6)
     fig_height = max((num_rows + 2) * row_height, 3)
 
@@ -45,8 +45,8 @@ def _render_with_matplotlib(rows: list[dict], path: str, label: str) -> None:
             cellLoc="center",
         )
         tbl.auto_set_font_size(False)
-        tbl.set_fontsize(11)
-        tbl.scale(1.0, 1.6)
+        tbl.set_fontsize(13)
+        tbl.scale(1.0, 2.0)
 
         for (row_idx, _col_idx), cell in tbl.get_celld().items():
             if row_idx == 0:

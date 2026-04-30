@@ -97,6 +97,182 @@ class TestGetSetJson:
         pc.set_json(cache, "k2", {"b": 2})
 
 
+class TestNoStaleCacheDirectories:
+    """Guard against re-introducing old cache path namespaces in production code."""
+
+    STALE_PREFIXES = ("stages/", "summaries/", "transcripts/")
+
+    def test_no_stale_paths_in_production_code(self):
+        import re
+        from pathlib import Path
+
+        src_root = Path(__file__).parents[2] / "social_research_probe"
+        pattern = re.compile(r'make_cache\s*\(\s*["\'](' + "|".join(self.STALE_PREFIXES) + r")")
+        violations = []
+        for py_file in src_root.rglob("*.py"):
+            text = py_file.read_text()
+            if pattern.search(text):
+                violations.append(str(py_file))
+        assert violations == [], f"Stale cache paths found in: {violations}"
+
+
+class TestTechnologyCacheEnvelope:
+    """Verify BaseTechnology._cached_execute writes {input, output} envelope."""
+
+    def test_cache_file_written_with_envelope(self, tmp_path, monkeypatch):
+        import asyncio
+        import json
+
+        from social_research_probe.technologies import BaseTechnology
+
+        class _EchoTech(BaseTechnology):
+            name = "test_echo"
+            health_check_key = "test_echo"
+            enabled_config_key = ""
+            cacheable = True
+
+            async def _execute(self, data):
+                return {"echoed": data}
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+
+        tech = _EchoTech()
+        result = asyncio.run(tech.execute("hello"))
+        assert result == {"echoed": "hello"}
+
+        cache_dir = tmp_path / "cache" / "technologies" / "test_echo"
+        assert cache_dir.exists(), f"Cache dir not created: {cache_dir}"
+        cache_files = list(cache_dir.glob("*.json"))
+        assert len(cache_files) == 1, f"Expected 1 cache file, got {cache_files}"
+        envelope = json.loads(cache_files[0].read_text())
+        assert "input" in envelope, "Cache file missing 'input' key"
+        assert "output" in envelope, "Cache file missing 'output' key"
+        assert envelope["output"] == {"echoed": "hello"}
+
+    def _debug_cfg(self):
+        from unittest.mock import MagicMock
+
+        cfg = MagicMock()
+        cfg.technology_enabled.return_value = True
+        cfg.debug_enabled.return_value = True
+        return cfg
+
+    def test_bypass_stage_disabled_no_debug(self, tmp_path, monkeypatch):
+        import asyncio
+
+        from social_research_probe.technologies import BaseTechnology
+        from social_research_probe.utils.caching import pipeline_cache as pc
+
+        class _BypassNoDTech(BaseTechnology):
+            name = "test_bypass_nodebug"
+            health_check_key = ""
+            enabled_config_key = ""
+            cacheable = True
+
+            async def _execute(self, data):
+                return {"v": data}
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        token = pc.disable_cache_for_technologies.set(["test_bypass_nodebug"])
+        try:
+            result = asyncio.run(_BypassNoDTech().execute("x"))
+        finally:
+            pc.disable_cache_for_technologies.reset(token)
+        assert result == {"v": "x"}
+
+    def test_debug_bypass_stage_disabled(self, tmp_path, monkeypatch):
+        import asyncio
+
+        from social_research_probe.technologies import BaseTechnology
+        from social_research_probe.utils.caching import pipeline_cache as pc
+
+        class _EchoTech(BaseTechnology):
+            name = "test_stage_disabled"
+            health_check_key = ""
+            enabled_config_key = ""
+            cacheable = True
+
+            async def _execute(self, data):
+                return {"v": data}
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.setattr(
+            "social_research_probe.technologies.load_active_config", self._debug_cfg
+        )
+        token = pc.disable_cache_for_technologies.set(["test_stage_disabled"])
+        try:
+            result = asyncio.run(_EchoTech().execute("x"))
+        finally:
+            pc.disable_cache_for_technologies.reset(token)
+        assert result == {"v": "x"}
+
+    def test_debug_bypass_not_cacheable(self, tmp_path, monkeypatch):
+        import asyncio
+
+        from social_research_probe.technologies import BaseTechnology
+
+        class _NoCacheTech(BaseTechnology):
+            name = "test_no_cache"
+            health_check_key = ""
+            enabled_config_key = ""
+            cacheable = False
+
+            async def _execute(self, data):
+                return {"v": data}
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.setattr(
+            "social_research_probe.technologies.load_active_config", self._debug_cfg
+        )
+        result = asyncio.run(_NoCacheTech().execute("y"))
+        assert result == {"v": "y"}
+
+    def test_debug_cache_miss_and_write(self, tmp_path, monkeypatch):
+        import asyncio
+
+        from social_research_probe.technologies import BaseTechnology
+
+        class _EchoTech2(BaseTechnology):
+            name = "test_debug_miss"
+            health_check_key = ""
+            enabled_config_key = ""
+            cacheable = True
+
+            async def _execute(self, data):
+                return {"v": data}
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.load_active_config", self._debug_cfg
+        )
+        result = asyncio.run(_EchoTech2().execute("z"))
+        assert result == {"v": "z"}
+
+    def test_debug_execute_returns_none(self, tmp_path, monkeypatch):
+        import asyncio
+
+        from social_research_probe.technologies import BaseTechnology
+
+        class _NullTech(BaseTechnology):
+            name = "test_debug_null"
+            health_check_key = ""
+            enabled_config_key = ""
+            cacheable = True
+
+            async def _execute(self, data):
+                return None
+
+        monkeypatch.setenv("SRP_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("SRP_DISABLE_CACHE", raising=False)
+        monkeypatch.setattr(
+            "social_research_probe.technologies.load_active_config", self._debug_cfg
+        )
+        result = asyncio.run(_NullTech().execute("w"))
+        assert result is None
+
+
 class TestEnvelopePattern:
     """Tests for _cached_execute envelope: {"input": ..., "output": ...}."""
 
