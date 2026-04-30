@@ -7,10 +7,6 @@ from typing import ClassVar
 from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.statistics import (
     StatisticsTech,
-    _compute,
-    _stats_per_target,
-    compute_async,
-    items_from_data,
 )
 
 
@@ -26,22 +22,6 @@ class StatisticsService(BaseService):
 
     def _get_technologies(self):
         return [StatisticsTech()]
-
-    @staticmethod
-    def _items(data: object) -> list[dict]:
-        return items_from_data(data)
-
-    @staticmethod
-    def _stats_per_target(targets: dict[str, list]) -> dict[str, list]:
-        return _stats_per_target(targets)
-
-    @staticmethod
-    def _compute(items: list[dict]) -> dict:
-        return _compute(items)
-
-    @staticmethod
-    async def _compute_async(items: list[dict]) -> dict:
-        return await compute_async(items)
 
     async def execute_one(self, data: object) -> ServiceResult:
         result = await super().execute_one(data)

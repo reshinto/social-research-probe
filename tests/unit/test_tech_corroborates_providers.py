@@ -21,6 +21,7 @@ from social_research_probe.technologies.corroborates.llm_search import (
     _coerce_sources,
     _coerce_verdict,
     _format_origin_sources,
+    _origin_urls_for,
     _parse_response,
 )
 from social_research_probe.technologies.corroborates.tavily import TavilyProvider
@@ -153,8 +154,8 @@ class TestLLMSearchHelpers:
 
 class TestLLMSearchProvider:
     def test_origin_urls(self):
-        assert LLMSearchProvider._origin_urls_for(_Claim("c", "https://x")) == ["https://x"]
-        assert LLMSearchProvider._origin_urls_for(_Claim("c")) == []
+        assert _origin_urls_for(_Claim("c", "https://x")) == ["https://x"]
+        assert _origin_urls_for(_Claim("c")) == []
 
     def test_build_result_defaults_reasoning(self):
         out = LLMSearchProvider()._build_result({"verdict": "supported", "confidence": 0.5})

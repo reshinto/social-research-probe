@@ -55,12 +55,20 @@ class TestYtFetchItemsAsync:
             extras={},
         )
 
-        async def fake_run(topic, config):
+        async def fake_execute_one(self, topic):
             assert topic == "topic"
-            return [item], []
+            from social_research_probe.services import ServiceResult, TechResult
+            from social_research_probe.technologies.media_fetch import YouTubeHydrateTech
+
+            return ServiceResult(
+                service_name="youtube_sourcing",
+                input_key=topic,
+                tech_results=[TechResult(YouTubeHydrateTech.name, [item], [item], True)],
+            )
 
         monkeypatch.setattr(
-            "social_research_probe.services.sourcing.youtube.run_youtube_sourcing", fake_run
+            "social_research_probe.services.sourcing.youtube.YouTubeSourcingService.execute_one",
+            fake_execute_one,
         )
         items, _em = asyncio.run(yt.YouTubeFetchStage()._fetch_items("topic", {}))
         assert len(items) == 1
@@ -126,7 +134,8 @@ class TestLLMSearchAskLLM:
     def test_ask_llm_uses_thread(self, monkeypatch):
         provider = LLMSearchProvider()
         monkeypatch.setattr(
-            LLMSearchProvider, "_run_llm", classmethod(lambda cls, p: {"verdict": "supported"})
+            "social_research_probe.technologies.corroborates.llm_search._run_llm",
+            lambda p: {"verdict": "supported"},
         )
         out = asyncio.run(provider._ask_llm("text", []))
         assert out == {"verdict": "supported"}

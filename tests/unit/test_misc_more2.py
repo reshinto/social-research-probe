@@ -9,15 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from social_research_probe.platforms import RawItem
-from social_research_probe.services.analyzing import statistics as stats_svc
-from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
-from social_research_probe.technologies.transcript_fetch import (
-    youtube_transcript_api as yt_api,
-)
-from social_research_probe.technologies.web_search import (
+from social_research_probe.technologies.media_fetch import (
     YouTubeHydrateTech,
     YouTubeSearchTech,
     _recency_cutoff,
+)
+from social_research_probe.technologies.statistics import compute_async
+from social_research_probe.technologies.transcript_fetch import whisper as whisper_mod
+from social_research_probe.technologies.transcript_fetch import (
+    youtube_transcript_api as yt_api,
 )
 
 
@@ -163,7 +163,7 @@ class TestSourcingYouTube:
 class TestStatisticsService:
     def test_compute_async(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
-        out = asyncio.run(stats_svc.StatisticsService._compute_async([]))
+        out = asyncio.run(compute_async([]))
         assert out["highlights"] == []
 
 
@@ -214,7 +214,9 @@ class TestLLMSearchProvider:
         cfg = MagicMock()
         cfg.llm_runner = "claude"
         with patch("social_research_probe.config.load_active_config", return_value=cfg):
-            from social_research_probe.technologies.corroborates.llm_search import LLMSearchProvider
+            from social_research_probe.technologies.corroborates.llm_search import (
+                _run_llm,
+            )
 
-            out = LLMSearchProvider._run_llm("p")
+            out = _run_llm("p")
         assert out == {"verdict": "supported"}

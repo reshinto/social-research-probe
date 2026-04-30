@@ -14,9 +14,24 @@ persists or reads structured data from disk.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
+from datetime import datetime
 from pathlib import Path
+
+
+def _srp_json_default(obj: object) -> object:
+    """Custom JSON serialiser fallback for non-standard types.
+
+    Handles dataclasses, Path, datetime, and falls back to repr() for
+    anything else so serialisation never raises TypeError.
+    """
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)  # type: ignore[arg-type]
+    if isinstance(obj, (Path, datetime)):
+        return str(obj)
+    return repr(obj)
 
 
 def read_json(path: Path, default: dict | None = None) -> dict:
@@ -53,23 +68,26 @@ def read_json(path: Path, default: dict | None = None) -> dict:
         return dict(default) if default is not None else {}
 
 
-def write_json(path: Path, data: dict) -> None:
+def write_json(path: Path, data: object) -> None:
     """Write *data* to a JSON file atomically, creating parent directories as needed.
 
     The function writes to a sibling ``.tmp`` file first, then renames it over
     the destination.  On POSIX systems ``os.replace`` is atomic at the
     filesystem level, so readers will never observe a partial write.
 
+    Non-standard types (dataclasses, Path, datetime, etc.) are handled by
+    ``_srp_json_default`` so callers do not need to pre-convert values.
+
     Args:
         path: Destination path for the JSON file.  Parent directories are
             created automatically if they do not exist.
-        data: The dict to serialise and write.  Must be JSON-serialisable.
+        data: Value to serialise and write.  Dataclasses, Path, and datetime
+            are converted automatically; anything else falls back to repr().
 
     Returns:
         None
 
     Raises:
-        TypeError: If ``data`` contains values that cannot be serialised to JSON.
         PermissionError: If the process lacks write permission for the parent
             directory.
 
@@ -79,22 +97,17 @@ def write_json(path: Path, data: dict) -> None:
         ``.tmp`` sibling and renaming over the target is the standard POSIX
         idiom for atomic file replacement.
     """
+    import contextlib
+
     path = Path(path)
-    # Create parent directories so callers need not do it themselves.
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Place the temp file next to the target so the rename stays on the same
-    # filesystem (cross-device renames are not atomic).
     tmp_path = path.with_suffix(".tmp")
     try:
         with open(tmp_path, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=2)
-        # os.replace is atomic on POSIX; on Windows it overwrites atomically too.
+            json.dump(data, fh, indent=2, default=_srp_json_default)
         os.replace(tmp_path, path)
     except Exception:
-        # Best-effort cleanup of the temp file so we do not litter .tmp files.
-        import contextlib
-
         with contextlib.suppress(OSError):
             os.unlink(tmp_path)
         raise

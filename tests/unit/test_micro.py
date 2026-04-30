@@ -136,5 +136,5 @@ class TestPipelineYtBuildContextSkipsNonTopN:
         state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
         state.set_stage_output("stats", {"stats_summary": {}})
         state.set_stage_output("charts", {"chart_outputs": []})
-        ctx = yt.YouTubeSynthesisStage._build_synthesis_context(state)
+        ctx = yt.YouTubeSynthesisStage()._build_synthesis_context(state)
         assert ctx["top_n"] == [{"id": "1"}]

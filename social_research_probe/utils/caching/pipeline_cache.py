@@ -61,15 +61,15 @@ def hash_key(*parts: str) -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
-def get_json(cache: FilesystemCache, key: str) -> dict | None:
-    """Fetch a cached JSON dict, honouring the global disable flag."""
+def get_json(cache: FilesystemCache, key: str) -> object | None:
+    """Fetch a cached value, honouring the global disable flag."""
     if cache_disabled():
         return None
     return cache.get(key)
 
 
-def set_json(cache: FilesystemCache, key: str, value: dict) -> None:
-    """Persist a dict value; no-op when caching is disabled."""
+def set_json(cache: FilesystemCache, key: str, value: object) -> None:
+    """Persist a value; no-op when caching is disabled."""
     if cache_disabled():
         return
     cache.set(key, value)

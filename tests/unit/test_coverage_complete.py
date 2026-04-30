@@ -127,9 +127,9 @@ def test_charts_suite_returns_already_annotated(tmp_path):
 
 def test_statistics_skip_empty_series():
     """services/analyzing/statistics.py:64 — continue on empty series."""
-    from social_research_probe.services.analyzing.statistics import StatisticsService
+    from social_research_probe.technologies.statistics import _stats_per_target
 
-    out = StatisticsService._stats_per_target({})
+    out = _stats_per_target({})
     assert out == {}
 
 

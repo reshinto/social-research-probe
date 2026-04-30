@@ -31,7 +31,7 @@ Let's add a new "Reddit Search" technology that a sourcing service could use.
 
 ### 1. Create the Technology
 
-Create `social_research_probe/technologies/web_search/reddit.py`:
+Create `social_research_probe/technologies/media_fetch/reddit.py`:
 
 ```python
 from __future__ import annotations

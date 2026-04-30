@@ -92,7 +92,7 @@ class TestScoreStage:
             "social_research_probe.services.scoring.resolve_scoring_weights",
             lambda m: {"trust": 0.5},
         )
-        out = yt.YouTubeScoreStage._resolve_purpose_scoring_weights(enabled_state)
+        out = yt.YouTubeScoreStage()._resolve_purpose_scoring_weights(enabled_state)
         assert out["trust"] == 0.5
 
 
@@ -124,7 +124,7 @@ class TestTranscriptStage:
             input_key="x",
             tech_results=[TechResult("t", None, None, success=False)],
         )
-        out = yt.YouTubeTranscriptStage._merge_transcripts([{"id": 1}], [sr])
+        out = yt._merge_transcripts([{"id": 1}], [sr])
         assert "transcript" not in out[0]
 
 
@@ -226,7 +226,7 @@ class TestCorroborateStage:
 
     def test_fast_mode_caps(self, monkeypatch):
         monkeypatch.setenv("SRP_FAST_MODE", "1")
-        out = yt.YouTubeCorroborateStage._cap_corroboration_providers_in_fast_mode(["a", "b", "c"])
+        out = yt._cap_corroboration_providers(["a", "b", "c"])
         assert len(out) == 1
 
     def test_execute_disabled_or_empty(self, enabled_state):
@@ -326,7 +326,7 @@ class TestSynthesisStage:
         enabled_state.set_stage_output("fetch", {"items": [], "engagement_metrics": []})
         enabled_state.set_stage_output("stats", {"stats_summary": {}})
         enabled_state.set_stage_output("charts", {"chart_outputs": []})
-        out = yt.YouTubeSynthesisStage._build_synthesis_context(enabled_state)
+        out = yt.YouTubeSynthesisStage()._build_synthesis_context(enabled_state)
         assert out["topic"] == "ai" and out["top_n"] == [{"y": 1}]
 
     def test_run_synthesis_success(self, monkeypatch):
@@ -340,7 +340,7 @@ class TestSynthesisStage:
             "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
-        out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
+        out = asyncio.run(yt._run_synthesis({}))
         assert out == "synth"
 
     def test_run_synthesis_failure(self, monkeypatch):
@@ -354,7 +354,7 @@ class TestSynthesisStage:
             "social_research_probe.technologies.synthesizing.llm_contract.build_synthesis_prompt",
             lambda c: "p",
         )
-        out = asyncio.run(yt.YouTubeSynthesisStage._run_synthesis({}))
+        out = asyncio.run(yt._run_synthesis({}))
         assert out == ""
 
     def test_execute_enabled(self, enabled_state, monkeypatch):
@@ -367,7 +367,7 @@ class TestSynthesisStage:
         async def fake_run(ctx):
             return "synth-text"
 
-        monkeypatch.setattr(yt.YouTubeSynthesisStage, "_run_synthesis", staticmethod(fake_run))
+        monkeypatch.setattr(yt, "_run_synthesis", fake_run)
         out = asyncio.run(yt.YouTubeSynthesisStage().execute(enabled_state))
         assert out.get_stage_output("synthesis")["synthesis"] == "synth-text"
 
@@ -379,7 +379,7 @@ class TestAssembleStage:
             {"summary_divergence": 0.1},
             {},
         ]
-        out = yt.YouTubeAssembleStage._collect_divergence_warnings(items, 0.4)
+        out = yt._collect_divergence_warnings(items, 0.4)
         assert len(out) == 1
 
     def test_execute_enabled(self, enabled_state):

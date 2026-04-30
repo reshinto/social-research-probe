@@ -7,7 +7,6 @@ from typing import ClassVar
 from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.charts import (
     ChartsTech,
-    items_from,
 )
 
 _INPUT_KEY = "scored_items"
@@ -24,10 +23,6 @@ class ChartsService(BaseService):
 
     def _get_technologies(self):
         return [ChartsTech()]
-
-    @staticmethod
-    def _items_from(data: object) -> list[dict]:
-        return items_from(data)
 
     async def execute_one(self, data: object) -> ServiceResult:
         result = await super().execute_one(data)

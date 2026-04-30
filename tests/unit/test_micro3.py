@@ -79,9 +79,9 @@ def test_orchestrator_fake_youtube_register(monkeypatch):
         captured.append(name)
         return MagicMock()
 
-    import social_research_probe.services.sourcing.youtube as yt_sourcing
+    from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
 
-    monkeypatch.setattr(yt_sourcing, "run_youtube_sourcing", yt_sourcing.run_youtube_sourcing)
+    monkeypatch.setattr(YouTubeSourcingService, "execute_one", YouTubeSourcingService.execute_one)
     monkeypatch.setattr("importlib.import_module", fake_import)
     orchestrator._maybe_register_fake()
     assert any("fake_youtube" in n for n in captured)

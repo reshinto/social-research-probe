@@ -74,7 +74,7 @@ class TestPipelineYtChartsExecuteWithFailure:
             "social_research_probe.services.analyzing.charts.ChartsService.execute_one",
             fake_one,
         )
-        out = asyncio.run(yt.YouTubeChartsStage._render_outputs([{"x": 1}]))
+        out = asyncio.run(yt.YouTubeChartsStage()._render_outputs([{"x": 1}]))
         assert out == []
 
 

@@ -17,8 +17,10 @@ from social_research_probe.services.enriching.transcript import TranscriptServic
 from social_research_probe.services.reporting.audio import AudioReportService
 from social_research_probe.services.reporting.html import HtmlReportService
 from social_research_probe.services.synthesizing.synthesis import SynthesisService
+from social_research_probe.technologies.charts import items_from
 from social_research_probe.technologies.enriching import _coerce_word_limit
 from social_research_probe.technologies.llms import schemas
+from social_research_probe.technologies.statistics import _compute, items_from_data
 
 
 def test_schemas_present():
@@ -33,10 +35,10 @@ class TestChartsService:
         assert techs[0].name == "charts_suite"
 
     def test_items_from_non_dict(self):
-        assert ChartsService._items_from(None) == []
+        assert items_from(None) == []
 
     def test_items_from_dict(self):
-        assert ChartsService._items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
+        assert items_from({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
 
     def test_execute_one_empty(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
@@ -53,11 +55,11 @@ class TestStatisticsService:
         assert techs[0].name == "stats_per_target"
 
     def test_items_filter(self):
-        assert StatisticsService._items({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
-        assert StatisticsService._items("notdict") == []
+        assert items_from_data({"scored_items": [{"a": 1}, "skip"]}) == [{"a": 1}]
+        assert items_from_data("notdict") == []
 
     def test_compute_empty(self):
-        assert StatisticsService._compute([]) == {"highlights": [], "low_confidence": True}
+        assert _compute([]) == {"highlights": [], "low_confidence": True}
 
     def test_compute_basic(self):
         items = [
@@ -70,7 +72,7 @@ class TestStatisticsService:
             }
             for v in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6)
         ]
-        out = StatisticsService._compute(items)
+        out = _compute(items)
         assert out["low_confidence"] is False
         assert out["highlights"]
 

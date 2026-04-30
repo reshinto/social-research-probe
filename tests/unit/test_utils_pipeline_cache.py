@@ -79,9 +79,40 @@ class TestGetSetJson:
         pc.set_json(cache, "k", {"a": 1})
         assert pc.get_json(cache, "k") == {"a": 1}
 
+    def test_roundtrip_list(self, tmp_path):
+        cache = pc.make_cache("test_json", pc.DEFAULT_TTL)
+        pc.set_json(cache, "list_key", [1, 2, 3])
+        assert pc.get_json(cache, "list_key") == [1, 2, 3]
+
+    def test_roundtrip_string(self, tmp_path):
+        cache = pc.make_cache("test_json", pc.DEFAULT_TTL)
+        pc.set_json(cache, "str_key", "hello")
+        assert pc.get_json(cache, "str_key") == "hello"
+
     def test_disabled(self, monkeypatch, tmp_path):
         cache = pc.make_cache("test_json", pc.DEFAULT_TTL)
         pc.set_json(cache, "k", {"a": 1})
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
         assert pc.get_json(cache, "k") is None
         pc.set_json(cache, "k2", {"b": 2})
+
+
+class TestEnvelopePattern:
+    """Tests for _cached_execute envelope: {"input": ..., "output": ...}."""
+
+    def test_envelope_dict_with_output_key_returns_output(self, tmp_path):
+        cache = pc.make_cache("test_env", pc.DEFAULT_TTL)
+        pc.set_json(cache, "ek", {"input": "repr", "output": {"x": 42}})
+        raw = pc.get_json(cache, "ek")
+        assert isinstance(raw, dict) and "output" in raw
+        assert raw["output"] == {"x": 42}
+
+    def test_dict_without_output_key_is_cache_miss_sentinel(self, tmp_path):
+        cache = pc.make_cache("test_env", pc.DEFAULT_TTL)
+        pc.set_json(cache, "old", {"some": "legacy"})
+        raw = pc.get_json(cache, "old")
+        assert isinstance(raw, dict) and "output" not in raw
+
+    def test_none_on_missing_key(self, tmp_path):
+        cache = pc.make_cache("test_env", pc.DEFAULT_TTL)
+        assert pc.get_json(cache, "nonexistent") is None

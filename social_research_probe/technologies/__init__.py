@@ -89,17 +89,14 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
         cache = make_cache(f"technologies/{self.name}", ttl)
 
         cached = get_json(cache, key)
-        if cached is not None:
+        if isinstance(cached, dict) and "output" in cached:
             log(f"[TECH][{self.name}] cache hit")
-            return cached
+            return cached["output"]
 
         result = await self._execute(data)
 
-        import contextlib
-
         if result is not None:
-            with contextlib.suppress(TypeError, ValueError):
-                set_json(cache, key, result)
+            set_json(cache, key, {"input": repr(data), "output": result})
 
         return result
 

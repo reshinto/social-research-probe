@@ -86,6 +86,23 @@ def _parse_response(payload: dict) -> tuple[str, float, str, list[str]]:
     return verdict, confidence, reasoning, sources
 
 
+def _preferred_runner() -> str:
+    from social_research_probe.config import load_active_config
+
+    return load_active_config().llm_runner
+
+
+def _run_llm(prompt: str) -> dict:
+    from social_research_probe.utils.llm.registry import run_with_fallback
+
+    return run_with_fallback(prompt, schema=_RESPONSE_SCHEMA, preferred=_preferred_runner())
+
+
+def _origin_urls_for(claim) -> list[str]:
+    url = getattr(claim, "source_url", None)
+    return [url] if url else []
+
+
 @register
 class LLMSearchProvider(CorroborationProvider):
     """Corroboration provider that delegates to the active LLM runner.
@@ -112,26 +129,9 @@ class LLMSearchProvider(CorroborationProvider):
                 continue
         return False
 
-    @staticmethod
-    def _preferred_runner() -> str:
-        from social_research_probe.config import load_active_config
-
-        return load_active_config().llm_runner
-
-    @classmethod
-    def _run_llm(cls, prompt: str) -> dict:
-        from social_research_probe.utils.llm.registry import run_with_fallback
-
-        return run_with_fallback(prompt, schema=_RESPONSE_SCHEMA, preferred=cls._preferred_runner())
-
-    @staticmethod
-    def _origin_urls_for(claim) -> list[str]:
-        url = getattr(claim, "source_url", None)
-        return [url] if url else []
-
     async def _ask_llm(self, claim_text: str, origin_urls: list[str]) -> dict:
         prompt = _build_prompt(claim_text, origin_urls)
-        return await asyncio.to_thread(self._run_llm, prompt)
+        return await asyncio.to_thread(_run_llm, prompt)
 
     def _build_result(self, payload: dict) -> CorroborationResult:
         verdict, confidence, reasoning, sources = _parse_response(payload)
@@ -146,5 +146,5 @@ class LLMSearchProvider(CorroborationProvider):
     async def corroborate(self, claim) -> CorroborationResult:
         """Ask the active LLM runner to assess ``claim`` and return a verdict."""
         log(f"[srp] llm_search: assessing claim: {claim.text[:80]!r}")
-        payload = await self._ask_llm(claim.text, self._origin_urls_for(claim))
+        payload = await self._ask_llm(claim.text, _origin_urls_for(claim))
         return self._build_result(payload)

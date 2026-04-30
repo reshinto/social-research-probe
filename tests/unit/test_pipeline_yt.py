@@ -98,11 +98,11 @@ def test_resolve_search_topic_with_purpose(disabled_state):
 
 def test_score_top_n_limit(disabled_state):
     disabled_state.platform_config["enrich_top_n"] = 7
-    assert yt.YouTubeScoreStage._top_n_limit(disabled_state) == 7
+    assert yt.YouTubeScoreStage()._top_n_limit(disabled_state) == 7
 
 
 def test_score_resolve_weights_none(disabled_state):
-    assert yt.YouTubeScoreStage._resolve_purpose_scoring_weights(disabled_state) is None
+    assert yt.YouTubeScoreStage()._resolve_purpose_scoring_weights(disabled_state) is None
 
 
 def test_pipeline_construct():
