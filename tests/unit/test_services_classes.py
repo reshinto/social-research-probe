@@ -48,6 +48,44 @@ class TestChartsService:
             out = asyncio.run(ChartsService().execute_one({"scored_items": []}))
         assert out.tech_results[0].success is True
 
+    def test_render_charts_no_success(self, monkeypatch):
+        from social_research_probe.services import ServiceResult, TechResult
+
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        failed_tr = TechResult(tech_name="charts_suite", input={}, output=None, success=False, error="err")
+        svc_result = ServiceResult(service_name="charts", input_key="scored_items", tech_results=[failed_tr])
+        with (
+            patch.object(ChartsService, "is_enabled", return_value=True),
+            patch.object(ChartsService, "execute_one", return_value=svc_result),
+        ):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    def test_render_charts_disabled(self, monkeypatch):
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        with patch.object(ChartsService, "is_enabled", return_value=False):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    def test_render_charts_success(self, tmp_path, monkeypatch):
+        from social_research_probe.technologies.charts import ChartResult
+
+        monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
+        cr = ChartResult(path=str(tmp_path / "bar.png"), caption="Bar chart")
+        cfg = MagicMock()
+        cfg.data_dir = tmp_path
+        with (
+            patch("social_research_probe.config.load_active_config", return_value=cfg),
+            patch(
+                "social_research_probe.technologies.charts.render_charts",
+                return_value=[cr],
+            ),
+        ):
+            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        assert out["chart_outputs"] == [cr]
+        assert out["chart_captions"] == ["Bar chart"]
+        assert out["chart_takeaways"] == []
+
 
 class TestStatisticsService:
     def test_techs(self):
