@@ -305,6 +305,51 @@ class ItemFeatures(TypedDict):
     subscriber_count: float
 
 
+TranscriptStatus: TypeAlias = Literal[
+    "not_attempted",
+    "available",
+    "unavailable",
+    "failed",
+    "timeout",
+    "provider_blocked",
+    "disabled",
+]
+
+EvidenceTier: TypeAlias = Literal[
+    "metadata_only",
+    "metadata_comments",
+    "metadata_transcript",
+    "metadata_comments_transcript",
+    "metadata_external",
+    "full",
+]
+
+
+class TextSurrogate(TypedDict, total=False):
+    """Evidence collected for a single item, used to select the best available
+    text for downstream LLM summarisation and to record what evidence was
+    present at the time of analysis."""
+
+    source_id: str
+    platform: str
+    url: str
+    title: str
+    description: str
+    channel_or_author: str
+    published_at: str
+    comments: list[str]
+    transcript: str
+    transcript_status: TranscriptStatus
+    external_snippets: list[str]
+    primary_text: str
+    primary_text_source: str
+    evidence_layers: list[str]
+    evidence_tier: EvidenceTier
+    confidence_penalties: list[str]
+    warnings: list[str]
+    char_count: int
+
+
 class ScoredItem(TypedDict, total=False):
     """One ranked item stored in the research report."""
 
@@ -320,6 +365,9 @@ class ScoredItem(TypedDict, total=False):
     summary_divergence: float
     summary_source: str
     transcript: str
+    transcript_status: TranscriptStatus
+    evidence_tier: EvidenceTier
+    text_surrogate: TextSurrogate
     corroboration_verdict: str
 
 
