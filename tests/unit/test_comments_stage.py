@@ -173,6 +173,24 @@ class TestCommentsStage:
         assert received["max"] == 10
         assert received["order"] == "time"
 
+    def test_comments_runs_when_transcript_disabled(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output(
+            "transcript",
+            {"top_n": [{"id": "v1", "title": "T", "transcript_status": "disabled"}]},
+        )
+
+        async def fake_one(self, item):
+            return _mk_comments_result({**item, "comments_status": "available"})
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.comments.CommentsService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeCommentsStage().execute(enabled_state))
+        top_n = out.get_stage_output("comments")["top_n"]
+        assert top_n[0]["comments_status"] == "available"
+        assert top_n[0]["transcript_status"] == "disabled"
+
 
 class TestPipelineStagesWiring:
     def test_pipeline_includes_comments_stage(self):
