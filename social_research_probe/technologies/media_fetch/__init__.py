@@ -19,6 +19,7 @@ from social_research_probe.utils.core.types import (
     FetchLimits,
     JSONObject,
     RawItem,
+    SourceComment,
 )
 
 
@@ -173,3 +174,53 @@ class YouTubeEngagementTech(BaseTechnology[list[RawItem], list[EngagementMetrics
                 )
             )
         return out
+
+
+def _parse_comment_thread(item: JSONObject, video_id: str) -> SourceComment | None:
+    """Extract a SourceComment from a raw commentThreads.list item."""
+    snippet = item.get("snippet")
+    if not isinstance(snippet, dict):
+        return None
+    top = snippet.get("topLevelComment")
+    if not isinstance(top, dict):
+        return None
+    top_snippet = top.get("snippet")
+    if not isinstance(top_snippet, dict):
+        return None
+    comment_id = top.get("id")
+    if not comment_id:
+        return None
+    return SourceComment(
+        source_id=video_id,
+        platform="youtube",
+        comment_id=str(comment_id),
+        author=str(top_snippet.get("authorDisplayName") or ""),
+        text=str(top_snippet.get("textDisplay") or ""),
+        like_count=int(top_snippet.get("likeCount") or 0),
+        published_at=str(top_snippet.get("publishedAt") or ""),
+    )
+
+
+class YouTubeCommentsTech(BaseTechnology[tuple[str, int, str], list[SourceComment]]):
+    """Fetch and parse YouTube top-level comments for a video."""
+
+    name: ClassVar[str] = "youtube_comments"
+    enabled_config_key: ClassVar[str] = "youtube_comments"
+
+    async def _execute(self, data: tuple[str, int, str]) -> list[SourceComment]:
+        from social_research_probe.technologies.media_fetch.youtube_api import (
+            fetch_youtube_comments,
+        )
+
+        video_id, max_results, order = data
+        raw = await asyncio.to_thread(
+            fetch_youtube_comments, video_id, max_results=max_results, order=order
+        )
+        result: list[SourceComment] = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            parsed = _parse_comment_thread(item, video_id)
+            if parsed is not None:
+                result.append(parsed)
+        return result
