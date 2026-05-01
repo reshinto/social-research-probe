@@ -51,7 +51,6 @@ DEFAULT_CONFIG: AppConfig = {
                 "max_videos": 5,
                 "max_comments_per_video": 20,
                 "order": "relevance",
-                "search_terms": [],
             },
         },
     },

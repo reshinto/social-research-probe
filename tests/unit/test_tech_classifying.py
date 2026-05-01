@@ -9,6 +9,8 @@ from social_research_probe.technologies.classifying import (
     HeuristicClassifier,
     HybridClassifier,
     LLMClassifier,
+)
+from social_research_probe.utils.core.classifying import (
     classify_by_channel_name_signal,
     classify_by_curated_map,
     classify_by_title_signal,

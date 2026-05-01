@@ -119,7 +119,6 @@ class CommentsConfig(TypedDict, total=False):
     max_videos: int
     max_comments_per_video: int
     order: str
-    search_terms: list[str]
 
 
 class YouTubePlatformConfig(TypedDict, total=False):

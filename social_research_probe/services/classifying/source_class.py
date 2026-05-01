@@ -57,11 +57,11 @@ class SourceClassService(BaseService[dict, str]):
         return [_PROVIDER_MAP[resolve_provider_name()]()]
 
     async def execute_service(self, data: dict, result: ServiceResult) -> ServiceResult:
-        from social_research_probe.technologies.classifying import (
+        from social_research_probe.utils.core.classifying import (
             classify_by_title_signal,
             coerce_class,
         )
-        from social_research_probe.technologies.scoring import normalize_item
+        from social_research_probe.utils.pipeline.helpers import normalize_item
 
         item = normalize_item(data)
         if item is None:

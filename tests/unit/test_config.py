@@ -184,7 +184,6 @@ def test_default_config_has_comments_platform(tmp_path):
     assert comments["max_videos"] == 5
     assert comments["max_comments_per_video"] == 20
     assert comments["order"] == "relevance"
-    assert comments["search_terms"] == []
 
 
 def test_default_config_has_comments_stage(tmp_path):

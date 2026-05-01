@@ -8,6 +8,7 @@ from typing import ClassVar
 from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.utils.display.progress import log, log_with_time
+from social_research_probe.utils.pipeline.helpers import dict_items, first_tech_output
 
 
 class YouTubeFetchStage(BaseStage):
@@ -66,11 +67,11 @@ class YouTubeClassifyStage(BaseStage):
 
     async def _classify(self, items: list) -> list[dict]:
         from social_research_probe.services.classifying.source_class import SourceClassService
-        from social_research_probe.technologies.classifying import (
+        from social_research_probe.utils.core.classifying import (
             classify_by_title_signal,
             coerce_class,
         )
-        from social_research_probe.technologies.scoring import normalize_item
+        from social_research_probe.utils.pipeline.helpers import normalize_item
 
         def _output_class(result) -> str:
             for tr in result.tech_results:
@@ -249,40 +250,72 @@ class YouTubeCommentsStage(BaseStage):
 
         top_n = list(state.get_stage_output("transcript").get("top_n", []))
         if not self._is_enabled(state):
-            disabled = [
-                {**it, "comments_status": "disabled"} if isinstance(it, dict) else it
-                for it in top_n
-            ]
-            state.set_stage_output("comments", {"top_n": disabled})
+            self._set_comments_output(state, self._disabled_items(top_n))
             return state
         if not top_n:
-            state.set_stage_output("comments", {"top_n": top_n})
+            self._set_comments_output(state, top_n)
             return state
 
-        comments_cfg = state.platform_config.get("comments", {})
-        max_videos = int(comments_cfg.get("max_videos", 5))
-        max_comments = int(comments_cfg.get("max_comments_per_video", 20))
-        order = str(comments_cfg.get("order", "relevance"))
-
-        dict_items = [item for item in top_n if isinstance(item, dict)]
-        fetch_items = dict_items[:max_videos]
-        inputs = [{**item, "_max_comments": max_comments, "_order": order} for item in fetch_items]
+        available_items = dict_items(top_n)
+        fetch_items = self._fetch_items(available_items, state)
+        inputs = self._service_inputs(fetch_items, state)
         results = await CommentsService().execute_batch(inputs)
+        enriched = self._enriched_items(fetch_items, results)
+        enriched.extend(self._not_attempted_items(available_items, state))
+        self._set_comments_output(state, enriched)
+        return state
 
+    def _set_comments_output(self, state: PipelineState, top_n: list) -> None:
+        state.set_stage_output("comments", {"top_n": top_n})
+
+    def _disabled_items(self, top_n: list) -> list:
+        return [
+            {**item, "comments_status": "disabled"} if isinstance(item, dict) else item
+            for item in top_n
+        ]
+
+    def _comments_config(self, state: PipelineState) -> dict:
+        cfg = state.platform_config.get("comments", {})
+        return cfg if isinstance(cfg, dict) else {}
+
+    def _max_videos(self, state: PipelineState) -> int:
+        return int(self._comments_config(state).get("max_videos", 5))
+
+    def _max_comments(self, state: PipelineState) -> int:
+        return int(self._comments_config(state).get("max_comments_per_video", 20))
+
+    def _comment_order(self, state: PipelineState) -> str:
+        return str(self._comments_config(state).get("order", "relevance"))
+
+    def _fetch_items(self, dict_items: list[dict], state: PipelineState) -> list[dict]:
+        return dict_items[: self._max_videos(state)]
+
+    def _service_inputs(self, fetch_items: list[dict], state: PipelineState) -> list[dict]:
+        max_comments = self._max_comments(state)
+        order = self._comment_order(state)
+        return [self._service_input(item, max_comments, order) for item in fetch_items]
+
+    def _service_input(self, item: dict, max_comments: int, order: str) -> dict:
+        return {**item, "_max_comments": max_comments, "_order": order}
+
+    def _enriched_items(self, fetch_items: list[dict], results: list) -> list[dict]:
         enriched: list[dict] = []
         for fetch_item, result in zip(fetch_items, results, strict=True):
-            merged = next(
-                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
-                None,
-            )
-            enriched.append(
-                merged if merged is not None else {**fetch_item, "comments_status": "failed"}
-            )
-        for item in dict_items[max_videos:]:
-            enriched.append({**item, "comments_status": "not_attempted"})
+            enriched.append(self._enriched_item(fetch_item, result))
+        return enriched
 
-        state.set_stage_output("comments", {"top_n": enriched})
-        return state
+    def _enriched_item(self, fetch_item: dict, result: object) -> dict:
+        merged = self._result_item(result)
+        return merged if merged is not None else {**fetch_item, "comments_status": "failed"}
+
+    def _result_item(self, result: object) -> dict | None:
+        return first_tech_output(result, dict)
+
+    def _not_attempted_items(self, dict_items: list[dict], state: PipelineState) -> list[dict]:
+        return [
+            {**item, "comments_status": "not_attempted"}
+            for item in dict_items[self._max_videos(state) :]
+        ]
 
 
 class YouTubeSummaryStage(BaseStage):
@@ -294,53 +327,60 @@ class YouTubeSummaryStage(BaseStage):
     @log_with_time("[srp] youtube/summary: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.summary import SummaryService
-        from social_research_probe.services.enriching.text_surrogate import TextSurrogateService
 
         top_n = list(state.get_stage_output("comments").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
-        text_surrogate_inputs = [item for item in top_n if isinstance(item, dict)]
-        text_surrogate_results = await TextSurrogateService().execute_batch(text_surrogate_inputs)
-        surrogate_by_index = iter(text_surrogate_results)
-        augmented = []
-        for item in top_n:
-            if isinstance(item, dict):
-                # Build the surrogate immediately before summarisation so the LLM layer receives
-                # the best available text and the report can show what evidence backed it.
-                result = next(surrogate_by_index)
-                surrogate = next(
-                    (tr.output for tr in result.tech_results if tr.success and tr.output),
-                    None,
-                )
-                if isinstance(surrogate, dict):
-                    augmented.append(
-                        {
-                            **item,
-                            "text_surrogate": surrogate,
-                            "evidence_tier": surrogate.get("evidence_tier", "metadata_only"),
-                        }
-                    )
-                else:
-                    augmented.append(item)
-            else:
-                augmented.append(item)
-        summary_inputs = [item for item in augmented if isinstance(item, dict)]
-        summary_results = await SummaryService().execute_batch(summary_inputs)
-        summary_by_index = iter(summary_results)
-        enriched: list[dict] = []
-        for item in augmented:
-            if not isinstance(item, dict):
-                enriched.append(item)
-                continue
-            result = next(summary_by_index)
-            merged = next(
-                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
-                None,
-            )
-            enriched.append(merged if merged else dict(item))
+        augmented = await self._items_with_surrogates(top_n)
+        summary_results = await SummaryService().execute_batch(dict_items(augmented))
+        enriched = self._items_with_summaries(augmented, summary_results)
         state.set_stage_output("summary", {"top_n": enriched})
         return state
+
+    async def _items_with_surrogates(self, top_n: list) -> list:
+        from social_research_probe.services.enriching.text_surrogate import TextSurrogateService
+
+        results = await TextSurrogateService().execute_batch(dict_items(top_n))
+        return self._merge_surrogates(top_n, results)
+
+    def _merge_surrogates(self, top_n: list, results: list) -> list:
+        result_by_index = iter(results)
+        augmented = []
+        for item in top_n:
+            augmented.append(self._item_with_surrogate(item, result_by_index))
+        return augmented
+
+    def _item_with_surrogate(self, item: object, result_by_index: object) -> object:
+        if not isinstance(item, dict):
+            return item
+        surrogate = self._surrogate_from_result(next(result_by_index))
+        if not isinstance(surrogate, dict):
+            return item
+        return {
+            **item,
+            "text_surrogate": surrogate,
+            "evidence_tier": surrogate.get("evidence_tier", "metadata_only"),
+        }
+
+    def _surrogate_from_result(self, result: object) -> object:
+        return first_tech_output(result, dict, require_success=True, require_truthy=True)
+
+    def _items_with_summaries(self, augmented: list, summary_results: list) -> list:
+        result_by_index = iter(summary_results)
+        enriched: list[dict] = []
+        for item in augmented:
+            enriched.append(self._item_with_summary(item, result_by_index))
+        return enriched
+
+    def _item_with_summary(self, item: object, result_by_index: object) -> object:
+        if not isinstance(item, dict):
+            return item
+        merged = self._summary_from_result(next(result_by_index))
+        return merged if isinstance(merged, dict) else dict(item)
+
+    def _summary_from_result(self, result: object) -> object:
+        return first_tech_output(result, dict)
 
 
 class YouTubeCorroborateStage(BaseStage):

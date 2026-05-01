@@ -49,10 +49,9 @@ def test_comments_config_all_fields():
         "max_videos": 5,
         "max_comments_per_video": 20,
         "order": "relevance",
-        "search_terms": ["AI", "safety"],
     }
     assert cfg["max_videos"] == 5
-    assert cfg["search_terms"] == ["AI", "safety"]
+    assert cfg["order"] == "relevance"
 
 
 def test_scored_item_accepts_comment_fields():

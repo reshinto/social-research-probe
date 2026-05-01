@@ -10,7 +10,8 @@ from social_research_probe.technologies.scoring.combine import overall_score
 from social_research_probe.technologies.scoring.opportunity import opportunity_score
 from social_research_probe.technologies.scoring.trend import trend_score
 from social_research_probe.technologies.scoring.trust import trust_score
-from social_research_probe.utils.core.types import EngagementMetrics, RawItem
+from social_research_probe.utils.core.types import EngagementMetrics
+from social_research_probe.utils.pipeline.helpers import normalize_item
 
 
 def zscores(values: list[float]) -> list[float]:
@@ -31,27 +32,6 @@ def age_days(published: object) -> float:
     if not isinstance(published, datetime):
         return 30.0
     return max(1.0, float((datetime.now(UTC) - published).days))
-
-
-def normalize_item(item: object) -> dict | None:
-    if isinstance(item, dict):
-        return item
-    if not isinstance(item, RawItem):
-        return None
-    return {
-        "id": item.id,
-        "url": item.url,
-        "title": item.title,
-        "channel": item.author_name,
-        "author_id": item.author_id,
-        "author_name": item.author_name,
-        "published_at": item.published_at,
-        # Keep metadata text/media available after scoring so enrichment can build a
-        # useful text surrogate even when no transcript is fetched.
-        "text_excerpt": item.text_excerpt,
-        "thumbnail": item.thumbnail,
-        "extras": dict(item.extras) if item.extras else {},
-    }
 
 
 def normalize_with_metrics(

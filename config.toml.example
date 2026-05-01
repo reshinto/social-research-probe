@@ -85,10 +85,6 @@ max_comments_per_video = 20
 # top-liked comments; "time" returns newest first.
 order = "relevance" # relevance | time
 
-# Optional keyword filters. When non-empty, only comments containing at least
-# one of these terms are kept. Leave empty to keep all fetched comments.
-search_terms = []
-
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
