@@ -39,9 +39,8 @@ class TestTranscriptServiceEnrichBatch:
         results = [_ok_result(svc.service_name, "transcript text")]
         with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
             out = await svc.enrich_batch(items)
-        assert out == [
-            {"url": "https://youtu.be/abc", "title": "Vid", "transcript": "transcript text"}
-        ]
+        assert out[0]["transcript"] == "transcript text"
+        assert out[0]["transcript_status"] == "available"
 
     @pytest.mark.asyncio
     async def test_no_transcript_on_failure(self, svc):
@@ -49,8 +48,8 @@ class TestTranscriptServiceEnrichBatch:
         results = [_fail_result(svc.service_name)]
         with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
             out = await svc.enrich_batch(items)
-        assert out == [{"url": "https://youtu.be/abc"}]
         assert "transcript" not in out[0]
+        assert out[0]["transcript_status"] == "unavailable"
 
     @pytest.mark.asyncio
     async def test_skips_non_dict_items(self, svc):
@@ -71,7 +70,26 @@ class TestTranscriptServiceEnrichBatch:
         with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
             out = await svc.enrich_batch(items)
         assert out[0]["transcript"] == "tx1"
+        assert out[0]["transcript_status"] == "available"
         assert "transcript" not in out[1]
+        assert out[1]["transcript_status"] == "unavailable"
+
+    @pytest.mark.asyncio
+    async def test_failed_status_when_tech_has_error(self, svc):
+        items = [{"url": "u1"}]
+        error_result = ServiceResult(
+            service_name=svc.service_name,
+            input_key="key",
+            tech_results=[
+                TechResult(
+                    tech_name="t", input="key", output=None, success=False, error="API error"
+                )
+            ],
+        )
+        with patch.object(svc, "execute_batch", new=AsyncMock(return_value=[error_result])):
+            out = await svc.enrich_batch(items)
+        assert out[0]["transcript_status"] == "failed"
+        assert "transcript" not in out[0]
 
 
 class TestSummaryServiceEnrichBatch:

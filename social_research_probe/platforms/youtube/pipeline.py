@@ -142,7 +142,14 @@ class YouTubeTranscriptStage(BaseStage):
         from social_research_probe.services.enriching.transcript import TranscriptService
 
         top_n = list(state.get_stage_output("score").get("top_n", []))
-        if not self._is_enabled(state) or not top_n:
+        if not self._is_enabled(state):
+            disabled = [
+                {**it, "transcript_status": "disabled"} if isinstance(it, dict) else it
+                for it in top_n
+            ]
+            state.set_stage_output("transcript", {"top_n": disabled})
+            return state
+        if not top_n:
             state.set_stage_output("transcript", {"top_n": top_n})
             return state
         enriched = await TranscriptService().enrich_batch(top_n)

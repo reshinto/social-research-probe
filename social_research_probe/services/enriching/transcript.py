@@ -38,17 +38,20 @@ class TranscriptService(FallbackService):
     async def enrich_batch(self, top_n: list) -> list[dict]:
         """Fetch transcripts and merge into items. Returns enriched item list."""
         results = await self.execute_batch(top_n)
-        return [
-            (
-                {**item, "transcript": t}
-                if (
-                    t := next(
-                        (tr.output for tr in r.tech_results if tr.success and tr.output),
-                        None,
-                    )
-                )
-                else dict(item)
+        enriched: list[dict] = []
+        for item, r in zip(top_n, results, strict=True):
+            if not isinstance(item, dict):
+                continue
+            transcript = next(
+                (tr.output for tr in r.tech_results if tr.success and tr.output),
+                None,
             )
-            for item, r in zip(top_n, results, strict=True)
-            if isinstance(item, dict)
-        ]
+            if transcript:
+                enriched.append(
+                    {**item, "transcript": transcript, "transcript_status": "available"}
+                )
+            elif any(tr.error for tr in r.tech_results):
+                enriched.append({**item, "transcript_status": "failed"})
+            else:
+                enriched.append({**item, "transcript_status": "unavailable"})
+        return enriched

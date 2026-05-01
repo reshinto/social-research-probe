@@ -116,6 +116,31 @@ class TestTranscriptStage:
         out = asyncio.run(yt.YouTubeTranscriptStage().execute(enabled_state))
         assert out.get_stage_output("transcript")["top_n"] == []
 
+    def test_enabled_sets_available_status(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": [{"url": "u1"}]})
+        sr = _mk_service_result("transcript", "TRANSCRIPT")
+
+        async def fake_batch(self, items):
+            return [sr]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.transcript.TranscriptService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeTranscriptStage().execute(enabled_state))
+        top_n = out.get_stage_output("transcript")["top_n"]
+        assert top_n[0]["transcript_status"] == "available"
+
+    def test_disabled_sets_disabled_status(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("score", {"top_n": [{"url": "u1"}, {"url": "u2"}]})
+        cfg = MagicMock()
+        cfg.stage_enabled.return_value = False
+        monkeypatch.setattr("social_research_probe.config.load_active_config", lambda *a, **k: cfg)
+        out = asyncio.run(yt.YouTubeTranscriptStage().execute(enabled_state))
+        top_n = out.get_stage_output("transcript")["top_n"]
+        assert all(it["transcript_status"] == "disabled" for it in top_n)
+        assert "transcript" not in top_n[0]
+
 
 class TestSummaryStage:
     def test_enabled(self, enabled_state, monkeypatch):
