@@ -339,8 +339,8 @@ class TestAssembleStage:
         from social_research_probe.utils.pipeline.helpers import collect_divergence_warnings
 
         items = [
-            {"summary_divergence": 0.6, "title": "t"},
-            {"summary_divergence": 0.1},
+            {"summary_divergence": 0.6, "title": "t", "transcript": "text"},
+            {"summary_divergence": 0.1, "transcript": "text"},
             {},
         ]
         out = collect_divergence_warnings(items, 0.4)
