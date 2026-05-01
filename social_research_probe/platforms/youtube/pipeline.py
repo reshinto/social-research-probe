@@ -166,11 +166,17 @@ class YouTubeSummaryStage(BaseStage):
     @log_with_time("[srp] youtube/summary: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.summary import SummaryService
+        from social_research_probe.services.enriching.text_surrogate import TextSurrogateService
 
         top_n = list(state.get_stage_output("transcript").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
+        for item in top_n:
+            if isinstance(item, dict):
+                surrogate = TextSurrogateService.from_item(item)
+                item["text_surrogate"] = surrogate
+                item["evidence_tier"] = surrogate.get("evidence_tier", "metadata_only")
         enriched = await SummaryService().enrich_batch(top_n)
         state.set_stage_output("summary", {"top_n": enriched})
         return state

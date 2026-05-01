@@ -32,12 +32,20 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
         from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
         title = data.get("title", "") if isinstance(data, dict) else ""
-        transcript = data.get("transcript", "") if isinstance(data, dict) else ""
         configured_limit = data.get("summary_word_limit") if isinstance(data, dict) else None
         word_limit = _coerce_word_limit(configured_limit)
+
+        surrogate = data.get("text_surrogate") if isinstance(data, dict) else None
+        if surrogate:
+            content = surrogate.get("primary_text", "")
+            label = "Content"
+        else:
+            content = data.get("transcript", "") if isinstance(data, dict) else ""
+            label = "Transcript"
+
         prompt = (
             f"Summarise this YouTube video in at most {word_limit} words.\n"
-            f"Title: {title}\nTranscript: {transcript[:3000]}"
+            f"Title: {title}\n{label}: {content[:3000]}"
         )
 
         summary = await multi_llm_prompt(prompt) or ""

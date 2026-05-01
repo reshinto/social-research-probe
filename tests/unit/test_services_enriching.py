@@ -135,3 +135,74 @@ class TestSummaryServiceEnrichBatch:
             out = await svc.enrich_batch(items)
         assert out[0]["score"] == 42
         assert out[0]["summary"] == "the summary"
+
+    @pytest.mark.asyncio
+    async def test_sets_summary_source_from_surrogate(self, svc):
+        items = [
+            {
+                "title": "T",
+                "text_surrogate": {"primary_text_source": "description"},
+            }
+        ]
+        results = [_ok_result(svc.service_name, "desc summary")]
+        with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
+            out = await svc.enrich_batch(items)
+        assert out[0]["summary_source"] == "description"
+
+    @pytest.mark.asyncio
+    async def test_no_summary_source_without_surrogate(self, svc):
+        items = [{"title": "T"}]
+        results = [_ok_result(svc.service_name, "plain summary")]
+        with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
+            out = await svc.enrich_batch(items)
+        assert "summary_source" not in out[0]
+
+    @pytest.mark.asyncio
+    async def test_no_summary_source_on_failure(self, svc):
+        items = [{"title": "T", "text_surrogate": {"primary_text_source": "transcript"}}]
+        results = [_fail_result(svc.service_name)]
+        with patch.object(svc, "execute_batch", new=AsyncMock(return_value=results)):
+            out = await svc.enrich_batch(items)
+        assert "summary_source" not in out[0]
+
+
+class TestSummaryEnsembleTechSurrogate:
+    @pytest.mark.asyncio
+    async def test_uses_surrogate_primary_text(self):
+        from social_research_probe.technologies.enriching import SummaryEnsembleTech
+
+        tech = SummaryEnsembleTech()
+        captured = {}
+
+        async def fake_llm(prompt):
+            captured["prompt"] = prompt
+            return "summary"
+
+        data = {
+            "title": "Video Title",
+            "transcript": "original transcript",
+            "text_surrogate": {"primary_text": "description fallback text"},
+        }
+        with patch("social_research_probe.utils.llm.ensemble.multi_llm_prompt", fake_llm):
+            result = await tech._execute(data)
+        assert result == "summary"
+        assert "Content:" in captured["prompt"]
+        assert "description fallback text" in captured["prompt"]
+        assert "original transcript" not in captured["prompt"]
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_transcript_without_surrogate(self):
+        from social_research_probe.technologies.enriching import SummaryEnsembleTech
+
+        tech = SummaryEnsembleTech()
+        captured = {}
+
+        async def fake_llm(prompt):
+            captured["prompt"] = prompt
+            return "summary"
+
+        data = {"title": "T", "transcript": "raw transcript text"}
+        with patch("social_research_probe.utils.llm.ensemble.multi_llm_prompt", fake_llm):
+            await tech._execute(data)
+        assert "Transcript:" in captured["prompt"]
+        assert "raw transcript text" in captured["prompt"]

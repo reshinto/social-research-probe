@@ -162,6 +162,57 @@ class TestSummaryStage:
         out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
         assert out.get_stage_output("summary")["top_n"] == []
 
+    def test_attaches_text_surrogate(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output(
+            "transcript", {"top_n": [{"url": "u1", "title": "T", "transcript": "txt"}]}
+        )
+        sr = _mk_service_result("summary", "SUM")
+
+        async def fake_batch(self, items):
+            return [sr]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.summary.SummaryService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        top_n = out.get_stage_output("summary")["top_n"]
+        assert "text_surrogate" in top_n[0]
+        assert top_n[0]["text_surrogate"]["primary_text"] == "txt"
+
+    def test_skips_non_dict_items_in_surrogate_build(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output(
+            "transcript", {"top_n": [{"url": "u1", "title": "T"}, "not-a-dict"]}
+        )
+
+        async def fake_enrich(self, items):
+            return [dict(it) if isinstance(it, dict) else {"raw": it} for it in items]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.summary.SummaryService.enrich_batch",
+            fake_enrich,
+        )
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        top_n = out.get_stage_output("summary")["top_n"]
+        assert "text_surrogate" in top_n[0]
+        assert "text_surrogate" not in top_n[1]
+
+    def test_attaches_evidence_tier(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1", "title": "T"}]})
+        sr = _mk_service_result("summary", "SUM")
+
+        async def fake_batch(self, items):
+            return [sr]
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.summary.SummaryService.execute_batch",
+            fake_batch,
+        )
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        top_n = out.get_stage_output("summary")["top_n"]
+        assert "evidence_tier" in top_n[0]
+        assert top_n[0]["evidence_tier"] == "metadata_only"
+
 
 class TestCorroborateStage:
     def test_execute_disabled_or_empty(self, enabled_state):

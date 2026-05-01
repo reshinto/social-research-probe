@@ -50,16 +50,18 @@ class SummaryService(BaseService):
     async def enrich_batch(self, top_n: list) -> list[dict]:
         """Generate summaries and merge into items. Returns enriched item list."""
         results = await self.execute_batch(top_n)
-        return [
-            (
-                {**item, "summary": s, "one_line_takeaway": s}
-                if (
-                    s := next(
-                        (tr.output for tr in r.tech_results if tr.success and tr.output),
-                        None,
-                    )
-                )
-                else dict(item)
+        enriched: list[dict] = []
+        for item, r in zip(top_n, results, strict=True):
+            s = next(
+                (tr.output for tr in r.tech_results if tr.success and tr.output),
+                None,
             )
-            for item, r in zip(top_n, results, strict=True)
-        ]
+            if s:
+                merged = {**item, "summary": s, "one_line_takeaway": s}
+                surr = item.get("text_surrogate")
+                if isinstance(surr, dict) and surr.get("primary_text_source"):
+                    merged["summary_source"] = surr["primary_text_source"]
+                enriched.append(merged)
+            else:
+                enriched.append(dict(item))
+        return enriched

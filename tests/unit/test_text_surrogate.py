@@ -27,10 +27,12 @@ class TestFromItemBasic:
         assert s["evidence_layers"] == ["title"]
 
     def test_with_description(self):
-        s = TextSurrogateService.from_item({
-            "title": "My Video",
-            "text_excerpt": "A longer description of the video.",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "My Video",
+                "text_excerpt": "A longer description of the video.",
+            }
+        )
         assert s["primary_text"] == "A longer description of the video."
         assert s["primary_text_source"] == "description"
         assert s["description"] == "A longer description of the video."
@@ -38,37 +40,45 @@ class TestFromItemBasic:
         assert s["evidence_tier"] == "metadata_only"
 
     def test_description_key_fallback(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "description": "From description key",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "description": "From description key",
+            }
+        )
         assert s["description"] == "From description key"
         assert s["primary_text_source"] == "description"
 
     def test_text_excerpt_preferred_over_description_key(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "text_excerpt": "From excerpt",
-            "description": "From desc key",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "text_excerpt": "From excerpt",
+                "description": "From desc key",
+            }
+        )
         assert s["description"] == "From excerpt"
 
     def test_with_transcript(self):
-        s = TextSurrogateService.from_item({
-            "title": "My Video",
-            "transcript": "Full transcript text here",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "My Video",
+                "transcript": "Full transcript text here",
+            }
+        )
         assert s["primary_text"] == "Full transcript text here"
         assert s["primary_text_source"] == "transcript"
         assert s["evidence_tier"] == "metadata_transcript"
         assert "transcript" in s["evidence_layers"]
 
     def test_empty_transcript_treated_as_absent(self):
-        s = TextSurrogateService.from_item({
-            "title": "My Video",
-            "text_excerpt": "Description",
-            "transcript": "",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "My Video",
+                "text_excerpt": "Description",
+                "transcript": "",
+            }
+        )
         assert s["primary_text"] == "Description"
         assert s["primary_text_source"] == "description"
         assert "transcript" not in s["evidence_layers"]
@@ -77,10 +87,12 @@ class TestFromItemBasic:
 
 class TestFromItemComments:
     def test_with_comments(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "comments": ["great video", "thanks"],
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "comments": ["great video", "thanks"],
+            }
+        )
         assert s["evidence_tier"] == "metadata_comments"
         assert "comments" in s["evidence_layers"]
 
@@ -90,48 +102,58 @@ class TestFromItemComments:
         assert s["evidence_tier"] == "metadata_only"
 
     def test_with_transcript_and_comments(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "transcript": "text",
-            "comments": ["c1"],
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "transcript": "text",
+                "comments": ["c1"],
+            }
+        )
         assert s["evidence_tier"] == "metadata_comments_transcript"
 
 
 class TestFromItemExternalSnippets:
     def test_with_external_snippets(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "external_snippets": ["snippet from reuters"],
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "external_snippets": ["snippet from reuters"],
+            }
+        )
         assert s["evidence_tier"] == "metadata_external"
         assert "external_snippets" in s["evidence_layers"]
 
     def test_empty_external_treated_as_absent(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "external_snippets": [],
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "external_snippets": [],
+            }
+        )
         assert "external_snippets" not in s["evidence_layers"]
 
 
 class TestFromItemFull:
     def test_full_tier(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "transcript": "t",
-            "comments": ["c"],
-            "external_snippets": ["e"],
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "transcript": "t",
+                "comments": ["c"],
+                "external_snippets": ["e"],
+            }
+        )
         assert s["evidence_tier"] == "full"
 
 
 class TestFromItemTranscriptStatus:
     def test_carries_transcript_status(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "transcript_status": "available",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "transcript_status": "available",
+            }
+        )
         assert s["transcript_status"] == "available"
 
     def test_default_not_attempted(self):
@@ -149,29 +171,35 @@ class TestFromItemConfidencePenalties:
         assert "no_description" in s["confidence_penalties"]
 
     def test_no_penalties_when_all_present(self):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "text_excerpt": "desc",
-            "transcript": "text",
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "text_excerpt": "desc",
+                "transcript": "text",
+            }
+        )
         assert s["confidence_penalties"] == []
 
 
 class TestFromItemWarnings:
     @pytest.mark.parametrize("status", ["failed", "timeout", "provider_blocked"])
     def test_warning_on_bad_status(self, status):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "transcript_status": status,
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "transcript_status": status,
+            }
+        )
         assert s["warnings"] == [f"transcript_{status}"]
 
     @pytest.mark.parametrize("status", ["not_attempted", "available", "unavailable", "disabled"])
     def test_no_warning_on_normal_status(self, status):
-        s = TextSurrogateService.from_item({
-            "title": "V",
-            "transcript_status": status,
-        })
+        s = TextSurrogateService.from_item(
+            {
+                "title": "V",
+                "transcript_status": status,
+            }
+        )
         assert s["warnings"] == []
 
 
@@ -201,7 +229,6 @@ class TestFromItemPlatformDetection:
     def test_empty_url(self):
         s = TextSurrogateService.from_item({})
         assert s["platform"] == ""
-
 
 
 class TestFromItemPublishedAt:

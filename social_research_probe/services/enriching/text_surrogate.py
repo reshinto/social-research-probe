@@ -30,7 +30,9 @@ class TextSurrogateService:
         external_snippets: list[str] = item.get("external_snippets") or []
 
         primary_text, primary_text_source = _pick_primary(
-            transcript, description, title,
+            transcript,
+            description,
+            title,
         )
         layers = _build_layers(title, description, transcript, comments, external_snippets)
         tier = TextSurrogateService.tier_from_layers(layers)
