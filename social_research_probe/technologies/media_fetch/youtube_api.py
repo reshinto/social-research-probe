@@ -198,6 +198,55 @@ def search_youtube(
     )
 
 
+def _fetch_comment_threads(
+    client,
+    video_id: str,
+    max_results: int,
+    order: str,
+) -> list[JSONObject]:
+    resp = (
+        client.commentThreads()
+        .list(
+            videoId=video_id,
+            part="snippet",
+            maxResults=max_results,
+            textFormat="plainText",
+            order=order,
+        )
+        .execute()
+    )
+    items = resp.get("items", [])
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+@log_with_time("[srp] youtube: comments {video_id!r}")
+def fetch_youtube_comments(
+    video_id: str,
+    *,
+    max_results: int = 20,
+    order: str = "relevance",
+) -> list[JSONObject]:
+    """Fetch top-level comment threads for a YouTube video.
+
+    Args:
+        video_id: YouTube video identifier.
+        max_results: Maximum number of comment threads to return (1-100).
+        order: Sort order — ``"relevance"`` or ``"time"``.
+
+    Returns:
+        Raw JSON objects from the YouTube ``commentThreads.list`` response.
+
+    Raises:
+        AdapterError: If the API key is missing.
+        Exception: API errors propagate to the caller.
+    """
+    api_key = resolve_youtube_api_key()
+    client = _build_client(api_key)
+    return _fetch_comment_threads(client, video_id, max_results, order)
+
+
 @log_with_time("[srp] youtube: hydrate")
 async def hydrate_youtube(
     video_ids: list[str],
