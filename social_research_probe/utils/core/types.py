@@ -91,12 +91,44 @@ class CorroborationConfigSection(TypedDict):
     max_claims_per_session: int
 
 
+CommentsStatus: TypeAlias = Literal[
+    "not_attempted",
+    "available",
+    "unavailable",
+    "failed",
+    "disabled",
+]
+
+
+class SourceComment(TypedDict, total=False):
+    """One fetched top-level YouTube comment."""
+
+    source_id: str
+    platform: str
+    comment_id: str
+    author: str
+    text: str
+    like_count: int
+    published_at: str
+
+
+class CommentsConfig(TypedDict, total=False):
+    """Per-platform comment-fetch configuration."""
+
+    enabled: bool
+    max_videos: int
+    max_comments_per_video: int
+    order: str
+    search_terms: list[str]
+
+
 class YouTubePlatformConfig(TypedDict, total=False):
     """Configurable defaults for the YouTube adapter."""
 
     recency_days: int
     max_items: int
     enrich_top_n: int
+    comments: CommentsConfig
 
 
 class PlatformsConfigSection(TypedDict):
@@ -128,6 +160,7 @@ class EnrichServices(TypedDict, total=False):
     llm: bool
     media_url_summary: bool
     merged_summary: bool
+    comments: bool
 
 
 class CorroborateServices(TypedDict, total=False):
@@ -171,6 +204,7 @@ class TechnologiesConfigSection(TypedDict):
     exa: bool
     brave: bool
     tavily: bool
+    youtube_comments: bool
 
 
 class TunablesConfigSection(TypedDict):
@@ -373,6 +407,9 @@ class ScoredItem(TypedDict, total=False):
     evidence_tier: EvidenceTier
     text_surrogate: TextSurrogate
     corroboration_verdict: str
+    comments_status: CommentsStatus
+    source_comments: list[SourceComment]
+    comments: list[str]
 
 
 class SourceValidationSummary(TypedDict):
