@@ -172,11 +172,20 @@ class YouTubeSummaryStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
+        augmented = []
         for item in top_n:
             if isinstance(item, dict):
                 surrogate = TextSurrogateService.from_item(item)
-                item["text_surrogate"] = surrogate
-                item["evidence_tier"] = surrogate.get("evidence_tier", "metadata_only")
+                augmented.append(
+                    {
+                        **item,
+                        "text_surrogate": surrogate,
+                        "evidence_tier": surrogate.get("evidence_tier", "metadata_only"),
+                    }
+                )
+            else:
+                augmented.append(item)
+        top_n = augmented
         enriched = await SummaryService().enrich_batch(top_n)
         state.set_stage_output("summary", {"top_n": enriched})
         return state

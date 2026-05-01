@@ -91,10 +91,12 @@ def _items_links(items: list[ScoredItem]) -> str:
             if it.get("summary_source") == "description"
             else ""
         )
+        tier = it.get("evidence_tier")
+        tier_tag = f' <span class="evidence-tier">[{_esc(tier)}]</span>' if tier else ""
         lis.append(
             f"<li><strong>[{i}]</strong> "
             f'<a href="{url}" rel="noopener noreferrer">{channel}</a>'
-            f" — {takeaway}{description_notice}{extra}</li>"
+            f" — {takeaway}{tier_tag}{description_notice}{extra}</li>"
         )
     return f"<ul>{''.join(lis)}</ul>"
 

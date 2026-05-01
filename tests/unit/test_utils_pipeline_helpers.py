@@ -90,7 +90,12 @@ def test_whitespace_transcript_no_warning():
 
 def test_status_unavailable_no_warning():
     items = [
-        {"title": "X", "summary_divergence": 0.9, "transcript": T, "transcript_status": "unavailable"}
+        {
+            "title": "X",
+            "summary_divergence": 0.9,
+            "transcript": T,
+            "transcript_status": "unavailable",
+        }
     ]
     assert collect_divergence_warnings(items, threshold=0.5) == []
 
