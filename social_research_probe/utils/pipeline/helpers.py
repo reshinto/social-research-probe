@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 def _has_real_transcript(item: dict) -> bool:
+    """Return True only when summary divergence has transcript text to compare against."""
     status = item.get("transcript_status")
     if status is not None and status != "available":
         return False

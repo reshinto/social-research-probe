@@ -27,6 +27,7 @@ class YouTubeSourcingService(BaseService[str, dict]):
 
     service_name: ClassVar[str] = "youtube.sourcing"
     enabled_config_key: ClassVar[str] = "services.youtube.sourcing.youtube"
+    run_technologies_concurrently: ClassVar[bool] = False
 
     def __init__(self, config: dict | None = None) -> None:
         self.config = config or {}
@@ -37,10 +38,8 @@ class YouTubeSourcingService(BaseService[str, dict]):
     def _get_technologies(self) -> list[object]:
         return [self._search, self._hydrate, self._engagement]
 
-    async def execute_one(self, data: str) -> ServiceResult:
+    async def execute_service(self, data: str, result: ServiceResult) -> ServiceResult:
         """Run the three techs sequentially: search → hydrate → engagement."""
-        if not self.is_enabled():
-            return ServiceResult(service_name=self.service_name, input_key=data, tech_results=[])
         topic = data
         limits = _resolve_default_limits()
         include_shorts = bool(self.config.get("include_shorts", True))

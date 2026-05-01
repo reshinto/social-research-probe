@@ -24,26 +24,17 @@ class ChartsService(BaseService):
     def _get_technologies(self):
         return [ChartsTech()]
 
-    async def execute_one(self, data: object) -> ServiceResult:
-        result = await super().execute_one(data)
-        result.input_key = _INPUT_KEY
-        return result
-
-    async def render_charts(self, items: list) -> dict:
-        """Render chart suite for items.
-
-        Returns {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []} if disabled.
-        """
-        if not self.is_enabled():
-            return {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
-        result = await self.execute_one({"scored_items": items})
-        chart_outputs = []
-        for tr in result.tech_results:
-            if tr.success and isinstance(tr.output, list):
-                chart_outputs = tr.output
-                break
-        return {
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
+        chart_outputs = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, list)),
+            [],
+        )
+        charts = {
             "chart_outputs": chart_outputs,
             "chart_captions": [c.caption for c in chart_outputs],
             "chart_takeaways": [],
         }
+        if result.tech_results:
+            result.tech_results[0].output = charts
+        result.input_key = _INPUT_KEY
+        return result

@@ -1,4 +1,4 @@
-"""Abstract base service: concurrent batch execution over technologies."""
+"""Abstract base service: protected batch/one execution over service logic."""
 
 import asyncio
 from abc import ABC, abstractmethod
@@ -32,14 +32,26 @@ class ServiceResult:
 
 
 class BaseService(ABC, Generic[TInput, TOutput]):
-    """Runs a batch of inputs through technologies concurrently.
+    """Runs inputs through service-specific logic via a protected lifecycle.
 
-    Subclasses set ``service_name`` and ``enabled_config_key``, then
-    implement ``_get_technologies`` to return the tech instances to run.
+    Subclasses set ``service_name`` and ``enabled_config_key``, then implement
+    ``execute_service``. They must not override ``execute_batch`` or
+    ``execute_one``; those methods are the framework contract used by pipelines.
     """
 
     service_name: ClassVar[str] = ""
     enabled_config_key: ClassVar[str] = ""
+    run_technologies_concurrently: ClassVar[bool] = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        forbidden = {"execute_batch", "execute_one"}.intersection(cls.__dict__)
+        if forbidden:
+            names = ", ".join(sorted(forbidden))
+            raise TypeError(
+                f"{cls.__name__} must implement execute_service; "
+                f"do not override protected BaseService method(s): {names}"
+            )
 
     @classmethod
     def is_enabled(cls) -> bool:
@@ -66,87 +78,74 @@ class BaseService(ABC, Generic[TInput, TOutput]):
         self,
         data: TInput,
     ) -> ServiceResult:
-        """Run all technologies for one input; isolate per-technology errors."""
+        """Run one input through this service's implementation."""
         if not self.is_enabled():
             return ServiceResult(
                 service_name=self.service_name,
                 input_key=repr(data),
                 tech_results=[],
             )
+        return await self._execute_technologies_concurrently(data)
+
+    @abstractmethod
+    async def execute_service(
+        self,
+        data: TInput,
+        result: ServiceResult,
+    ) -> ServiceResult:
+        """Apply service-specific logic to the framework technology result."""
+
+    async def _execute_technologies_concurrently(
+        self,
+        data: TInput,
+    ) -> ServiceResult:
+        """Run all technologies for one input; isolate per-technology errors."""
         techs = self._get_technologies()
+        if not techs:
+            raise ValueError(
+                f"{self.__class__.__name__}._get_technologies() must return technology "
+                "instances, or [None] when the service has no technology layer."
+            )
+        tech_input = self._technology_input(data)
+        result = ServiceResult(
+            service_name=self.service_name,
+            input_key=repr(tech_input),
+            tech_results=[],
+        )
+        if techs == [None] or not self.run_technologies_concurrently:
+            return await self.execute_service(data, result)
 
         async def _run(tech: object) -> TechResult:
             tech.caller_service = self.service_name
 
             try:
-                output = await tech.execute(data)
+                output = await tech.execute(tech_input)
                 return TechResult(
                     tech_name=tech.name,
-                    input=data,
+                    input=tech_input,
                     output=output,
                     success=output is not None,
                 )
             except Exception as exc:
                 return TechResult(
                     tech_name=tech.name,
-                    input=data,
+                    input=tech_input,
                     output=None,
                     success=False,
                     error=str(exc),
                 )
 
-        tech_results = list(await asyncio.gather(*(_run(t) for t in techs)))
-        return ServiceResult(
+        result = ServiceResult(
             service_name=self.service_name,
-            input_key=repr(data),
-            tech_results=tech_results,
+            input_key=repr(tech_input),
+            tech_results=list(await asyncio.gather(*(_run(t) for t in techs))),
         )
+        return await self.execute_service(data, result)
+
+    def _technology_input(self, data: TInput) -> object:
+        """Return the value passed to technology adapters."""
+        return data
 
     @abstractmethod
     def _get_technologies(self) -> list[object]:
         """Return technology instances to run for one input."""
-
-
-class FallbackService(BaseService[TInput, TOutput]):
-    """Runs a batch of inputs through technologies sequentially.
-
-    Tries each technology in order. If one succeeds, returns immediately
-    without executing the remaining technologies.
-    """
-
-    @log_with_time("[srp] {self.service_name}: execute_one (fallback)")
-    async def execute_one(self, data: TInput) -> ServiceResult:
-        """Run technologies sequentially until one succeeds."""
-        techs = self._get_technologies()
-        tech_results = []
-
-        for tech in techs:
-            tech.caller_service = self.service_name
-
-            try:
-                output = await tech.execute(data)
-                tr = TechResult(
-                    tech_name=tech.name,
-                    input=data,
-                    output=output,
-                    success=output is not None,
-                )
-                tech_results.append(tr)
-                if tr.success:
-                    break
-            except Exception as exc:
-                tech_results.append(
-                    TechResult(
-                        tech_name=tech.name,
-                        input=data,
-                        output=None,
-                        success=False,
-                        error=str(exc),
-                    )
-                )
-
-        return ServiceResult(
-            service_name=self.service_name,
-            input_key=repr(data),
-            tech_results=tech_results,
-        )

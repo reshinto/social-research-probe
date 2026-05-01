@@ -92,6 +92,8 @@ def _items_links(items: list[ScoredItem]) -> str:
             else ""
         )
         tier = it.get("evidence_tier")
+        # Surface the evidence tier beside each takeaway so readers can judge how much
+        # source text supported the summary without opening the raw item data.
         tier_tag = f' <span class="evidence-tier">[{_esc(tier)}]</span>' if tier else ""
         lis.append(
             f"<li><strong>[{i}]</strong> "

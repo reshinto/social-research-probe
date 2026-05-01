@@ -40,28 +40,27 @@ class SummaryService(BaseService):
     def _get_technologies(self):
         return [SummaryEnsembleTech()]
 
-    async def execute_one(self, data: object) -> ServiceResult:
-        payload = _with_summary_word_limit(data)
-        result = await super().execute_one(payload)
+    def _technology_input(self, data: object) -> object:
+        return _with_summary_word_limit(data)
+
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
         title = data.get("title", "") if isinstance(data, dict) else repr(data)
+        summary = next(
+            (tr.output for tr in result.tech_results if tr.success and tr.output),
+            None,
+        )
+        if isinstance(data, dict):
+            if summary:
+                merged = {**data, "summary": summary, "one_line_takeaway": summary}
+                surr = data.get("text_surrogate")
+                if isinstance(surr, dict) and surr.get("primary_text_source"):
+                    # Record the source that produced the summary so renderers can flag
+                    # metadata-only summaries instead of presenting them as transcript-backed.
+                    merged["summary_source"] = surr["primary_text_source"]
+            else:
+                merged = dict(data)
+            if result.tech_results:
+                result.tech_results[0].output = merged
+                result.tech_results[0].success = bool(summary)
         result.input_key = title
         return result
-
-    async def enrich_batch(self, top_n: list) -> list[dict]:
-        """Generate summaries and merge into items. Returns enriched item list."""
-        results = await self.execute_batch(top_n)
-        enriched: list[dict] = []
-        for item, r in zip(top_n, results, strict=True):
-            s = next(
-                (tr.output for tr in r.tech_results if tr.success and tr.output),
-                None,
-            )
-            if s:
-                merged = {**item, "summary": s, "one_line_takeaway": s}
-                surr = item.get("text_surrogate")
-                if isinstance(surr, dict) and surr.get("primary_text_source"):
-                    merged["summary_source"] = surr["primary_text_source"]
-                enriched.append(merged)
-            else:
-                enriched.append(dict(item))
-        return enriched

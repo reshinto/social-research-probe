@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from social_research_probe.services import TechResult
+from social_research_probe.services import ServiceResult, TechResult
 from social_research_probe.services.scoring import resolve_scoring_weights
 from social_research_probe.services.scoring.score import ScoringService
 from social_research_probe.technologies.scoring.combine import DEFAULT_WEIGHTS
@@ -19,54 +19,50 @@ def service():
 
 
 @pytest.mark.asyncio
-async def test_score_and_rank_disabled_returns_passthrough(service):
-    items = [{"id": "a"}, {"id": "b"}]
-    with patch.object(ScoringService, "is_enabled", return_value=False):
-        result = await service.score_and_rank(items, [], {}, limit=1)
-    assert result == {"all_scored": items, "top_n": items[:1]}
-
-
-@pytest.mark.asyncio
-async def test_score_and_rank_empty_items_returns_empty(service):
-    with patch.object(ScoringService, "is_enabled", return_value=True):
-        result = await service.score_and_rank([], [], {}, limit=5)
-    assert result == {"all_scored": [], "top_n": []}
-
-
-@pytest.mark.asyncio
-async def test_score_and_rank_success_extracts_scored_list(service):
-    items = [{"id": "x"}]
+async def test_execute_service_extracts_scored_list(service):
     scored_items = [{"id": "x", "score": 0.9}, {"id": "y", "score": 0.5}]
+    data = {"items": [{"id": "x"}], "engagement_metrics": [], "weights": {}, "limit": 1}
+    service_result = ServiceResult(
+        service_name=service.service_name,
+        input_key="score",
+        tech_results=[
+            TechResult(tech_name="scoring", input=data, success=True, output=scored_items)
+        ],
+    )
 
-    tr = TechResult(tech_name="scoring", input=items, success=True, output=scored_items)
-    service_result = MagicMock()
-    service_result.tech_results = [tr]
+    result = await service.execute_service(data, service_result)
 
-    with (
-        patch.object(ScoringService, "is_enabled", return_value=True),
-        patch.object(service, "execute_one", new=AsyncMock(return_value=service_result)),
-    ):
-        result = await service.score_and_rank(items, [], {}, limit=1)
-
-    assert result["all_scored"] == scored_items
-    assert result["top_n"] == scored_items[:1]
+    assert result.tech_results[0].output == {
+        "all_scored": scored_items,
+        "top_n": scored_items[:1],
+    }
 
 
 @pytest.mark.asyncio
-async def test_score_and_rank_no_successful_tech_result_returns_empty(service):
-    items = [{"id": "x"}]
+async def test_execute_service_no_successful_tech_result_returns_empty(service):
+    data = {"items": [{"id": "x"}], "engagement_metrics": [], "weights": {}, "limit": 5}
+    service_result = ServiceResult(
+        service_name=service.service_name,
+        input_key="score",
+        tech_results=[TechResult(tech_name="scoring", input=data, success=False, output=None)],
+    )
 
-    tr = TechResult(tech_name="scoring", input=items, success=False, output=None)
-    service_result = MagicMock()
-    service_result.tech_results = [tr]
+    result = await service.execute_service(data, service_result)
 
-    with (
-        patch.object(ScoringService, "is_enabled", return_value=True),
-        patch.object(service, "execute_one", new=AsyncMock(return_value=service_result)),
-    ):
-        result = await service.score_and_rank(items, [], {}, limit=5)
+    assert result.tech_results[0].output == {"all_scored": [], "top_n": []}
 
-    assert result == {"all_scored": [], "top_n": []}
+
+@pytest.mark.asyncio
+async def test_execute_service_with_empty_result_keeps_empty_result(service):
+    service_result = ServiceResult(
+        service_name=service.service_name,
+        input_key="score",
+        tech_results=[],
+    )
+
+    result = await service.execute_service({"items": [], "limit": 1}, service_result)
+
+    assert result.tech_results == []
 
 
 def _merged(**overrides) -> MergedPurpose:

@@ -1,9 +1,9 @@
-"""Unit tests for CorroborationService.__init__ and corroborate_batch."""
+"""Unit tests for CorroborationService.__init__ and execute_service."""
 
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 from social_research_probe.services import ServiceResult, TechResult
 from social_research_probe.services.corroborating.corroborate import (
@@ -81,58 +81,33 @@ class TestCorroborationServiceInit:
         assert any("no provider usable" in m for m in logged)
 
 
-class TestCorroborateBatch:
-    def test_no_providers_returns_list_unchanged(self):
-        svc = CorroborationService(providers=[])
-        items = [{"title": "a"}, {"title": "b"}]
-        result = asyncio.run(svc.corroborate_batch(items))
-        assert result == items
-
-    def test_merges_corroboration_into_items(self, monkeypatch):
+class TestCorroborateExecuteService:
+    def test_merges_corroboration_into_item(self):
         svc = CorroborationService(providers=["exa"])
         corr_data = {"aggregate_verdict": "supported", "confidence": 0.9}
-        fake_results = [
-            _service_result(corr_data),
-            _service_result(None),
-        ]
-        monkeypatch.setattr(
-            svc,
-            "execute_batch",
-            AsyncMock(return_value=fake_results),
-        )
-        items = [{"title": "first"}, {"title": "second"}]
-        result = asyncio.run(svc.corroborate_batch(items))
-        assert result[0]["corroboration"] == corr_data
-        assert result[0]["title"] == "first"
-        assert "corroboration" not in result[1]
-        assert result[1]["title"] == "second"
+        result = asyncio.run(svc.execute_service({"title": "first"}, _service_result(corr_data)))
+        output = result.tech_results[0].output
+        assert output["corroboration"] == corr_data
+        assert output["title"] == "first"
 
-    def test_non_dict_items_excluded(self, monkeypatch):
+    def test_non_dict_items_are_not_merged(self):
         svc = CorroborationService(providers=["exa"])
         corr_data = {"verdict": "supported"}
-        fake_results = [
-            _service_result(corr_data),
-            _service_result(None),
-        ]
-        monkeypatch.setattr(
-            svc,
-            "execute_batch",
-            AsyncMock(return_value=fake_results),
-        )
-        items = [{"title": "a"}, "not-a-dict"]
-        result = asyncio.run(svc.corroborate_batch(items))
-        assert len(result) == 1
-        assert result[0]["corroboration"] == corr_data
+        result = asyncio.run(svc.execute_service("not-a-dict", _service_result(corr_data)))
+        assert result.tech_results[0].output == corr_data
 
-    def test_all_outputs_none_returns_copies(self, monkeypatch):
+    def test_output_none_returns_copy_without_corroboration(self):
         svc = CorroborationService(providers=["exa"])
-        fake_results = [_service_result(None), _service_result(None)]
-        monkeypatch.setattr(
-            svc,
-            "execute_batch",
-            AsyncMock(return_value=fake_results),
+        result = asyncio.run(svc.execute_service({"title": "x"}, _service_result(None)))
+        assert result.tech_results[0].output == {"title": "x"}
+        assert "corroboration" not in result.tech_results[0].output
+
+    def test_dict_input_with_empty_result_is_left_empty(self):
+        svc = CorroborationService(providers=["exa"])
+        result = asyncio.run(
+            svc.execute_service(
+                {"title": "x"},
+                ServiceResult(service_name=svc.service_name, input_key="x", tech_results=[]),
+            )
         )
-        items = [{"title": "x"}, {"title": "y"}]
-        result = asyncio.run(svc.corroborate_batch(items))
-        assert result == items
-        assert all("corroboration" not in r for r in result)
+        assert result.tech_results == []

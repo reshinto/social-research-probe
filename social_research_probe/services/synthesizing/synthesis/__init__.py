@@ -21,7 +21,6 @@ class SynthesisService(BaseService):
     def _get_technologies(self):
         return [SynthesisTech()]
 
-    async def execute_one(self, data: object) -> ServiceResult:
-        result = await super().execute_one(data)
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
         result.input_key = "context"
         return result

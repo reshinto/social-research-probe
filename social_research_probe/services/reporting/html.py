@@ -21,7 +21,6 @@ class HtmlReportService(BaseService):
     def _get_technologies(self):
         return [HtmlRenderTech()]
 
-    async def execute_one(self, data: object) -> ServiceResult:
-        result = await super().execute_one(data)
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
         result.input_key = "report"
         return result

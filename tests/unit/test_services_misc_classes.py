@@ -20,7 +20,7 @@ class TestScoringService:
         svc = ScoringService()
         items = [{"id": "1"}, {"id": "2"}]
         out = asyncio.run(svc.execute_one({"items": items}))
-        scored = out.tech_results[0].output
+        scored = out.tech_results[0].output["all_scored"]
         assert len(scored) == 2
         assert all("overall_score" in d for d in scored)
 
@@ -32,10 +32,10 @@ class TestScoringService:
         svc = ScoringService()
         items = [{"id": "1"}]
         out = asyncio.run(svc.execute_one({"items": items, "weights": {"trust": 1.0}}))
-        scored = out.tech_results[0].output
+        scored = out.tech_results[0].output["all_scored"]
         assert scored[0]["overall_score"] == 1.0
 
     def test_execute_one_non_dict(self):
         svc = ScoringService()
         out = asyncio.run(svc.execute_one("not a dict"))
-        assert out.tech_results[0].output == []
+        assert out.tech_results[0].output == {"all_scored": [], "top_n": []}

@@ -124,6 +124,7 @@ class ScoreServices(TypedDict, total=False):
 
 class EnrichServices(TypedDict, total=False):
     transcripts: bool
+    text_surrogate: bool
     llm: bool
     media_url_summary: bool
     merged_summary: bool
@@ -326,9 +327,12 @@ EvidenceTier: TypeAlias = Literal[
 
 
 class TextSurrogate(TypedDict, total=False):
-    """Evidence collected for a single item, used to select the best available
-    text for downstream LLM summarisation and to record what evidence was
-    present at the time of analysis."""
+    """Evidence collected for a single item.
+
+    This is the handoff contract between enrichment, LLM summarisation, scoring,
+    and rendering: it selects the best available text while recording the evidence
+    layers and limitations present at analysis time.
+    """
 
     source_id: str
     platform: str

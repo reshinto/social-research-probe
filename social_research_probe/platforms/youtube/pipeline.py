@@ -30,7 +30,7 @@ class YouTubeFetchStage(BaseStage):
     async def _fetch_items(self, search_topic: str, config: dict) -> tuple[list, list]:
         from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
 
-        result = await YouTubeSourcingService(config).execute_one(search_topic)
+        result = (await YouTubeSourcingService(config).execute_batch([search_topic]))[0]
         items: list = []
         engagement: list = []
         for tr in result.tech_results:
@@ -66,8 +66,62 @@ class YouTubeClassifyStage(BaseStage):
 
     async def _classify(self, items: list) -> list[dict]:
         from social_research_probe.services.classifying.source_class import SourceClassService
+        from social_research_probe.technologies.classifying import (
+            classify_by_title_signal,
+            coerce_class,
+        )
+        from social_research_probe.technologies.scoring import normalize_item
 
-        return await SourceClassService().classify_batch(items)
+        def _output_class(result) -> str:
+            for tr in result.tech_results:
+                if tr.success and isinstance(tr.output, dict):
+                    return coerce_class(tr.output.get("source_class"))
+            return "unknown"
+
+        def _title_override(item: dict) -> bool:
+            return classify_by_title_signal(str(item.get("title") or "")) == "commentary"
+
+        normalized = [d for d in (normalize_item(it) for it in items) if d is not None]
+        if not normalized:
+            return list(items)
+
+        service = SourceClassService()
+        channel_cache: dict[str, str] = {}
+        classified: list[dict] = []
+        pending: list[dict] = []
+        pending_channels: list[str] = []
+        pending_seen: set[str] = set()
+        for item in normalized:
+            existing = coerce_class(item.get("source_class"))
+            channel = str(item.get("channel") or item.get("author_name") or "")
+            if existing != "unknown":
+                source_class = existing
+            elif channel in pending_seen:
+                source_class = "unknown"
+            else:
+                pending.append(item)
+                pending_channels.append(channel)
+                pending_seen.add(channel)
+                source_class = "unknown"
+            enriched = dict(item)
+            enriched["source_class"] = "commentary" if _title_override(item) else source_class
+            classified.append(enriched)
+        if pending:
+            results = await service.execute_batch(pending)
+            resolved_by_channel = {
+                channel: _output_class(result)
+                for channel, result in zip(pending_channels, results, strict=True)
+            }
+            channel_cache.update(resolved_by_channel)
+            for item in classified:
+                if item.get("source_class") == "unknown":
+                    channel = str(item.get("channel") or item.get("author_name") or "")
+                    item["source_class"] = (
+                        "commentary"
+                        if _title_override(item)
+                        else channel_cache.get(channel, "unknown")
+                    )
+        return classified
 
     def _store_passthrough(self, state: PipelineState, raw_items: list) -> PipelineState:
         state.set_stage_output("classify", {"items": raw_items})
@@ -124,10 +178,24 @@ class YouTubeScoreStage(BaseStage):
 
         from social_research_probe.services.scoring.score import ScoringService
 
-        result = await ScoringService().score_and_rank(
-            items, fetch.get("engagement_metrics", []), weights, limit
+        service = ScoringService()
+        result = (
+            await service.execute_batch(
+                [
+                    {
+                        "items": items,
+                        "engagement_metrics": fetch.get("engagement_metrics", []),
+                        "weights": weights,
+                        "limit": limit,
+                    }
+                ]
+            )
+        )[0]
+        score_output = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, dict)),
+            {"all_scored": [], "top_n": []},
         )
-        state.set_stage_output("score", result)
+        state.set_stage_output("score", score_output)
         return state
 
 
@@ -143,6 +211,8 @@ class YouTubeTranscriptStage(BaseStage):
 
         top_n = list(state.get_stage_output("score").get("top_n", []))
         if not self._is_enabled(state):
+            # Preserve the ranked item list while marking transcript evidence as intentionally absent.
+            # Downstream stages can then distinguish a configured skip from a provider failure.
             disabled = [
                 {**it, "transcript_status": "disabled"} if isinstance(it, dict) else it
                 for it in top_n
@@ -152,7 +222,17 @@ class YouTubeTranscriptStage(BaseStage):
         if not top_n:
             state.set_stage_output("transcript", {"top_n": top_n})
             return state
-        enriched = await TranscriptService().enrich_batch(top_n)
+        service = TranscriptService()
+        transcript_inputs = [item for item in top_n if isinstance(item, dict)]
+        results = await service.execute_batch(transcript_inputs)
+        enriched: list[dict] = []
+        for result in results:
+            item = next(
+                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
+                None,
+            )
+            if item:
+                enriched.append(item)
         state.set_stage_output("transcript", {"top_n": enriched})
         return state
 
@@ -172,21 +252,45 @@ class YouTubeSummaryStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
+        text_surrogate_inputs = [item for item in top_n if isinstance(item, dict)]
+        text_surrogate_results = await TextSurrogateService().execute_batch(text_surrogate_inputs)
+        surrogate_by_index = iter(text_surrogate_results)
         augmented = []
         for item in top_n:
             if isinstance(item, dict):
-                surrogate = TextSurrogateService.from_item(item)
-                augmented.append(
-                    {
-                        **item,
-                        "text_surrogate": surrogate,
-                        "evidence_tier": surrogate.get("evidence_tier", "metadata_only"),
-                    }
+                # Build the surrogate immediately before summarisation so the LLM layer receives
+                # the best available text and the report can show what evidence backed it.
+                result = next(surrogate_by_index)
+                surrogate = next(
+                    (tr.output for tr in result.tech_results if tr.success and tr.output),
+                    None,
                 )
+                if isinstance(surrogate, dict):
+                    augmented.append(
+                        {
+                            **item,
+                            "text_surrogate": surrogate,
+                            "evidence_tier": surrogate.get("evidence_tier", "metadata_only"),
+                        }
+                    )
+                else:
+                    augmented.append(item)
             else:
                 augmented.append(item)
-        top_n = augmented
-        enriched = await SummaryService().enrich_batch(top_n)
+        summary_inputs = [item for item in augmented if isinstance(item, dict)]
+        summary_results = await SummaryService().execute_batch(summary_inputs)
+        summary_by_index = iter(summary_results)
+        enriched: list[dict] = []
+        for item in augmented:
+            if not isinstance(item, dict):
+                enriched.append(item)
+                continue
+            result = next(summary_by_index)
+            merged = next(
+                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
+                None,
+            )
+            enriched.append(merged if merged else dict(item))
         state.set_stage_output("summary", {"top_n": enriched})
         return state
 
@@ -205,7 +309,20 @@ class YouTubeCorroborateStage(BaseStage):
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("corroborate", {"top_n": top_n})
             return state
-        corroborated = await CorroborationService().corroborate_batch(top_n)
+        service = CorroborationService()
+        if not service.providers:
+            state.set_stage_output("corroborate", {"top_n": top_n})
+            return state
+        corroboration_inputs = [item for item in top_n if isinstance(item, dict)]
+        results = await service.execute_batch(corroboration_inputs)
+        corroborated: list[dict] = []
+        for result in results:
+            item = next(
+                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
+                None,
+            )
+            if item:
+                corroborated.append(item)
         state.set_stage_output("corroborate", {"top_n": corroborated})
         return state
 
@@ -225,7 +342,7 @@ class YouTubeStatsStage(BaseStage):
             return state
 
         top_n = list(state.get_stage_output("score").get("top_n", []))
-        result = await StatisticsService().execute_one({"scored_items": top_n})
+        result = (await StatisticsService().execute_batch([{"scored_items": top_n}]))[0]
         stats_output = next((tr.output for tr in result.tech_results if tr.success), None)
         state.set_stage_output(
             "stats",
@@ -254,7 +371,11 @@ class YouTubeChartsStage(BaseStage):
             )
             return state
         items = self._scored_dataset(state)
-        charts = await ChartsService().render_charts(items)
+        result = (await ChartsService().execute_batch([{"scored_items": items}]))[0]
+        charts = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, dict)),
+            {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []},
+        )
         state.set_stage_output("charts", charts)
         return state
 
@@ -289,7 +410,7 @@ class YouTubeSynthesisStage(BaseStage):
             state.set_stage_output("synthesis", {"synthesis": ""})
             return state
         context = self._build_synthesis_context(state)
-        result = await SynthesisService().execute_one(context)
+        result = (await SynthesisService().execute_batch([context]))[0]
         synthesis_text = next(
             (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, str)),
             "",
@@ -462,7 +583,13 @@ class YouTubeReportStage(BaseStage):
 
         report = state.outputs.get("report", {})
         allow_html = bool(state.platform_config.get("allow_html", True))
-        report_path = await ReportService().write_report(report, allow_html=allow_html)
+        result = (
+            await ReportService().execute_batch([{"report": report, "allow_html": allow_html}])
+        )[0]
+        report_path = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, str)),
+            "",
+        )
         report["report_path"] = report_path
         state.outputs["report"] = report
         return state
@@ -483,7 +610,7 @@ class YouTubeNarrationStage(BaseStage):
 
         narration = str(state.outputs.get("report", {}).get("evidence_summary", ""))
         if narration:
-            await AudioReportService().execute_one({"text": narration})
+            await AudioReportService().execute_batch([{"text": narration}])
         return state
 
 

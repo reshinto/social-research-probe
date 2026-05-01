@@ -71,8 +71,8 @@ class TestPipelineYtChartsExecuteWithFailure:
             )
 
         monkeypatch.setattr(ChartsService, "execute_one", fake_one)
-        out = asyncio.run(ChartsService().render_charts([{"x": 1}]))
-        assert out["chart_outputs"] == []
+        result = asyncio.run(ChartsService().execute_one({"scored_items": [{"x": 1}]}))
+        assert result.tech_results[0].output is None
 
 
 class TestYoutubeApiSearch:

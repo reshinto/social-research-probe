@@ -71,7 +71,7 @@ DEFAULT_CONFIG: AppConfig = {
             "sourcing": {"youtube": True},
             "classifying": {"source_class": True},
             "scoring": {"score": True},
-            "enriching": {"transcript": True, "summary": True},
+            "enriching": {"transcript": True, "text_surrogate": True, "summary": True},
             "corroborating": {"corroborate": True},
             "analyzing": {"statistics": True, "charts": True},
             "synthesizing": {"synthesis": True},
