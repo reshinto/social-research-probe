@@ -237,6 +237,54 @@ class YouTubeTranscriptStage(BaseStage):
         return state
 
 
+class YouTubeCommentsStage(BaseStage):
+    """Fetch YouTube comments for top-N items."""
+
+    def stage_name(self) -> str:
+        return "comments"
+
+    @log_with_time("[srp] youtube/comments: execute")
+    async def execute(self, state: PipelineState) -> PipelineState:
+        from social_research_probe.services.enriching.comments import CommentsService
+
+        top_n = list(state.get_stage_output("transcript").get("top_n", []))
+        if not self._is_enabled(state):
+            disabled = [
+                {**it, "comments_status": "disabled"} if isinstance(it, dict) else it
+                for it in top_n
+            ]
+            state.set_stage_output("comments", {"top_n": disabled})
+            return state
+        if not top_n:
+            state.set_stage_output("comments", {"top_n": top_n})
+            return state
+
+        comments_cfg = state.platform_config.get("comments", {})
+        max_videos = int(comments_cfg.get("max_videos", 5))
+        max_comments = int(comments_cfg.get("max_comments_per_video", 20))
+        order = str(comments_cfg.get("order", "relevance"))
+
+        dict_items = [item for item in top_n if isinstance(item, dict)]
+        fetch_items = dict_items[:max_videos]
+        inputs = [{**item, "_max_comments": max_comments, "_order": order} for item in fetch_items]
+        results = await CommentsService().execute_batch(inputs)
+
+        enriched: list[dict] = []
+        for fetch_item, result in zip(fetch_items, results, strict=True):
+            merged = next(
+                (tr.output for tr in result.tech_results if isinstance(tr.output, dict)),
+                None,
+            )
+            enriched.append(
+                merged if merged is not None else {**fetch_item, "comments_status": "failed"}
+            )
+        for item in dict_items[max_videos:]:
+            enriched.append({**item, "comments_status": "not_attempted"})
+
+        state.set_stage_output("comments", {"top_n": enriched})
+        return state
+
+
 class YouTubeSummaryStage(BaseStage):
     """Generate LLM summaries for top-N items."""
 
@@ -248,7 +296,7 @@ class YouTubeSummaryStage(BaseStage):
         from social_research_probe.services.enriching.summary import SummaryService
         from social_research_probe.services.enriching.text_surrogate import TextSurrogateService
 
-        top_n = list(state.get_stage_output("transcript").get("top_n", []))
+        top_n = list(state.get_stage_output("comments").get("top_n", []))
         if not self._is_enabled(state) or not top_n:
             state.set_stage_output("summary", {"top_n": top_n})
             return state
@@ -623,6 +671,7 @@ class YouTubePipeline(BaseResearchPlatform):
             [YouTubeClassifyStage()],
             [YouTubeScoreStage()],
             [YouTubeTranscriptStage(), YouTubeStatsStage(), YouTubeChartsStage()],
+            [YouTubeCommentsStage()],
             [YouTubeSummaryStage()],
             [YouTubeCorroborateStage()],
             [YouTubeSynthesisStage()],

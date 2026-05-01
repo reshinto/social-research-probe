@@ -48,7 +48,12 @@ class CommentsService(BaseService):
         order = str(data.get("_order", "relevance"))
 
         if not video_id:
-            merged = {**data, "source_comments": [], "comments": [], "comments_status": "unavailable"}
+            merged = {
+                **data,
+                "source_comments": [],
+                "comments": [],
+                "comments_status": "unavailable",
+            }
             result.tech_results = [
                 TechResult(
                     tech_name="youtube_comments",
@@ -101,7 +106,12 @@ class CommentsService(BaseService):
                 success=True,
             )
         elif raw_comments is not None:
-            merged = {**data, "source_comments": [], "comments": [], "comments_status": "unavailable"}
+            merged = {
+                **data,
+                "source_comments": [],
+                "comments": [],
+                "comments_status": "unavailable",
+            }
             tech_results[0] = TechResult(
                 tech_name=first.tech_name,
                 input=video_id,

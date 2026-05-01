@@ -46,8 +46,15 @@ def _run(coro):
 
 def _sample_comments():
     return [
-        {"comment_id": "c1", "author": "Alice", "text": "Great video!", "like_count": 5,
-         "published_at": "2026-01-01T00:00:00Z", "source_id": "vid1", "platform": "youtube"},
+        {
+            "comment_id": "c1",
+            "author": "Alice",
+            "text": "Great video!",
+            "like_count": 5,
+            "published_at": "2026-01-01T00:00:00Z",
+            "source_id": "vid1",
+            "platform": "youtube",
+        },
     ]
 
 
@@ -110,9 +117,7 @@ class TestCommentsServiceExecuteService:
                 service_name=svc.service_name,
                 input_key="vid1",
                 tech_results=[
-                    TechResult(
-                        tech_name="youtube_comments", input="vid1", output=[], success=True
-                    )
+                    TechResult(tech_name="youtube_comments", input="vid1", output=[], success=True)
                 ],
             ),
         )
