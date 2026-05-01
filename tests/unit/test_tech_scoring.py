@@ -1,7 +1,10 @@
-"""Tests for tech.scoring (combine, opportunity, trend, trust)."""
+"""Tests for tech.scoring (combine, opportunity, trend, trust, normalize)."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+from social_research_probe.technologies.scoring import normalize_item, score_one
 from social_research_probe.technologies.scoring.combine import (
     DEFAULT_WEIGHTS,
     overall_score,
@@ -9,6 +12,7 @@ from social_research_probe.technologies.scoring.combine import (
 from social_research_probe.technologies.scoring.opportunity import opportunity_score
 from social_research_probe.technologies.scoring.trend import recency_decay, trend_score
 from social_research_probe.technologies.scoring.trust import trust_score
+from social_research_probe.utils.core.types import RawItem
 
 
 class TestOverallScore:
@@ -128,3 +132,73 @@ class TestMetricValues:
         )
         result = _metric_values(m)
         assert result == (1.0, 0.5, 0.2)
+
+
+def _make_raw_item(**overrides):
+    defaults = {
+        "id": "vid1",
+        "url": "https://youtube.com/watch?v=vid1",
+        "title": "Test Video",
+        "author_id": "ch1",
+        "author_name": "Channel",
+        "published_at": datetime(2026, 1, 1, tzinfo=UTC),
+        "metrics": {},
+        "text_excerpt": "Video description text",
+        "thumbnail": "https://img.youtube.com/vi/vid1/default.jpg",
+        "extras": {"channel_subscribers": 1000},
+    }
+    defaults.update(overrides)
+    return RawItem(**defaults)
+
+
+class TestNormalizeItem:
+    def test_preserves_text_excerpt(self):
+        result = normalize_item(_make_raw_item())
+        assert result["text_excerpt"] == "Video description text"
+
+    def test_preserves_thumbnail(self):
+        result = normalize_item(_make_raw_item())
+        assert result["thumbnail"] == "https://img.youtube.com/vi/vid1/default.jpg"
+
+    def test_text_excerpt_none(self):
+        result = normalize_item(_make_raw_item(text_excerpt=None))
+        assert result["text_excerpt"] is None
+
+    def test_thumbnail_none(self):
+        result = normalize_item(_make_raw_item(thumbnail=None))
+        assert result["thumbnail"] is None
+
+    def test_dict_passthrough_unchanged(self):
+        d = {"id": "x", "title": "Y", "custom_field": 42}
+        assert normalize_item(d) is d
+
+    def test_non_raw_item_returns_none(self):
+        assert normalize_item("not an item") is None
+
+    def test_existing_fields_preserved(self):
+        result = normalize_item(_make_raw_item())
+        assert result["id"] == "vid1"
+        assert result["url"] == "https://youtube.com/watch?v=vid1"
+        assert result["title"] == "Test Video"
+        assert result["channel"] == "Channel"
+        assert result["author_id"] == "ch1"
+        assert result["extras"]["channel_subscribers"] == 1000
+
+
+class TestScoreOnePreservesMetadata:
+    def test_text_excerpt_survives_scoring(self):
+        item = normalize_item(_make_raw_item())
+        scored = score_one(item, None, 0.0, 0.0, DEFAULT_WEIGHTS)
+        assert scored["text_excerpt"] == "Video description text"
+
+    def test_thumbnail_survives_scoring(self):
+        item = normalize_item(_make_raw_item())
+        scored = score_one(item, None, 0.0, 0.0, DEFAULT_WEIGHTS)
+        assert scored["thumbnail"] == "https://img.youtube.com/vi/vid1/default.jpg"
+
+    def test_scores_unaffected_by_metadata(self):
+        item_with = normalize_item(_make_raw_item())
+        item_without = normalize_item(_make_raw_item(text_excerpt=None, thumbnail=None))
+        scored_with = score_one(item_with, None, 0.0, 0.0, DEFAULT_WEIGHTS)
+        scored_without = score_one(item_without, None, 0.0, 0.0, DEFAULT_WEIGHTS)
+        assert scored_with["scores"] == scored_without["scores"]
