@@ -38,7 +38,23 @@ def _mk_result(output: str) -> ServiceResult:
         service_name="youtube.classifying.source_class",
         input_key="x",
         tech_results=[
-            TechResult(tech_name="t", input=None, output=output, success=True),
+            TechResult(tech_name="t", input=None, output={"source_class": output}, success=True),
+        ],
+    )
+
+
+def _mk_multi_result() -> ServiceResult:
+    return ServiceResult(
+        service_name="youtube.classifying.source_class",
+        input_key="x",
+        tech_results=[
+            TechResult(tech_name="t1", input=None, output=None, success=False),
+            TechResult(
+                tech_name="t2",
+                input=None,
+                output={"source_class": "secondary"},
+                success=True,
+            ),
         ],
     )
 
@@ -152,11 +168,26 @@ class TestStageEnabled:
         items = out.get_stage_output("classify")["items"]
         assert items[0]["source_class"] == "commentary"
 
+    def test_classification_result_scans_past_failed_tech_results(self, enabled_state, monkeypatch):
+        state, _ = enabled_state
+        state.set_stage_output("fetch", {"items": [{"id": "1", "channel": "Source", "title": "x"}]})
+
+        async def fake(self, data):
+            return _mk_multi_result()
+
+        from social_research_probe.services.classifying.source_class import SourceClassService
+
+        monkeypatch.setattr(SourceClassService, "execute_one", fake)
+
+        out = asyncio.run(yt.YouTubeClassifyStage().execute(state))
+        items = out.get_stage_output("classify")["items"]
+        assert items[0]["source_class"] == "secondary"
+
 
 class TestNormalizeFiltersUnclassifiable:
     def test_passthrough_when_all_items_fail_to_normalize(self, enabled_state):
         state, _ = enabled_state
-        # Strings are neither dicts nor RawItems — classify_batch returns them unchanged.
+        # Strings are neither dicts nor RawItems, so classification leaves them unchanged.
         state.set_stage_output("fetch", {"items": ["not-a-dict-or-RawItem", 42]})
 
         out = asyncio.run(yt.YouTubeClassifyStage().execute(state))

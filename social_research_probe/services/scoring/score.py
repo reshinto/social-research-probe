@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services import BaseService
+from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.scoring import ScoringComputeTech
 
 
@@ -20,28 +20,13 @@ class ScoringService(BaseService):
     def _get_technologies(self):
         return [ScoringComputeTech()]
 
-    async def score_and_rank(
-        self,
-        items: list,
-        engagement_metrics: list,
-        weights,
-        limit: int,
-    ) -> dict:
-        """Score items and return ranked output dict.
-
-        Returns {"all_scored": items, "top_n": items[:limit]} if disabled or empty.
-        """
-        if not self.is_enabled() or not items:
-            return {"all_scored": items, "top_n": items[:limit]}
-        data = {
-            "items": items,
-            "engagement_metrics": engagement_metrics,
-            "weights": weights,
-        }
-        result = await self.execute_one(data)
-        scored = []
-        for tr in result.tech_results:
-            if tr.success and isinstance(tr.output, list):
-                scored = tr.output
-                break
-        return {"all_scored": scored, "top_n": scored[:limit]}
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
+        limit = int(data.get("limit", 0)) if isinstance(data, dict) else 0
+        scored = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, list)),
+            [],
+        )
+        output = {"all_scored": scored, "top_n": scored[:limit] if limit else scored}
+        if result.tech_results:
+            result.tech_results[0].output = output
+        return result

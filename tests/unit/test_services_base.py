@@ -49,6 +49,37 @@ class _Service(BaseService[str, str]):
     def _get_technologies(self):
         return self._techs
 
+    async def execute_service(self, data, result):
+        return result
+
+
+class _NoTechService(BaseService[str, str]):
+    service_name = "no_tech"
+
+    def _get_technologies(self):
+        return [None]
+
+    async def execute_service(self, data, result):
+        result.tech_results.append(
+            TechResult(
+                tech_name="local_logic",
+                input=data,
+                output=f"local({data})",
+                success=True,
+            )
+        )
+        return result
+
+
+class _EmptyTechService(BaseService[str, str]):
+    service_name = "empty_tech"
+
+    def _get_technologies(self):
+        return []
+
+    async def execute_service(self, data, result):
+        return result
+
 
 def test_tech_result_defaults():
     r = TechResult(tech_name="x", input="i", output="o", success=True)
@@ -91,9 +122,38 @@ def test_execute_batch():
     assert out[0].tech_results[0].output == "out(a)"
 
 
+def test_execute_one_supports_no_technology_sentinel():
+    svc = _NoTechService()
+    out = asyncio.run(svc.execute_one("foo"))
+    assert out.tech_results[0].tech_name == "local_logic"
+    assert out.tech_results[0].output == "local(foo)"
+
+
+def test_get_technologies_must_not_return_empty_list():
+    svc = _EmptyTechService()
+    with pytest.raises(ValueError, match=r"\[None\]"):
+        asyncio.run(svc.execute_one("foo"))
+
+
 def test_base_service_abstract():
     with pytest.raises(TypeError):
         BaseService()  # type: ignore[abstract]
+
+
+def test_subclasses_cannot_override_protected_lifecycle_methods():
+    with pytest.raises(TypeError, match="execute_service"):
+
+        class _BadService(BaseService[str, str]):
+            service_name = "bad"
+
+            def _get_technologies(self):
+                return []
+
+            async def execute_service(self, data, result):
+                return ServiceResult(service_name="bad", input_key="x")
+
+            async def execute_one(self, data):
+                return ServiceResult(service_name="bad", input_key="x")
 
 
 class _CacheableTech(BaseTechnology[str, str]):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from social_research_probe.services import BaseService
+from social_research_probe.services import BaseService, ServiceResult
 from social_research_probe.technologies.corroborates import CorroborationHostTech
 
 
@@ -44,22 +44,14 @@ class CorroborationService(BaseService):
     def _get_technologies(self):
         return [CorroborationHostTech(self.providers)]
 
-    async def corroborate_batch(self, top_n: list) -> list[dict]:
-        """Corroborate top-N items and merge results. Returns enriched item list."""
-        if not self.providers:
-            return list(top_n)
-        results = await self.execute_batch(top_n)
-        return [
-            (
-                {**item, "corroboration": corr}
-                if (
-                    corr := next(
-                        (tr.output for tr in r.tech_results if tr.success and tr.output),
-                        None,
-                    )
-                )
-                else dict(item)
-            )
-            for item, r in zip(top_n, results, strict=True)
-            if isinstance(item, dict)
-        ]
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
+        corroboration = next(
+            (tr.output for tr in result.tech_results if tr.success and tr.output),
+            None,
+        )
+        if isinstance(data, dict):
+            output = {**data, "corroboration": corroboration} if corroboration else dict(data)
+            if result.tech_results:
+                result.tech_results[0].output = output
+                result.tech_results[0].success = bool(corroboration)
+        return result

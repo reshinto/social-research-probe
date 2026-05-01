@@ -141,6 +141,11 @@ def test_service_enabled_known(tmp_path):
     assert cfg.service_enabled("score") is True
 
 
+def test_text_surrogate_service_enabled_by_default(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.service_enabled("text_surrogate") is True
+
+
 def test_technology_enabled(tmp_path):
     cfg = Config.load(tmp_path)
     assert cfg.technology_enabled("yt_dlp") is True

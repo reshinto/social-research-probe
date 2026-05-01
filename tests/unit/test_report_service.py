@@ -21,9 +21,12 @@ async def test_write_report_delegates_to_write_final_report(monkeypatch):
     )
 
     svc = ReportService()
-    result = await svc.write_report({"title": "test"}, allow_html=False)
+    result = await svc.execute_service(
+        {"report": {"title": "test"}, "allow_html": False},
+        None,
+    )
 
-    assert result == "/fake/path/report.md"
+    assert result.tech_results[0].output == "/fake/path/report.md"
     assert calls == [({"title": "test"}, False)]
 
 
@@ -50,6 +53,6 @@ async def test_write_report_default_allow_html_is_true(monkeypatch):
     )
 
     svc = ReportService()
-    await svc.write_report({})
+    await svc.execute_service({"report": {}}, None)
 
     assert captured["allow_html"] is True

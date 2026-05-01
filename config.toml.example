@@ -117,6 +117,10 @@ score = true
 # captions are unavailable and the required tools are installed.
 transcript = true
 
+# Enables deterministic text-surrogate construction. This preserves the best
+# available text evidence and its tier before LLM summaries are generated.
+text_surrogate = true
+
 # Enables LLM-generated per-item summaries for enriched items.
 summary = true
 

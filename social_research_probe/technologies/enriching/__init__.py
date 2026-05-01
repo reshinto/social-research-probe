@@ -37,6 +37,8 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
 
         surrogate = data.get("text_surrogate") if isinstance(data, dict) else None
         if surrogate:
+            # Surrogates let summarisation fall back to description/title text when
+            # transcript evidence is unavailable, while keeping the prompt wording honest.
             content = surrogate.get("primary_text", "")
             label = "Content"
         else:

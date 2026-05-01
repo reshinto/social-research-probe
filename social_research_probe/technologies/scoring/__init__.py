@@ -46,6 +46,8 @@ def normalize_item(item: object) -> dict | None:
         "author_id": item.author_id,
         "author_name": item.author_name,
         "published_at": item.published_at,
+        # Keep metadata text/media available after scoring so enrichment can build a
+        # useful text surrogate even when no transcript is fetched.
         "text_excerpt": item.text_excerpt,
         "thumbnail": item.thumbnail,
         "extras": dict(item.extras) if item.extras else {},
