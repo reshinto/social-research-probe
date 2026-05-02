@@ -122,6 +122,12 @@ def _handle_serve_report(args: argparse.Namespace) -> int:
     )
 
 
+def _handle_demo_report(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import demo
+
+    return demo.run(args)
+
+
 def _dispatch_config(args: argparse.Namespace) -> int:
     from social_research_probe.commands import config
 
@@ -150,5 +156,6 @@ def handlers_factory() -> dict[str, callable]:
         Command.SETUP: _handle_setup,
         Command.REPORT: _handle_report,
         Command.SERVE_REPORT: _handle_serve_report,
+        Command.DEMO_REPORT: _handle_demo_report,
         Command.CONFIG: _dispatch_config,
     }

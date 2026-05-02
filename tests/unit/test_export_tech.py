@@ -157,6 +157,29 @@ def test_flat_platform_config_enabled_false_suppresses_all_artifacts(tmp_path: P
     assert written == []
 
 
+def test_run_summary_includes_html_report_when_available(tmp_path: Path):
+    """Regression: run_summary.json artifact_paths includes html_report when set on report."""
+    import json
+
+    data = _make_data(tmp_path)
+    html_file = tmp_path / "demo.html"
+    html_file.write_text("<html></html>", encoding="utf-8")
+    data["report"]["html_report_path"] = html_file.as_uri()
+    paths = _run(ExportPackageTech()._execute(data))
+    summary = json.loads(Path(paths["run_summary_json"]).read_text(encoding="utf-8"))
+    assert summary["artifact_paths"]["html_report"] == str(html_file)
+
+
+def test_run_summary_omits_html_report_when_unavailable(tmp_path: Path):
+    """Regression: run_summary.json artifact_paths omits html_report when no html path on report."""
+    import json
+
+    data = _make_data(tmp_path)
+    paths = _run(ExportPackageTech()._execute(data))
+    summary = json.loads(Path(paths["run_summary_json"]).read_text(encoding="utf-8"))
+    assert "html_report" not in summary["artifact_paths"]
+
+
 def test_flat_platform_config_per_artifact_flags_respected(tmp_path: Path):
     """Regression: per-artifact flags work with flat platform-level config, not nested AppConfig."""
     data = {

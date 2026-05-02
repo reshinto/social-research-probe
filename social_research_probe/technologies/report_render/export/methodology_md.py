@@ -45,7 +45,7 @@ def _yt_config_lines(yt: dict) -> list[str]:
 def _scoring_weight_lines(config: dict) -> list[str]:
     weights = config.get("scoring", {}).get("weights") or {}
     if not weights:
-        return ["- scoring weights: Not available in platform-level export context"]
+        return []
     return ["- scoring weights:"] + [f"  - {k}: {v}" for k, v in weights.items()]
 
 
@@ -62,7 +62,7 @@ def _tech_status(enabled: object) -> str:
 def _section_technologies(config: dict) -> str:
     techs = config.get("technologies") or {}
     if not techs:
-        return "## Technologies\n\nNot available in platform-level export context\n\n"
+        return ""
     lines = [f"- {name}: {_tech_status(val)}" for name, val in techs.items()]
     return "## Technologies\n\n" + "\n".join(lines) + "\n\n"
 

@@ -58,6 +58,7 @@ class Command(StrEnum):
     SETUP = "setup"
     REPORT = "report"
     SERVE_REPORT = "serve-report"
+    DEMO_REPORT = "demo-report"
     CONFIG = "config"
 
 

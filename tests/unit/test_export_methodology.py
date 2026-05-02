@@ -55,9 +55,9 @@ def test_build_includes_technology_statuses():
     assert "disabled" in out
 
 
-def test_build_technologies_unavailable_shows_fallback():
+def test_build_technologies_section_omitted_when_unavailable():
     out = build_methodology(_minimal_report(), _minimal_config())
-    assert "Not available in platform-level export context" in out
+    assert "## Technologies" not in out
 
 
 def test_build_includes_evidence_tier_distribution():
@@ -141,9 +141,9 @@ def test_build_includes_scoring_weights():
     assert "trust" in out
 
 
-def test_build_scoring_weights_unavailable_shows_fallback():
+def test_build_scoring_weights_omitted_when_unavailable():
     out = build_methodology(_minimal_report(), _minimal_config())
-    assert "Not available in platform-level export context" in out
+    assert "scoring weights" not in out
 
 
 def test_build_stage_timings_skips_non_dict_entries():
