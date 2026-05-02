@@ -88,6 +88,24 @@ def test_stdout_lists_five_paths(isolated_data_dir, capsys):
         assert line.strip()
 
 
+def test_stdout_first_line_is_html_path(isolated_data_dir, capsys):
+    _run_demo()
+    out = capsys.readouterr().out.strip().splitlines()
+    assert out[0].endswith(".html")
+    assert Path(out[0]).exists()
+
+
+def test_run_summary_artifact_paths_lists_html(isolated_data_dir):
+    _run_demo()
+    json_files = [
+        f
+        for f in _list_reports(isolated_data_dir)
+        if f.suffix == ".json" and "run_summary" in f.name
+    ]
+    payload = json.loads(json_files[0].read_text(encoding="utf-8"))
+    assert payload["artifact_paths"]["html_report"].endswith(".html")
+
+
 def test_run_offline_when_external_http_blocked(isolated_data_dir, monkeypatch):
     def _refuse(*_args, **_kwargs):
         raise OSError("network disabled in test")

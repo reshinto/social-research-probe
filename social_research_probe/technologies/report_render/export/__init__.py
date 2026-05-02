@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+from social_research_probe.utils.pipeline.helpers import resolve_html_report_path
 
 
 def _write_sources(report: dict, reports_dir: Path, stem: str) -> str:
@@ -83,5 +84,11 @@ class ExportPackageTech(BaseTechnology[dict, dict[str, str]]):
         if export_cfg.get("methodology_md", True):
             paths["methodology_md"] = _write_methodology(report, config, reports_dir, stem)
         if export_cfg.get("run_summary_json", True):
-            paths["run_summary_json"] = _write_run_summary(report, config, paths, reports_dir, stem)
+            summary_paths = dict(paths)
+            html_path = resolve_html_report_path(report)
+            if html_path is not None:
+                summary_paths["html_report"] = str(html_path)
+            paths["run_summary_json"] = _write_run_summary(
+                report, config, summary_paths, reports_dir, stem
+            )
         return paths

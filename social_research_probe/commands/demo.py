@@ -85,5 +85,5 @@ def run(args: argparse.Namespace) -> int:
     platform_cfg = cfg.platform_defaults("youtube")
     export_paths = asyncio.run(_run_exports(report, platform_cfg, html_path.stem, html_path.parent))
     report["export_paths"] = export_paths
-    _print_paths(report["report_path"], export_paths)
+    _print_paths(str(html_path), export_paths)
     return ExitCode.SUCCESS
