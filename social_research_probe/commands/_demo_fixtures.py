@@ -32,11 +32,7 @@ _PARTIAL = "partially_verified"
 def _source_validation_summary(items: list[ScoredItem]) -> SourceValidationSummary:
     classes = Counter(item.get("source_class", "unknown") for item in items)
     verdicts = Counter(item.get("corroboration_verdict", "unverified") for item in items)
-    low_trust = sum(
-        1
-        for item in items
-        if item.get("scores", {}).get("trust", 0.0) < 0.4
-    )
+    low_trust = sum(1 for item in items if item.get("scores", {}).get("trust", 0.0) < 0.4)
     return {
         "validated": verdicts.get(_VERIFIED, 0),
         "partially": verdicts.get(_PARTIAL, 0),

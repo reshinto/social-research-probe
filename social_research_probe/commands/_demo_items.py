@@ -94,9 +94,7 @@ def _text_surrogate(
 ) -> TextSurrogate:
     primary_text = transcript or description or title
     primary_text_source = (
-        "transcript"
-        if transcript
-        else ("description" if description else "title")
+        "transcript" if transcript else ("description" if description else "title")
     )
     return {
         "source_id": source_id,

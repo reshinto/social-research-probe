@@ -61,9 +61,7 @@ def test_html_contains_disclaimer(isolated_data_dir):
 def test_methodology_md_contains_disclaimer(isolated_data_dir):
     _run_demo()
     md_files = [
-        f
-        for f in _list_reports(isolated_data_dir)
-        if f.suffix == ".md" and "methodology" in f.name
+        f for f in _list_reports(isolated_data_dir) if f.suffix == ".md" and "methodology" in f.name
     ]
     assert md_files, "methodology.md not produced"
     assert DEMO_DISCLAIMER in md_files[0].read_text(encoding="utf-8")

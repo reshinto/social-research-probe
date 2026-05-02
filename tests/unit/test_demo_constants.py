@@ -17,8 +17,7 @@ def test_topic_marked_synthetic():
 
 def test_disclaimer_exact_wording():
     assert DEMO_DISCLAIMER == (
-        "Synthetic sample data for product demonstration only. "
-        "Not factual market research."
+        "Synthetic sample data for product demonstration only. Not factual market research."
     )
 
 

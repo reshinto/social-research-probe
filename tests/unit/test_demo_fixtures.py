@@ -65,11 +65,7 @@ def test_source_validation_counts_match_items():
     report = build_demo_report()
     items = report["items_top_n"]
     summary = report["source_validation_summary"]
-    bucketed = (
-        summary["primary"]
-        + summary["secondary"]
-        + summary["commentary"]
-    )
+    bucketed = summary["primary"] + summary["secondary"] + summary["commentary"]
     unknowns = sum(1 for it in items if it.get("source_class") == "unknown")
     assert bucketed + unknowns == len(items)
 
@@ -79,9 +75,7 @@ def test_source_validation_verdict_counts():
     items = report["items_top_n"]
     summary = report["source_validation_summary"]
     verified = sum(1 for it in items if it["corroboration_verdict"] == "verified")
-    partial = sum(
-        1 for it in items if it["corroboration_verdict"] == "partially_verified"
-    )
+    partial = sum(1 for it in items if it["corroboration_verdict"] == "partially_verified")
     unverified = sum(1 for it in items if it["corroboration_verdict"] == "unverified")
     assert summary["validated"] == verified
     assert summary["partially"] == partial

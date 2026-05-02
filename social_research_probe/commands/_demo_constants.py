@@ -6,13 +6,10 @@ fixture and command. No logic, no I/O.
 
 from __future__ import annotations
 
-DEMO_TOPIC: str = (
-    "[SYNTHETIC DEMO] AI coding agents and the future of junior developers"
-)
+DEMO_TOPIC: str = "[SYNTHETIC DEMO] AI coding agents and the future of junior developers"
 
 DEMO_DISCLAIMER: str = (
-    "Synthetic sample data for product demonstration only. "
-    "Not factual market research."
+    "Synthetic sample data for product demonstration only. Not factual market research."
 )
 
 DEMO_PURPOSE_SET: tuple[str, ...] = (

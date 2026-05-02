@@ -31,15 +31,9 @@ from social_research_probe.utils.pipeline.helpers import resolve_html_report_pat
 
 async def _render_html(report: dict) -> None:
     """Render the report via ReportService and stamp report_path on the dict."""
-    result = (
-        await ReportService().execute_batch([{"report": report, "allow_html": True}])
-    )[0]
+    result = (await ReportService().execute_batch([{"report": report, "allow_html": True}]))[0]
     report_path = next(
-        (
-            tr.output
-            for tr in result.tech_results
-            if tr.success and isinstance(tr.output, str)
-        ),
+        (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, str)),
         "",
     )
     report["report_path"] = report_path
@@ -65,11 +59,7 @@ async def _run_exports(
         )
     )[0]
     return next(
-        (
-            tr.output
-            for tr in result.tech_results
-            if tr.success and isinstance(tr.output, dict)
-        ),
+        (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, dict)),
         {},
     )
 
@@ -93,9 +83,7 @@ def run(args: argparse.Namespace) -> int:
     if html_path is None:
         return ExitCode.SUCCESS
     platform_cfg = cfg.platform_defaults("youtube")
-    export_paths = asyncio.run(
-        _run_exports(report, platform_cfg, html_path.stem, html_path.parent)
-    )
+    export_paths = asyncio.run(_run_exports(report, platform_cfg, html_path.stem, html_path.parent))
     report["export_paths"] = export_paths
     _print_paths(report["report_path"], export_paths)
     return ExitCode.SUCCESS
