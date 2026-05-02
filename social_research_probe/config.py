@@ -15,6 +15,7 @@ from pathlib import Path
 from social_research_probe.utils.core.types import (
     AdapterConfig,
     AppConfig,
+    DatabaseConfigSection,
     DebugConfigSection,
     FreeTextRunnerName,
     JSONObject,
@@ -79,6 +80,7 @@ DEFAULT_CONFIG: AppConfig = {
             "narration": True,
             "comments": True,
             "export": True,
+            "persist": True,
         },
     },
     "services": {
@@ -100,6 +102,7 @@ DEFAULT_CONFIG: AppConfig = {
         # Legacy keys still looked up by internal config methods.
         "corroborate": {"corroboration": True},
         "enrich": {"llm": True},
+        "persistence": {"sqlite": True},
     },
     "technologies": {
         "classifying": True,
@@ -131,6 +134,7 @@ DEFAULT_CONFIG: AppConfig = {
         "ai_slop_detector": True,
         "youtube_comments": True,
         "export_package": True,
+        "sqlite_persist": True,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,
@@ -142,6 +146,12 @@ DEFAULT_CONFIG: AppConfig = {
     "voicebox": {
         "default_profile_name": "Jarvis",
         "api_base": "http://127.0.0.1:17493",
+    },
+    "database": {
+        "enabled": True,
+        "path": "",
+        "persist_transcript_text": False,
+        "persist_comment_text": True,
     },
 }
 
@@ -294,6 +304,20 @@ class Config:
     def voicebox(self) -> VoiceboxConfigSection:
         """Return the Voicebox renderer defaults."""
         return self.raw["voicebox"]
+
+    @property
+    def database(self) -> DatabaseConfigSection:
+        """Return the database configuration section."""
+        return self.raw["database"]
+
+    @property
+    def database_path(self) -> Path:
+        """Return the resolved path for srp.db."""
+        raw = (self.raw.get("database") or {}).get("path") or ""
+        if not raw:
+            return self.data_dir / "srp.db"
+        p = Path(str(raw)).expanduser()
+        return p if p.is_absolute() else (self.data_dir / p)
 
     def stage_enabled(self, platform: str, name: str) -> bool:
         """Return True iff the named stage is enabled for the given platform."""
