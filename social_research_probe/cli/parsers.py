@@ -268,6 +268,10 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
         default=None,
         help="Voicebox API base URL (default: SRP_VOICEBOX_API_BASE env var or config file)",
     )
+    sub.add_parser(
+        Command.DEMO_REPORT,
+        help="Generate a synthetic offline demo report and export package.",
+    )
 
 
 def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
