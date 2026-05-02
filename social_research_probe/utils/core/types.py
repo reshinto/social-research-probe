@@ -189,6 +189,12 @@ class ReportServices(TypedDict, total=False):
     export: bool
 
 
+class PersistenceServices(TypedDict, total=False):
+    """Service gates for persistence backends."""
+
+    sqlite: bool
+
+
 class ServicesConfigSection(TypedDict, total=False):
     """Service-level gates applied after stage gates."""
 
@@ -198,6 +204,7 @@ class ServicesConfigSection(TypedDict, total=False):
     corroborate: CorroborateServices
     analyze: AnalyzeServices
     report: ReportServices
+    persistence: PersistenceServices
 
 
 class TechnologiesConfigSection(TypedDict):
@@ -217,6 +224,16 @@ class TechnologiesConfigSection(TypedDict):
     tavily: bool
     youtube_comments: bool
     export_package: bool
+    sqlite_persist: bool
+
+
+class DatabaseConfigSection(TypedDict, total=False):
+    """Local SQLite persistence settings."""
+
+    enabled: bool
+    path: str
+    persist_transcript_text: bool
+    persist_comment_text: bool
 
 
 class TunablesConfigSection(TypedDict):
@@ -252,6 +269,7 @@ class AppConfig(TypedDict):
     tunables: TunablesConfigSection
     debug: DebugConfigSection
     voicebox: VoiceboxConfigSection
+    database: DatabaseConfigSection
 
 
 class AdapterConfig(TypedDict, total=False):

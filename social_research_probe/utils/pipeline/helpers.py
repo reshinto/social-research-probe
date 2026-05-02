@@ -88,6 +88,27 @@ def _looks_like_filesystem_path(s: str) -> bool:
     return s.startswith("/") or s.startswith("./") or s.startswith("../")
 
 
+def resolve_item_source_class(item: dict) -> dict:
+    """Return item copy with source_class set by title signal or coerced from existing value."""
+    from social_research_probe.utils.core.classifying import classify_by_title_signal, coerce_class
+
+    enriched = dict(item)
+    if classify_by_title_signal(str(item.get("title") or "")) == "commentary":
+        enriched["source_class"] = "commentary"
+    else:
+        enriched["source_class"] = coerce_class(item.get("source_class"))
+    return enriched
+
+
+def apply_channel_classes(classified: list[dict], channel_classes: dict[str, str]) -> None:
+    """Update source_class for any classified items still marked 'unknown'."""
+    for item in classified:
+        if item.get("source_class") != "unknown":
+            continue
+        channel = str(item.get("channel") or item.get("author_name") or "")
+        item["source_class"] = channel_classes.get(channel, "unknown")
+
+
 def resolve_html_report_path(report: dict) -> Path | None:
     """Return filesystem Path for the HTML report, or None if unavailable.
 

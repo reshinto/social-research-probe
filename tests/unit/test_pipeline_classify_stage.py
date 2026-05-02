@@ -183,6 +183,30 @@ class TestStageEnabled:
         items = out.get_stage_output("classify")["items"]
         assert items[0]["source_class"] == "secondary"
 
+    def test_apply_channel_classes_skips_non_unknown_items(self, enabled_state, monkeypatch):
+        state, _ = enabled_state
+        state.set_stage_output(
+            "fetch",
+            {
+                "items": [
+                    {"id": "1", "channel": "BBC News", "title": "My reaction"},
+                    {"id": "2", "channel": "Other Channel", "title": "Facts report"},
+                ]
+            },
+        )
+
+        async def fake(self, data):
+            return _mk_result("secondary")
+
+        from social_research_probe.services.classifying.source_class import SourceClassService
+
+        monkeypatch.setattr(SourceClassService, "execute_one", fake)
+
+        out = asyncio.run(yt.YouTubeClassifyStage().execute(state))
+        items = out.get_stage_output("classify")["items"]
+        assert items[0]["source_class"] == "commentary"
+        assert items[1]["source_class"] == "secondary"
+
 
 class TestNormalizeFiltersUnclassifiable:
     def test_passthrough_when_all_items_fail_to_normalize(self, enabled_state):

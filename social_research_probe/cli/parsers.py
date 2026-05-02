@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 from enum import StrEnum
 
-from social_research_probe.commands import Command, ConfigSubcommand
+from social_research_probe.commands import Command, ConfigSubcommand, DbSubcommand
 
 
 class Action(StrEnum):
@@ -307,6 +307,16 @@ def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
     _add_output_arg(check_p)
 
 
+def _add_db_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register database management subcommands."""
+    db = sub.add_parser(Command.DB, help="Local SQLite database management")
+    db.set_defaults(_db_parser=db)
+    db_sub = db.add_subparsers(dest="db_cmd", metavar="ACTION")
+    db_sub.add_parser(DbSubcommand.INIT, help="Create or migrate the local database")
+    db_sub.add_parser(DbSubcommand.STATS, help="Print row counts for each table")
+    db_sub.add_parser(DbSubcommand.PATH, help="Print the resolved database path")
+
+
 def global_parser() -> argparse.ArgumentParser:
     """Build the root ``srp`` argument parser.
 
@@ -333,4 +343,5 @@ def global_parser() -> argparse.ArgumentParser:
     _add_suggestions_subparsers(sub)
     _add_research_subparsers(sub)
     _add_config_subparsers(sub)
+    _add_db_subparsers(sub)
     return parser

@@ -312,3 +312,25 @@ default_profile_name = "Jarvis"
 
 # Base URL for the local Voicebox API used by report playback and narration.
 api_base = "http://127.0.0.1:17493"
+
+[database]
+# Enable local SQLite persistence for research runs.
+enabled = true
+
+# Path to srp.db. Empty -> <data_dir>/srp.db. Absolute path used as-is.
+# Relative path resolved against data_dir.
+path = ""
+
+# When false, transcripts.text is NULL in the DB; only status/char_count/digest stored.
+persist_transcript_text = false
+
+# When false, comments.text is NULL in the DB; only metadata and digest stored.
+persist_comment_text = true
+
+[services.persistence]
+# Enables the persistence service that writes research runs to SQLite.
+sqlite = true
+
+[stages.youtube]
+# Enables the end-of-run SQLite persistence stage (runs after export).
+persist = true

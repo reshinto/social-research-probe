@@ -8,7 +8,12 @@ from typing import ClassVar
 from social_research_probe.platforms import BaseResearchPlatform, BaseStage
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.utils.display.progress import log, log_with_time
-from social_research_probe.utils.pipeline.helpers import dict_items, first_tech_output
+from social_research_probe.utils.pipeline.helpers import (
+    apply_channel_classes,
+    dict_items,
+    first_tech_output,
+    resolve_item_source_class,
+)
 
 
 class YouTubeFetchStage(BaseStage):
@@ -16,6 +21,7 @@ class YouTubeFetchStage(BaseStage):
 
     disable_cache_for_technologies: ClassVar[list[str]] = ["youtube_search", "youtube_hydrate"]
 
+    @property
     def stage_name(self) -> str:
         return "fetch"
 
@@ -41,7 +47,6 @@ class YouTubeFetchStage(BaseStage):
                 engagement = tr.output
         return items, engagement
 
-    @log_with_time("[srp] youtube/fetch: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         empty: dict = {"items": [], "engagement_metrics": []}
         if not self._is_enabled(state):
@@ -62,67 +67,57 @@ class YouTubeClassifyStage(BaseStage):
     returns no signal so the report still renders.
     """
 
+    @property
     def stage_name(self) -> str:
         return "classify"
 
     async def _classify(self, items: list) -> list[dict]:
-        from social_research_probe.services.classifying.source_class import SourceClassService
-        from social_research_probe.utils.core.classifying import (
-            classify_by_title_signal,
-            coerce_class,
-        )
         from social_research_probe.utils.pipeline.helpers import normalize_item
-
-        def _output_class(result) -> str:
-            for tr in result.tech_results:
-                if tr.success and isinstance(tr.output, dict):
-                    return coerce_class(tr.output.get("source_class"))
-            return "unknown"
-
-        def _title_override(item: dict) -> bool:
-            return classify_by_title_signal(str(item.get("title") or "")) == "commentary"
 
         normalized = [d for d in (normalize_item(it) for it in items) if d is not None]
         if not normalized:
             return list(items)
+        classified, pending, pending_channels = self._build_classification_partition(normalized)
+        if pending:
+            channel_classes = await self._fetch_channel_classes(pending, pending_channels)
+            apply_channel_classes(classified, channel_classes)
+        return classified
 
-        service = SourceClassService()
-        channel_cache: dict[str, str] = {}
+    def _build_classification_partition(
+        self, normalized: list[dict]
+    ) -> tuple[list[dict], list[dict], list[str]]:
         classified: list[dict] = []
         pending: list[dict] = []
         pending_channels: list[str] = []
         pending_seen: set[str] = set()
         for item in normalized:
-            existing = coerce_class(item.get("source_class"))
             channel = str(item.get("channel") or item.get("author_name") or "")
-            if existing != "unknown":
-                source_class = existing
-            elif channel in pending_seen:
-                source_class = "unknown"
-            else:
+            enriched = resolve_item_source_class(item)
+            classified.append(enriched)
+            if enriched.get("source_class") == "unknown" and channel not in pending_seen:
                 pending.append(item)
                 pending_channels.append(channel)
                 pending_seen.add(channel)
-                source_class = "unknown"
-            enriched = dict(item)
-            enriched["source_class"] = "commentary" if _title_override(item) else source_class
-            classified.append(enriched)
-        if pending:
-            results = await service.execute_batch(pending)
-            resolved_by_channel = {
-                channel: _output_class(result)
-                for channel, result in zip(pending_channels, results, strict=True)
-            }
-            channel_cache.update(resolved_by_channel)
-            for item in classified:
-                if item.get("source_class") == "unknown":
-                    channel = str(item.get("channel") or item.get("author_name") or "")
-                    item["source_class"] = (
-                        "commentary"
-                        if _title_override(item)
-                        else channel_cache.get(channel, "unknown")
-                    )
-        return classified
+        return classified, pending, pending_channels
+
+    async def _fetch_channel_classes(
+        self, pending: list[dict], pending_channels: list[str]
+    ) -> dict[str, str]:
+        from social_research_probe.services.classifying.source_class import SourceClassService
+
+        results = await SourceClassService().execute_batch(pending)
+        return {
+            channel: self._output_class(result)
+            for channel, result in zip(pending_channels, results, strict=True)
+        }
+
+    def _output_class(self, result: object) -> str:
+        from social_research_probe.utils.core.classifying import coerce_class
+
+        for tr in getattr(result, "tech_results", []):
+            if tr.success and isinstance(tr.output, dict):
+                return coerce_class(tr.output.get("source_class"))
+        return "unknown"
 
     def _store_passthrough(self, state: PipelineState, raw_items: list) -> PipelineState:
         state.set_stage_output("classify", {"items": raw_items})
@@ -136,7 +131,6 @@ class YouTubeClassifyStage(BaseStage):
         state.set_stage_output("classify", {"items": classified})
         return state
 
-    @log_with_time("[srp] youtube/classify: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         fetch = state.get_stage_output("fetch")
         raw_items = list(fetch.get("items", []))
@@ -151,6 +145,7 @@ class YouTubeClassifyStage(BaseStage):
 class YouTubeScoreStage(BaseStage):
     """Score and rank fetched items."""
 
+    @property
     def stage_name(self) -> str:
         return "score"
 
@@ -165,7 +160,6 @@ class YouTubeScoreStage(BaseStage):
 
         return resolve_scoring_weights(merged)
 
-    @log_with_time("[srp] youtube/score: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         fetch = state.get_stage_output("fetch")
         items = fetch.get("items", [])
@@ -203,10 +197,10 @@ class YouTubeScoreStage(BaseStage):
 class YouTubeTranscriptStage(BaseStage):
     """Fetch transcripts for top-N items."""
 
+    @property
     def stage_name(self) -> str:
         return "transcript"
 
-    @log_with_time("[srp] youtube/transcript: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.transcript import TranscriptService
 
@@ -241,10 +235,10 @@ class YouTubeTranscriptStage(BaseStage):
 class YouTubeCommentsStage(BaseStage):
     """Fetch YouTube comments for top-N items."""
 
+    @property
     def stage_name(self) -> str:
         return "comments"
 
-    @log_with_time("[srp] youtube/comments: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.comments import CommentsService
 
@@ -321,10 +315,10 @@ class YouTubeCommentsStage(BaseStage):
 class YouTubeSummaryStage(BaseStage):
     """Generate LLM summaries for top-N items."""
 
+    @property
     def stage_name(self) -> str:
         return "summary"
 
-    @log_with_time("[srp] youtube/summary: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.enriching.summary import SummaryService
 
@@ -386,10 +380,10 @@ class YouTubeSummaryStage(BaseStage):
 class YouTubeCorroborateStage(BaseStage):
     """Corroborate claims in top-N items via configured search providers."""
 
+    @property
     def stage_name(self) -> str:
         return "corroborate"
 
-    @log_with_time("[srp] youtube/corroborate: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.corroborating.corroborate import CorroborationService
 
@@ -418,10 +412,10 @@ class YouTubeCorroborateStage(BaseStage):
 class YouTubeStatsStage(BaseStage):
     """Compute statistics on scored items."""
 
+    @property
     def stage_name(self) -> str:
         return "stats"
 
-    @log_with_time("[srp] youtube/stats: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.analyzing.statistics import StatisticsService
 
@@ -442,6 +436,7 @@ class YouTubeStatsStage(BaseStage):
 class YouTubeChartsStage(BaseStage):
     """Render charts for scored items."""
 
+    @property
     def stage_name(self) -> str:
         return "charts"
 
@@ -449,7 +444,6 @@ class YouTubeChartsStage(BaseStage):
         score = state.get_stage_output("score")
         return list(score.get("all_scored") or score.get("top_n", []))
 
-    @log_with_time("[srp] youtube/charts: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.analyzing.charts import ChartsService
 
@@ -471,6 +465,7 @@ class YouTubeChartsStage(BaseStage):
 class YouTubeSynthesisStage(BaseStage):
     """Generate LLM synthesis of all research findings."""
 
+    @property
     def stage_name(self) -> str:
         return "synthesis"
 
@@ -490,7 +485,6 @@ class YouTubeSynthesisStage(BaseStage):
             "topic": state.inputs.get("topic", ""),
         }
 
-    @log_with_time("[srp] youtube/synthesis: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.synthesizing.synthesis import SynthesisService
 
@@ -510,6 +504,7 @@ class YouTubeSynthesisStage(BaseStage):
 class YouTubeAssembleStage(BaseStage):
     """Assemble all stage outputs into the final research report."""
 
+    @property
     def stage_name(self) -> str:
         return "assemble"
 
@@ -592,7 +587,6 @@ class YouTubeAssembleStage(BaseStage):
             report["source_validation_summary"] = self._build_source_validation_summary(top_n)
         return report
 
-    @log_with_time("[srp] youtube/assemble: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.utils.pipeline.helpers import collect_divergence_warnings
 
@@ -640,10 +634,10 @@ class YouTubeAssembleStage(BaseStage):
 class YouTubeStructuredSynthesisStage(BaseStage):
     """Run structured LLM synthesis on the assembled report and attach results."""
 
+    @property
     def stage_name(self) -> str:
         return "structured_synthesis"
 
-    @log_with_time("[srp] youtube/structured_synthesis: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         if not self._is_enabled(state):
             return state
@@ -659,10 +653,10 @@ class YouTubeStructuredSynthesisStage(BaseStage):
 class YouTubeReportStage(BaseStage):
     """Write text and HTML research reports to disk."""
 
+    @property
     def stage_name(self) -> str:
         return "report"
 
-    @log_with_time("[srp] youtube/report: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.reporting.report import ReportService
 
@@ -686,10 +680,10 @@ class YouTubeReportStage(BaseStage):
 class YouTubeExportStage(BaseStage):
     """Write export artifacts (CSV, markdown, JSON) alongside the HTML report."""
 
+    @property
     def stage_name(self) -> str:
         return "export"
 
-    @log_with_time("[srp] youtube/export: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.reporting.export import ExportService
         from social_research_probe.utils.pipeline.helpers import resolve_html_report_path
@@ -729,10 +723,10 @@ class YouTubeExportStage(BaseStage):
 class YouTubeNarrationStage(BaseStage):
     """Read evidence summary aloud via TTS."""
 
+    @property
     def stage_name(self) -> str:
         return "narration"
 
-    @log_with_time("[srp] youtube/narration: execute")
     async def execute(self, state: PipelineState) -> PipelineState:
         from social_research_probe.services.reporting.audio import AudioReportService
 
@@ -742,6 +736,52 @@ class YouTubeNarrationStage(BaseStage):
         narration = str(state.outputs.get("report", {}).get("evidence_summary", ""))
         if narration:
             await AudioReportService().execute_batch([{"text": narration}])
+        return state
+
+
+class YouTubePersistStage(BaseStage):
+    """Persist the completed research run to the local SQLite database."""
+
+    @property
+    def stage_name(self) -> str:
+        return "persist"
+
+    async def execute(self, state: PipelineState) -> PipelineState:
+        if not self._is_enabled(state):
+            return state
+        report = state.outputs.get("report") or {}
+        if not report:
+            return state
+        from social_research_probe.config import load_active_config
+        from social_research_probe.services.persistence import PersistenceService
+
+        cfg = load_active_config()
+        db_cfg = cfg.raw.get("database") or {}
+        if not db_cfg.get("enabled", True):
+            return state
+        payload = {
+            "report": report,
+            "db_path": cfg.database_path,
+            "config": cfg.raw,
+            "persist_transcript_text": db_cfg.get("persist_transcript_text", False),
+            "persist_comment_text": db_cfg.get("persist_comment_text", True),
+        }
+        results = await PersistenceService().execute_batch([payload])
+        for r in results:
+            for tr in r.tech_results:
+                if not tr.success:
+                    report.setdefault("warnings", []).append(
+                        f"persistence: {tr.error or 'sqlite persist failed'}"
+                    )
+                elif isinstance(tr.output, dict):
+                    state.set_stage_output(
+                        "persist",
+                        {
+                            "db_path": tr.output.get("db_path"),
+                            "run_id": tr.output.get("run_id"),
+                        },
+                    )
+        state.outputs["report"] = report
         return state
 
 
@@ -762,6 +802,7 @@ class YouTubePipeline(BaseResearchPlatform):
             [YouTubeStructuredSynthesisStage()],
             [YouTubeReportStage(), YouTubeNarrationStage()],
             [YouTubeExportStage()],
+            [YouTubePersistStage()],
         ]
 
     @log_with_time("[srp] youtube/pipeline: run")
