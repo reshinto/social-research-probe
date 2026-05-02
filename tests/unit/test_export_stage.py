@@ -75,7 +75,7 @@ def test_resolve_serve_command_not_treated_as_path():
 
 
 def test_stage_name():
-    assert YouTubeExportStage().stage_name() == "export"
+    assert YouTubeExportStage().stage_name == "export"
 
 
 def test_stage_disabled_skips():
@@ -154,16 +154,16 @@ def test_stage_plain_path_resolves(tmp_path):
 
 def test_pipeline_stages_include_export():
     all_stages = [s for group in YouTubePipeline().stages() for s in group]
-    names = [s.stage_name() for s in all_stages]
+    names = [s.stage_name for s in all_stages]
     assert "export" in names
 
 
 def test_pipeline_export_after_report():
     groups = YouTubePipeline().stages()
     report_group_idx = next(
-        i for i, g in enumerate(groups) if any(s.stage_name() == "report" for s in g)
+        i for i, g in enumerate(groups) if any(s.stage_name == "report" for s in g)
     )
     export_group_idx = next(
-        i for i, g in enumerate(groups) if any(s.stage_name() == "export" for s in g)
+        i for i, g in enumerate(groups) if any(s.stage_name == "export" for s in g)
     )
     assert export_group_idx > report_group_idx

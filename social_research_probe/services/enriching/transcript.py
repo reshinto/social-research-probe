@@ -24,60 +24,56 @@ class TranscriptService(BaseService):
     def _get_technologies(self):
         return [YoutubeTranscriptFetch(), TranscriptWhisperTech()]
 
-    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
-        # Extract the URL since BaseService expects it as TInput
-        # for our tech execution.
-        url = data.get("url", "") if isinstance(data, dict) else str(data)
-
-        tech_results: list[TechResult] = result.tech_results
-        if not tech_results:
-            for tech in self._get_technologies():
-                tech.caller_service = self.service_name
-                try:
-                    output = await tech.execute(url)
-                    tr = TechResult(
+    async def _run_with_fallback(self, url: str) -> list[TechResult]:
+        """Try each technology in order, stopping on the first success."""
+        tech_results: list[TechResult] = []
+        for tech in self._get_technologies():
+            tech.caller_service = self.service_name
+            try:
+                output = await tech.execute(url)
+                tech_results.append(
+                    TechResult(
                         tech_name=tech.name,
                         input=url,
                         output=output,
                         success=output is not None,
                     )
-                    tech_results.append(tr)
-                    if tr.success:
-                        break
-                except Exception as exc:
-                    tech_results.append(
-                        TechResult(
-                            tech_name=tech.name,
-                            input=url,
-                            output=None,
-                            success=False,
-                            error=str(exc),
-                        )
+                )
+                if output is not None:
+                    break
+            except Exception as exc:
+                tech_results.append(
+                    TechResult(
+                        tech_name=tech.name,
+                        input=url,
+                        output=None,
+                        success=False,
+                        error=str(exc),
                     )
+                )
+        return tech_results
 
-        transcript = next(
-            (tr.output for tr in tech_results if tr.success and tr.output),
-            None,
-        )
+    def _build_item_output(
+        self, data: dict, tech_results: list[TechResult], transcript: object
+    ) -> dict:
+        """Return enriched item dict with transcript and transcript_status."""
+        if transcript:
+            return {**data, "transcript": transcript, "transcript_status": "available"}
+        if any(tr.error for tr in tech_results):
+            return {**data, "transcript_status": "failed"}
+        return {**data, "transcript_status": "unavailable"}
 
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
+        url = data.get("url", "") if isinstance(data, dict) else str(data)
+        tech_results: list[TechResult] = result.tech_results
+        if not tech_results:
+            tech_results = await self._run_with_fallback(url)
+        transcript = next((tr.output for tr in tech_results if tr.success and tr.output), None)
         if isinstance(data, dict):
-            # Attach an explicit status for every attempted item so later stages can
-            # separate usable transcripts from unavailable or failed transcript evidence.
-            if transcript:
-                output = {**data, "transcript": transcript, "transcript_status": "available"}
-            elif any(tr.error for tr in tech_results):
-                output = {**data, "transcript_status": "failed"}
-            else:
-                output = {**data, "transcript_status": "unavailable"}
-
-            # The BaseService doesn't run technologies if run_technologies_concurrently is False,
-            # so we modify our first successful result or the last failure to carry the output.
+            output = self._build_item_output(data, tech_results, transcript)
             if tech_results:
                 tech_results[0].output = output
                 tech_results[0].success = bool(transcript)
-
         return ServiceResult(
-            service_name=self.service_name,
-            input_key=url,
-            tech_results=tech_results,
+            service_name=self.service_name, input_key=url, tech_results=tech_results
         )

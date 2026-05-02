@@ -13,6 +13,7 @@ from social_research_probe.utils.core.types import (
     FetchLimits,
     RawItem,
 )
+from social_research_probe.utils.display.progress import log_with_time
 
 
 class PlatformClient(ABC):
@@ -48,8 +49,9 @@ class BaseStage(ABC):
 
     disable_cache_for_technologies: ClassVar[list[str]] = []
 
+    @log_with_time("[srp] {state.platform_type}/{self.stage_name}: execute")
     async def run(self, state: PipelineState) -> PipelineState:
-        """Set stage cache overrides, then execute."""
+        """Set stage cache overrides, time execution, then return result."""
         from social_research_probe.utils.caching.pipeline_cache import (
             disable_cache_for_technologies,
         )
@@ -60,13 +62,14 @@ class BaseStage(ABC):
     @abstractmethod
     async def execute(self, state: PipelineState) -> PipelineState: ...
 
+    @property
     @abstractmethod
     def stage_name(self) -> str: ...
 
     def _is_enabled(self, state: PipelineState) -> bool:
         from social_research_probe.config import load_active_config
 
-        return load_active_config().stage_enabled(state.platform_type, self.stage_name())
+        return load_active_config().stage_enabled(state.platform_type, self.stage_name)
 
 
 class BaseResearchPlatform(ABC):

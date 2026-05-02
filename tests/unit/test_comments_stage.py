@@ -43,7 +43,7 @@ def _mk_comments_result(item_output):
 
 class TestCommentsStage:
     def test_stage_name(self):
-        assert yt.YouTubeCommentsStage().stage_name() == "comments"
+        assert yt.YouTubeCommentsStage().stage_name == "comments"
 
     def test_enabled_fetches_comments(self, enabled_state, monkeypatch):
         item = {"id": "vid1", "title": "T"}
@@ -195,15 +195,15 @@ class TestCommentsStage:
 class TestPipelineStagesWiring:
     def test_pipeline_includes_comments_stage(self):
         stages = yt.YouTubePipeline().stages()
-        stage_names = [s.stage_name() for group in stages for s in group]
+        stage_names = [s.stage_name for group in stages for s in group]
         assert "comments" in stage_names
 
     def test_comments_stage_before_summary(self):
         stages = yt.YouTubePipeline().stages()
-        flat = [s.stage_name() for group in stages for s in group]
+        flat = [s.stage_name for group in stages for s in group]
         assert flat.index("comments") < flat.index("summary")
 
     def test_comments_stage_after_transcript(self):
         stages = yt.YouTubePipeline().stages()
-        flat = [s.stage_name() for group in stages for s in group]
+        flat = [s.stage_name for group in stages for s in group]
         assert flat.index("transcript") < flat.index("comments")

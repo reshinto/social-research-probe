@@ -28,18 +28,18 @@ def disabled_state():
 
 
 def test_stage_names():
-    assert yt.YouTubeFetchStage().stage_name() == "fetch"
-    assert yt.YouTubeScoreStage().stage_name() == "score"
-    assert yt.YouTubeTranscriptStage().stage_name() == "transcript"
-    assert yt.YouTubeSummaryStage().stage_name() == "summary"
-    assert yt.YouTubeCorroborateStage().stage_name() == "corroborate"
-    assert yt.YouTubeStatsStage().stage_name() == "stats"
-    assert yt.YouTubeChartsStage().stage_name() == "charts"
-    assert yt.YouTubeSynthesisStage().stage_name() == "synthesis"
-    assert yt.YouTubeAssembleStage().stage_name() == "assemble"
-    assert yt.YouTubeStructuredSynthesisStage().stage_name() == "structured_synthesis"
-    assert yt.YouTubeReportStage().stage_name() == "report"
-    assert yt.YouTubeNarrationStage().stage_name() == "narration"
+    assert yt.YouTubeFetchStage().stage_name == "fetch"
+    assert yt.YouTubeScoreStage().stage_name == "score"
+    assert yt.YouTubeTranscriptStage().stage_name == "transcript"
+    assert yt.YouTubeSummaryStage().stage_name == "summary"
+    assert yt.YouTubeCorroborateStage().stage_name == "corroborate"
+    assert yt.YouTubeStatsStage().stage_name == "stats"
+    assert yt.YouTubeChartsStage().stage_name == "charts"
+    assert yt.YouTubeSynthesisStage().stage_name == "synthesis"
+    assert yt.YouTubeAssembleStage().stage_name == "assemble"
+    assert yt.YouTubeStructuredSynthesisStage().stage_name == "structured_synthesis"
+    assert yt.YouTubeReportStage().stage_name == "report"
+    assert yt.YouTubeNarrationStage().stage_name == "narration"
 
 
 def test_fetch_disabled(disabled_state):
