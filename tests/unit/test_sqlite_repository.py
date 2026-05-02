@@ -221,6 +221,31 @@ def test_insert_run_purpose_set_json(tmp_path):
     conn.close()
 
 
+def test_insert_run_duplicate_run_id_returns_existing_pk(tmp_path):
+    conn = _db(tmp_path)
+    pk1 = _insert_run(conn, run_id="dup-run")
+    pk2 = insert_run(
+        conn,
+        run_id="dup-run",
+        topic="t",
+        platform="youtube",
+        purpose_set=[],
+        started_at=_now(),
+        finished_at=None,
+        html_report_path=None,
+        output_dir=None,
+        export_paths={},
+        warning_count=0,
+        exit_status="ok",
+        config_snapshot={},
+        schema_version=1,
+    )
+    assert pk2 == pk1
+    count = conn.execute("SELECT COUNT(*) FROM research_runs WHERE run_id='dup-run'").fetchone()[0]
+    assert count == 1
+    conn.close()
+
+
 # --- upsert_source ---
 
 
@@ -435,6 +460,25 @@ def test_insert_transcript_unavailable_status(tmp_path):
     assert row[0] == "unavailable"
     assert row[1] is None
     assert row[2] is None
+    conn.close()
+
+
+def test_insert_transcript_stores_fetched_at(tmp_path):
+    conn = _db(tmp_path)
+    run_pk = _insert_run(conn)
+    src_pk = _insert_source(conn)
+    snap_pk = _insert_snap(conn, src_pk, run_pk)
+    insert_transcript(
+        conn,
+        snap_pk,
+        {"transcript_status": "available"},
+        persist_text=False,
+        fetched_at="2026-01-01T00:00:00Z",
+    )
+    row = conn.execute(
+        "SELECT fetched_at FROM transcripts WHERE source_snapshot_id=?", (snap_pk,)
+    ).fetchone()
+    assert row[0] == "2026-01-01T00:00:00Z"
     conn.close()
 
 

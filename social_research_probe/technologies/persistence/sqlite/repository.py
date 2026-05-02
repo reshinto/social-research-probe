@@ -66,7 +66,7 @@ def insert_run(
 ) -> int:
     cur = conn.execute(
         """
-        INSERT INTO research_runs (
+        INSERT OR IGNORE INTO research_runs (
             run_id, topic, platform, purpose_set_json, started_at, finished_at,
             html_report_path, output_dir, export_paths_json, warning_count,
             exit_status, config_snapshot_json, schema_version
@@ -88,7 +88,10 @@ def insert_run(
             schema_version,
         ),
     )
-    return cur.lastrowid  # type: ignore[return-value]
+    if cur.rowcount:
+        return cur.lastrowid  # type: ignore[return-value]
+    row = conn.execute("SELECT id FROM research_runs WHERE run_id = ?", (run_id,)).fetchone()
+    return row[0]
 
 
 def upsert_source(
@@ -242,6 +245,7 @@ def insert_transcript(
     item: dict,
     *,
     persist_text: bool,
+    fetched_at: str | None = None,
 ) -> None:
     status = item.get("transcript_status") or "unavailable"
     raw_text: str | None = item.get("transcript")
@@ -254,7 +258,7 @@ def insert_transcript(
             source_snapshot_id, status, text, text_digest, char_count, fetched_at
         ) VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (snapshot_pk, status, text, digest, char_count, None),
+        (snapshot_pk, status, text, digest, char_count, fetched_at),
     )
 
 

@@ -148,7 +148,7 @@ class SQLitePersistTech(BaseTechnology[dict, dict]):
         comment_count = insert_comments(
             conn, snap_pk, item.get("source_comments") or [], persist_text=persist_comment_text
         )
-        insert_transcript(conn, snap_pk, item, persist_text=persist_transcript_text)
+        insert_transcript(conn, snap_pk, item, persist_text=persist_transcript_text, fetched_at=now)
         if surrogate:
             insert_text_surrogate(conn, snap_pk, surrogate)
         return comment_count
