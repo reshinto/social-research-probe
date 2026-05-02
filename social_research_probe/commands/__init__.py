@@ -60,6 +60,15 @@ class Command(StrEnum):
     SERVE_REPORT = "serve-report"
     DEMO_REPORT = "demo-report"
     CONFIG = "config"
+    DB = "db"
+
+
+class DbSubcommand(StrEnum):
+    """Database subcommand names dispatched within db.run()."""
+
+    INIT = "init"
+    STATS = "stats"
+    PATH = "path"
 
 
 class ConfigSubcommand(StrEnum):
@@ -363,6 +372,7 @@ def add_pending_suggestions(
 __all__ = [
     "Command",
     "ConfigSubcommand",
+    "DbSubcommand",
     "IdSelector",
     "PendingEntry",
     "ResearchCommand",

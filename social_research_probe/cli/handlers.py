@@ -134,6 +134,12 @@ def _dispatch_config(args: argparse.Namespace) -> int:
     return config.run(args)
 
 
+def _dispatch_db(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import db
+
+    return db.run(args)
+
+
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions."""
     from social_research_probe.commands import Command
@@ -158,4 +164,5 @@ def handlers_factory() -> dict[str, callable]:
         Command.SERVE_REPORT: _handle_serve_report,
         Command.DEMO_REPORT: _handle_demo_report,
         Command.CONFIG: _dispatch_config,
+        Command.DB: _dispatch_db,
     }
