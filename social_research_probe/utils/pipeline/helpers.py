@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TypeVar
 
 from social_research_probe.utils.core.types import RawItem
@@ -75,3 +76,33 @@ def collect_divergence_warnings(top_n: list, threshold: float) -> list[str]:
             title = (item.get("title") or "untitled")[:80]
             warnings.append(f"summary/transcript divergence on {title!r}: {divergence:.2f}")
     return warnings
+
+
+def _path_from_file_uri(uri: str) -> Path:
+    from urllib.parse import unquote, urlparse
+
+    return Path(unquote(urlparse(uri).path))
+
+
+def _looks_like_filesystem_path(s: str) -> bool:
+    return s.startswith("/") or s.startswith("./") or s.startswith("../")
+
+
+def resolve_html_report_path(report: dict) -> Path | None:
+    """Return filesystem Path for the HTML report, or None if unavailable.
+
+    Checks html_report_path (file:// URI) first, then report_path (plain
+    filesystem path from markdown fallback only — not serve command strings).
+    """
+    for field in ("html_report_path", "report_path"):
+        raw = report.get(field)
+        if not raw:
+            continue
+        if isinstance(raw, Path):
+            return raw
+        s = str(raw)
+        if s.startswith("file://"):
+            return _path_from_file_uri(s)
+        if _looks_like_filesystem_path(s):
+            return Path(s)
+    return None
