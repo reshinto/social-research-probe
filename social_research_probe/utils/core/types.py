@@ -121,6 +121,16 @@ class CommentsConfig(TypedDict, total=False):
     order: str
 
 
+class ExportConfig(TypedDict, total=False):
+    """Per-platform export artifact configuration."""
+
+    enabled: bool
+    sources_csv: bool
+    comments_csv: bool
+    methodology_md: bool
+    run_summary_json: bool
+
+
 class YouTubePlatformConfig(TypedDict, total=False):
     """Configurable defaults for the YouTube adapter."""
 
@@ -128,6 +138,7 @@ class YouTubePlatformConfig(TypedDict, total=False):
     max_items: int
     enrich_top_n: int
     comments: CommentsConfig
+    export: ExportConfig
 
 
 class PlatformsConfigSection(TypedDict):
@@ -175,6 +186,7 @@ class AnalyzeServices(TypedDict, total=False):
 class ReportServices(TypedDict, total=False):
     html: bool
     audio: bool
+    export: bool
 
 
 class ServicesConfigSection(TypedDict, total=False):
@@ -204,6 +216,7 @@ class TechnologiesConfigSection(TypedDict):
     brave: bool
     tavily: bool
     youtube_comments: bool
+    export_package: bool
 
 
 class TunablesConfigSection(TypedDict):
@@ -495,6 +508,7 @@ class ResearchReport(TypedDict, total=False):
     opportunity_analysis: str
     report_summary: str
     html_report_path: str
+    export_paths: dict[str, str]
 
 
 class MultiResearchReport(TypedDict, total=False):

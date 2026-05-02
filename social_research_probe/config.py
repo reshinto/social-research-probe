@@ -52,6 +52,13 @@ DEFAULT_CONFIG: AppConfig = {
                 "max_comments_per_video": 20,
                 "order": "relevance",
             },
+            "export": {
+                "enabled": True,
+                "sources_csv": True,
+                "comments_csv": True,
+                "methodology_md": True,
+                "run_summary_json": True,
+            },
         },
     },
     "scoring": {"weights": {}},
@@ -71,6 +78,7 @@ DEFAULT_CONFIG: AppConfig = {
             "report": True,
             "narration": True,
             "comments": True,
+            "export": True,
         },
     },
     "services": {
@@ -87,7 +95,7 @@ DEFAULT_CONFIG: AppConfig = {
             "corroborating": {"corroborate": True},
             "analyzing": {"statistics": True, "charts": True},
             "synthesizing": {"synthesis": True},
-            "reporting": {"html": True, "audio": True},
+            "reporting": {"html": True, "audio": True, "export": True},
         },
         # Legacy keys still looked up by internal config methods.
         "corroborate": {"corroboration": True},
@@ -122,6 +130,7 @@ DEFAULT_CONFIG: AppConfig = {
         "claim_extractor": True,
         "ai_slop_detector": True,
         "youtube_comments": True,
+        "export_package": True,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,
