@@ -48,8 +48,15 @@ def test_build_includes_config_values():
 
 
 def test_build_includes_technology_statuses():
-    config = _minimal_config()
+    config = _minimal_config(technologies={"youtube_api": True, "whisper": False})
     out = build_methodology(_minimal_report(), config)
+    assert "youtube_api" in out
+    assert "enabled" in out
+    assert "disabled" in out
+
+
+def test_build_technologies_unavailable_shows_fallback():
+    out = build_methodology(_minimal_report(), _minimal_config())
     assert "Not available in platform-level export context" in out
 
 
