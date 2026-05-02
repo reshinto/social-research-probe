@@ -46,6 +46,12 @@ DEFAULT_CONFIG: AppConfig = {
             "recency_days": 90,
             "max_items": 20,
             "enrich_top_n": 5,
+            "comments": {
+                "enabled": True,
+                "max_videos": 5,
+                "max_comments_per_video": 20,
+                "order": "relevance",
+            },
         },
     },
     "scoring": {"weights": {}},
@@ -64,6 +70,7 @@ DEFAULT_CONFIG: AppConfig = {
             "structured_synthesis": True,
             "report": True,
             "narration": True,
+            "comments": True,
         },
     },
     "services": {
@@ -71,7 +78,12 @@ DEFAULT_CONFIG: AppConfig = {
             "sourcing": {"youtube": True},
             "classifying": {"source_class": True},
             "scoring": {"score": True},
-            "enriching": {"transcript": True, "text_surrogate": True, "summary": True},
+            "enriching": {
+                "transcript": True,
+                "text_surrogate": True,
+                "summary": True,
+                "comments": True,
+            },
             "corroborating": {"corroborate": True},
             "analyzing": {"statistics": True, "charts": True},
             "synthesizing": {"synthesis": True},
@@ -109,6 +121,7 @@ DEFAULT_CONFIG: AppConfig = {
         "mac_tts": True,
         "claim_extractor": True,
         "ai_slop_detector": True,
+        "youtube_comments": True,
     },
     "tunables": {
         "summary_divergence_threshold": 0.4,

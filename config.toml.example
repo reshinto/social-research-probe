@@ -71,6 +71,20 @@ max_items = 20
 # enrichment. This controls most of the expensive or slow downstream work.
 enrich_top_n = 5
 
+[platforms.youtube.comments]
+# Enables comment fetching for top-scored videos.
+enabled = true
+
+# Maximum number of videos to fetch comments for per run.
+max_videos = 5
+
+# Maximum number of top-level comments fetched per video.
+max_comments_per_video = 20
+
+# Comment sort order passed to YouTube Data API v3. "relevance" returns
+# top-liked comments; "time" returns newest first.
+order = "relevance" # relevance | time
+
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
@@ -87,6 +101,7 @@ assemble = true              # Assemble stage outputs into the report packet.
 structured_synthesis = true  # Ask an LLM for structured report sections.
 report = true                # Render the HTML report.
 narration = true             # Render audio narration through Voicebox or fallback TTS.
+comments = true              # Fetch YouTube comments for top-scored videos.
 
 [services.youtube.sourcing]
 # Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
@@ -123,6 +138,10 @@ text_surrogate = true
 
 # Enables LLM-generated per-item summaries for enriched items.
 summary = true
+
+# Enables YouTube comment fetching for top-scored videos. Requires
+# SRP_YOUTUBE_API_KEY or a youtube_api_key secret.
+comments = true
 
 [services.youtube.corroborating]
 # Enables claim extraction and provider-based corroboration.
@@ -245,6 +264,10 @@ claim_extractor = true
 
 # Enables the AI slop detector technology for filtering low-quality AI-generated content.
 ai_slop_detector = true
+
+# Enables YouTube comment fetching technology via Data API v3. Requires a
+# YouTube API key. Fetches top-level comments for top-scored videos.
+youtube_comments = true
 
 [tunables]
 # Transcript-vs-URL summary divergence threshold that triggers a warning.

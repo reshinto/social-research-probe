@@ -237,7 +237,7 @@ class TestTranscriptStage:
 
 class TestSummaryStage:
     def test_enabled(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1"}]})
+        enabled_state.set_stage_output("comments", {"top_n": [{"url": "u1"}]})
         sr = _mk_service_result("summary", {"url": "u1", "summary": "SUM"})
 
         async def fake_one(self, item):
@@ -251,13 +251,13 @@ class TestSummaryStage:
         assert out.get_stage_output("summary")["top_n"][0]["summary"] == "SUM"
 
     def test_empty_top_n(self, enabled_state):
-        enabled_state.set_stage_output("transcript", {"top_n": []})
+        enabled_state.set_stage_output("comments", {"top_n": []})
         out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
         assert out.get_stage_output("summary")["top_n"] == []
 
     def test_attaches_text_surrogate(self, enabled_state, monkeypatch):
         enabled_state.set_stage_output(
-            "transcript", {"top_n": [{"url": "u1", "title": "T", "transcript": "txt"}]}
+            "comments", {"top_n": [{"url": "u1", "title": "T", "transcript": "txt"}]}
         )
         calls = []
 
@@ -291,7 +291,7 @@ class TestSummaryStage:
 
     def test_skips_non_dict_items_in_surrogate_build(self, enabled_state, monkeypatch):
         enabled_state.set_stage_output(
-            "transcript", {"top_n": [{"url": "u1", "title": "T"}, "not-a-dict"]}
+            "comments", {"top_n": [{"url": "u1", "title": "T"}, "not-a-dict"]}
         )
 
         async def fake_summary_one(self, item):
@@ -307,7 +307,7 @@ class TestSummaryStage:
         assert top_n[1] == "not-a-dict"
 
     def test_skips_text_surrogate_when_service_disabled(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1", "title": "T"}]})
+        enabled_state.set_stage_output("comments", {"top_n": [{"url": "u1", "title": "T"}]})
         cfg = MagicMock()
         cfg.stage_enabled.return_value = True
         cfg.service_enabled.side_effect = lambda name: name != "text_surrogate"
@@ -326,7 +326,7 @@ class TestSummaryStage:
         assert "evidence_tier" not in top_n[0]
 
     def test_attaches_evidence_tier(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1", "title": "T"}]})
+        enabled_state.set_stage_output("comments", {"top_n": [{"url": "u1", "title": "T"}]})
 
         async def fake_one(self, item):
             return _mk_service_result("summary", {**item, "summary": "SUM"})
@@ -341,7 +341,7 @@ class TestSummaryStage:
         assert top_n[0]["evidence_tier"] == "metadata_only"
 
     def test_keeps_item_when_summary_service_returns_no_output(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("transcript", {"top_n": [{"url": "u1", "title": "T"}]})
+        enabled_state.set_stage_output("comments", {"top_n": [{"url": "u1", "title": "T"}]})
 
         async def fake_one(self, item):
             return ServiceResult(service_name="summary", input_key="T", tech_results=[])
@@ -354,6 +354,32 @@ class TestSummaryStage:
         top_n = out.get_stage_output("summary")["top_n"]
         assert top_n[0]["title"] == "T"
         assert "summary" not in top_n[0]
+
+    def test_evidence_tier_upgrades_with_comments(self, enabled_state, monkeypatch):
+        enabled_state.set_stage_output(
+            "comments",
+            {
+                "top_n": [
+                    {
+                        "id": "v1",
+                        "title": "T",
+                        "comments": ["Nice!"],
+                        "comments_status": "available",
+                    }
+                ]
+            },
+        )
+
+        async def fake_one(self, item):
+            return _mk_service_result("summary", {**item, "summary": "SUM"})
+
+        monkeypatch.setattr(
+            "social_research_probe.services.enriching.summary.SummaryService.execute_one",
+            fake_one,
+        )
+        out = asyncio.run(yt.YouTubeSummaryStage().execute(enabled_state))
+        top_n = out.get_stage_output("summary")["top_n"]
+        assert top_n[0]["evidence_tier"] == "metadata_comments"
 
 
 class TestCorroborateStage:

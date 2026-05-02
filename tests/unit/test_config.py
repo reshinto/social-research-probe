@@ -175,3 +175,37 @@ def test_reset_config_cache():
     cfg = load_active_config()
     reset_config_cache()
     assert cfg is not load_active_config()
+
+
+def test_default_config_has_comments_platform(tmp_path):
+    cfg = Config.load(tmp_path)
+    comments = cfg.raw["platforms"]["youtube"]["comments"]
+    assert comments["enabled"] is True
+    assert comments["max_videos"] == 5
+    assert comments["max_comments_per_video"] == 20
+    assert comments["order"] == "relevance"
+
+
+def test_default_config_has_comments_stage(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["stages"]["youtube"]["comments"] is True
+
+
+def test_default_config_has_comments_service(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["services"]["youtube"]["enriching"]["comments"] is True
+
+
+def test_default_config_has_youtube_comments_tech(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["technologies"]["youtube_comments"] is True
+
+
+def test_stage_enabled_comments(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.stage_enabled("youtube", "comments") is True
+
+
+def test_technology_enabled_youtube_comments(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.technology_enabled("youtube_comments") is True

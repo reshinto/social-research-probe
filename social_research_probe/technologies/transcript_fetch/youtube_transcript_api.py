@@ -11,13 +11,11 @@ Any failure returns None so callers can fall back gracefully.
 from __future__ import annotations
 
 import os
-import re
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+from social_research_probe.utils.core.youtube import youtube_video_id_from_url
 from social_research_probe.utils.display.progress import log
-
-_VIDEO_ID_RE = re.compile(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})")
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
@@ -26,12 +24,6 @@ try:
 except ImportError:
     YouTubeTranscriptApi = None
     _API_AVAILABLE = False
-
-
-def _extract_video_id(url: str) -> str | None:
-    """Return the 11-character YouTube video ID from a URL, or None."""
-    m = _VIDEO_ID_RE.search(url)
-    return m.group(1) if m else None
 
 
 def fetch_transcript(url: str) -> str | None:
@@ -47,7 +39,7 @@ def fetch_transcript(url: str) -> str | None:
         return fake
     if not _API_AVAILABLE:
         return None
-    video_id = _extract_video_id(url)
+    video_id = youtube_video_id_from_url(url)
     if not video_id:
         log(f"[srp] captions: cannot parse video id from {url}")
         return None

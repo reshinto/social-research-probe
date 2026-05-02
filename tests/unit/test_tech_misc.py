@@ -16,17 +16,18 @@ from social_research_probe.technologies.transcript_fetch import (
 )
 from social_research_probe.technologies.tts import mac_tts, voicebox
 from social_research_probe.utils.core.errors import AdapterError
+from social_research_probe.utils.core.youtube import youtube_video_id_from_url
 
 
 class TestYoutubeTranscriptApi:
     def test_extract_video_id_from_watch(self):
-        assert yt_api._extract_video_id("https://youtube.com/watch?v=abcDEF12345") == "abcDEF12345"
+        assert youtube_video_id_from_url("https://youtube.com/watch?v=abcDEF12345") == "abcDEF12345"
 
     def test_extract_video_id_from_shortlink(self):
-        assert yt_api._extract_video_id("https://youtu.be/abcDEF12345") == "abcDEF12345"
+        assert youtube_video_id_from_url("https://youtu.be/abcDEF12345") == "abcDEF12345"
 
     def test_extract_video_id_none(self):
-        assert yt_api._extract_video_id("https://example.com") is None
+        assert youtube_video_id_from_url("https://example.com") is None
 
     def test_fake_test_transcript_disabled(self, monkeypatch):
         monkeypatch.delenv("SRP_TEST_USE_FAKE_YOUTUBE", raising=False)

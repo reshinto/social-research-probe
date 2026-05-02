@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from social_research_probe.utils.pipeline.helpers import collect_divergence_warnings
+from social_research_probe.services import ServiceResult, TechResult
+from social_research_probe.utils.pipeline.helpers import (
+    collect_divergence_warnings,
+    dict_items,
+    first_tech_output,
+)
 
 T = "real transcript text"
 
@@ -132,3 +137,56 @@ def test_status_available_with_transcript_warns():
 def test_low_divergence_with_transcript_no_warning():
     items = [{"title": "X", "summary_divergence": 0.1, "transcript": T}]
     assert collect_divergence_warnings(items, threshold=0.5) == []
+
+
+def test_dict_items_filters_non_dict_values():
+    assert dict_items([{"a": 1}, None, "x", {"b": 2}]) == [{"a": 1}, {"b": 2}]
+
+
+def test_first_tech_output_returns_matching_output_type():
+    result = ServiceResult(
+        service_name="svc",
+        input_key="key",
+        tech_results=[
+            TechResult("a", None, "nope", success=True),
+            TechResult("b", None, {"ok": True}, success=False),
+        ],
+    )
+    assert first_tech_output(result, dict) == {"ok": True}
+
+
+def test_first_tech_output_can_require_success():
+    result = ServiceResult(
+        service_name="svc",
+        input_key="key",
+        tech_results=[
+            TechResult("a", None, {"skip": True}, success=False),
+            TechResult("b", None, {"ok": True}, success=True),
+        ],
+    )
+    assert first_tech_output(result, dict, require_success=True) == {"ok": True}
+
+
+def test_first_tech_output_can_require_truthy():
+    result = ServiceResult(
+        service_name="svc",
+        input_key="key",
+        tech_results=[
+            TechResult("a", None, {}, success=True),
+            TechResult("b", None, {"ok": True}, success=True),
+        ],
+    )
+    assert first_tech_output(result, dict, require_truthy=True) == {"ok": True}
+
+
+def test_first_tech_output_returns_none_without_match():
+    result = ServiceResult(
+        service_name="svc",
+        input_key="key",
+        tech_results=[TechResult("a", None, "nope", success=True)],
+    )
+    assert first_tech_output(result, dict) is None
+
+
+def test_first_tech_output_handles_objects_without_tech_results():
+    assert first_tech_output(object(), dict) is None

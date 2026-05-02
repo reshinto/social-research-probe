@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from social_research_probe.technologies.scoring import normalize_item, score_one
+from social_research_probe.technologies.scoring import score_one
 from social_research_probe.technologies.scoring.combine import (
     DEFAULT_WEIGHTS,
     overall_score,
@@ -13,6 +13,7 @@ from social_research_probe.technologies.scoring.opportunity import opportunity_s
 from social_research_probe.technologies.scoring.trend import recency_decay, trend_score
 from social_research_probe.technologies.scoring.trust import trust_score
 from social_research_probe.utils.core.types import RawItem
+from social_research_probe.utils.pipeline.helpers import normalize_item
 
 
 class TestOverallScore:
