@@ -71,7 +71,7 @@ class ExportPackageTech(BaseTechnology[dict, dict[str, str]]):
         reports_dir = Path(data.get("reports_dir") or ".")
         reports_dir.mkdir(parents=True, exist_ok=True)
 
-        export_cfg = config.get("platforms", {}).get("youtube", {}).get("export") or {}
+        export_cfg = config.get("export") or {}
         if not export_cfg.get("enabled", True):
             return {}
 

@@ -16,9 +16,9 @@ def _minimal_report(**kwargs) -> dict:
 
 def _minimal_config(**kwargs) -> dict:
     return {
-        "platforms": {"youtube": {"max_items": 20, "enrich_top_n": 5, "recency_days": 90}},
-        "scoring": {"weights": {}},
-        "technologies": {"youtube_api": True, "whisper": False},
+        "max_items": 20,
+        "enrich_top_n": 5,
+        "recency_days": 90,
         **kwargs,
     }
 
@@ -50,9 +50,7 @@ def test_build_includes_config_values():
 def test_build_includes_technology_statuses():
     config = _minimal_config()
     out = build_methodology(_minimal_report(), config)
-    assert "youtube_api" in out
-    assert "enabled" in out
-    assert "disabled" in out
+    assert "Not available in platform-level export context" in out
 
 
 def test_build_includes_evidence_tier_distribution():
@@ -123,23 +121,22 @@ def test_build_unicode_preserved():
 
 
 def test_build_includes_comments_config():
-    config = _minimal_config()
-    config["platforms"]["youtube"]["comments"] = {
-        "enabled": True,
-        "max_videos": 5,
-        "order": "relevance",
-    }
+    config = _minimal_config(comments={"enabled": True, "max_videos": 5, "order": "relevance"})
     out = build_methodology(_minimal_report(), config)
     assert "comments" in out
     assert "max_videos" in out
 
 
 def test_build_includes_scoring_weights():
-    config = _minimal_config()
-    config["scoring"]["weights"] = {"trust": 0.5, "trend": 0.3, "opportunity": 0.2}
+    config = _minimal_config(scoring={"weights": {"trust": 0.5, "trend": 0.3, "opportunity": 0.2}})
     out = build_methodology(_minimal_report(), config)
     assert "scoring weights" in out
     assert "trust" in out
+
+
+def test_build_scoring_weights_unavailable_shows_fallback():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "Not available in platform-level export context" in out
 
 
 def test_build_stage_timings_skips_non_dict_entries():

@@ -18,8 +18,9 @@ def _minimal_report(**kwargs) -> dict:
 
 def _minimal_config(**kwargs) -> dict:
     return {
-        "platforms": {"youtube": {"max_items": 20, "enrich_top_n": 5, "recency_days": 90}},
-        "scoring": {"weights": {}},
+        "max_items": 20,
+        "enrich_top_n": 5,
+        "recency_days": 90,
         **kwargs,
     }
 
@@ -95,6 +96,8 @@ def test_build_config_snapshot_has_platform_config():
     snap = out["config_snapshot"]
     assert "youtube" in snap
     assert snap["youtube"]["max_items"] == 20
+    assert snap["youtube"]["enrich_top_n"] == 5
+    assert snap["youtube"]["recency_days"] == 90
 
 
 def test_build_has_warnings():
@@ -143,9 +146,7 @@ def test_build_does_not_mutate_inputs():
     assert paths == paths_copy
 
 
-def test_build_config_snapshot_has_scoring_weights():
-    config = _minimal_config()
-    config["scoring"]["weights"] = {"trust": 0.6, "trend": 0.2, "opportunity": 0.2}
-    out = build_run_summary(_minimal_report(), config, {})
-    assert "scoring_weights" in out["config_snapshot"]
-    assert out["config_snapshot"]["scoring_weights"]["trust"] == 0.6
+def test_build_config_snapshot_no_scoring_weights_in_flat_config():
+    """Regression: flat platform-level config snapshot omits scoring_weights (not in platform scope)."""
+    out = build_run_summary(_minimal_report(), _minimal_config(), {})
+    assert "scoring_weights" not in out["config_snapshot"]

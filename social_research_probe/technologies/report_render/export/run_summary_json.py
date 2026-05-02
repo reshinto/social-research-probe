@@ -35,14 +35,12 @@ def _corroboration_summary(items: list[dict]) -> dict[str, int]:
 
 
 def _config_snapshot(config: dict) -> dict:
-    yt = config.get("platforms", {}).get("youtube") or {}
-    weights = config.get("scoring", {}).get("weights") or {}
-    snapshot: dict = {}
-    if yt:
-        snapshot["youtube"] = {k: v for k, v in yt.items() if not isinstance(v, dict)}
-    if weights:
-        snapshot["scoring_weights"] = dict(weights)
-    return snapshot
+    platform_keys = {
+        k: config[k]
+        for k in ("max_items", "enrich_top_n", "recency_days", "comments", "export")
+        if k in config
+    }
+    return {"youtube": platform_keys} if platform_keys else {}
 
 
 def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]) -> dict:

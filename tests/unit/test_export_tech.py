@@ -14,21 +14,18 @@ def _run(coro):
 
 def _make_data(tmp_path: Path, export_cfg: dict | None = None) -> dict:
     config: dict = {
-        "platforms": {
-            "youtube": {
-                "export": export_cfg
-                if export_cfg is not None
-                else {
-                    "enabled": True,
-                    "sources_csv": True,
-                    "comments_csv": True,
-                    "methodology_md": True,
-                    "run_summary_json": True,
-                }
-            }
+        "max_items": 20,
+        "enrich_top_n": 5,
+        "recency_days": 90,
+        "export": export_cfg
+        if export_cfg is not None
+        else {
+            "enabled": True,
+            "sources_csv": True,
+            "comments_csv": True,
+            "methodology_md": True,
+            "run_summary_json": True,
         },
-        "scoring": {"weights": {}},
-        "technologies": {},
     }
     return {
         "report": {"topic": "test", "platform": "youtube", "items_top_n": []},
@@ -143,3 +140,42 @@ def test_execute_missing_optional_config(tmp_path: Path):
         "methodology_md",
         "run_summary_json",
     }
+
+
+def test_flat_platform_config_enabled_false_suppresses_all_artifacts(tmp_path: Path):
+    """Regression: flat platform-level config shape used; full AppConfig nesting would silently ignore this flag."""
+    data = {
+        "report": {"topic": "test", "platform": "youtube", "items_top_n": []},
+        "config": {"export": {"enabled": False}},
+        "stem": "regression",
+        "reports_dir": tmp_path,
+    }
+    paths = _run(ExportPackageTech()._execute(data))
+    assert paths == {}
+    artifact_extensions = {".csv", ".md", ".json"}
+    written = [f for f in tmp_path.iterdir() if f.suffix in artifact_extensions]
+    assert written == []
+
+
+def test_flat_platform_config_per_artifact_flags_respected(tmp_path: Path):
+    """Regression: per-artifact flags work with flat platform-level config, not nested AppConfig."""
+    data = {
+        "report": {"topic": "test", "platform": "youtube", "items_top_n": []},
+        "config": {
+            "max_items": 10,
+            "export": {
+                "enabled": True,
+                "sources_csv": False,
+                "comments_csv": True,
+                "methodology_md": False,
+                "run_summary_json": True,
+            },
+        },
+        "stem": "regression",
+        "reports_dir": tmp_path,
+    }
+    paths = _run(ExportPackageTech()._execute(data))
+    assert "sources_csv" not in paths
+    assert "methodology_md" not in paths
+    assert "comments_csv" in paths
+    assert "run_summary_json" in paths
