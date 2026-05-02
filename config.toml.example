@@ -85,6 +85,23 @@ max_comments_per_video = 20
 # top-liked comments; "time" returns newest first.
 order = "relevance" # relevance | time
 
+[platforms.youtube.export]
+# Enables export artifact generation (CSV, markdown, JSON) alongside the HTML
+# report after each research run.
+enabled = true
+
+# Write a sources.csv with one row per ranked item (scores, evidence tier, etc.).
+sources_csv = true
+
+# Write a comments.csv with one row per fetched comment linked to its source.
+comments_csv = true
+
+# Write a methodology.md documenting the pipeline configuration and coverage.
+methodology_md = true
+
+# Write a run_summary.json with machine-readable run metadata and artifact paths.
+run_summary_json = true
+
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
@@ -102,6 +119,7 @@ structured_synthesis = true  # Ask an LLM for structured report sections.
 report = true                # Render the HTML report.
 narration = true             # Render audio narration through Voicebox or fallback TTS.
 comments = true              # Fetch YouTube comments for top-scored videos.
+export = true                # Write export artifacts (CSV, MD, JSON) alongside the HTML report.
 
 [services.youtube.sourcing]
 # Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
@@ -164,6 +182,9 @@ html = true
 
 # Enables audio report generation through Voicebox or local fallback TTS.
 audio = true
+
+# Enables export artifact generation alongside the HTML report.
+export = true
 
 [services.corroborate]
 # Internal service gate still read by corroboration commands and health checks.
@@ -268,6 +289,10 @@ ai_slop_detector = true
 # Enables YouTube comment fetching technology via Data API v3. Requires a
 # YouTube API key. Fetches top-level comments for top-scored videos.
 youtube_comments = true
+
+# Enables the export package technology for writing CSV, markdown, and JSON
+# artifacts alongside the HTML report.
+export_package = true
 
 [tunables]
 # Transcript-vs-URL summary divergence threshold that triggers a warning.
