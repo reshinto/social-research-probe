@@ -1,25 +1,23 @@
-%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","actorBkg":"#dbeafe","actorBorder":"#1d4ed8","actorTextColor":"#111111","activationBkgColor":"#fef3c7","activationBorderColor":"#d97706","noteBkgColor":"#dcfce7","noteBorderColor":"#15803d"}}}%%
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 sequenceDiagram
-  participant U as User
-  participant C as CLI
-  participant O as Orchestrator
+  participant U as Operator
+  participant C as CLI parser
+  participant R as research command
+  participant O as orchestrator
   participant P as YouTubePipeline
   participant S as Services
   participant T as Technologies
-  participant D as DataDir
-  U->>C: srp research youtube "topic" "purposes"
-  C->>O: parsed platform, topic, purposes, flags
+  participant D as Data directory
+  U->>C: srp research youtube TOPIC PURPOSES
+  C->>R: argparse Namespace
+  R->>R: parse platform, topic, purposes
+  R->>O: ParsedRunResearch
   O->>P: PipelineState
-  P->>S: fetch, classify, score
-  S->>T: YouTube API and scoring adapters
-  T-->>S: normalized items or isolated failures
-  S-->>P: ranked top-N
-  P->>S: transcript, comments, summary, claims, corroborate
-  S->>T: transcript, LLM, comment, claim, search adapters
-  T-->>S: evidence, summaries, claims, verdicts
-  S-->>P: enriched stage outputs
-  P->>S: narratives, synthesis, report, export, persist
-  S->>D: charts, HTML, CSV, JSON, SQLite rows
-  P-->>O: report metadata
-  O-->>C: report path or serve command
-  C-->>U: operator-facing path
+  P->>S: stage service batches
+  S->>T: technology execute calls
+  T-->>S: TechResult output or None
+  S-->>P: ServiceResult
+  P->>D: reports exports sqlite cache
+  P-->>O: state.outputs.report
+  O-->>R: report dictionary
+  R-->>U: report path

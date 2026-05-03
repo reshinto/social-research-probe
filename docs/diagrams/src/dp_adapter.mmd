@@ -1,6 +1,11 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Vendor["vendor CLI/API shape"] --> Adapter["technology adapter"] --> Internal["internal result type"] --> Service["service orchestration"]
+  Service["service"] --> Interface["BaseTechnology.execute"] --> Adapter["provider adapter"] --> External["API CLI file system"]
+  Adapter --> Output["project-shaped output"]
+  class Service process;
+  class Interface,Adapter analysis;
+  class External external;
+  class Output output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -9,7 +14,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Vendor external;
-  class Adapter process;
-  class Internal config;
-  class Service output;

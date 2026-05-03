@@ -1,10 +1,12 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Caller["caller"] --> Contract["runner/provider interface"]
-  Contract --> A["Claude"]
-  Contract --> B["Gemini"]
-  Contract --> C["Codex"]
-  Contract --> D["Exa/Brave/Tavily"]
+  Config["config choice"] --> Strategy["selected provider"]
+  Strategy --> Heuristic["heuristic"]
+  Strategy --> LLM["llm"]
+  Strategy --> Hybrid["hybrid"]
+  class Config config;
+  class Strategy process;
+  class Heuristic,LLM,Hybrid external;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -13,6 +15,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Caller input;
-  class Contract process;
-  class A,B,C,D external;

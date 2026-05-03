@@ -1,11 +1,13 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Cache["cache lookup"] --> Hit{"hit?"}
-  Hit -- yes --> Reuse["reuse JSON/string/PNG path"]
-  Hit -- no --> Cheap["local scoring, stats, charts"]
-  Cheap --> Needed{"LLM needed?"}
-  Needed -- no --> Report["report"]
-  Needed -- yes --> TopN["only top-N items"] --> Runner["runner CLI"] --> Store["write cache"] --> Report
+  Run["research run"] --> MaxItems["max_items"] --> TopN["enrich_top_n"]
+  TopN --> Gates["stage/service/technology gates"] --> Cache["technology cache"]
+  Cache --> Providers["YouTube runners search TTS"]
+  Providers --> Outputs["report exports SQLite"]
+  class Run input;
+  class MaxItems,TopN,Gates,Cache process;
+  class Providers external;
+  class Outputs output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,8 +16,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Cache,Store config;
-  class Hit,Needed analysis;
-  class Reuse,Cheap,TopN process;
-  class Runner external;
-  class Report output;

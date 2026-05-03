@@ -1,12 +1,14 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
-flowchart LR
-  Need["Need generated text or JSON"] --> Enabled{"llm service enabled?"}
-  Enabled -- no --> Skip["skip LLM task"]
-  Enabled -- yes --> Runner["configured llm.runner"]
-  Runner --> Health{"CLI on PATH?"}
-  Health -- yes --> Run["run prompt with timeout"]
-  Health -- no --> Fallback["try registered fallback runners"]
-  Fallback --> Fail["return empty or validation error by caller"]
+flowchart TB
+  Config["llm.runner"] --> Preferred["preferred runner"]
+  TechFlags["technologies.*"] --> Registry["enabled runner list"]
+  Preferred --> Order["preferred then fallbacks"]
+  Registry --> Order
+  Order --> Health["health_check"] --> Run["run prompt with schema"]
+  Run --> JSON["parsed JSON output"]
+  class Config,TechFlags config;
+  class Preferred,Registry,Order,Health,Run process;
+  class JSON output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -15,8 +17,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Need input;
-  class Enabled,Health analysis;
-  class Skip,Run,Fallback process;
-  class Runner external;
-  class Fail risk;

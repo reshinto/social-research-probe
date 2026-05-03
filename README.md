@@ -1,81 +1,82 @@
 # social-research-probe
 
-**Local-first social-media research CLI and bundled `/srp` operator skill**
-
 [![CI](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/social-research-probe)](https://pypi.org/project/social-research-probe/)
 [![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://pypi.org/project/social-research-probe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/reshinto/social-research-probe/blob/main/LICENSE)
 
-`srp` turns a research question into an auditable evidence packet. It fetches platform results, classifies source type, scores sources, enriches the strongest items, extracts and corroborates claims when providers are available, clusters narratives, computes statistics, renders charts, writes reports, exports CSV/Markdown/JSON artifacts, and can persist the run to SQLite.
+`social-research-probe` installs the `srp` command. The command builds an evidence packet from a social-media research question: it fetches source items, ranks them, enriches the strongest sources, extracts claims, corroborates those claims when providers are configured, clusters narratives, renders reports, exports data files, and can persist the run to SQLite.
 
-YouTube is the only concrete source adapter in the current codebase. The CLI also exposes an `all` platform that runs every registered concrete platform; today that means YouTube.
+The source code currently registers two platform keys:
+
+| Key       | Meaning                                                                      |
+| --------- | ---------------------------------------------------------------------------- |
+| `youtube` | The concrete YouTube pipeline in `social_research_probe/platforms/youtube`.  |
+| `all`     | A meta-pipeline that runs every concrete pipeline; today that means YouTube. |
 
 ## Quickstart
 
 ```bash
-srp research youtube "what are researchers saying about model collapse?" "latest-news"
+srp setup
+srp config set-secret youtube_api_key
+srp research youtube "AI agents" "latest-news,trends"
 ```
 
-If you omit the platform, `srp research` targets `all`:
+For a no-network verification run:
 
 ```bash
-srp research "what are researchers saying about model collapse?" "latest-news"
+srp --data-dir /tmp/srp-demo demo-report
 ```
 
-Install, configure a YouTube key, and choose optional LLM/corroboration providers with [docs/installation.md](docs/installation.md).
+`demo-report` writes a synthetic HTML report, export files, and `srp.db` under the selected data directory.
 
-## Pipeline
+## Runtime Flow
 
 ![Research data flow](docs/diagrams/data-flow.svg)
 
-One YouTube run follows this order:
+A YouTube run follows the stage order defined by `YouTubePipeline.stages()`:
 
-1. Parse topic and purpose.
-2. Fetch YouTube items and engagement metrics.
-3. Classify source type: `primary`, `secondary`, `commentary`, or `unknown`.
-4. Score and rank by trust, trend, opportunity, and overall score.
-5. Run transcripts, statistics, and chart rendering after scoring.
-6. Fetch comments, build text surrogates, and summarize top-N items.
-7. Extract claims, corroborate them, and cluster narratives.
-8. Generate synthesis, assemble the report packet, and attach structured synthesis.
-9. Render HTML/Markdown, optional narration, export files, and SQLite persistence.
+1. `fetch`: search YouTube, hydrate metadata, and compute engagement metrics.
+2. `classify`: assign `primary`, `secondary`, `commentary`, or `unknown` source classes.
+3. `score`: compute trust, trend, opportunity, and overall scores.
+4. `transcript`, `stats`, `charts`: run concurrently after scoring.
+5. `comments`: fetch top-level comments for top-ranked videos.
+6. `summary`: build text surrogates and summarize top-ranked items.
+7. `claims`: extract structured claims from primary text.
+8. `corroborate`: check extracted claims with configured providers.
+9. `narratives`: cluster related claims into narrative groups.
+10. `synthesis`: produce the research synthesis.
+11. `assemble`: build the report dictionary.
+12. `structured_synthesis`: attach structured report sections if available.
+13. `report` and `narration`: render HTML and optional audio in parallel.
+14. `export`: write CSV, Markdown, and JSON artifacts.
+15. `persist`: write the run to SQLite.
 
-The design keeps cheap deterministic work first. LLM calls and paid/search-provider work are gated by config and concentrated on top-ranked items.
-
-## Common commands
+## Main Commands
 
 ```bash
-srp setup
-srp config path
+srp research [platform] TOPIC PURPOSES
+srp research [platform] "natural language query"
 srp config show
-srp config set-secret youtube_api_key
-srp config set llm.runner gemini
-srp config set technologies.gemini true
-srp research youtube "AI agents" "latest-news,trends" --no-shorts
-srp demo-report
+srp config path
+srp config set KEY VALUE
+srp config set-secret NAME
+srp db init
 srp db stats
 srp claims list --needs-review
-srp serve-report --report ~/.social-research-probe/reports/report.html
+srp serve-report --report PATH_TO_HTML
 ```
+
+The command parser accepts the platform as the first `research` argument only when it matches a registered pipeline key. If it is omitted, the parser uses `all`.
 
 ## Documentation
 
-Start with [docs/README.md](docs/README.md). The docs are organized as a curriculum:
+Start with [docs/README.md](docs/README.md). The docs were written from the source tree: CLI parser, config defaults, pipeline stages, service and technology base classes, persistence schema, export package, tests, and skill bundle.
 
-| Read | Purpose |
-| --- | --- |
-| [Objective](docs/objective.md) and [How it works](docs/how-it-works.md) | Understand the product and one end-to-end run. |
-| [Installation](docs/installation.md), [Usage](docs/usage.md), and [Commands](docs/commands.md) | Install and operate the CLI. |
-| [Configuration](docs/configuration.md), [Data directory](docs/data-directory.md), and [Security](docs/security.md) | Control local state, secrets, providers, and outputs. |
-| [Architecture](docs/architecture.md), [Module reference](docs/module-reference.md), and [Design patterns](docs/design-patterns.md) | Learn the codebase boundaries. |
-| [Python guide](docs/python-language-guide.md) | Learn enough Python to work in this repository. |
-| [Adding a platform](docs/adding-a-platform.md), [Adding a service](docs/adding-a-service.md), and [Adding a technology](docs/adding-a-technology.md) | Extend the system safely. |
+## Architecture In One Paragraph
 
-## Architecture in one paragraph
-
-The CLI parses commands and dispatches to command modules. Research commands build a `PipelineState` and send it to the platform orchestrator. Platform stages decide order and source-specific behavior. Services coordinate one reusable task and return `ServiceResult` objects. Technologies are atomic adapters or algorithms behind feature flags and cache. Utilities hold shared config, state, cache, display, parsing, report, and persistence helpers.
+`cli/parsers.py` builds the command surface, `cli/handlers.py` dispatches parsed commands into `commands/*`, and `commands/research.py` builds a `ParsedRunResearch`. The orchestrator creates `PipelineState` and runs a registered platform pipeline. Platform stages decide order and state keys. Services own batch execution and normalization. Technologies own concrete provider calls, local algorithms, renderers, and persistence adapters. Utilities hold shared types, cache, config, state, display, claims, narratives, report, and IO helpers.
 
 ## License
 
-MIT © 2026 Terence. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

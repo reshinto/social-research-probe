@@ -1,10 +1,10 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Create["create platforms/<name>/"] --> Stages["define stage classes and pipeline order"]
-  Stages --> Register["register pipeline in the orchestrator"]
-  Register --> Config["add platform, stage, service, and technology gates"]
-  Config --> Tests["unit, integration, and docs contract tests"]
-  Tests --> Docs["document behavior and diagrams"]
+  Dir["create platforms/name"] --> Stages["implement stages"] --> Registry["register pipeline"] --> Config["add config gates"] --> Tests["tests"] --> Docs["docs diagrams"]
+  class Dir input;
+  class Stages,Registry,Tests process;
+  class Config config;
+  class Docs output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -13,7 +13,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Create input;
-  class Stages,Register,Tests process;
-  class Config config;
-  class Docs output;

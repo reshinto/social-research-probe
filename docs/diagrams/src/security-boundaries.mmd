@@ -1,12 +1,13 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
-flowchart LR
-  User["local user"] --> DataDir["data directory"]
-  DataDir --> Config["config.toml non-secret"]
-  DataDir --> Secrets["secrets.toml chmod 0600"]
-  Env["SRP_* env vars"] --> SecretRead["secret lookup"]
-  Secrets --> SecretRead
-  SecretRead --> Vendors["YouTube/search providers"]
-  CLI["runner CLIs"] --> Vendors
+flowchart TB
+  Secrets["secrets.toml or SRP_*"] --> Providers["external providers"]
+  Prompts["source text prompts claims"] --> Runners["runner CLIs"]
+  Local["data dir"] --> Reports["reports exports db"]
+  Reports --> Share["operator decides sharing"]
+  class Secrets,Local config;
+  class Prompts process;
+  class Providers,Runners external;
+  class Reports,Share output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -15,7 +16,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class User input;
-  class DataDir,Config,Secrets,Env config;
-  class SecretRead process;
-  class CLI,Vendors external;

@@ -1,13 +1,16 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
-flowchart TB
-  Config["llm.runner"] --> Registry["LLM runner registry"]
-  Registry --> Claude["Claude CLI web search"]
-  Registry --> Gemini["Gemini CLI grounding"]
-  Registry --> Codex["Codex CLI search"]
-  Claude --> Contract["AgenticSearchResult"]
-  Gemini --> Contract
-  Codex --> Contract
-  Contract --> Corroboration["llm_search provider"]
+flowchart LR
+  Claim["claim text"] --> Query["search query"] --> RunnerProvider["LLM search provider"]
+  RunnerProvider --> Registry["runner registry"]
+  Registry --> Claude["Claude search"]
+  Registry --> Gemini["Gemini search"]
+  Registry --> Codex["Codex search"]
+  Claude --> Citations["citations"]
+  Gemini --> Citations
+  Codex --> Citations
+  class Claim input;
+  class Query,RunnerProvider,Registry,Citations process;
+  class Claude,Gemini,Codex external;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -16,6 +19,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Config config;
-  class Registry,Contract,Corroboration process;
-  class Claude,Gemini,Codex external;

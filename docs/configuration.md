@@ -1,136 +1,57 @@
 [Back to docs index](README.md)
 
+
 # Configuration
+
+`config.py` owns non-secret runtime configuration. It starts from `DEFAULT_CONFIG`, merges `config.toml` from the active data directory when present, and exposes typed accessors through `Config`.
 
 ![Configuration lifecycle](diagrams/config_lifecycle.svg)
 
-Configuration starts with `DEFAULT_CONFIG` in `social_research_probe/config.py`, then merges `config.toml` from the active data directory. Secrets are separate and are read from environment variables or `secrets.toml`.
-
-## Data Directory Resolution
-
-The active data directory is resolved before commands run:
-
-1. `--data-dir PATH`
-2. `SRP_DATA_DIR`
-3. `.skill-data` in the current working directory, only if that directory already exists
-4. `~/.social-research-probe`
-
-Use `srp config path` to see the active `config.toml` and `secrets.toml` paths.
-
 ## Main Sections
 
-| Section | Controls |
+| Section | Source use |
 | --- | --- |
-| `[llm]` | Runner name, timeout, and runner-specific CLI flags. |
-| `[llm.claude]`, `[llm.gemini]`, `[llm.codex]`, `[llm.local]` | Runner binary/flag settings used by subprocess adapters. |
-| `[corroboration]` | Provider mode and claim caps. |
-| `[platforms.youtube]` | YouTube search recency, max results, top-N enrichment, comments, claims, narratives, and export options. |
-| `[scoring.weights]` | Optional global weights for `trust`, `trend`, and `opportunity`. |
-| `[stages.youtube]` | Whole-stage gates. |
-| `[services.youtube.*]` | Service gates and service-level options, including source classification provider. |
-| `[services.corroborate]`, `[services.enrich]`, `[services.persistence]` | Compatibility/service gates still read by commands and service selection. |
-| `[technologies]` | Concrete provider, renderer, algorithm, runner, and persistence gates. |
+| `[llm]` | Selects `none`, `claude`, `gemini`, `codex`, or `local`; stores timeout and runner flags. |
+| `[corroboration]` | Selects provider and max claim budgets. |
+| `[platforms.youtube]` | YouTube limits, comments, claims, narratives, export options. |
+| `[scoring.weights]` | Optional global trust/trend/opportunity weights. |
+| `[stages.youtube]` | Highest-level stage gates. |
+| `[services]` | Service-level gates read by `BaseService.is_enabled()`. |
+| `[technologies]` | Flat technology gates read by `BaseTechnology.execute()`. |
 | `[tunables]` | Summary divergence threshold and per-item summary word target. |
-| `[debug]` | Runtime logging gates. |
-| `[voicebox]` | Optional Voicebox profile and API base URL. |
-| `[database]` | SQLite enablement, path, and text-persistence policy. |
+| `[debug]` | Technology log control. |
+| `[voicebox]` | HTML narration and playback settings. |
+| `[database]` | SQLite path and text-persistence settings. |
 
 ## Stage Gates
 
-The current YouTube stage gates are:
+Current YouTube stage gates are:
 
-```toml
-[stages.youtube]
-fetch = true
-classify = true
-score = true
-transcript = true
-stats = true
-charts = true
-comments = true
-summary = true
-claims = true
-corroborate = true
-narratives = true
-synthesis = true
-assemble = true
-structured_synthesis = true
-report = true
-narration = true
-export = true
-persist = true
+```text
+fetch, classify, score, transcript, summary, corroborate, stats, charts,
+synthesis, assemble, structured_synthesis, report, narration, comments,
+claims, narratives, export, persist
 ```
 
-A disabled stage publishes an empty or pass-through output when downstream stages need a stable shape.
+If a stage gate is false, the stage skips before service or technology work.
 
-## Service And Technology Gates
+## Service Gates
 
-A stage can run only if its stage gate allows it. Services and technologies then apply their own gates.
+Service classes declare dotted `enabled_config_key` values such as `services.youtube.reporting.html`. The current compatibility lookup checks the final leaf name against known service names. Unknown service names are disabled by default.
 
-Examples:
+## Technology Gates
 
-```bash
-srp config set llm.runner gemini
-srp config set technologies.gemini true
-srp config set platforms.youtube.enrich_top_n 3
-srp config set technologies.tavily false
-srp config set stages.youtube.persist false
-```
-
-Use the narrowest gate that matches your intent:
-
-| Goal | Prefer |
-| --- | --- |
-| Skip one provider | `technologies.<provider> = false` |
-| Skip a service family | `services.youtube.<group>.<service> = false` |
-| Skip a whole pipeline step | `stages.youtube.<stage> = false` |
-| Disable all hosted LLM text generation | `llm.runner = "none"` |
-| Disable SQLite writes | `[database].enabled = false` or `stages.youtube.persist = false` |
+Technology gates are flat names under `[technologies]`, for example `youtube_search`, `llm_ensemble`, `corroboration_host`, `export_package`, and `sqlite_persist`. Unknown technology names are disabled.
 
 ## Secrets
 
-Secrets are resolved by name. Environment variables win over `secrets.toml`.
+`commands/config.py` maps logical secret names to environment variables by uppercasing and prefixing `SRP_`.
 
-| Secret | Environment variable | Used by |
-| --- | --- | --- |
-| `youtube_api_key` | `SRP_YOUTUBE_API_KEY` | YouTube search, metadata, and comments. |
-| `brave_api_key` | `SRP_BRAVE_API_KEY` | Brave corroboration provider. |
-| `exa_api_key` | `SRP_EXA_API_KEY` | Exa corroboration provider. |
-| `tavily_api_key` | `SRP_TAVILY_API_KEY` | Tavily corroboration provider. |
+| Logical name | Environment variable |
+| --- | --- |
+| `youtube_api_key` | `SRP_YOUTUBE_API_KEY` |
+| `exa_api_key` | `SRP_EXA_API_KEY` |
+| `brave_api_key` | `SRP_BRAVE_API_KEY` |
+| `tavily_api_key` | `SRP_TAVILY_API_KEY` |
 
-Set secrets without echoing values in shell history:
-
-```bash
-srp config set-secret youtube_api_key
-```
-
-Or pipe from a secret manager:
-
-```bash
-printf "%s" "$SRP_YOUTUBE_API_KEY" | srp config set-secret youtube_api_key --from-stdin
-```
-
-Check what is required before a run:
-
-```bash
-srp config check-secrets --needed-for research --platform youtube --output json
-```
-
-## Runner Configuration
-
-Hosted runner CLIs authenticate outside `srp`; `srp` only shells out to the configured binary and parses output.
-
-```toml
-[llm]
-runner = "codex"
-timeout_seconds = 60
-
-[llm.codex]
-binary = "codex"
-extra_flags = ["--model", "gpt-5.4"]
-
-[technologies]
-codex = true
-```
-
-For a local runner, set `llm.runner = "local"`, enable `technologies.local`, and set `SRP_LOCAL_LLM_BIN` to a wrapper that reads a prompt from stdin and writes plain text to stdout.
+Secret file values live in `[secrets]` in `secrets.toml`. Environment variables win over file values.

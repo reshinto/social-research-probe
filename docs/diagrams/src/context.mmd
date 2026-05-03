@@ -1,11 +1,16 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Human["Human researcher"] --> CLI["srp CLI or Claude Code skill"]
-  CLI --> Local["Local Python pipeline"]
-  Local --> YouTube["YouTube metadata and transcripts"]
-  Local --> Providers["Optional corroboration providers"]
-  Local --> Runners["Optional LLM runner CLIs"]
-  Local --> Reports["Markdown, HTML, charts, cache"]
+  User["Operator"] --> CLI["srp CLI"]
+  CLI --> Data["Local data dir"]
+  CLI --> YouTube["YouTube Data API and transcripts"]
+  CLI --> Runners["LLM runner CLIs"]
+  CLI --> Search["Exa Brave Tavily"]
+  CLI --> Voicebox["Voicebox or macOS TTS"]
+  CLI --> Reports["HTML CSV JSON SQLite"]
+  class User input;
+  class CLI process;
+  class Data,Reports output;
+  class YouTube,Runners,Search,Voicebox external;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,7 +19,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Human input;
-  class CLI,Local process;
-  class YouTube,Providers,Runners external;
-  class Reports output;

@@ -1,14 +1,14 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  ReportDict["assembled report dict"] --> Markdown["report.md"]
-  ReportDict --> HTML["reports/*.html"]
-  ReportDict --> Charts["charts/*.png"]
-  ReportDict --> CSV["sources, comments, claims, narratives CSV"]
-  ReportDict --> SummaryJSON["run_summary.json"]
-  ReportDict --> Methodology["methodology.md"]
-  ReportDict --> DB["srp.db persistence"]
-  HTML --> Serve["srp serve-report"]
-  ReportDict --> Audio["optional Voicebox/mac TTS narration"]
+  Report["report dict"] --> HTML["HTML"]
+  Report --> CSV["sources comments claims narratives CSV"]
+  Report --> Method["methodology.md"]
+  Report --> Summary["run_summary.json"]
+  Report --> DB["SQLite"]
+  HTML --> Serve["serve-report"]
+  class Report input;
+  class HTML,CSV,Method,Summary,DB output;
+  class Serve process;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -17,7 +17,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class ReportDict input;
-  class Markdown,HTML,Charts,CSV,SummaryJSON,Methodology,DB output;
-  class Serve process;
-  class Audio external;
