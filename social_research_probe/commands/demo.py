@@ -21,7 +21,8 @@ import sys
 from pathlib import Path
 
 from social_research_probe.commands._demo_fixtures import build_demo_report
-from social_research_probe.config import load_active_config
+from social_research_probe.config import Config, load_active_config
+from social_research_probe.services.persistence import PersistenceService
 from social_research_probe.services.reporting.export import ExportService
 from social_research_probe.services.reporting.report import ReportService
 from social_research_probe.utils.core.exit_codes import ExitCode
@@ -64,6 +65,27 @@ async def _run_exports(
     )
 
 
+async def _persist_if_enabled(report: dict, cfg: Config) -> None:
+    """Persist demo report to SQLite when database persistence is enabled."""
+    db_cfg: dict = cfg.raw.get("database") or {}
+    if not db_cfg.get("enabled", True):
+        return
+    payload = {
+        "report": report,
+        "db_path": cfg.database_path,
+        "config": cfg.raw,
+        "persist_transcript_text": db_cfg.get("persist_transcript_text", False),
+        "persist_comment_text": db_cfg.get("persist_comment_text", True),
+    }
+    results = await PersistenceService().execute_batch([payload])
+    for r in results:
+        for tr in r.tech_results:
+            if not tr.success:
+                report.setdefault("warnings", []).append(
+                    f"persistence: {tr.error or 'sqlite persist failed'}"
+                )
+
+
 def _print_paths(report_path: str, export_paths: dict[str, str]) -> None:
     """Write report_path then each export path to stdout, one per line."""
     sys.stdout.write(f"{report_path}\n")
@@ -85,5 +107,6 @@ def run(args: argparse.Namespace) -> int:
     platform_cfg = cfg.platform_defaults("youtube")
     export_paths = asyncio.run(_run_exports(report, platform_cfg, html_path.stem, html_path.parent))
     report["export_paths"] = export_paths
+    asyncio.run(_persist_if_enabled(report, cfg))
     _print_paths(str(html_path), export_paths)
     return ExitCode.SUCCESS
