@@ -1,20 +1,26 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 sequenceDiagram
     participant Pipeline as Platform Pipeline
-    participant Service as Service (e.g., Enriching)
-    participant TechA as Tech A (e.g., Vendor API)
-    participant TechB as Tech B (e.g., Local Model)
+    participant Stage as Stage
+    participant Service as BaseService subclass
+    participant TechA as Tech A
+    participant TechB as Tech B
 
-    Pipeline->>Service: execute_batch([item1, item2])
+    Pipeline->>Stage: run(PipelineState)
+    Stage->>Service: execute_batch([item1, item2])
     activate Service
     
     rect rgb(240, 240, 240)
-        Note over Service, TechB: Concurrent execution for each item
+        Note over Service, TechB: BaseService owns execute_batch and execute_one
+        Service->>Service: check service gate and shape technology input
         Service->>TechA: execute(item1)
         Service->>TechB: execute(item1)
+        Note over TechA, TechB: BaseTechnology checks [technologies] and cache
         TechA-->>Service: Output or None (Error)
         TechB-->>Service: Output or None (Error)
+        Service->>Service: execute_service(data, result)
     end
     
-    Service-->>Pipeline: list[ServiceResult]
+    Service-->>Stage: list[ServiceResult]
     deactivate Service
+    Stage-->>Pipeline: updated PipelineState

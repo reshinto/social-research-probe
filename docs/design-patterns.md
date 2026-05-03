@@ -19,12 +19,12 @@ How it is applied:
 ```python
 for group in self.stages():
     if len(group) == 1:
-        state = await group[0].execute(state)
+        state = await group[0].run(state)
     else:
-        await asyncio.gather(*(s.execute(state) for s in group))
+        await asyncio.gather(*(s.run(state) for s in group))
 ```
 
-The important idea is that stages communicate through `PipelineState`, not through hidden globals. This makes a run inspectable: fetched items, scored items, summaries, statistics, charts, and final reports are separate outputs.
+`BaseStage.run()` wraps `execute()` with stage-level cache-bypass setup and timing. The important idea is that stages communicate through `PipelineState`, not through hidden globals. This makes a run inspectable: fetched items, classified items, scored items, comments, summaries, claims, corroboration, narratives, statistics, charts, exports, and final reports are separate outputs.
 
 ## Adapter
 
@@ -85,6 +85,8 @@ Why use it: each technology call can fail independently while the service return
 What if we did not use it: one provider error could abort unrelated work, or failures would be hidden in logs only.
 
 The result-object pattern is especially important for research workflows because partial output is still useful. If chart rendering fails, the report can still include scored items and summaries. If one corroboration provider fails, another provider may still return evidence. Structured results make those partial successes visible.
+
+Current service subclasses implement `_get_technologies()` and `execute_service()`. They do not override `execute_batch()` or `execute_one()`; `BaseService` owns that lifecycle so every service handles concurrency, timing, disabled gates, and technology failures consistently.
 
 ## Fake seam for tests
 

@@ -1,15 +1,16 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  DataDir["SRP_DATA_DIR or ~/.social-research-probe"] --> Cache["cache/"]
-  Cache --> Transcripts["transcripts"]
-  Cache --> Whisper["whisper"]
-  Cache --> Summaries["summaries"]
-  Cache --> Corroboration["corroboration"]
-  Cache --> Classification["classification"]
-  Cache --> Stages["stages/fetch score enrich analyze"]
+  DataDir["SRP_DATA_DIR or ~/.social-research-probe"] --> Config["config.toml and secrets.toml"]
+  DataDir --> State["topics.json, purposes.json, pending_suggestions.json"]
+  DataDir --> Cache["cache/technologies/"]
+  Cache --> Fetch["youtube_search and youtube_hydrate"]
+  Cache --> Text["youtube_transcript_api, llm_ensemble, llm_synthesis"]
+  Cache --> Evidence["classifying, claim_extractor, corroboration_host"]
+  Cache --> Analysis["scoring_compute, stats_per_target, charts_suite"]
   DataDir --> Charts["charts/*.png"]
-  DataDir --> Reports["reports/ and report.md"]
-  DataDir --> State["topics, purposes, pending suggestions"]
+  DataDir --> Reports["reports/*.html"]
+  Reports --> Exports["*-sources.csv, *-claims.csv, *-narratives.csv, *-run_summary.json"]
+  DataDir --> DB["srp.db plus SQLite WAL files"]
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -18,7 +19,7 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class DataDir,Cache,State config;
-  class Transcripts,Whisper,Summaries,Corroboration,Classification,Stages process;
+  class DataDir,Config,Cache,State config;
+  class Fetch,Text,Evidence,Analysis process;
   class Charts analysis;
-  class Reports output;
+  class Reports,Exports,DB output;

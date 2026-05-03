@@ -3,6 +3,10 @@ flowchart LR
   ReportDict["assembled report dict"] --> Markdown["report.md"]
   ReportDict --> HTML["reports/*.html"]
   ReportDict --> Charts["charts/*.png"]
+  ReportDict --> CSV["sources, comments, claims, narratives CSV"]
+  ReportDict --> SummaryJSON["run_summary.json"]
+  ReportDict --> Methodology["methodology.md"]
+  ReportDict --> DB["srp.db persistence"]
   HTML --> Serve["srp serve-report"]
   ReportDict --> Audio["optional Voicebox/mac TTS narration"]
 
@@ -14,6 +18,6 @@ flowchart LR
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
   class ReportDict input;
-  class Markdown,HTML,Charts output;
+  class Markdown,HTML,Charts,CSV,SummaryJSON,Methodology,DB output;
   class Serve process;
   class Audio external;

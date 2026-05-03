@@ -2,10 +2,12 @@
 flowchart TB
   CLI["cli/parsers.py and handlers.py"] --> Commands["commands/*"]
   Commands --> Orchestrator["platforms/orchestrator.py"]
-  Orchestrator --> Pipeline["platforms/youtube/pipeline.py"]
-  Pipeline --> Services["services/* orchestration"]
+  Orchestrator --> Pipeline["platforms/youtube/__init__.py"]
+  Pipeline --> Stages["platforms/youtube/*_stage.py"]
+  Stages --> Services["services/* orchestration"]
   Services --> Technologies["technologies/* adapters and pure algorithms"]
-  Services --> Utils["utils/* state, cache, IO, display"]
+  Technologies --> Utils["utils/* state, cache, IO, display"]
+  Technologies --> Persistence["technologies/persistence/sqlite/*"]
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,7 +16,7 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class CLI,Commands,Orchestrator,Pipeline process;
+  class CLI,Commands,Orchestrator,Pipeline,Stages process;
   class Services analysis;
-  class Technologies external;
+  class Technologies,Persistence external;
   class Utils config;
