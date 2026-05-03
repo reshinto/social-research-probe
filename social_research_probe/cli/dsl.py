@@ -11,6 +11,27 @@ from social_research_probe.utils.core.errors import ValidationError
 
 
 def _take_quoted(src: str, pos: int) -> tuple[str, int]:
+    """Read one quoted token from the CLI mini-DSL.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        src: Quoted CLI DSL string being parsed.
+        pos: Character offset where the quoted token should start.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _take_quoted(
+                src="\"AI safety\"|\"model evaluation\"",
+                pos=0,
+            )
+        Output:
+            ("AI safety", 11)
+    """
     if pos >= len(src) or src[pos] != '"':
         raise ValidationError(f"expected '\"' at position {pos} in {src!r}")
     end = src.find('"', pos + 1)
@@ -20,7 +41,25 @@ def _take_quoted(src: str, pos: int) -> tuple[str, int]:
 
 
 def parse_quoted_list(src: str) -> list[str]:
-    """Parse ``"a"|"b"|"c"`` into ``["a", "b", "c"]``."""
+    """Parse ``"a"|"b"|"c"`` into ``["a", "b", "c"]``.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        src: Quoted CLI DSL string being parsed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            parse_quoted_list(
+                src="\"AI safety\"|\"model evaluation\"",
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     values: list[str] = []
     pos = 0
     while pos < len(src):
@@ -34,7 +73,25 @@ def parse_quoted_list(src: str) -> list[str]:
 
 
 def parse_topic_values(values: list[str]) -> list[str]:
-    """Expand DSL forms in topic values; pass through positional ones."""
+    """Expand DSL forms in topic values; pass through positional ones.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        values: User-provided values to validate and normalize.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            parse_topic_values(
+                values=["AI safety", "model evaluation"],
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     if len(values) == 1 and values[0].startswith('"'):
         return parse_quoted_list(values[0])
     return values
@@ -44,6 +101,20 @@ def parse_name_method(values: list[str]) -> tuple[str, str]:
     """Parse a purpose ``--add`` value into ``(name, method)``.
 
     Accepts either positional ``[NAME, METHOD]`` or DSL ``"name"="method"``.
+
+    Args:
+        values: User-provided values to validate and normalize.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            parse_name_method(
+                values=["AI safety", "model evaluation"],
+            )
+        Output:
+            ("Opportunity Map", "Find unmet needs")
     """
     if len(values) == 1 and values[0].startswith('"'):
         src = values[0]

@@ -64,7 +64,25 @@ _MODEL_PREFIXES: list[tuple[str, str]] = [
 
 
 def infer_model(metric: str) -> str:
-    """Return the model name for a metric string, or empty string if unknown."""
+    """Return the model name for a metric string, or empty string if unknown.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            infer_model(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     for prefix, model in _MODEL_PREFIXES:
         if metric.startswith(prefix):
             return model
@@ -72,7 +90,26 @@ def infer_model(metric: str) -> str:
 
 
 def parse_numeric(s: str) -> float | None:
-    """Extract the first numeric value that appears after a colon in s."""
+    """Extract the first numeric value that appears after a colon in s.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        s: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to a
+           provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            parse_numeric(
+                s="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     m = re.search(r":\s*(-?\d+\.?\d*)", s)
     return float(m.group(1)) if m else None
 
@@ -80,8 +117,25 @@ def parse_numeric(s: str) -> float | None:
 def contextual_explanation(metric: str, finding: str) -> str:
     """Return a plain-English, decision-relevant sentence for one highlight row.
 
-    Dispatches to the model-specific explanation function based on the metric
-    prefix. Returns an empty string when no explanation is available.
+    Dispatches to the model-specific explanation function based on the metric prefix.
+
+    Returns an empty string when no explanation is available.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            contextual_explanation(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
     """
     model = infer_model(metric)
     if model == "descriptive":

@@ -1,4 +1,4 @@
-"""Tests for YouTubeCommentsStage in platforms/youtube/pipeline.py."""
+"""Tests for YouTubeCommentsStage in platforms/youtube."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import social_research_probe.platforms.youtube as yt
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services import ServiceResult, TechResult
 
 

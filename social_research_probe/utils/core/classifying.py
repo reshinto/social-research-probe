@@ -86,7 +86,25 @@ _COMMENTARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 
 
 def classify_by_curated_map(channel: str) -> SourceClass:
-    """Return curated class for ``channel`` or ``"unknown"`` when no match."""
+    """Return the classify by curated map.
+
+    This shared utility keeps one parsing or normalization rule in a single place instead of letting
+    call sites drift apart.
+
+    Args:
+        channel: YouTube channel name, id, or classification map used for source labeling.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            classify_by_curated_map(
+                channel="OpenAI",
+            )
+        Output:
+            "AI safety"
+    """
     if not channel:
         return "unknown"
     needle = channel.lower()
@@ -97,7 +115,26 @@ def classify_by_curated_map(channel: str) -> SourceClass:
 
 
 def classify_by_title_signal(title: str) -> SourceClass:
-    """Return ``"commentary"`` when the title signals reaction/opinion content."""
+    """Return the classify by title signal.
+
+    This shared utility keeps one parsing or normalization rule in a single place instead of letting
+    call sites drift apart.
+
+    Args:
+        title: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            classify_by_title_signal(
+                title="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     if not title:
         return "unknown"
     for pattern in _COMMENTARY_TITLE_PATTERNS:
@@ -107,7 +144,25 @@ def classify_by_title_signal(title: str) -> SourceClass:
 
 
 def classify_by_channel_name_signal(channel: str) -> SourceClass:
-    """Return a class when channel name contains recognisable tokens."""
+    """Return the classify by channel name signal.
+
+    This shared utility keeps one parsing or normalization rule in a single place instead of letting
+    call sites drift apart.
+
+    Args:
+        channel: YouTube channel name, id, or classification map used for source labeling.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            classify_by_channel_name_signal(
+                channel="OpenAI",
+            )
+        Output:
+            "AI safety"
+    """
     if not channel:
         return "unknown"
     for pattern in _PRIMARY_NAME_PATTERNS:
@@ -123,7 +178,25 @@ def classify_by_channel_name_signal(channel: str) -> SourceClass:
 
 
 def coerce_class(value: object) -> SourceClass:
-    """Coerce arbitrary input to a valid ``source_class`` string."""
+    """Convert an untyped value into a safe class value.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            coerce_class(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if isinstance(value, str) and value.lower() in VALID_CLASSES:
         return value.lower()
     return "unknown"

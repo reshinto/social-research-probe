@@ -16,6 +16,31 @@ from social_research_probe.technologies.charts import ChartResult
 def _render_with_matplotlib(
     data: list[float], path: str, label: str, bins: int
 ) -> tuple[float, float]:
+    """Create with matplotlib output for users or downstream tools.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+        path: Filesystem location used to read, write, or resolve project data.
+        label: Human-readable metric label included in statistical and chart outputs.
+        bins: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _render_with_matplotlib(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                path=Path("report.html"),
+                label="engagement",
+                bins=3,
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -39,13 +64,56 @@ def _render_with_matplotlib(
 
 
 def _sanitise(label: str) -> str:
+    """Sanitize a label so it is safe to use in generated filenames.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _sanitise(
+                label="engagement",
+            )
+        Output:
+            "AI safety"
+    """
     return label.replace(" ", "_").replace("/", "_")
 
 
 def render(
     data: list[float], label: str = "values", output_dir: str | None = None, bins: int = 10
 ) -> ChartResult:
-    """Render a histogram of *data* and return path plus summary caption."""
+    """Document the render rule at the boundary where callers use it.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
+        output_dir: Filesystem location used to read, write, or resolve project data.
+        bins: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        ChartResult with the output path and the caption shown in reports.
+
+    Examples:
+        Input:
+            render(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+                output_dir=Path(".skill-data"),
+                bins=3,
+            )
+        Output:
+            ChartResult(path="charts/engagement.png", caption="Engagement trend")
+    """
     save_dir = output_dir if output_dir is not None else tempfile.gettempdir()
     path = f"{save_dir}/{_sanitise(label)}_histogram.png"
 

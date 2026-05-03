@@ -5,12 +5,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from unittest.mock import patch
 
-from social_research_probe.commands._demo_constants import (
+from social_research_probe.utils.demo.constants import (
     DEMO_DISCLAIMER,
     DEMO_PURPOSE_SET,
 )
-from social_research_probe.commands._demo_fixtures import build_demo_report
-from social_research_probe.commands._demo_items import build_demo_items
+from social_research_probe.utils.demo.fixtures import build_demo_report
+from social_research_probe.utils.demo.items import build_demo_items
 
 _FIXED_NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
 

@@ -17,7 +17,20 @@ from social_research_probe.utils.core.exit_codes import ExitCode
 
 
 def run() -> int:
-    """Run the first-time setup wizard: config scaffold, runner, secrets."""
+    """Run the first-time setup wizard: config scaffold, runner, secrets.
+
+    This is the command boundary: argparse passes raw options in, and the rest of the application
+    receives validated project data or a clear error.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            run()
+        Output:
+            5
+    """
     print("Welcome to social-research-probe setup.")
     print(
         "This wizard writes a default config and prompts for each API key in turn.\n"

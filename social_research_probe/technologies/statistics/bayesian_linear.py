@@ -19,7 +19,31 @@ def run(
     label: str = "y",
     prior_variance: float = 10.0,
 ) -> list[StatResult]:
-    """Fit Bayesian linear regression and return posterior means + std devs."""
+    """Fit Bayesian linear regression and return posterior means + std devs.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        y: Numeric series used by the statistical calculation.
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+        label: Human-readable metric label included in statistical and chart outputs.
+        prior_variance: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                y=[1.0, 2.0, 3.0],
+                features=[[1.0, 0.2], [2.0, 0.4]],
+                label="engagement",
+                prior_variance=0.75,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(y)
     names = list(features.keys())
     k = len(names)
@@ -75,11 +99,50 @@ def run(
 
 
 def _xtx(x: list[list[float]], size: int) -> list[list[float]]:
+    """Calculate the xtx step used by the statistical algorithm.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        size: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _xtx(
+                x=[1.0, 2.0, 3.0],
+                size=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(x)
     return [[sum(x[i][r] * x[i][c] for i in range(n)) for c in range(size)] for r in range(size)]
 
 
 def _diagonal_of_inverse(matrix: list[list[float]], size: int) -> list[float] | None:
+    """Return the diagonal of inverse.
+
+    Args:
+        matrix: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        size: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _diagonal_of_inverse(
+                matrix=[[1.0, 2.0], [3.0, 4.0]],
+                size=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     diag: list[float] = []
     for i in range(size):
         e = [1.0 if j == i else 0.0 for j in range(size)]

@@ -15,15 +15,47 @@ from social_research_probe.technologies.statistics import StatResult
 def explain(result: StatResult) -> str:
     """Return ``"<caption> — <plain-english reading>"`` for *result*.
 
-    Falls back to the bare caption when no specific reading is known. Keeps
-    the reading short (one clause) so it never overwhelms the original
-    caption.
+    Falls back to the bare caption when no specific reading is known. Keeps the reading short (one
+    clause) so it never overwhelms the original caption.
+
+    Args:
+        result: Service or technology result being inspected for payload and diagnostics.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain(
+                result=ServiceResult(service_name="comments", input_key="demo", tech_results=[]),
+            )
+        Output:
+            "AI safety"
     """
     reading = _reading_for(result)
     return f"{result.caption} — {reading}" if reading else result.caption
 
 
 def _reading_for(result: StatResult) -> str | None:
+    """Choose the plain-English reading for a statistical result.
+
+    Services turn platform items into adapter requests and normalize results so stages handle
+    success, skip, and failure the same way.
+
+    Args:
+        result: Service or technology result being inspected for payload and diagnostics.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _reading_for(
+                result=ServiceResult(service_name="comments", input_key="demo", tech_results=[]),
+            )
+        Output:
+            "AI safety"
+    """
     name = result.name
     value = result.value
     if name == "growth_rate":
@@ -52,6 +84,26 @@ def _reading_for(result: StatResult) -> str | None:
 
 
 def _growth_reading(value: float) -> str:
+    """Describe a growth-rate value in plain language.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _growth_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if abs(value) < 0.005:
         return "essentially flat from item to item"
     direction = "rising" if value > 0 else "falling"
@@ -59,6 +111,26 @@ def _growth_reading(value: float) -> str:
 
 
 def _slope_reading(value: float) -> str:
+    """Describe a regression slope in plain language.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _slope_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if abs(value) < 0.001:
         return "no meaningful linear trend"
     direction = "increases" if value > 0 else "decreases"
@@ -66,6 +138,26 @@ def _slope_reading(value: float) -> str:
 
 
 def _r_squared_reading(value: float) -> str:
+    """Document the r squared reading rule at the boundary where callers use it.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _r_squared_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if value >= 0.8:
         return f"strong fit — {value:.0%} of the variation is explained by the trend"
     if value >= 0.5:
@@ -76,6 +168,26 @@ def _r_squared_reading(value: float) -> str:
 
 
 def _pearson_reading(value: float) -> str:
+    """Document the pearson reading rule at the boundary where callers use it.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _pearson_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     magnitude = abs(value)
     if magnitude < 0.1:
         strength = "no meaningful correlation"
@@ -94,6 +206,26 @@ def _pearson_reading(value: float) -> str:
 
 
 def _outlier_count_reading(value: float) -> str:
+    """Describe the outlier count in plain language.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _outlier_count_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     n = int(value)
     if n == 0:
         return "no extreme items — scores are homogeneous"
@@ -101,12 +233,52 @@ def _outlier_count_reading(value: float) -> str:
 
 
 def _outlier_fraction_reading(value: float) -> str:
+    """Describe the outlier fraction in plain language.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _outlier_fraction_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if value == 0.0:
         return "0% — the dataset is well-behaved"
     return f"{value:.0%} of items are outliers"
 
 
 def _stdev_reading(value: float) -> str:
+    """Describe standard deviation in plain language.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _stdev_reading(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if value < 0.05:
         return "tight clustering — values barely vary"
     if value < 0.2:

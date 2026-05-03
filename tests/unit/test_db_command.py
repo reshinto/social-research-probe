@@ -57,7 +57,7 @@ def test_db_init_creates_db_file(tmp_path: Path, capsys):
     assert (tmp_path / "srp.db").exists()
     out = capsys.readouterr().out
     assert "Database ready" in out
-    assert "schema v2" in out
+    assert "schema v3" in out
 
 
 def test_db_init_is_idempotent(tmp_path: Path):
@@ -104,6 +104,9 @@ def test_db_stats_prints_zero_counts_for_fresh_db(tmp_path: Path, capsys):
     assert "text_surrogates: 0" in out
     assert "warnings: 0" in out
     assert "artifacts: 0" in out
+    assert "claims: 0" in out
+    assert "claim_reviews: 0" in out
+    assert "claim_notes: 0" in out
 
 
 def test_db_stats_reports_counts_after_seeded_run(tmp_path: Path, capsys):

@@ -10,7 +10,20 @@ CLIENTS: dict[str, type[PlatformClient] | None] = {"all": None}
 
 
 def register(cls: type[PlatformClient]) -> type[PlatformClient]:
-    """Register one platform client class under its declared name."""
+    """Register the implementation in the module registry.
+
+    Platform orchestration code uses this contract to run different platforms without leaking
+    platform-specific state into callers.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            register()
+        Output:
+            "AI safety"
+    """
     if not hasattr(cls, "name") or not cls.name:
         raise ValueError(f"{cls!r} must define class var `name`")
     CLIENTS[cls.name] = cls
@@ -18,12 +31,45 @@ def register(cls: type[PlatformClient]) -> type[PlatformClient]:
 
 
 def list_clients() -> list[str]:
-    """Return names of all registered clients (excludes meta-platforms like 'all')."""
+    """Return names of all registered clients (excludes meta-platforms like 'all').
+
+    Platform orchestration code uses this contract to run different platforms without leaking
+    platform-specific state into callers.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            list_clients()
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     return [k for k, v in CLIENTS.items() if v is not None]
 
 
 def get_client(name: str, config: AdapterConfig) -> PlatformClient:
-    """Instantiate the named client with the merged runtime config."""
+    """Return the registered platform client requested by configuration.
+
+    Platform orchestration code uses this contract to run different platforms without leaking
+    platform-specific state into callers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        config: Configuration or context values that control this run.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            get_client(
+                name="AI safety",
+                config={"enabled": True},
+            )
+        Output:
+            "AI safety"
+    """
     if name not in CLIENTS:
         known = sorted(CLIENTS.keys())
         raise ValidationError(f"unknown platform: {name!r} (registered: {known})")

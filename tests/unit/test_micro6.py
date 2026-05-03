@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock, patch
 
+import social_research_probe.platforms.youtube as yt
 import social_research_probe.services.scoring as compute_mod
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.enriching import transcript as transcript_svc
 from social_research_probe.technologies.corroborates.brave import BraveProvider
 from social_research_probe.technologies.corroborates.exa import ExaProvider

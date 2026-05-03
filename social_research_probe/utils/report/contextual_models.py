@@ -6,7 +6,26 @@ import re
 
 
 def _parse_numeric(s: str) -> float | None:
-    """Extract the first numeric value that appears after a colon in s."""
+    """Extract the first numeric value that appears after a colon in s.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        s: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to a
+           provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _parse_numeric(
+                s="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     m = re.search(r":\s*(-?\d+\.?\d*)", s)
     return float(m.group(1)) if m else None
 
@@ -15,7 +34,25 @@ def _parse_numeric(s: str) -> float | None:
 
 
 def explain_descriptive(metric: str) -> str:
-    """Mean / median / min / max — sets the competitive baseline for this space."""
+    """Mean / median / min / max — sets the competitive baseline for this space.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_descriptive(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if v is None:
         return ""
@@ -35,7 +72,25 @@ def explain_descriptive(metric: str) -> str:
 
 
 def explain_spread(metric: str) -> str:
-    """Spread metrics — reveals how tightly clustered or differentiated the field is."""
+    """Spread metrics — reveals how tightly clustered or differentiated the field is.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_spread(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if v is None:
         return ""
@@ -72,7 +127,25 @@ def explain_spread(metric: str) -> str:
 
 
 def explain_correlation(metric: str) -> str:
-    """Pearson correlation — reveals tradeoffs or alignments between scoring factors."""
+    """Pearson correlation — reveals tradeoffs or alignments between scoring factors.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_correlation(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     m = re.search(r":\s*(-?\d+\.\d+)", metric)
     v = float(m.group(1)) if m else None
     if v is None:
@@ -91,7 +164,25 @@ def explain_correlation(metric: str) -> str:
 
 
 def explain_spearman(metric: str) -> str:
-    """Spearman correlation — rank-based check that confirms or weakens the Pearson finding."""
+    """Spearman correlation — rank-based check that confirms or weakens the Pearson finding.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_spearman(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     m = re.search(r":\s*(-?\d+\.\d+)", metric)
     v = float(m.group(1)) if m else None
     if v is None:
@@ -104,7 +195,25 @@ def explain_spearman(metric: str) -> str:
 
 
 def explain_outliers(metric: str) -> str:
-    """Outlier detection — flags whether unusual videos are distorting the aggregate picture."""
+    """Outlier detection — flags whether unusual videos are distorting the aggregate picture.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_outliers(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("Outliers in"):
         m = re.search(r":\s*(\d+)\s*of\s*(\d+)", metric)
         if not m:
@@ -128,7 +237,27 @@ def explain_outliers(metric: str) -> str:
 
 
 def explain_tests(metric: str, finding: str) -> str:
-    """Hypothesis tests (Mann-Whitney, Welch t, normality) — validates quality-tier separation."""
+    """Hypothesis tests (Mann-Whitney, Welch t, normality) — validates quality-tier separation.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_tests(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("Mann-Whitney"):
         return "Top half and bottom half are statistically distinct — the ranking is meaningful, not random. Targeting the top tier is a real and achievable goal."
     if metric.startswith("Welch t-test"):
@@ -148,7 +277,25 @@ def explain_tests(metric: str, finding: str) -> str:
 
 
 def explain_regression(metric: str) -> str:
-    """Regression / growth — reveals quality drop-off and whether rankings are locking in."""
+    """Regression / growth — reveals quality drop-off and whether rankings are locking in.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_regression(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if v is None:
         return ""
@@ -174,7 +321,25 @@ def explain_regression(metric: str) -> str:
 
 
 def explain_polynomial(metric: str) -> str:
-    """Polynomial fits — checks whether the quality drop-off accelerates or has an S-curve shape."""
+    """Polynomial fits — checks whether the quality drop-off accelerates or has an S-curve shape.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_polynomial(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if v is None:
         return ""
@@ -194,7 +359,25 @@ def explain_polynomial(metric: str) -> str:
 
 
 def explain_huber(metric: str) -> str:
-    """Huber regression — outlier-resistant trend line confirming the ranking decay is real."""
+    """Huber regression — outlier-resistant trend line confirming the ranking decay is real.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_huber(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if v is None:
         return ""
@@ -208,7 +391,25 @@ def explain_huber(metric: str) -> str:
 
 
 def explain_multi_regression(metric: str) -> str:
-    """Multi-regression — reveals the exact weight of each scoring factor."""
+    """Multi-regression — reveals the exact weight of each scoring factor.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_multi_regression(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if metric.startswith("Intercept for overall"):
         return "Formula offset — use alongside the coefficients below to understand exactly how the overall score is calculated."
@@ -245,7 +446,25 @@ def explain_multi_regression(metric: str) -> str:
 
 
 def explain_kmeans(metric: str) -> str:
-    """K-means clustering — segments the market into tiers."""
+    """K-means clustering — segments the market into tiers.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_kmeans(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("K-means (k=3) within"):
         return "Three market tiers were identified. Check the cluster sizes below to see how content is distributed across high, mid, and low performers."
     if metric.startswith("K-means cluster"):
@@ -263,7 +482,27 @@ def explain_kmeans(metric: str) -> str:
 
 
 def explain_pca(metric: str, finding: str) -> str:
-    """PCA — identifies which feature most separates videos, revealing the true competitive axis."""
+    """PCA — identifies which feature most separates videos, revealing the true competitive axis.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_pca(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("PC1 "):
         m2 = re.search(r"top loadings:\s*(\w+)=", metric + " " + finding)
         factor = m2.group(1) if m2 else "one factor"
@@ -274,7 +513,27 @@ def explain_pca(metric: str, finding: str) -> str:
 
 
 def explain_kaplan_meier(metric: str, finding: str) -> str:
-    """Kaplan-Meier survival — shows how long popular videos retain their reach over time."""
+    """Kaplan-Meier survival — shows how long popular videos retain their reach over time.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_kaplan_meier(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("Kaplan-Meier median survival"):
         if "not reached" in metric or "not reached" in finding:
             return "More than half of popular videos are still accumulating views at the end of the observation window — this topic has durable long-term value; publishing here is not a one-week bet."
@@ -301,7 +560,27 @@ def explain_kaplan_meier(metric: str, finding: str) -> str:
 
 
 def explain_bootstrap(metric: str, finding: str) -> str:
-    """Bootstrap resampling — validates that score estimates are stable."""
+    """Bootstrap resampling — validates that score estimates are stable.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_bootstrap(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("Bootstrap CI lower"):
         v = _parse_numeric(metric)
         return (
@@ -327,7 +606,25 @@ def explain_bootstrap(metric: str, finding: str) -> str:
 
 
 def explain_naive_bayes(metric: str) -> str:
-    """Naive Bayes — shows the base rate for top-N success and whether signals are predictive."""
+    """Naive Bayes — shows the base rate for top-N success and whether signals are predictive.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_naive_bayes(
+                metric="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     v = _parse_numeric(metric)
     if metric.startswith("Naive Bayes prior P(is_top_n=0)"):
         return (
@@ -353,7 +650,27 @@ def explain_naive_bayes(metric: str) -> str:
 
 
 def explain_bayesian(metric: str, finding: str) -> str:
-    """Bayesian linear model — probabilistic confidence ranges on each factor's impact."""
+    """Bayesian linear model — probabilistic confidence ranges on each factor's impact.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            explain_bayesian(
+                metric="Engagement increased",
+                finding="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     if metric.startswith("Bayesian intercept"):
         m2 = re.search(r":\s*(-?\d+\.\d+).*SD\s*(-?\d+\.\d+)", metric)
         if m2:
@@ -399,6 +716,25 @@ _PURPOSE_VERBS: dict[str, str] = {
 
 
 def _purpose_focus(purposes: list[str]) -> str:
+    """Return the purpose focus.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _purpose_focus(
+                purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            "AI safety"
+    """
     if not purposes:
         return "your goal"
     parts = [_PURPOSE_VERBS.get(p.lower(), p.replace("_", " ")) for p in purposes]
@@ -406,6 +742,29 @@ def _purpose_focus(purposes: list[str]) -> str:
 
 
 def _baseline_action(model: str, topic: str, focus: str) -> str:
+    """Return the baseline action.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        model: HTML, caption, metric, or report text being formatted for the final report.
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        focus: Contextual model focus area used to choose explanatory wording.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _baseline_action(
+                model="Engagement increased",
+                topic="AI safety",
+                focus="AI safety",
+            )
+        Output:
+            "http://127.0.0.1:5050"
+    """
     if model == "descriptive":
         return (
             f"Use this baseline when judging if a `{topic}` idea clears the bar; lean into {focus}."
@@ -444,7 +803,29 @@ def _baseline_action(model: str, topic: str, focus: str) -> str:
 
 
 def topic_action_hint(model: str, topic: str, purposes: list[str]) -> str:
-    """Return one short, action-oriented sentence tying a stat to topic+purpose."""
+    """Return one short, action-oriented sentence tying a stat to topic+purpose.
+
+    Report utilities keep fallback wording and formatting rules consistent between HTML, exports,
+    and CLI summaries.
+
+    Args:
+        model: HTML, caption, metric, or report text being formatted for the final report.
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            topic_action_hint(
+                model="Engagement increased",
+                topic="AI safety",
+                purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            "AI safety"
+    """
     if not model or not topic:
         return ""
     return _baseline_action(model, topic, _purpose_focus(purposes))

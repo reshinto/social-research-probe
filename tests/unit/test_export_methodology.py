@@ -166,7 +166,7 @@ def test_build_claims_extraction_mentions_deterministic():
 
 def test_build_claims_extraction_mentions_llm_disabled():
     out = build_methodology(_minimal_report(), _minimal_config())
-    assert "LLM extraction: disabled" in out
+    assert "LLM-backed extraction enabled: no" in out
 
 
 def test_build_claims_extraction_llm_enabled_when_configured():
@@ -174,7 +174,25 @@ def test_build_claims_extraction_llm_enabled_when_configured():
         claims={"use_llm": True, "max_claims_per_source": 10, "max_claim_chars": 500}
     )
     out = build_methodology(_minimal_report(), config)
-    assert "LLM extraction: enabled" in out
+    assert "LLM-backed extraction enabled: yes" in out
+
+
+def test_build_claims_extraction_method_llm_backed_when_use_llm_true():
+    config = _minimal_config(
+        claims={"use_llm": True, "max_claims_per_source": 10, "max_claim_chars": 500}
+    )
+    out = build_methodology(_minimal_report(), config)
+    assert "LLM-backed with deterministic fallback" in out
+
+
+def test_build_claims_extraction_method_deterministic_when_use_llm_false():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "deterministic (pattern-matching)" in out
+
+
+def test_build_claims_extraction_no_phase_5b_label():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "Phase 5B" not in out
 
 
 def test_build_claims_extraction_section_before_warnings():

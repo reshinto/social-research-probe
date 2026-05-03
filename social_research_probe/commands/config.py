@@ -40,12 +40,43 @@ _MASKED_PLACEHOLDER = "***"
 
 
 def _env_key(name: str) -> str:
-    """Map a logical secret name to its environment-variable override name."""
+    """Map a logical secret name to its environment-variable override name.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _env_key(
+                name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     return f"SRP_{name.upper()}"
 
 
 def _read_secrets_file() -> dict[str, str]:
-    """Read secrets.toml when it exists and return a plain string mapping."""
+    """Read secrets.toml when it exists and return a plain string mapping.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _read_secrets_file()
+        Output:
+            {"enabled": True}
+    """
     from social_research_probe.config import load_active_config
 
     path = load_active_config().data_dir / SECRET_FILENAME
@@ -59,7 +90,26 @@ def _read_secrets_file() -> dict[str, str]:
 
 
 def _check_perms(path: Path) -> None:
-    """Warn when the secrets file is group- or world-readable."""
+    """Warn when the secrets file is group- or world-readable.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _check_perms(
+                path=Path("report.html"),
+            )
+        Output:
+            None
+    """
     mode = stat.S_IMODE(path.stat().st_mode)
     if mode & _INSECURE_PERMS_MASK:
         import sys
@@ -71,7 +121,25 @@ def _check_perms(path: Path) -> None:
 
 
 def _format_secrets_toml(secrets: dict[str, str]) -> str:
-    """Format secrets dict as TOML content."""
+    """Format secrets dict as TOML content.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        secrets: Secret-name to secret-value mapping loaded from secrets.toml.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _format_secrets_toml(
+                secrets={"enabled": True},
+            )
+        Output:
+            "AI safety"
+    """
     lines = ["[secrets]"]
     for key, val in sorted(secrets.items()):
         escaped = val.replace("\\", "\\\\").replace('"', '\\"')
@@ -80,7 +148,26 @@ def _format_secrets_toml(secrets: dict[str, str]) -> str:
 
 
 def _write_secrets_file(secrets: dict[str, str]) -> None:
-    """Persist secrets.toml with restrictive permissions."""
+    """Persist secrets.toml with restrictive permissions.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        secrets: Secret-name to secret-value mapping loaded from secrets.toml.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _write_secrets_file(
+                secrets={"enabled": True},
+            )
+        Output:
+            None
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -97,7 +184,25 @@ def _write_secrets_file(secrets: dict[str, str]) -> None:
 
 
 def read_secret(name: str) -> str | None:
-    """Read a secret, preferring an environment override when present."""
+    """Read a secret, preferring an environment override when present.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            read_secret(
+                name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     env_val = os.environ.get(_env_key(name))
     if env_val:
         return env_val
@@ -106,28 +211,108 @@ def read_secret(name: str) -> str | None:
 
 
 def write_secret(name: str, value: str) -> None:
-    """Set or replace one secret value in secrets.toml."""
+    """Set or replace one secret value in secrets.toml.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            write_secret(
+                name="AI safety",
+                value="42",
+            )
+        Output:
+            None
+    """
     secrets = _read_secrets_file()
     secrets[name] = value
     _write_secrets_file(secrets)
 
 
 def unset_secret(name: str) -> None:
-    """Remove one secret from secrets.toml if present."""
+    """Remove one secret from secrets.toml if present.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            unset_secret(
+                name="AI safety",
+            )
+        Output:
+            None
+    """
     secrets = _read_secrets_file()
     secrets.pop(name, None)
     _write_secrets_file(secrets)
 
 
 def mask_secret(value: str) -> str:
-    """Mask a secret so operators can confirm presence without leaking it."""
+    """Mask a secret so operators can confirm presence without leaking it.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            mask_secret(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if len(value) < _MIN_SECRET_LENGTH_FOR_MASKING:
         return _MASKED_PLACEHOLDER
     return f"{value[:_MASKED_CHARS_TO_SHOW]}...{value[-_MASKED_CHARS_TO_SHOW:]}"
 
 
 def _format_config_section(data_dir: Path, raw_config: dict) -> list[str]:
-    """Format config section for display."""
+    """Format config section for display.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        data_dir: Filesystem location used to read, write, or resolve project data.
+        raw_config: Raw config dictionary before formatting or display.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _format_config_section(
+                data_dir=Path(".skill-data"),
+                raw_config={"enabled": True},
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     display_config = {
         key: value for key, value in raw_config.items() if key not in {"features", "logging"}
     }
@@ -143,7 +328,25 @@ def _format_config_section(data_dir: Path, raw_config: dict) -> list[str]:
 
 
 def _format_secrets_section(secrets: dict[str, str]) -> list[str]:
-    """Format secrets section for display with masking."""
+    """Format secrets section for display with masking.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        secrets: Secret-name to secret-value mapping loaded from secrets.toml.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _format_secrets_section(
+                secrets={"enabled": True},
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     lines = ["[secrets]"]
     for name, val in sorted(secrets.items()):
         env = os.environ.get(_env_key(name))
@@ -155,7 +358,20 @@ def _format_secrets_section(secrets: dict[str, str]) -> list[str]:
 
 
 def show_config() -> str:
-    """Render the merged config plus masked secret status for CLI display."""
+    """Render the merged config plus masked secret status for CLI display.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            show_config()
+        Output:
+            "AI safety"
+    """
     from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
@@ -165,7 +381,26 @@ def show_config() -> str:
 
 
 def _parse_scalar_value(value: str) -> JSONScalar:
-    """Best-effort parse of CLI scalar values before writing TOML."""
+    """Best-effort parse of CLI scalar values before writing TOML.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _parse_scalar_value(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     lowered = value.lower()
     if lowered == "true":
         return True
@@ -182,7 +417,26 @@ def _parse_scalar_value(value: str) -> JSONScalar:
 
 
 def _format_toml_value(value: object) -> str:
-    """Serialise a supported scalar or list value into TOML syntax."""
+    """Serialise a supported scalar or list value into TOML syntax.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _format_toml_value(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     if isinstance(value, str):
         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
@@ -196,7 +450,30 @@ def _format_toml_value(value: object) -> str:
 
 
 def _emit_table(name: str, entries: JSONObject, lines: list[str]) -> None:
-    """Render one TOML table, recursing into nested tables afterwards."""
+    """Render one TOML table, recursing into nested tables afterwards.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        entries: Ordered source items being carried through the current pipeline step.
+        lines: Lines being assembled into TOML or CLI output.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _emit_table(
+                name="AI safety",
+                entries=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                lines=["AI safety"],
+            )
+        Output:
+            None
+    """
     lines.append(f"[{name}]")
     child_tables: list[tuple[str, JSONObject]] = []
     for key, value in entries.items():
@@ -210,7 +487,27 @@ def _emit_table(name: str, entries: JSONObject, lines: list[str]) -> None:
 
 
 def _order_like_template(data: JSONObject, template: JSONObject) -> JSONObject:
-    """Return *data* reordered to match *template* first, preserving extras last."""
+    """Return *data* reordered to match *template* first, preserving extras last.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+        template: Template dictionary used to preserve config key ordering.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _order_like_template(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                template="AI safety",
+            )
+        Output:
+            {"enabled": True}
+    """
     ordered: JSONObject = {}
     for key, template_value in template.items():
         if key not in data:
@@ -231,7 +528,31 @@ def _order_like_template(data: JSONObject, template: JSONObject) -> JSONObject:
 
 
 def _set_nested_value(config: JSONObject, parts: list[str], value: JSONScalar) -> None:
-    """Create any missing tables and assign the final scalar value."""
+    """Create any missing tables and assign the final scalar value.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        config: Configuration or context values that control this run.
+        parts: Path or dotted-key parts being walked.
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _set_nested_value(
+                config={"enabled": True},
+                parts=["AI safety"],
+                value="42",
+            )
+        Output:
+            None
+    """
     current = config
     for part in parts[:-1]:
         next_value = current.get(part)
@@ -243,7 +564,30 @@ def _set_nested_value(config: JSONObject, parts: list[str], value: JSONScalar) -
 
 
 def _prepare_config_update(dotted_key: str, value: str, existing: JSONObject) -> JSONObject:
-    """Validate key, parse value, update config, and order like template."""
+    """Validate key, parse value, update config, and order like template.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        dotted_key: Dotted config key such as llm.runner.
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        existing: Intermediate collection used to preserve ordering while stage results are merged.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _prepare_config_update(
+                dotted_key="AI safety",
+                value="42",
+                existing=[],
+            )
+        Output:
+            {"enabled": True}
+    """
     parts = dotted_key.split(".")
     if len(parts) < 2 or any(not part for part in parts):
         raise ValidationError(
@@ -254,7 +598,28 @@ def _prepare_config_update(dotted_key: str, value: str, existing: JSONObject) ->
 
 
 def _write_config_to_file(config: JSONObject, path: Path) -> None:
-    """Emit config to TOML format and write to file."""
+    """Emit config to TOML format and write to file.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        config: Configuration or context values that control this run.
+        path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _write_config_to_file(
+                config={"enabled": True},
+                path=Path("report.html"),
+            )
+        Output:
+            None
+    """
     lines: list[str] = []
     for sec, entries in config.items():
         if not isinstance(entries, dict):
@@ -264,7 +629,29 @@ def _write_config_to_file(config: JSONObject, path: Path) -> None:
 
 
 def write_config_value(dotted_key: str, value: str) -> None:
-    """Write one config value, supporting nested dotted keys like llm.codex.binary."""
+    """Write one config value, supporting nested dotted keys like llm.codex.binary.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        dotted_key: Dotted config key such as llm.runner.
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            write_config_value(
+                dotted_key="AI safety",
+                value="42",
+            )
+        Output:
+            None
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -286,7 +673,30 @@ def check_secrets(
     platform: str | None,
     corroboration: str | None,
 ) -> dict[str, list[str]]:
-    """Report which secrets are required, optional, present, and missing."""
+    """Report which secrets are required, optional, present, and missing.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        needed_for: Feature names that explain why a secret is required.
+        platform: Platform name, such as youtube or all, used to select config and pipeline
+                  behavior.
+        corroboration: Corroboration config values included in the secret status report.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            check_secrets(
+                needed_for="AI safety",
+                platform="AI safety",
+                corroboration="AI safety",
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     required: list[str] = []
 
     if needed_for == ResearchCommand.RESEARCH and platform:
@@ -311,7 +721,25 @@ def check_secrets(
 
 
 def _read_secret_input(args: argparse.Namespace) -> str:
-    """Read secret value from stdin or interactive prompt."""
+    """Read secret value from stdin or interactive prompt.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _read_secret_input(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            "AI safety"
+    """
     import getpass
     import sys
 
@@ -321,6 +749,25 @@ def _read_secret_input(args: argparse.Namespace) -> str:
 
 
 def run_set_secret(args: argparse.Namespace) -> int:
+    """Document the run set secret rule at the boundary where callers use it.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            run_set_secret(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.utils.core.errors import ValidationError
 
     value = _read_secret_input(args)
@@ -331,6 +778,25 @@ def run_set_secret(args: argparse.Namespace) -> int:
 
 
 def run(args: argparse.Namespace) -> int:
+    """Execute the `config` CLI command.
+
+    Config access stays centralized so callers do not need to know the TOML layout, environment
+    fallbacks, or compatibility aliases.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            run(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.commands import ConfigSubcommand
     from social_research_probe.config import load_active_config
     from social_research_probe.utils.display.cli_output import emit

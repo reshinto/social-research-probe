@@ -1,7 +1,7 @@
 """Binary logistic regression via iteratively reweighted least squares (IRLS).
 
-Fits ``logit(p) = b0 + b1·x1 + ... + bk·xk`` by Newton-Raphson on the
 log-likelihood. Pure Python — uses the Gauss-Jordan solver from
+
 ``multi_regression``. Reports each coefficient, the McFadden pseudo-R²,
 and accuracy on the training set.
 """
@@ -17,7 +17,31 @@ from social_research_probe.technologies.statistics.multi_regression import _solv
 def run(
     y: list[int], features: dict[str, list[float]], label: str = "y", max_iter: int = 25
 ) -> list[StatResult]:
-    """Fit binary logistic regression and return coefficients plus fit metrics."""
+    """Fit binary logistic regression and return coefficients plus fit metrics.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        y: Numeric series used by the statistical calculation.
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+        label: Human-readable metric label included in statistical and chart outputs.
+        max_iter: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                y=[1.0, 2.0, 3.0],
+                features=[[1.0, 0.2], [2.0, 0.4]],
+                label="engagement",
+                max_iter=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(y)
     if n == 0:
         return []
@@ -58,6 +82,33 @@ def run(
 def _format_results(
     y: list[int], x: list[list[float]], beta: list[float], names: list[str], label: str
 ) -> list[StatResult]:
+    """Format results for display or files.
+
+    Statistics helpers return report-sized records, keeping the calculation and the label shown to
+    readers in one place.
+
+    Args:
+        y: Numeric series used by the statistical calculation.
+        x: Numeric series used by the statistical calculation.
+        beta: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        names: Topic, purpose, or provider names being matched against stored state.
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _format_results(
+                y=[1.0, 2.0, 3.0],
+                x=[1.0, 2.0, 3.0],
+                beta=[[1.0, 2.0], [3.0, 4.0]],
+                names=["AI safety"],
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     predictions = [_sigmoid(_dot(row, beta)) for row in x]
     preds_bin = [1 if p >= 0.5 else 0 for p in predictions]
     accuracy = sum(1 for yi, pi in zip(y, preds_bin, strict=True) if yi == pi) / len(y)
@@ -104,6 +155,22 @@ def _format_results(
 
 
 def _sigmoid(z: float) -> float:
+    """Return the sigmoid.
+
+    Args:
+        z: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _sigmoid(
+                z=0.75,
+            )
+        Output:
+            0.75
+    """
     if z < -500:
         return 0.0
     if z > 500:
@@ -112,8 +179,45 @@ def _sigmoid(z: float) -> float:
 
 
 def _dot(row: list[float], beta: list[float]) -> float:
+    """Calculate the dot step used by the statistical algorithm.
+
+    Args:
+        row: Single source item, database row, or registry entry being transformed.
+        beta: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _dot(
+                row={"title": "Example", "url": "https://youtu.be/demo"},
+                beta=[[1.0, 2.0], [3.0, 4.0]],
+            )
+        Output:
+            0.75
+    """
     return sum(r * b for r, b in zip(row, beta, strict=True))
 
 
 def _safe_log(p: float) -> float:
+    """Document the safe log rule at the boundary where callers use it.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        p: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _safe_log(
+                p=0.75,
+            )
+        Output:
+            0.75
+    """
     return math.log(max(1e-12, min(1.0 - 1e-12, p)))

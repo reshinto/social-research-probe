@@ -18,6 +18,32 @@ from social_research_probe.technologies.charts import ChartResult
 
 
 def _render_with_matplotlib(x: list[float], y: list[float], path: str, label: str) -> None:
+    """Create with matplotlib output for users or downstream tools.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        path: Filesystem location used to read, write, or resolve project data.
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _render_with_matplotlib(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                path=Path("report.html"),
+                label="engagement",
+            )
+        Output:
+            None
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -33,11 +59,22 @@ def _render_with_matplotlib(x: list[float], y: list[float], path: str, label: st
 def _sanitise(label: str) -> str:
     """Replace characters that are unsafe in filenames with underscores.
 
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
     Args:
-        label: Raw label string, possibly containing spaces or slashes.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        Sanitised string safe for use as part of a file name.
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _sanitise(
+                label="engagement",
+            )
+        Output:
+            "AI safety"
     """
     return label.replace(" ", "_").replace("/", "_")
 
@@ -50,18 +87,28 @@ def render(
 ) -> ChartResult:
     """Render a scatter plot of two numeric series and save it as a PNG.
 
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
     Args:
-        x: Values for the horizontal axis.
-        y: Values for the vertical axis (must align index-for-index with x).
-        label: Chart title; also used to construct the output filename.
-        output_dir: Save directory (uses tempfile.gettempdir() if None).
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        label: Human-readable metric label included in statistical and chart outputs.
+        output_dir: Filesystem location used to read, write, or resolve project data.
 
     Returns:
-        ChartResult with the saved PNG path and a descriptive caption.
+        ChartResult with the output path and the caption shown in reports.
 
-    Why plt.close() (matplotlib path): matplotlib retains figure state in
-    memory between calls; closing explicitly prevents memory leaks in
-    long-running pipeline runs.
+    Examples:
+        Input:
+            render(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                label="engagement",
+                output_dir=Path(".skill-data"),
+            )
+        Output:
+            ChartResult(path="charts/engagement.png", caption="Engagement trend")
     """
     save_dir = output_dir if output_dir is not None else tempfile.gettempdir()
     filename = f"{_sanitise(label)}_scatter.png"

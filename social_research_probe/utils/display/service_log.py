@@ -19,7 +19,17 @@ _TRUTHY = {"1", "true", "yes", "on"}
 
 
 class StageTiming(TypedDict):
-    """One entry in ``report["stage_timings"]``."""
+    """One entry in ``report["stage_timings"]``.
+
+    The project passes this data as dictionaries, so the type documents the keys that stages,
+    services, and renderers are allowed to rely on.
+
+    Examples:
+        Input:
+            StageTiming
+        Output:
+            {"title": "Example"}
+    """
 
     stage: str
     elapsed_s: float
@@ -30,15 +40,48 @@ class StageTiming(TypedDict):
 def logs_enabled(cfg_flag: bool = False) -> bool:
     """Return True iff service logs should be emitted.
 
-    Env var ``SRP_LOGS`` (``1|true|yes|on``) overrides the config flag; either
-    one turning it on is sufficient. Off by default.
+    Env var ``SRP_LOGS`` (``1|true|yes|on``) overrides the config flag; either one turning it on is
+    sufficient. Off by default.
+
+    Args:
+        cfg_flag: Flag that selects the branch for this operation.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            logs_enabled(
+                cfg_flag=True,
+            )
+        Output:
+            True
     """
     env = os.environ.get("SRP_LOGS", "").strip().lower()
     return env in _TRUTHY or bool(cfg_flag)
 
 
 def _emit(line: str) -> None:
-    """Write a single log line to stderr."""
+    """Write a single log line to stderr.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        line: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _emit(
+                line="Engagement increased",
+            )
+        Output:
+            None
+    """
     print(line, file=sys.stderr, flush=True)
 
 
@@ -49,12 +92,28 @@ async def service_log(
     report: dict,
     cfg_logs_enabled: bool = False,
 ) -> AsyncIterator[None]:
-    """Bracket an async service call with start/end events + timing capture.
+    """Document the service log rule at the boundary where callers use it.
 
-    Always appends one ``StageTiming`` entry to ``report["stage_timings"]``.
-    Emits ``start`` / ``end`` lines to stderr only when ``logs_enabled``.
-    On exception: records ``status="error"`` with the exception string, emits
-    a failure line, then re-raises so callers can decide how to handle it.
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        report: Research report dictionary being rendered, exported, or persisted.
+        cfg_logs_enabled: Flag that selects the branch for this operation.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            await service_log(
+                name="comments",
+                report={"topic": "AI safety", "items_top_n": []},
+                cfg_logs_enabled=True,
+            )
+        Output:
+            "AI safety"
     """
     enabled = logs_enabled(cfg_logs_enabled)
     timings = report.setdefault("stage_timings", [])
@@ -90,7 +149,29 @@ def service_log_sync(
     report: dict,
     cfg_logs_enabled: bool = False,
 ):
-    """Bracket a sync service call with start/end events + timing capture."""
+    """Document the service log sync rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        report: Research report dictionary being rendered, exported, or persisted.
+        cfg_logs_enabled: Flag that selects the branch for this operation.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            service_log_sync(
+                name="comments",
+                report={"topic": "AI safety", "items_top_n": []},
+                cfg_logs_enabled=True,
+            )
+        Output:
+            "AI safety"
+    """
     enabled = logs_enabled(cfg_logs_enabled)
     timings = report.setdefault("stage_timings", [])
     if enabled:

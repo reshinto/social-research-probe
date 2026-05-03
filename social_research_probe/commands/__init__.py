@@ -30,15 +30,19 @@ from social_research_probe.utils.state.validate import validate
 class Command(StrEnum):
     """Top-level CLI command names dispatched via handlers_factory.
 
-    Each enum member maps to the exact command string accepted by the CLI.
-    Example:
-        Use command constants when registering handlers:
-        ```python
-        handlers = {
-            Command.UPDATE_TOPICS: handle_update_topics,
-            Command.SHOW_TOPICS: handle_show_topics,
-        }
-        ```
+    Each enum member maps to the exact command string accepted by the CLI. Example:
+
+    Use command constants when registering handlers: ```python handlers = {
+
+    Command.UPDATE_TOPICS: handle_update_topics, Command.SHOW_TOPICS:
+
+    handle_show_topics, } ```
+
+    Examples:
+        Input:
+            Command
+        Output:
+            Command
     """
 
     UPDATE_TOPICS = "update-topics"
@@ -61,10 +65,35 @@ class Command(StrEnum):
     DEMO_REPORT = "demo-report"
     CONFIG = "config"
     DB = "db"
+    CLAIMS = "claims"
+
+
+class ClaimsSubcommand(StrEnum):
+    """Claims subcommand names dispatched within claims.run().
+
+    Examples:
+        Input:
+            ClaimsSubcommand
+        Output:
+            ClaimsSubcommand
+    """
+
+    LIST = "list"
+    SHOW = "show"
+    STATS = "stats"
+    REVIEW = "review"
+    NOTE = "note"
 
 
 class DbSubcommand(StrEnum):
-    """Database subcommand names dispatched within db.run()."""
+    """Database subcommand names dispatched within db.run().
+
+    Examples:
+        Input:
+            DbSubcommand
+        Output:
+            DbSubcommand
+    """
 
     INIT = "init"
     STATS = "stats"
@@ -75,6 +104,12 @@ class ConfigSubcommand(StrEnum):
     """Config subcommand names dispatched within config.run().
 
     These are not top-level commands; they are sub-actions under the CONFIG command.
+
+    Examples:
+        Input:
+            ConfigSubcommand
+        Output:
+            ConfigSubcommand
     """
 
     SHOW = "show"
@@ -89,6 +124,12 @@ class SpecialCommand(StrEnum):
     """Argparse built-in commands handled outside handlers_factory.
 
     These are not dispatched to command modules; they are processed directly in main().
+
+    Examples:
+        Input:
+            SpecialCommand
+        Output:
+            SpecialCommand
     """
 
     HELP = "help"
@@ -103,6 +144,20 @@ IdSelector = Literal["all"] | list[int]
 
 
 def _load_topics() -> dict:
+    """Load topics from disk or active configuration.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _load_topics()
+        Output:
+            {"enabled": True}
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -114,6 +169,26 @@ def _load_topics() -> dict:
 
 
 def _save_topics(data: dict) -> None:
+    """Build the small payload that carries topics through this workflow.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _save_topics(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            None
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -126,14 +201,49 @@ def _save_topics(data: dict) -> None:
 
 
 def list_topics() -> list[str]:
-    """Return the current list of topics from state."""
+    """Return the current list of topics from state.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            list_topics()
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     return list(_load_topics()["topics"])
 
 
 def _check_topic_duplicates(
     values: list[str], existing: list[str], force: bool
 ) -> tuple[list[str], list[tuple[str, list[str]]]]:
-    """Classify each value against existing topics; return (to_add, conflicts)."""
+    """Classify each value against existing topics; return (to_add, conflicts).
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        values: User-provided values to validate and normalize.
+        existing: Intermediate collection used to preserve ordering while stage results are merged.
+        force: Flag that selects the branch for this operation.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _check_topic_duplicates(
+                values=["AI safety", "model evaluation"],
+                existing=[],
+                force=True,
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     to_add: list[str] = []
     conflicts: list[tuple[str, list[str]]] = []
     for value in values:
@@ -146,7 +256,30 @@ def _check_topic_duplicates(
 
 
 def _merge_new_topics(data: dict, existing: list[str], to_add: list[str]) -> None:
-    """Deduplicate to_add against existing and append to data, then save."""
+    """Deduplicate to_add against existing and append to data, then save.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+        existing: Intermediate collection used to preserve ordering while stage results are merged.
+        to_add: New topic or purpose entries that survived duplicate checks.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _merge_new_topics(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                existing=[],
+                to_add=["AI safety"],
+            )
+        Output:
+            None
+    """
     seen = set(existing)
     deduped: list[str] = []
     for v in to_add:
@@ -158,7 +291,28 @@ def _merge_new_topics(data: dict, existing: list[str], to_add: list[str]) -> Non
 
 
 def add_topics(values: list[str], *, force: bool) -> None:
-    """Add one or more topics, checking for duplicates unless force is True."""
+    """Add one or more topics, checking for duplicates unless force is True.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        values: User-provided values to validate and normalize.
+        force: Flag that selects the branch for this operation.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            add_topics(
+                values=["AI safety", "model evaluation"],
+                force=True,
+            )
+        Output:
+            None
+    """
     data = _load_topics()
     existing = list(data["topics"])
     to_add, conflicts = _check_topic_duplicates(values, existing, force)
@@ -171,7 +325,26 @@ def add_topics(values: list[str], *, force: bool) -> None:
 
 
 def remove_topics(values: list[str]) -> None:
-    """Remove topics by exact name. Raises ValidationError if any not found."""
+    """Remove topics by exact name. Raises ValidationError if any not found.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        values: User-provided values to validate and normalize.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            remove_topics(
+                values=["AI safety", "model evaluation"],
+            )
+        Output:
+            None
+    """
     data = _load_topics()
     existing = list(data["topics"])
     not_found = [v for v in values if v not in existing]
@@ -182,7 +355,28 @@ def remove_topics(values: list[str]) -> None:
 
 
 def rename_topic(old: str, new: str) -> None:
-    """Rename a topic. Raises ValidationError if old not found or new already exists."""
+    """Rename a topic. Raises ValidationError if old not found or new already exists.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        old: Registry, config, or CLI name used to select the matching project value.
+        new: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            rename_topic(
+                old="AI safety",
+                new="AI safety",
+            )
+        Output:
+            None
+    """
     data = _load_topics()
     existing = list(data["topics"])
     if old not in existing:
@@ -194,7 +388,20 @@ def rename_topic(old: str, new: str) -> None:
 
 
 def list_purposes() -> dict:
-    """Return the current purposes registry as a plain dict."""
+    """Return the current purposes registry as a plain dict.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            list_purposes()
+        Output:
+            {"enabled": True}
+    """
     from social_research_probe.utils.purposes import registry
 
     data = registry.load()
@@ -209,7 +416,30 @@ def list_purposes() -> dict:
 
 
 def _validate_purpose_addition(name: str, existing_names: list[str], force: bool) -> None:
-    """Raise DuplicateError if name conflicts with existing purposes."""
+    """Raise DuplicateError if name conflicts with existing purposes.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        existing_names: Names already present in state, used for duplicate detection.
+        force: Flag that selects the branch for this operation.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _validate_purpose_addition(
+                name="AI safety",
+                existing_names=["AI safety"],
+                force=True,
+            )
+        Output:
+            None
+    """
     result = classify(name, existing_names)
     if result.status in (DuplicateStatus.DUPLICATE, DuplicateStatus.NEAR_DUPLICATE) and not force:
         raise DuplicateError(
@@ -222,7 +452,30 @@ def _validate_purpose_addition(name: str, existing_names: list[str], force: bool
 
 
 def add_purpose(*, name: str, method: str, force: bool) -> None:
-    """Add a new purpose entry, checking for duplicates unless force is True."""
+    """Add a new purpose entry, checking for duplicates unless force is True.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        method: Purpose method text that explains how the research should be evaluated.
+        force: Flag that selects the branch for this operation.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            add_purpose(
+                name="AI safety",
+                method="Find unmet needs",
+                force=True,
+            )
+        Output:
+            None
+    """
     from social_research_probe.utils.purposes import registry
 
     if not method.strip():
@@ -241,7 +494,26 @@ def add_purpose(*, name: str, method: str, force: bool) -> None:
 
 
 def remove_purposes(names: list[str]) -> None:
-    """Remove purposes by exact name. Raises ValidationError if any not found."""
+    """Remove purposes by exact name. Raises ValidationError if any not found.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        names: Topic, purpose, or provider names being matched against stored state.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            remove_purposes(
+                names=["AI safety"],
+            )
+        Output:
+            None
+    """
     from social_research_probe.utils.purposes import registry
 
     data = registry.load()
@@ -254,7 +526,28 @@ def remove_purposes(names: list[str]) -> None:
 
 
 def rename_purpose(old: str, new: str) -> None:
-    """Rename a purpose. Raises ValidationError if old not found or new already exists."""
+    """Rename a purpose. Raises ValidationError if old not found or new already exists.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        old: Registry, config, or CLI name used to select the matching project value.
+        new: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            rename_purpose(
+                old="AI safety",
+                new="AI safety",
+            )
+        Output:
+            None
+    """
     from social_research_probe.utils.purposes import registry
 
     data = registry.load()
@@ -267,7 +560,20 @@ def rename_purpose(old: str, new: str) -> None:
 
 
 def load_pending() -> PendingSuggestionsState:
-    """Load, migrate, validate, and return pending_suggestions.json."""
+    """Load pending from disk or active configuration.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            load_pending()
+        Output:
+            "AI safety"
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -282,7 +588,26 @@ def load_pending() -> PendingSuggestionsState:
 
 
 def save_pending(data: PendingSuggestionsState) -> None:
-    """Validate and persist pending_suggestions.json."""
+    """Validate and persist pending_suggestions.json.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            save_pending(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            None
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -291,14 +616,52 @@ def save_pending(data: PendingSuggestionsState) -> None:
 
 
 def _next_id(entries: list[PendingTopicSuggestion] | list[PendingPurposeSuggestion]) -> int:
-    """Return the next monotonically increasing suggestion id."""
+    """Return the next monotonically increasing suggestion id.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        entries: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _next_id(
+                entries=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            5
+    """
     return max((e["id"] for e in entries), default=0) + 1
 
 
 def select_pending(
     entries: list[PendingEntry], selector: IdSelector
 ) -> tuple[list[PendingEntry], list[PendingEntry]]:
-    """Split entries into the chosen subset and the remaining subset."""
+    """Split entries into the chosen subset and the remaining subset.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        entries: Ordered source items being carried through the current pipeline step.
+        selector: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            select_pending(
+                entries=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                selector="1",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if selector == "all":
         return entries, []
     ids = set(selector)
@@ -312,7 +675,31 @@ def _stage_topic_suggestions(
     candidates: list[TopicSuggestionCandidate],
     existing_topics: list[str],
 ) -> None:
-    """Add validated topic candidates to pending suggestions."""
+    """Add validated topic candidates to pending suggestions.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        pending: Intermediate collection used to preserve ordering while stage results are merged.
+        candidates: Ordered source items being carried through the current pipeline step.
+        existing_topics: Research topic text or existing topic list used for classification and
+                         suggestions.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _stage_topic_suggestions(
+                pending=[],
+                candidates=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                existing_topics=["AI safety"],
+            )
+        Output:
+            None
+    """
     next_id = _next_id(pending["pending_topic_suggestions"])
     for cand in candidates:
         if "value" not in cand:
@@ -334,7 +721,30 @@ def _stage_purpose_suggestions(
     candidates: list[PurposeSuggestionCandidate],
     existing_purposes: list[str],
 ) -> None:
-    """Add validated purpose candidates to pending suggestions."""
+    """Add validated purpose candidates to pending suggestions.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        pending: Intermediate collection used to preserve ordering while stage results are merged.
+        candidates: Ordered source items being carried through the current pipeline step.
+        existing_purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _stage_purpose_suggestions(
+                pending=[],
+                candidates=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                existing_purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            None
+    """
     next_id = _next_id(pending["pending_purpose_suggestions"])
     for cand in candidates:
         if "name" not in cand or "method" not in cand:
@@ -357,7 +767,27 @@ def add_pending_suggestions(
     topic_candidates: list[TopicSuggestionCandidate],
     purpose_candidates: list[PurposeSuggestionCandidate],
 ) -> PendingSuggestionsState:
-    """Stage topic and purpose candidates into pending_suggestions.json."""
+    """Append suggested topics and purposes to the pending-suggestions state file.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        topic_candidates: Suggested topic candidates before they are staged.
+        purpose_candidates: Suggested purpose candidates before they are staged.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            add_pending_suggestions(
+                topic_candidates=["AI safety"],
+                purpose_candidates=["AI safety"],
+            )
+        Output:
+            "AI safety"
+    """
     pending = load_pending()
     existing_topics = list_topics()
     existing_purposes = list(list_purposes().keys())
@@ -370,6 +800,7 @@ def add_pending_suggestions(
 
 
 __all__ = [
+    "ClaimsSubcommand",
     "Command",
     "ConfigSubcommand",
     "DbSubcommand",

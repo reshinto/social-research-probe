@@ -32,6 +32,8 @@ EXPECTED_TABLES = {
     "warnings",
     "artifacts",
     "claims",
+    "claim_reviews",
+    "claim_notes",
 }
 
 EXPECTED_INDEXES = {
@@ -50,6 +52,9 @@ EXPECTED_INDEXES = {
     "idx_claims_type",
     "idx_claims_review",
     "idx_claims_corrob",
+    "idx_claim_reviews_claim",
+    "idx_claim_reviews_status",
+    "idx_claim_notes_claim",
 }
 
 
@@ -113,7 +118,7 @@ def test_schema_ddl_creates_indexes():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == 2
+    assert SCHEMA_VERSION == 3
 
 
 def test_ensure_schema_backs_up_on_version_crossing(
@@ -130,13 +135,14 @@ def test_ensure_schema_backs_up_on_version_crossing(
     conn.execute("INSERT OR REPLACE INTO schema_meta(key, value) VALUES ('version', '2')")
     conn.commit()
 
-    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 3)
+    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 4)
     monkeypatch.setattr(
         schema_mod,
         "MIGRATIONS",
         [
             schema_mod.MIGRATIONS[0],
             schema_mod.MIGRATIONS[1],
+            schema_mod.MIGRATIONS[2],
             lambda c: None,
         ],
     )
@@ -147,8 +153,8 @@ def test_ensure_schema_backs_up_on_version_crossing(
     backups = list(tmp_path.glob("test.db.bak.*"))
     assert len(backups) == 1
 
-    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 2)
-    monkeypatch.setattr(schema_mod, "MIGRATIONS", schema_mod.MIGRATIONS[:2])
+    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 3)
+    monkeypatch.setattr(schema_mod, "MIGRATIONS", schema_mod.MIGRATIONS[:3])
 
 
 def test_ensure_schema_no_backup_on_fresh_db(tmp_path: Path):

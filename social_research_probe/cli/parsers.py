@@ -14,14 +14,25 @@ from __future__ import annotations
 import argparse
 from enum import StrEnum
 
-from social_research_probe.commands import Command, ConfigSubcommand, DbSubcommand
+from social_research_probe.commands import (
+    ClaimsSubcommand,
+    Command,
+    ConfigSubcommand,
+    DbSubcommand,
+)
 
 
 class Action(StrEnum):
     """Argparse action names used by this module.
 
-    The enum avoids repeating raw action strings throughout parser setup and
-    keeps action values discoverable in one place.
+    The enum avoids repeating raw action strings throughout parser setup and keeps action
+    values discoverable in one place.
+
+    Examples:
+        Input:
+            Action
+        Output:
+            Action
     """
 
     STORE_TRUE = "store_true"
@@ -30,9 +41,15 @@ class Action(StrEnum):
 class Default:
     """Default CLI option values.
 
-    These constants define fallback values for arguments that are optional at
-    the command line, such as server host, server port, suggestion count, and
-    default corroboration providers.
+    These constants define fallback values for arguments that are optional at the command
+    line, such as server host, server port, suggestion count, and default corroboration
+    providers.
+
+    Examples:
+        Input:
+            Default
+        Output:
+            Default
     """
 
     PROVIDERS: str = "llm_search"
@@ -43,7 +60,14 @@ class Default:
 
 
 class OutputFormat(StrEnum):
-    """Supported output formats for commands that render user-facing results."""
+    """Supported output formats for commands that render user-facing results.
+
+    Examples:
+        Input:
+            OutputFormat
+        Output:
+            OutputFormat
+    """
 
     TEXT = "text"
     JSON = "json"
@@ -53,9 +77,15 @@ class OutputFormat(StrEnum):
 class Arg(StrEnum):
     """CLI argument names used across parser registration.
 
-    This enum provides a single source of truth for positional and optional
-    argument names. It reduces typo risk and makes shared flags easier to
-    update across subcommands.
+    This enum provides a single source of truth for positional and optional argument names.
+
+    It reduces typo risk and makes shared flags easier to update across subcommands.
+
+    Examples:
+        Input:
+            Arg
+        Output:
+            Arg
     """
 
     # Mutation flags
@@ -109,8 +139,23 @@ class Arg(StrEnum):
 def _add_output_arg(parser: argparse.ArgumentParser) -> None:
     """Add the shared ``--output`` format argument to a parser.
 
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
     Args:
-        parser: Parser or subparser that should accept an output format.
+        parser: Argparse parser receiving shared options or subcommands.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_output_arg(
+                parser=argparse.ArgumentParser(prog="srp"),
+            )
+        Output:
+            None
     """
     parser.add_argument(Arg.OUTPUT, choices=list(OutputFormat), default=OutputFormat.TEXT)
 
@@ -118,12 +163,24 @@ def _add_output_arg(parser: argparse.ArgumentParser) -> None:
 def _add_mutation_group(parser: argparse.ArgumentParser) -> None:
     """Add mutually exclusive mutation flags to a parser.
 
-    The mutation group is used by commands that modify stored topics or
-    purposes. Exactly one mutation operation is required, while ``--force`` is
-    available as an additional safety override.
+    The mutation group is used by commands that modify stored topics or purposes. Exactly
+    one mutation operation is required, while ``--force`` is available as an additional
+    safety override.
 
     Args:
-        parser: Parser that should receive mutation-related arguments.
+        parser: Argparse parser receiving shared options or subcommands.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_mutation_group(
+                parser=argparse.ArgumentParser(prog="srp"),
+            )
+        Output:
+            None
     """
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(Arg.ADD, nargs="+")
@@ -138,7 +195,19 @@ def _add_topics_subparsers(sub: argparse._SubParsersAction) -> None:
     Adds commands for updating and displaying configured research topics.
 
     Args:
-        sub: Root subparser collection that receives topic commands.
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_topics_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
     """
     ut = sub.add_parser(Command.UPDATE_TOPICS)
     _add_mutation_group(ut)
@@ -153,8 +222,19 @@ def _add_purposes_subparsers(sub: argparse._SubParsersAction) -> None:
     Adds commands for updating and displaying configured research purposes.
 
     Args:
-        sub: Root subparser collection that receives purpose commands.
+        sub: Argparse subparser collection where command parsers are registered.
 
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_purposes_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
     """
     up = sub.add_parser(Command.UPDATE_PURPOSES)
     _add_mutation_group(up)
@@ -166,11 +246,23 @@ def _add_purposes_subparsers(sub: argparse._SubParsersAction) -> None:
 def _add_suggestions_subparsers(sub: argparse._SubParsersAction) -> None:
     """Register suggestion workflow subcommands.
 
-    Adds commands for generating, staging, showing, applying, and discarding
-    suggested topics and purposes.
+    Adds commands for generating, staging, showing, applying, and discarding suggested
+    topics and purposes.
 
     Args:
-        sub: Root subparser collection that receives suggestion commands.
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_suggestions_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
     """
     sug_t = sub.add_parser(Command.SUGGEST_TOPICS)
     sug_t.add_argument(Arg.COUNT, type=int, default=Default.SUGGESTION_COUNT)
@@ -197,11 +289,23 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
     """Register research, reporting, rendering, and local serving commands.
 
     These subcommands cover the main research packet workflow: running research,
-    corroborating claims, rendering charts, generating reports, installing skill
-    files, running setup, and serving HTML reports locally.
+    corroborating claims, rendering charts, generating reports, installing skill files,
+    running setup, and serving HTML reports locally.
 
     Args:
-        sub: Root subparser collection that receives research-related commands.
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_research_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
     """
     rs = sub.add_parser(
         Command.RESEARCH,
@@ -277,11 +381,23 @@ def _add_research_subparsers(sub: argparse._SubParsersAction) -> None:
 def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
     """Register configuration and secret-management subcommands.
 
-    Adds nested ``config`` actions for showing config, resolving config paths,
-    setting regular values, managing secrets, and checking required secrets.
+    Adds nested ``config`` actions for showing config, resolving config paths, setting
+    regular values, managing secrets, and checking required secrets.
 
     Args:
-        sub: Root subparser collection that receives the ``config`` command.
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_config_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
     """
     cfg = sub.add_parser(Command.CONFIG)
     cfg_sub = cfg.add_subparsers(dest="config_cmd", metavar="ACTION")
@@ -308,7 +424,26 @@ def _add_config_subparsers(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_db_subparsers(sub: argparse._SubParsersAction) -> None:
-    """Register database management subcommands."""
+    """Register database management subcommands.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_db_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
+    """
     db = sub.add_parser(Command.DB, help="Local SQLite database management")
     db.set_defaults(_db_parser=db)
     db_sub = db.add_subparsers(dest="db_cmd", metavar="ACTION")
@@ -317,15 +452,76 @@ def _add_db_subparsers(sub: argparse._SubParsersAction) -> None:
     db_sub.add_parser(DbSubcommand.PATH, help="Print the resolved database path")
 
 
+def _add_claims_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register claims query and review subcommands.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _add_claims_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
+    """
+    claims = sub.add_parser(Command.CLAIMS, help="Query and review extracted claims")
+    claims.set_defaults(_claims_parser=claims)
+    claims_sub = claims.add_subparsers(dest="claims_cmd", metavar="ACTION")
+
+    list_p = claims_sub.add_parser(ClaimsSubcommand.LIST, help="List claims with filters")
+    list_p.add_argument("--run-id", type=int, default=None)
+    list_p.add_argument("--topic", default=None)
+    list_p.add_argument("--claim-type", default=None)
+    list_p.add_argument("--needs-review", action="store_true")
+    list_p.add_argument("--needs-corroboration", action="store_true")
+    list_p.add_argument("--corroboration-status", default=None)
+    list_p.add_argument("--extraction-method", default=None)
+    list_p.add_argument("--limit", type=int, default=100)
+    _add_output_arg(list_p)
+
+    show_p = claims_sub.add_parser(ClaimsSubcommand.SHOW, help="Show claim details")
+    show_p.add_argument("claim_id", help="Claim ID to display")
+    _add_output_arg(show_p)
+
+    stats_p = claims_sub.add_parser(ClaimsSubcommand.STATS, help="Claim statistics")
+    _add_output_arg(stats_p)
+
+    review_p = claims_sub.add_parser(ClaimsSubcommand.REVIEW, help="Set review status")
+    review_p.add_argument("claim_id", help="Claim ID to review")
+    review_p.add_argument("--status", required=True)
+    review_p.add_argument("--importance", default=None)
+    review_p.add_argument("--notes", default="")
+    _add_output_arg(review_p)
+
+    note_p = claims_sub.add_parser(ClaimsSubcommand.NOTE, help="Add a note to a claim")
+    note_p.add_argument("claim_id", help="Claim ID")
+    note_p.add_argument("text", help="Note text")
+    _add_output_arg(note_p)
+
+
 def global_parser() -> argparse.ArgumentParser:
     """Build the root ``srp`` argument parser.
 
-    The returned parser includes global flags and all supported subcommands.
-    Command dispatch code can use the parsed ``command`` value to route to the
-    correct handler.
+    The returned parser includes global flags and all supported subcommands. Command
+    dispatch code can use the parsed ``command`` value to route to the correct handler.
 
     Returns:
-        Fully configured argparse parser for the ``srp`` CLI.
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            global_parser()
+        Output:
+            "AI safety"
     """
     parser = argparse.ArgumentParser(
         prog="srp", description="Evidence-first social-media research."
@@ -344,4 +540,5 @@ def global_parser() -> argparse.ArgumentParser:
     _add_research_subparsers(sub)
     _add_config_subparsers(sub)
     _add_db_subparsers(sub)
+    _add_claims_subparsers(sub)
     return parser

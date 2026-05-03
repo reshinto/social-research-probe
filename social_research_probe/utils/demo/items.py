@@ -7,13 +7,13 @@ source_class values. Pure function, no I/O.
 
 from __future__ import annotations
 
-from social_research_probe.commands._demo_constants import DEMO_THEMES
 from social_research_probe.utils.core.types import (
     ExtractedClaim,
     ScoredItem,
     SourceComment,
     TextSurrogate,
 )
+from social_research_probe.utils.demo.constants import DEMO_THEMES
 
 _DEMO_AUTHORS = (
     "viewerOne",
@@ -35,10 +35,52 @@ _DEMO_COMMENT_BANK = (
 
 
 def _theme(idx: int) -> str:
+    """Document the theme rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        idx: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _theme(
+                idx=3,
+            )
+        Output:
+            "AI safety"
+    """
     return DEMO_THEMES[idx % len(DEMO_THEMES)]
 
 
 def _scores(trust: float, trend: float, opportunity: float) -> dict:
+    """Document the scores rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        trust: Numeric score, threshold, prior, or confidence value.
+        trend: Numeric score, threshold, prior, or confidence value.
+        opportunity: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _scores(
+                trust=0.75,
+                trend=0.75,
+                opportunity=0.75,
+            )
+        Output:
+            {"enabled": True}
+    """
     overall = round((trust + trend + opportunity) / 3, 2)
     return {
         "trust": trust,
@@ -49,6 +91,31 @@ def _scores(trust: float, trend: float, opportunity: float) -> dict:
 
 
 def _features(view_velocity: float, engagement: float, age: float, subs: float) -> dict:
+    """Document the features rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        view_velocity: Numeric score, threshold, prior, or confidence value.
+        engagement: Numeric score, threshold, prior, or confidence value.
+        age: Numeric score, threshold, prior, or confidence value.
+        subs: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _features(
+                view_velocity=0.75,
+                engagement=0.75,
+                age=0.75,
+                subs=0.75,
+            )
+        Output:
+            {"enabled": True}
+    """
     return {
         "view_velocity": view_velocity,
         "engagement_ratio": engagement,
@@ -58,12 +125,55 @@ def _features(view_velocity: float, engagement: float, age: float, subs: float) 
 
 
 def _comments_for(idx: int, count: int) -> list[str]:
+    """Document the comments for rule at the boundary where callers use it.
+
+    Downstream stages can read the same fields regardless of which source text was available.
+
+    Args:
+        idx: Count, database id, index, or limit that bounds the work being performed.
+        count: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _comments_for(
+                idx=3,
+                count=3,
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     if count == 0:
         return []
     return [_DEMO_COMMENT_BANK[(idx + n) % len(_DEMO_COMMENT_BANK)] for n in range(count)]
 
 
 def _source_comments_for(idx: int, source_id: str, count: int) -> list[SourceComment]:
+    """Document the source comments for rule at the boundary where callers use it.
+
+    Later stages should not care whether comments were fetched, unavailable, or skipped; they just
+    read the same fields.
+
+    Args:
+        idx: Count, database id, index, or limit that bounds the work being performed.
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        count: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _source_comments_for(
+                idx=3,
+                source_id="youtube:abc123",
+                count=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if count == 0:
         return []
     out: list[SourceComment] = []
@@ -93,6 +203,43 @@ def _text_surrogate(
     comments: list[str],
     layers: list[str],
 ) -> TextSurrogate:
+    """Document the text surrogate rule at the boundary where callers use it.
+
+    The report pipeline needs a predictable text payload even when transcripts or summaries are
+    missing.
+
+    Args:
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        title: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        description: Source text, prompt text, or raw value being parsed, normalized, classified, or
+                     sent to a provider.
+        transcript: Source text, prompt text, or raw value being parsed, normalized, classified, or
+                    sent to a provider.
+        transcript_status: Lifecycle, evidence, or provider status being written into the output
+                           record.
+        evidence_tier: Evidence provenance label written with extracted claims.
+        comments: Comment records or text used as audience evidence.
+        layers: Evidence-layer records that describe which source text was available.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _text_surrogate(
+                source_id="youtube:abc123",
+                title="This tool reduces latency by 30%.",
+                description="This tool reduces latency by 30%.",
+                transcript="This tool reduces latency by 30%.",
+                transcript_status="available",
+                evidence_tier="direct",
+                comments=[{"text": "Useful point"}],
+                layers=[{"kind": "transcript", "available": True}],
+            )
+        Output:
+            "AI safety"
+    """
     primary_text = transcript or description or title
     primary_text_source = (
         "transcript" if transcript else ("description" if description else "title")
@@ -136,6 +283,57 @@ def _build_item(
     transcript_text: str = "",
     layers: list[str] | None = None,
 ) -> ScoredItem:
+    """Build build item in the shape consumed by the next project step.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        idx: Count, database id, index, or limit that bounds the work being performed.
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        title: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        channel: YouTube channel name, id, or classification map used for source labeling.
+        source_class: Source-class label such as primary, secondary, commentary, or unknown.
+        transcript_status: Lifecycle, evidence, or provider status being written into the output
+                           record.
+        comments_status: Lifecycle, evidence, or provider status being written into the output
+                         record.
+        evidence_tier: Evidence provenance label written with extracted claims.
+        verdict: Lifecycle, evidence, or provider status being written into the output record.
+        comment_count: Count, database id, index, or limit that bounds the work being performed.
+        trust: Numeric score, threshold, prior, or confidence value.
+        trend: Numeric score, threshold, prior, or confidence value.
+        opportunity: Numeric score, threshold, prior, or confidence value.
+        transcript_text: Source text, prompt text, or raw value being parsed, normalized,
+                         classified, or sent to a provider.
+        layers: Evidence-layer records that describe which source text was available.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _build_item(
+                idx=3,
+                source_id="youtube:abc123",
+                title="This tool reduces latency by 30%.",
+                channel="OpenAI",
+                source_class="primary",
+                transcript_status="available",
+                comments_status="available",
+                evidence_tier="direct",
+                verdict="supported",
+                comment_count=3,
+                trust=0.75,
+                trend=0.75,
+                opportunity=0.75,
+                transcript_text="This tool reduces latency by 30%.",
+                layers=[{"kind": "transcript", "available": True}],
+            )
+        Output:
+            "AI safety"
+    """
     description = f"Channel deep-dive on {_theme(idx)}; covers concrete examples."
     summary = (
         f"Item {idx + 1} explores {_theme(idx)} with concrete examples drawn "
@@ -418,6 +616,24 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
 
 
 def _extract_item_claims(item: ScoredItem) -> list[ExtractedClaim]:
+    """Extract item claims from the supplied content.
+
+    Extraction, review, corroboration, and reporting all need the same claim shape.
+
+    Args:
+        item: Single source item, database row, or registry entry being transformed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _extract_item_claims(
+                item={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     from social_research_probe.utils.claims.extractor import extract_claims_deterministic
 
     surrogate: TextSurrogate = item.get("text_surrogate") or {}
@@ -433,7 +649,20 @@ def _extract_item_claims(item: ScoredItem) -> list[ExtractedClaim]:
 
 
 def build_demo_items() -> list[ScoredItem]:
-    """Return 12 deterministic synthetic ScoredItem dicts."""
+    """Return 12 deterministic synthetic ScoredItem dicts.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            build_demo_items()
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     items = [_build_item(idx, **spec) for idx, spec in enumerate(_DEMO_ITEM_SPECS)]
     for item in items:
         item["extracted_claims"] = _extract_item_claims(item)

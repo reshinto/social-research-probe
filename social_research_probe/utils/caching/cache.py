@@ -1,5 +1,4 @@
-"""
-Filesystem-backed key/value cache with TTL expiry.
+"""Filesystem-backed key/value cache with TTL expiry.
 
 Why this exists: API adapters and pipeline stages benefit from caching expensive
 network responses or computed results to disk so they survive process restarts.
@@ -29,17 +28,22 @@ _SAFE_KEY_RE = re.compile(r"[^a-zA-Z0-9_\-]")
 def _sanitise_key(key: str) -> str:
     """Replace characters outside ``[a-zA-Z0-9_-]`` with underscores.
 
+    Caching code keeps expensive provider and LLM calls repeatable while hiding storage filenames
+    from callers.
+
     Args:
-        key: Raw cache key (may contain slashes, spaces, colons, etc.).
+        key: Registry, config, or CLI name used to select the matching project value.
 
     Returns:
-        A filename-safe version of the key.
+        Normalized string used as a config key, provider value, or report field.
 
-    Why this exists:
-        Cache keys are often derived from URLs or user-supplied strings that
-        contain characters illegal or dangerous in filenames (e.g. ``/``,
-        ``:``, whitespace).  Sanitising to a restricted alphabet avoids both
-        OS errors and potential path-traversal issues.
+    Examples:
+        Input:
+            _sanitise_key(
+                key="llm.runner",
+            )
+        Output:
+            "AI safety"
     """
     return _SAFE_KEY_RE.sub("_", key)
 
@@ -47,28 +51,39 @@ def _sanitise_key(key: str) -> str:
 class FilesystemCache:
     """A simple on-disk key/value cache that stores values as JSON files.
 
-    Each entry is stored as ``<cache_dir>/<sanitised_key>.json``.  On ``get``
-    the file's modification time is compared against the configured TTL; if the
-    entry is stale ``None`` is returned and the file is left in place (lazy
-    eviction).
+    Each entry is stored as ``<cache_dir>/<sanitised_key>.json``. On ``get`` the file's
+    modification time is compared against the configured TTL; if the entry is stale ``None``
+    is returned and the file is left in place (lazy eviction).
 
-    Lifecycle:
-        Instantiated once per adapter or pipeline stage.  The cache directory
-        is created lazily on the first ``set`` call via ``write_json``.
+    Lifecycle: Instantiated once per adapter or pipeline stage. The cache directory
+    is created lazily on the first ``set`` call via ``write_json``.
 
-    Args:
-        cache_dir: Directory under which cache files are stored.  Created
-            automatically when the first entry is written.
-        ttl_seconds: Maximum age (in seconds) of a cache entry before it is
-            considered expired.  Defaults to 3600 (one hour).
+    Examples:
+        Input:
+            FilesystemCache
+        Output:
+            FilesystemCache
     """
 
     def __init__(self, cache_dir: Path, ttl_seconds: int = 3600) -> None:
         """Initialise the cache.
 
         Args:
-            cache_dir: Root directory for cache files.
-            ttl_seconds: Entry lifetime in seconds (default 3600).
+            cache_dir: Filesystem location used to read, write, or resolve project data.
+            ttl_seconds: Count, database id, index, or limit that bounds the work being performed.
+
+        Returns:
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
+
+        Examples:
+            Input:
+                __init__(
+                    cache_dir=Path(".skill-data"),
+                    ttl_seconds=3,
+                )
+            Output:
+                None
         """
         self._cache_dir = Path(cache_dir)
         self._ttl = ttl_seconds
@@ -76,31 +91,43 @@ class FilesystemCache:
     def _path_for(self, key: str) -> Path:
         """Return the filesystem path for a given cache key.
 
+        Caching code keeps expensive provider and LLM calls repeatable while hiding storage filenames
+        from callers.
+
         Args:
-            key: Raw cache key.
+            key: Registry, config, or CLI name used to select the matching project value.
 
         Returns:
-            Absolute ``Path`` to the corresponding ``.json`` file.
+            Resolved filesystem path, or None when the optional path is intentionally absent.
+
+        Examples:
+            Input:
+                _path_for(
+                    key="llm.runner",
+                )
+            Output:
+                Path("report.html")
         """
         return self._cache_dir / f"{_sanitise_key(key)}.json"
 
     def get(self, key: str) -> object | None:
         """Return the cached value for *key*, or ``None`` if missing or expired.
 
-        The entry is considered expired when
-        ``time.time() - mtime > ttl_seconds``.
+        The entry is considered expired when ``time.time() - mtime > ttl_seconds``.
 
         Args:
-            key: Cache key to look up.
+            key: Registry, config, or CLI name used to select the matching project value.
 
         Returns:
-            The cached value if the entry exists and is within TTL, otherwise
-            ``None``.
+            Normalized value needed by the next operation.
 
-        Why this exists:
-            Lazy TTL evaluation (checking age on read rather than running a
-            background eviction thread) keeps the implementation simple and
-            avoids threading concerns.
+        Examples:
+            Input:
+                get(
+                    key="llm.runner",
+                )
+            Output:
+                "AI safety"
         """
         path = self._path_for(key)
         if not path.exists():
@@ -117,32 +144,49 @@ class FilesystemCache:
     def set(self, key: str, value: object) -> None:
         """Persist *value* to disk under *key*.
 
+        Caching helpers keep expensive provider and LLM calls repeatable without exposing storage
+        filenames to callers.
+
         Args:
-            key: Cache key.
-            value: JSON-serialisable value to cache.
+            key: Registry, config, or CLI name used to select the matching project value.
+            value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                   to a provider.
 
         Returns:
-            None
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
 
-        Why this exists:
-            Delegating to ``write_json`` gives us atomic writes for free,
-            so a crash during ``set`` cannot corrupt an existing entry.
+        Examples:
+            Input:
+                set(
+                    key="llm.runner",
+                    value="42",
+                )
+            Output:
+                None
         """
         write_json(self._path_for(key), value)
 
     def invalidate(self, key: str) -> None:
         """Delete the cache file for *key* if it exists.
 
+        Caching helpers keep expensive provider and LLM calls repeatable without exposing storage
+        filenames to callers.
+
         Args:
-            key: Cache key to invalidate.
+            key: Registry, config, or CLI name used to select the matching project value.
 
         Returns:
-            None
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
 
-        Why this exists:
-            Explicit invalidation is needed when upstream data changes (e.g.
-            after a forced refresh) and stale cached data must not be served
-            even within the TTL window.
+        Examples:
+            Input:
+                invalidate(
+                    key="llm.runner",
+                )
+            Output:
+                None
         """
         path = self._path_for(key)
         with contextlib.suppress(FileNotFoundError):

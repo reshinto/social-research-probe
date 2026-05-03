@@ -16,21 +16,30 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
     """Fit a simple linear regression (ordinary least squares) to the series.
 
     Returns StatResults for:
-      - 'slope': rate of change per unit index step
-      - 'r_squared': goodness-of-fit (0=no fit, 1=perfect fit)
+
+    - 'slope': rate of change per unit index step
+
+    - 'r_squared': goodness-of-fit (0=no fit, 1=perfect fit)
 
     Uses the formula: slope = cov(x,y)/var(x), intercept = mean_y - slope*mean_x.
+
     Returns empty list for fewer than 2 data points.
 
     Args:
-        data: Ordered numeric values to regress (y). x is the integer index.
-        label: Human-readable name for this metric, used in captions.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List of StatResult objects for slope and r_squared, or empty list.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why manual OLS: avoids numpy/scipy dependency while still giving accurate
-    slope and fit quality for typical social-media metric series.
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     n = len(data)
     if n < 2:

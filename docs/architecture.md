@@ -19,7 +19,7 @@ Functional requirements:
 | Requirement | Implementation |
 | --- | --- |
 | Run research from a CLI | `srp research` in `cli/parsers.py` and `commands/research.py`. |
-| Support platform-specific fetching | `platforms/youtube/pipeline.py` and registry/client seams. |
+| Support platform-specific fetching | `platforms/youtube` stage modules and registry/client seams. |
 | Rank items | `services/scoring` and `technologies/scoring`. |
 | Enrich top results | transcript and summary services. |
 | Corroborate claims | `services/corroborating` plus Exa, Brave, Tavily, and LLM search providers. |

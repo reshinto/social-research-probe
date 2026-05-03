@@ -12,7 +12,14 @@ from social_research_probe.utils.core.types import PurposeEntry
 
 @dataclass(frozen=True)
 class MergedPurpose:
-    """Deterministic merged view of one or more named purposes."""
+    """Deterministic merged view of one or more named purposes.
+
+    Examples:
+        Input:
+            MergedPurpose
+        Output:
+            MergedPurpose
+    """
 
     names: tuple[str, ...]
     method: str
@@ -21,7 +28,27 @@ class MergedPurpose:
 
 
 def merge_purposes(purposes: dict[str, PurposeEntry], selected: list[str]) -> MergedPurpose:
-    """Merge the selected purpose definitions into one execution-time view."""
+    """Merge purposes using the module's precedence rules.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        purposes: Purpose name or purpose definitions that shape the research goal.
+        selected: Selected purpose definitions requested by the user.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            merge_purposes(
+                purposes=[{"name": "Opportunity Map"}],
+                selected=["AI safety"],
+            )
+        Output:
+            "AI safety"
+    """
     missing = [n for n in selected if n not in purposes]
     if missing:
         raise ValidationError(f"unknown purpose(s): {missing}")

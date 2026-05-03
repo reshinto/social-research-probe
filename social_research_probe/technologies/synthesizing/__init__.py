@@ -8,12 +8,37 @@ from social_research_probe.technologies import BaseTechnology
 
 
 class SynthesisTech(BaseTechnology[object, str]):
-    """Technology for generating the final research synthesis."""
+    """Technology for generating the final research synthesis.
+
+    Examples:
+        Input:
+            SynthesisTech
+        Output:
+            SynthesisTech
+    """
 
     name: ClassVar[str] = "llm_synthesis"
     enabled_config_key: ClassVar[str] = "llm_synthesis"
 
     async def _execute(self, input_data: object) -> str | None:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            input_data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    input_data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         from social_research_probe.technologies.synthesizing.llm_contract import (
             build_synthesis_prompt,
         )

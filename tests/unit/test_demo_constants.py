@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from social_research_probe.commands import _demo_constants
-from social_research_probe.commands._demo_constants import (
+from social_research_probe.utils.demo import constants as demo_constants
+from social_research_probe.utils.demo.constants import (
     DEMO_DISCLAIMER,
     DEMO_PURPOSE_SET,
     DEMO_THEMES,
@@ -39,7 +39,7 @@ def test_constants_types():
 
 
 def test_module_exposes_all_constants():
-    assert hasattr(_demo_constants, "DEMO_TOPIC")
-    assert hasattr(_demo_constants, "DEMO_DISCLAIMER")
-    assert hasattr(_demo_constants, "DEMO_PURPOSE_SET")
-    assert hasattr(_demo_constants, "DEMO_THEMES")
+    assert hasattr(demo_constants, "DEMO_TOPIC")
+    assert hasattr(demo_constants, "DEMO_DISCLAIMER")
+    assert hasattr(demo_constants, "DEMO_PURPOSE_SET")
+    assert hasattr(demo_constants, "DEMO_THEMES")

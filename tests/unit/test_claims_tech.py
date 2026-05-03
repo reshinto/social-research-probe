@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from social_research_probe.technologies.claims import (
     ClaimExtractionTech,
@@ -156,20 +155,58 @@ class TestClaimExtractionTechExecute:
         result = _run_execute(data, max_chars=50)
         assert all(len(c["claim_text"]) <= 50 for c in result)
 
-    def test_does_not_call_llm_when_use_llm_true(self) -> None:
+    def test_use_llm_true_returns_llm_claims_on_success(self) -> None:
+        llm_claim = {
+            "claim_id": "abc",
+            "source_id": "s",
+            "source_url": "u",
+            "source_title": "T",
+            "claim_text": "Revenue grew by 50%.",
+            "evidence_text": "Revenue grew by 50%.",
+            "claim_type": "fact_claim",
+            "entities": ["50%"],
+            "confidence": 0.9,
+            "evidence_layer": "transcript",
+            "evidence_tier": "metadata_comments_transcript",
+            "needs_corroboration": True,
+            "corroboration_status": "pending",
+            "contradiction_status": "none",
+            "needs_review": False,
+            "uncertainty": "low",
+            "extraction_method": "llm",
+            "source_sentence": "Revenue grew by 50%.",
+            "position_in_text": 0,
+            "context_before": "",
+            "context_after": "",
+            "extracted_at": "2026-01-01T00:00:00+00:00",
+        }
         data = {"transcript": "Revenue grew by 50%.", "url": "u", "title": "T"}
-        with patch(
-            "social_research_probe.technologies.claims.load_active_config",
-            return_value=_mock_cfg(use_llm=True),
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg(use_llm=True),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor.extract_claims_llm",
+                new=AsyncMock(return_value=[llm_claim]),
+            ),
         ):
-            original_run = subprocess.run
-            calls: list[object] = []
+            result = asyncio.run(ClaimExtractionTech()._execute(data))
+        assert len(result) == 1
+        assert result[0]["extraction_method"] == "llm"
 
-            def recording_run(*args: object, **kwargs: object) -> object:
-                calls.append(args)
-                return original_run(*args, **kwargs)
-
-            with patch("subprocess.run", side_effect=recording_run):
-                asyncio.run(ClaimExtractionTech()._execute(data))
-
-        assert calls == [], "subprocess.run must not be called by deterministic extractor"
+    def test_use_llm_true_falls_back_to_deterministic_on_llm_failure(self) -> None:
+        data = {"transcript": "Revenue grew by 50%.", "url": "u", "title": "T"}
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg(use_llm=True),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor.extract_claims_llm",
+                new=AsyncMock(return_value=None),
+            ),
+        ):
+            result = asyncio.run(ClaimExtractionTech()._execute(data))
+        assert len(result) >= 1
+        assert all(c["extraction_method"] == "deterministic" for c in result)

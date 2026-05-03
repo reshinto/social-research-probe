@@ -18,20 +18,26 @@ def run(
 ) -> list[StatResult]:
     """Identify outliers using the z-score method.
 
+    Statistics helpers return report-sized records, keeping the calculation and the label shown to
+    readers in one place.
+
     Args:
-        data: Numeric series to analyse.
-        label: Human-readable name for this metric, used in captions.
-        threshold: Z-score magnitude above which a value is an outlier
-                   (default 2.0). Lower values are more aggressive; the
-                   conventional social-science threshold is often 3.0.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
+        threshold: Numeric score, threshold, prior, or confidence value.
 
     Returns:
-        List of StatResult objects for 'outlier_count' and 'outlier_fraction',
-        or empty list if fewer than 2 data points.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why z-score: it normalises deviation by standard deviation, making the
-    outlier threshold comparable across metrics with different scales.
-    Returns empty list for fewer than 2 data points (z-score needs std dev).
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+                threshold=0.75,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     n = len(data)
     if n < 2:

@@ -15,7 +15,31 @@ from social_research_probe.technologies.statistics import StatResult
 def run_spearman(
     a: list[float], b: list[float], label_a: str = "a", label_b: str = "b"
 ) -> list[StatResult]:
-    """Return Spearman's rank correlation coefficient for two equal-length series."""
+    """Return Spearman's rank correlation coefficient for two equal-length series.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        a: Numeric series used by the statistical calculation.
+        b: Numeric series used by the statistical calculation.
+        label_a: Human-readable metric label included in statistical and chart outputs.
+        label_b: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run_spearman(
+                a=[1.0, 2.0, 3.0],
+                b=[1.0, 2.0, 3.0],
+                label_a="engagement",
+                label_b="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(a)
     if n < 2 or n != len(b):
         return []
@@ -40,7 +64,31 @@ def run_spearman(
 def run_mann_whitney(
     group_a: list[float], group_b: list[float], label_a: str = "a", label_b: str = "b"
 ) -> list[StatResult]:
-    """Return the Mann-Whitney U statistic and a tie-aware z approximation."""
+    """Return the Mann-Whitney U statistic and a tie-aware z approximation.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        group_a: Numeric series used by the statistical calculation.
+        group_b: Numeric series used by the statistical calculation.
+        label_a: Human-readable metric label included in statistical and chart outputs.
+        label_b: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run_mann_whitney(
+                group_a=[1.0, 2.0, 3.0],
+                group_b=[1.0, 2.0, 3.0],
+                label_a="engagement",
+                label_b="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     na = len(group_a)
     nb = len(group_b)
     if na < 1 or nb < 1:
@@ -64,6 +112,25 @@ def run_mann_whitney(
 
 
 def _ranks(values: list[float]) -> list[float]:
+    """Assign ranks used by nonparametric statistical tests.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        values: User-provided values to validate and normalize.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _ranks(
+                values=["AI safety", "model evaluation"],
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     indexed = sorted(enumerate(values), key=lambda pair: pair[1])
     ranks = [0.0] * len(values)
     i = 0
@@ -79,4 +146,23 @@ def _ranks(values: list[float]) -> list[float]:
 
 
 def _ranks_for_pairs(pairs: list[tuple[float, str]]) -> list[float]:
+    """Assign ranks used by nonparametric statistical tests.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        pairs: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _ranks_for_pairs(
+                pairs=[[1.0, 2.0], [3.0, 4.0]],
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     return _ranks([v for v, _ in pairs])

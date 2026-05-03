@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 2
+SCHEMA_VERSION: int = 3
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -162,13 +162,60 @@ CREATE INDEX IF NOT EXISTS idx_claims_review ON claims(needs_review);
 CREATE INDEX IF NOT EXISTS idx_claims_corrob ON claims(corroboration_status);
 """
 
+SCHEMA_DDL_V3: str = """\
+CREATE TABLE IF NOT EXISTS claim_reviews (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_pk       INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    claim_id       TEXT NOT NULL,
+    run_id         INTEGER NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    review_status  TEXT NOT NULL DEFAULT 'unreviewed',
+    review_note    TEXT,
+    importance     TEXT,
+    quality_score  REAL,
+    reviewed_at    TEXT NOT NULL,
+    UNIQUE(claim_pk)
+);
+CREATE INDEX IF NOT EXISTS idx_claim_reviews_claim ON claim_reviews(claim_pk);
+CREATE INDEX IF NOT EXISTS idx_claim_reviews_status ON claim_reviews(review_status);
+
+CREATE TABLE IF NOT EXISTS claim_notes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_pk   INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    claim_id   TEXT NOT NULL,
+    run_id     INTEGER REFERENCES research_runs(id) ON DELETE CASCADE,
+    note_text  TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_claim_notes_claim ON claim_notes(claim_pk);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
     lambda conn: conn.executescript(SCHEMA_DDL_V2),
+    lambda conn: conn.executescript(SCHEMA_DDL_V3),
 ]
 
 
 def _read_version(conn: sqlite3.Connection) -> int:
+    """Read the SQLite schema version from the database.
+
+    Persistence helpers keep SQL and schema details at the storage boundary instead of leaking them
+    through pipeline code.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _read_version(
+                conn=sqlite3.Connection(":memory:"),
+            )
+        Output:
+            5
+    """
     try:
         row = conn.execute("SELECT value FROM schema_meta WHERE key = 'version'").fetchone()
     except sqlite3.OperationalError:
@@ -177,12 +224,54 @@ def _read_version(conn: sqlite3.Connection) -> int:
 
 
 def _backup_db(db_path: Path) -> None:
+    """Document the backup db rule at the boundary where callers use it.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        db_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _backup_db(
+                db_path=Path("srp.db"),
+            )
+        Output:
+            None
+    """
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     backup = db_path.with_suffix(f".db.bak.{ts}")
     shutil.copy2(db_path, backup)
 
 
 def ensure_schema(conn: sqlite3.Connection, db_path: Path | None = None) -> int:
+    """Ensure schema exists before callers depend on it.
+
+    Keeping SQL details here lets pipeline code work with project records instead of database
+    plumbing.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        db_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            ensure_schema(
+                conn=sqlite3.Connection(":memory:"),
+                db_path=Path("srp.db"),
+            )
+        Output:
+            5
+    """
     current = _read_version(conn)
 
     if current > SCHEMA_VERSION:

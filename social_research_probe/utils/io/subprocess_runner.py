@@ -1,5 +1,4 @@
-"""
-Thin wrapper around ``subprocess.run`` with structured error handling.
+"""Thin wrapper around ``subprocess.run`` with structured error handling.
 
 Why this exists: raw ``subprocess.run`` calls scatter error-handling boilerplate
 (returncode checks, timeout handling, stderr extraction) across every call site.
@@ -26,35 +25,42 @@ def run(
 ) -> subprocess.CompletedProcess:
     """Run a subprocess and return the completed process on success.
 
-    The command is executed with ``capture_output=True`` and ``text=True`` so
-    that stdout and stderr are available as strings on the returned
-    ``CompletedProcess`` object.
+    The command is executed with ``capture_output=True`` and ``text=True`` so that stdout
+    and stderr are available as strings on the returned ``CompletedProcess`` object.
 
     Args:
-        argv: Command and arguments as a list of strings, e.g.
-            ``["git", "status", "--short"]``.
-        timeout: Maximum wall-clock seconds to wait for the subprocess to
-            finish.  Defaults to 30.  The timeout is forwarded to
-            ``subprocess.run`` unchanged.
-        input: Optional string to write to the subprocess's stdin.  Pass
-            ``None`` (the default) to leave stdin empty.
+        argv: Optional command-line argument list, excluding the executable name.
+        timeout: Count, database id, index, or limit that bounds the work being performed.
+        input: Optional stdin payload passed to the subprocess.
 
     Returns:
-        A ``subprocess.CompletedProcess`` instance with ``returncode``,
-        ``stdout``, and ``stderr`` attributes populated.
+        Normalized value needed by the next operation.
 
     Raises:
-        AdapterError: If the process exits with a non-zero return code, or if
-            the timeout expires before the process finishes.
-        All other exceptions raised by ``subprocess.run`` (e.g.
-            ``FileNotFoundError`` when the executable is not found) is *not*
-            caught and propagates to the caller unchanged.
+                        AdapterError: If the process exits with a non-zero return code, or if
+                            the timeout expires before the process finishes.
+                        All other exceptions raised by ``subprocess.run`` (e.g.
+                            ``FileNotFoundError`` when the executable is not found) is *not*
+                            caught and propagates to the caller unchanged.
 
-    Why this exists:
-        Raising ``AdapterError`` (rather than letting ``CalledProcessError`` or
-        ``TimeoutExpired`` bubble up) keeps the rest of the codebase insulated
-        from subprocess internals and aligns with SRP's structured exception
-        hierarchy (§9 of the spec).
+                    Why this exists:
+                        Raising ``AdapterError`` (rather than letting ``CalledProcessError`` or
+                        ``TimeoutExpired`` bubble up) keeps the rest of the codebase insulated
+                        from subprocess internals and aligns with SRP's structured exception
+                        hierarchy (§9 of the spec).
+
+
+
+
+    Examples:
+        Input:
+            run(
+                argv=["AI safety"],
+                timeout=3,
+                input="AI safety",
+            )
+        Output:
+            "AI safety"
     """
     try:
         result = subprocess.run(

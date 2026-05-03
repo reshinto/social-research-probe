@@ -19,7 +19,29 @@ def run(
     features: dict[str, list[float]],
     label: str = "y",
 ) -> list[StatResult]:
-    """Fit Gaussian NB and report priors, per-class feature means, and accuracy."""
+    """Fit Gaussian NB and report priors, per-class feature means, and accuracy.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        y: Numeric series used by the statistical calculation.
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                y=[1.0, 2.0, 3.0],
+                features=[[1.0, 0.2], [2.0, 0.4]],
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(y)
     if n == 0 or len(set(y)) < 2:
         return []
@@ -49,7 +71,27 @@ def run(
 
 
 def fit(y: list, features: dict[str, list[float]]) -> tuple[dict, dict, dict]:
-    """Return (priors, per-class means, per-class stdevs)."""
+    """Return (priors, per-class means, per-class stdevs).
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        y: Numeric series used by the statistical calculation.
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            fit(
+                y=[1.0, 2.0, 3.0],
+                features=[[1.0, 0.2], [2.0, 0.4]],
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     classes = sorted(set(y))
     n = len(y)
     priors = {c: sum(1 for yi in y if yi == c) / n for c in classes}
@@ -70,7 +112,31 @@ def fit(y: list, features: dict[str, list[float]]) -> tuple[dict, dict, dict]:
 
 
 def predict(row: dict[str, float], priors: dict, mus: dict, sigmas: dict):
-    """Return the class with the highest posterior for *row*."""
+    """Document the predict rule at the boundary where callers use it.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        row: Single source item, database row, or registry entry being transformed.
+        priors: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        mus: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        sigmas: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            predict(
+                row={"title": "Example", "url": "https://youtu.be/demo"},
+                priors=[[1.0, 2.0], [3.0, 4.0]],
+                mus=[[1.0, 2.0], [3.0, 4.0]],
+                sigmas=[[1.0, 2.0], [3.0, 4.0]],
+            )
+        Output:
+            "AI safety"
+    """
     best_cls = None
     best_score = float("-inf")
     for cls, prior in priors.items():
@@ -88,4 +154,25 @@ def predict(row: dict[str, float], priors: dict, mus: dict, sigmas: dict):
 
 
 def row_values(features: dict[str, list[float]], i: int) -> dict[str, float]:
+    """Document the row values rule at the boundary where callers use it.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+        i: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            row_values(
+                features=[[1.0, 0.2], [2.0, 0.4]],
+                i=3,
+            )
+        Output:
+            {"enabled": True}
+    """
     return {name: features[name][i] for name in features}

@@ -9,10 +9,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.platforms.youtube as yt
 from social_research_probe.commands import serve_report
 from social_research_probe.platforms import orchestrator
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.technologies.llms import ensemble
 from social_research_probe.utils.core.research_command_parser import ParsedRunResearch
 

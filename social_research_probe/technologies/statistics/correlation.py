@@ -20,22 +20,37 @@ def run(
 ) -> list[StatResult]:
     """Compute Pearson correlation coefficient between two series.
 
+    Statistics helpers return report-sized records, keeping the calculation and the label shown to
+    readers in one place.
+
     Args:
-        series_a: First numeric series.
-        series_b: Second numeric series (must be same length as series_a).
-        label_a: Human-readable name for the first series.
-        label_b: Human-readable name for the second series.
+        series_a: Numeric series used by the statistical calculation.
+        series_b: Numeric series used by the statistical calculation.
+        label_a: Human-readable metric label included in statistical and chart outputs.
+        label_b: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List with a single StatResult named 'pearson_r', or empty list if
-        inputs are too short or differ in length.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
     Raises:
-        Nothing — all edge cases return an empty list.
+                    Nothing — all edge cases return an empty list.
 
-    Pearson r = cov(a,b) / (std_a * std_b). A value near +1 or -1 means
-    the two signals move together; near 0 means no linear relationship.
-    Returns empty list if fewer than 2 points or series are unequal length.
+                Pearson r = cov(a,b) / (std_a * std_b). A value near +1 or -1 means
+                the two signals move together; near 0 means no linear relationship.
+                Returns empty list if fewer than 2 points or series are unequal length.
+
+
+
+    Examples:
+        Input:
+            run(
+                series_a=[1.0, 2.0, 3.0],
+                series_b=[1.0, 2.0, 3.0],
+                label_a="engagement",
+                label_b="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     n = len(series_a)
     if n < 2 or len(series_b) != n:

@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.platforms.youtube as yt
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services import ServiceResult, TechResult
 from social_research_probe.technologies.corroborates import CorroborationHostTech
 

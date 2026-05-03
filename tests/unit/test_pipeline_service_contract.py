@@ -3,7 +3,7 @@
 import ast
 from pathlib import Path
 
-PIPELINE = Path("social_research_probe/platforms/youtube/pipeline.py")
+YOUTUBE_PACKAGE = Path("social_research_probe/platforms/youtube")
 SERVICES_DIR = Path("social_research_probe/services")
 DISALLOWED_PIPELINE_SERVICE_CALLS = {
     "classify_batch",
@@ -25,6 +25,14 @@ DISALLOWED_SERVICE_HELPERS = {
 }
 
 
+def _youtube_trees() -> list[ast.AST]:
+    return [
+        ast.parse(path.read_text(encoding="utf-8"))
+        for path in YOUTUBE_PACKAGE.glob("*.py")
+        if path.name != "__init__.py"
+    ]
+
+
 def _base_name(base: ast.expr) -> str:
     if isinstance(base, ast.Name):
         return base.id
@@ -40,9 +48,9 @@ def test_youtube_pipeline_invokes_services_through_execute_batch():
     BaseService batch lifecycle at the stage boundary. Keeping this rule in a
     test makes accidental bypasses fail in CI instead of relying on code review.
     """
-    tree = ast.parse(PIPELINE.read_text(encoding="utf-8"))
     calls = [
         node.attr
+        for tree in _youtube_trees()
         for node in ast.walk(tree)
         if isinstance(node, ast.Attribute) and node.attr in DISALLOWED_PIPELINE_SERVICE_CALLS
     ]
@@ -50,9 +58,9 @@ def test_youtube_pipeline_invokes_services_through_execute_batch():
 
 
 def test_youtube_pipeline_uses_execute_batch_for_service_calls():
-    tree = ast.parse(PIPELINE.read_text(encoding="utf-8"))
     calls = [
         node.attr
+        for tree in _youtube_trees()
         for node in ast.walk(tree)
         if isinstance(node, ast.Attribute) and node.attr == "execute_batch"
     ]

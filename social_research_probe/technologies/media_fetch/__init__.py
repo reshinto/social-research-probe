@@ -24,6 +24,25 @@ from social_research_probe.utils.core.types import (
 
 
 def _recency_cutoff(days: int | None) -> str | None:
+    """Calculate the oldest publish date allowed by the fetch limits.
+
+    Fetch adapters hide provider response details and return the stable source-item shape used by
+    services.
+
+    Args:
+        days: Number of recency days used to compute the provider cutoff.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _recency_cutoff(
+                days="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     if not days:
         return None
     dt = datetime.now(UTC) - timedelta(days=days)
@@ -31,6 +50,25 @@ def _recency_cutoff(days: int | None) -> str | None:
 
 
 def _parse_search_results(raw: list[JSONObject]) -> list[RawItem]:
+    """Parse search results into the project format.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        raw: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to
+             a provider.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _parse_search_results(
+                raw="42",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     items: list[RawItem] = []
     for r in raw:
         id_block = coerce_object(r.get("id"))
@@ -63,6 +101,29 @@ def _parse_search_results(raw: list[JSONObject]) -> list[RawItem]:
 
 
 def _merge_video_and_channel_data(item: RawItem, vid: JSONObject, ch: JSONObject) -> RawItem:
+    """Return an item with the comment fields expected by later enrichment and reports.
+
+    Fetch adapters hide provider response details and return the stable source-item shape used by
+    services.
+
+    Args:
+        item: Single source item, database row, or registry entry being transformed.
+        vid: Video metadata record from the provider response.
+        ch: Channel metadata record from the provider response.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _merge_video_and_channel_data(
+                item={"title": "Example", "url": "https://youtu.be/demo"},
+                vid="AI safety",
+                ch="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     stats = coerce_object(vid.get("statistics"))
     ch_stats = coerce_object(ch.get("statistics"))
     ch_snippet = coerce_object(ch.get("snippet"))
@@ -94,18 +155,65 @@ def _merge_video_and_channel_data(item: RawItem, vid: JSONObject, ch: JSONObject
 
 
 def _filter_shorts(items: list[RawItem], include_shorts: bool) -> list[RawItem]:
+    """Filter shorts before items enter ranking or reporting.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+        include_shorts: Flag that selects the branch for this operation.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _filter_shorts(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                include_shorts=True,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if include_shorts:
         return items
     return [it for it in items if not it.extras.get("is_short")]
 
 
 class YouTubeSearchTech(BaseTechnology[tuple[str, FetchLimits], list[RawItem]]):
-    """Search YouTube by topic and parse the raw API response into RawItems."""
+    """Search YouTube by topic and parse the raw API response into RawItems.
+
+    Examples:
+        Input:
+            YouTubeSearchTech
+        Output:
+            YouTubeSearchTech
+    """
 
     name: ClassVar[str] = "youtube_search"
     enabled_config_key: ClassVar[str] = "youtube_search"
 
     async def _execute(self, data: tuple[str, FetchLimits]) -> list[RawItem]:
+        """Run this component and return the project-shaped output expected by its service.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                [{"title": "Example", "url": "https://youtu.be/demo"}]
+        """
         from social_research_probe.technologies.media_fetch.youtube_api import (
             search_youtube,
         )
@@ -121,12 +229,38 @@ class YouTubeSearchTech(BaseTechnology[tuple[str, FetchLimits], list[RawItem]]):
 
 
 class YouTubeHydrateTech(BaseTechnology[tuple[list[RawItem], bool], list[RawItem]]):
-    """Hydrate RawItems with video + channel statistics; optionally filter shorts."""
+    """Hydrate RawItems with video + channel statistics; optionally filter shorts.
+
+    Examples:
+        Input:
+            YouTubeHydrateTech
+        Output:
+            YouTubeHydrateTech
+    """
 
     name: ClassVar[str] = "youtube_hydrate"
     enabled_config_key: ClassVar[str] = "youtube_hydrate"
 
     async def _execute(self, data: tuple[list[RawItem], bool]) -> list[RawItem]:
+        """Build the small payload that carries id through this workflow.
+
+        The caller gets one stable method even when this component needs fallbacks or provider-specific
+        handling.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                [{"title": "Example", "url": "https://youtu.be/demo"}]
+        """
         from social_research_probe.technologies.media_fetch.youtube_api import (
             hydrate_youtube,
         )
@@ -147,12 +281,38 @@ class YouTubeHydrateTech(BaseTechnology[tuple[list[RawItem], bool], list[RawItem
 
 
 class YouTubeEngagementTech(BaseTechnology[list[RawItem], list[EngagementMetrics]]):
-    """Compute engagement metrics from hydrated items. Pure calculation."""
+    """Compute engagement metrics from hydrated items. Pure calculation.
+
+    Examples:
+        Input:
+            YouTubeEngagementTech
+        Output:
+            YouTubeEngagementTech
+    """
 
     name: ClassVar[str] = "youtube_engagement"
     enabled_config_key: ClassVar[str] = "youtube_engagement"
 
     async def _execute(self, items: list[RawItem]) -> list[EngagementMetrics]:
+        """Run this component and return the project-shaped output expected by its service.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            items: Ordered source items being carried through the current pipeline step.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                await _execute(
+                    items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                )
+            Output:
+                [{"title": "Example", "url": "https://youtu.be/demo"}]
+        """
         now = datetime.now(UTC)
         out: list[EngagementMetrics] = []
         for it in items:
@@ -177,7 +337,28 @@ class YouTubeEngagementTech(BaseTechnology[list[RawItem], list[EngagementMetrics
 
 
 def _parse_comment_thread(item: JSONObject, video_id: str) -> SourceComment | None:
-    """Extract a SourceComment from a raw commentThreads.list item."""
+    """Extract a SourceComment from a raw commentThreads.list item.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        item: Single source item, database row, or registry entry being transformed.
+        video_id: YouTube video id whose metadata, transcript, comments, or claims are being
+                  fetched.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _parse_comment_thread(
+                item={"title": "Example", "url": "https://youtu.be/demo"},
+                video_id="abc123",
+            )
+        Output:
+            "AI safety"
+    """
     snippet = item.get("snippet")
     if not isinstance(snippet, dict):
         return None
@@ -202,12 +383,38 @@ def _parse_comment_thread(item: JSONObject, video_id: str) -> SourceComment | No
 
 
 class YouTubeCommentsTech(BaseTechnology[tuple[str, int, str], list[SourceComment]]):
-    """Fetch and parse YouTube top-level comments for a video."""
+    """Fetch and parse YouTube top-level comments for a video.
+
+    Examples:
+        Input:
+            YouTubeCommentsTech
+        Output:
+            YouTubeCommentsTech
+    """
 
     name: ClassVar[str] = "youtube_comments"
     enabled_config_key: ClassVar[str] = "youtube_comments"
 
     async def _execute(self, data: tuple[str, int, str]) -> list[SourceComment]:
+        """Run this component and return the project-shaped output expected by its service.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                [{"title": "Example", "url": "https://youtu.be/demo"}]
+        """
         from social_research_probe.technologies.media_fetch.youtube_api import (
             fetch_youtube_comments,
         )
