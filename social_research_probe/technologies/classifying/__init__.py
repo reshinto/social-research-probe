@@ -32,12 +32,37 @@ from social_research_probe.utils.core.classifying import (
 
 
 class HeuristicClassifier(BaseTechnology[dict, SourceClass]):
-    """Curated channel map plus title/name regex signals; zero cost."""
+    """Curated channel map plus title/name regex signals; zero cost.
+
+    Examples:
+        Input:
+            HeuristicClassifier
+        Output:
+            HeuristicClassifier
+    """
 
     name: ClassVar[str] = "classifying.heuristic"
     enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         channel = str(data.get("channel") or data.get("author_name") or "")
         title = str(data.get("title") or "")
         curated = classify_by_curated_map(channel)
@@ -73,12 +98,38 @@ _LLM_PROMPT_TEMPLATE = (
 
 
 class LLMClassifier(BaseTechnology[dict, SourceClass]):
-    """Asks the configured LLM runner to classify the channel into the enum."""
+    """Asks the configured LLM runner to classify the channel into the enum.
+
+    Examples:
+        Input:
+            LLMClassifier
+        Output:
+            LLMClassifier
+    """
 
     name: ClassVar[str] = "classifying.llm"
     enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Return the execute.
+
+        The caller gets one stable method even when this component needs fallbacks or provider-specific
+        handling.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         from social_research_probe.config import load_active_config
         from social_research_probe.utils.display.progress import log
         from social_research_probe.utils.llm.registry import run_with_fallback
@@ -106,17 +157,54 @@ class LLMClassifier(BaseTechnology[dict, SourceClass]):
 
 
 class HybridClassifier(BaseTechnology[dict, SourceClass]):
-    """Heuristic first, LLM fallback when curated map yields ``unknown``."""
+    """Heuristic first, LLM fallback when curated map yields ``unknown``.
+
+    Examples:
+        Input:
+            HybridClassifier
+        Output:
+            HybridClassifier
+    """
 
     name: ClassVar[str] = "classifying.hybrid"
     enabled_config_key: ClassVar[str] = "classifying"
 
     def __init__(self) -> None:
+        """Store constructor options used by later method calls.
+
+        Returns:
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
+
+        Examples:
+            Input:
+                __init__()
+            Output:
+                None
+        """
         super().__init__()
         self._heuristic = HeuristicClassifier()
         self._llm = LLMClassifier()
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         result = await self._heuristic._execute(data)
         if result != "unknown":
             return result

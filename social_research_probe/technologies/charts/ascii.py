@@ -16,18 +16,27 @@ _DEFAULT_WIDTH = 30
 def render_bars(data: list[float], label: str = "values", width: int = _DEFAULT_WIDTH) -> str:
     """Return a multi-line Unicode bar chart for *data*.
 
-    Bars are scaled so the largest value fills *width* columns. Values are
-    printed to three decimal places — enough resolution for normalised
-    scores in the 0-to-1 range without overwhelming the line.
+    Bars are scaled so the largest value fills *width* columns. Values are printed to three
+    decimal places — enough resolution for normalised scores in the 0-to-1 range without
+    overwhelming the line.
 
     Args:
-        data: Numeric values to plot, in display order.
-        label: Heading shown above the bars.
-        width: Maximum bar width in characters.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
+        width: Count, database id, index, or limit that bounds the work being performed.
 
     Returns:
-        A string containing the heading and one row per data point.
-        Returns a short placeholder when *data* is empty.
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            render_bars(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+                width=3,
+            )
+        Output:
+            "AI safety"
     """
     if not data:
         return f"{label}: (no data)"

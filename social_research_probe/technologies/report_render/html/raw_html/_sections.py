@@ -23,12 +23,49 @@ from social_research_probe.utils.report.formatter import (
 
 
 def _esc(text: str) -> str:
-    """HTML-escape a string for safe insertion into element content."""
+    """HTML-escape a string for safe insertion into element content.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _esc(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     return html.escape(str(text), quote=False)
 
 
 def section_1_topic_purpose(report: ResearchReport) -> str:
-    """Section 1: Topic and purpose set."""
+    """Section 1: Topic and purpose set.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_1_topic_purpose(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     purposes = _esc(", ".join(report["purpose_set"]))
     return (
         "<ul>"
@@ -39,12 +76,48 @@ def section_1_topic_purpose(report: ResearchReport) -> str:
 
 
 def section_2_platform(report: ResearchReport) -> str:
-    """Section 2: Platform."""
+    """Section 2: Platform.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_2_platform(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     return f"<ul><li><strong>Platform:</strong> {_esc(report['platform'])}</li></ul>"
 
 
 def section_3_top_items(report: ResearchReport) -> str:
-    """Section 3: Scored top-N items with table and per-item links."""
+    """Section 3: Scored top-N items with table and per-item links.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_3_top_items(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     items = report.get("items_top_n", [])
     if not items:
         return "<p><em>(no items returned)</em></p>"
@@ -52,7 +125,25 @@ def section_3_top_items(report: ResearchReport) -> str:
 
 
 def _items_score_table(items: list[ScoredItem]) -> str:
-    """Render the score table for top items."""
+    """Render the score table for top items.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _items_score_table(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            "AI safety"
+    """
     rows = [
         "<tr><th>#</th><th>Channel</th><th>Class</th><th>Trust</th>"
         "<th>Trend</th><th>Opp</th><th>Overall</th><th>Title</th></tr>"
@@ -70,7 +161,25 @@ def _items_score_table(items: list[ScoredItem]) -> str:
 
 
 def _items_links(items: list[ScoredItem]) -> str:
-    """Render per-item URL + one-line takeaway as a bullet list."""
+    """Render per-item URL + one-line takeaway as a bullet list.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _items_links(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            "AI safety"
+    """
     lis = []
     for i, it in enumerate(items, 1):
         url = _esc(it.get("url", "#"))
@@ -108,12 +217,48 @@ def _items_links(items: list[ScoredItem]) -> str:
 
 
 def section_4_platform_engagement(report: ResearchReport) -> str:
-    """Section 4: Platform signals as bullet list."""
+    """Section 4: Platform signals as bullet list.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_4_platform_engagement(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     return _bulletise(report.get("platform_engagement_summary", ""))
 
 
 def section_5_source_validation(report: ResearchReport) -> str:
-    """Section 5: Source validation counts."""
+    """Section 5: Source validation counts.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_5_source_validation(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     svs = report.get("source_validation_summary") or {}
     lines = [
         f"<li>Validated: {svs.get('validated', 0)}, Partial: {svs.get('partially', 0)}, "
@@ -127,12 +272,48 @@ def section_5_source_validation(report: ResearchReport) -> str:
 
 
 def section_6_evidence(report: ResearchReport) -> str:
-    """Section 6: Evidence summary as bullet list."""
+    """Section 6: Evidence summary as bullet list.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_6_evidence(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     return _bulletise(report.get("evidence_summary", ""))
 
 
 def section_7_statistics(report: ResearchReport) -> str:
-    """Section 7: Statistics highlights table."""
+    """Section 7: Statistics highlights table.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_7_statistics(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     stats = report.get("stats_summary", {})
     highlights = stats.get("highlights", [])
     low_confidence = stats.get("low_confidence", False)
@@ -149,6 +330,25 @@ def section_7_statistics(report: ResearchReport) -> str:
 
 
 def _split_metric_finding(line: str) -> tuple[str, str]:
+    """Split metric finding into smaller units for classification.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        line: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _split_metric_finding(
+                line="Engagement increased",
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     if " — " in line:
         a, b = line.split(" — ", 1)
         return a, b
@@ -159,7 +359,33 @@ def _split_metric_finding(line: str) -> tuple[str, str]:
 
 
 def _what_it_means(metric: str, finding: str, model: str, topic: str, purposes: list[str]) -> str:
-    """Combine the model's plain-English explanation with topic+purpose guidance."""
+    """Combine the model's plain-English explanation with topic+purpose guidance.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        metric: HTML, caption, metric, or report text being formatted for the final report.
+        finding: HTML, caption, metric, or report text being formatted for the final report.
+        model: HTML, caption, metric, or report text being formatted for the final report.
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _what_it_means(
+                metric="Engagement increased",
+                finding="Engagement increased",
+                model="Engagement increased",
+                topic="AI safety",
+                purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            "AI safety"
+    """
     base = _contextual_explanation(metric, finding)
     hint = topic_action_hint(model, topic, purposes)
     if base and hint:
@@ -168,7 +394,29 @@ def _what_it_means(metric: str, finding: str, model: str, topic: str, purposes: 
 
 
 def _highlights_table(highlights: list[str], topic: str, purposes: list[str]) -> str:
-    """Render statistics highlights as a four-column HTML table."""
+    """Render statistics highlights as a four-column HTML table.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        highlights: HTML, caption, metric, or report text being formatted for the final report.
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _highlights_table(
+                highlights="Engagement increased",
+                topic="AI safety",
+                purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            "AI safety"
+    """
     rows = ["<tr><th>Model</th><th>Metric</th><th>Finding</th><th>What it means</th></tr>"]
     prev_model = None
     for h in highlights:
@@ -189,7 +437,27 @@ def _highlights_table(highlights: list[str], topic: str, purposes: list[str]) ->
 
 
 def section_8_charts(report: ResearchReport, charts_dir: Path | None) -> str:
-    """Section 8: Embedded chart images and captions."""
+    """Section 8: Embedded chart images and captions.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        charts_dir: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_8_charts(
+                report={"topic": "AI safety", "items_top_n": []},
+                charts_dir=Path(".skill-data"),
+            )
+        Output:
+            "AI safety"
+    """
     captions = report.get("chart_captions", [])
     if not captions:
         return "<p><em>(no charts rendered)</em></p>"
@@ -200,7 +468,27 @@ def section_8_charts(report: ResearchReport, charts_dir: Path | None) -> str:
 
 
 def _chart_block(caption: str, charts_dir: Path | None) -> str:
-    """Render one chart: embedded image (if available) plus caption text."""
+    """Render one chart: embedded image (if available) plus caption text.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        caption: HTML, caption, metric, or report text being formatted for the final report.
+        charts_dir: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _chart_block(
+                caption="Engagement increased",
+                charts_dir=Path(".skill-data"),
+            )
+        Output:
+            "AI safety"
+    """
     png_path = _find_chart_path(caption, charts_dir)
     img_tag = ""
     if png_path:
@@ -230,7 +518,27 @@ def _chart_block(caption: str, charts_dir: Path | None) -> str:
 
 
 def _find_chart_path(caption: str, charts_dir: Path | None) -> str | None:
-    """Extract the PNG file path referenced in a chart caption, if available."""
+    """Extract the PNG file path referenced in a chart caption, if available.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        caption: HTML, caption, metric, or report text being formatted for the final report.
+        charts_dir: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _find_chart_path(
+                caption="Engagement increased",
+                charts_dir=Path(".skill-data"),
+            )
+        Output:
+            "AI safety"
+    """
     if charts_dir is None:
         return None
     # Most chart types embed path as _(see PNG: /absolute/path.png)_
@@ -248,7 +556,25 @@ def _find_chart_path(caption: str, charts_dir: Path | None) -> str | None:
 
 
 def section_9_warnings(report: ResearchReport) -> str:
-    """Section 9: Research warnings."""
+    """Section 9: Research warnings.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_9_warnings(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     warnings = report.get("warnings", [])
     if not warnings:
         return "<p><em>(none)</em></p>"
@@ -257,7 +583,26 @@ def section_9_warnings(report: ResearchReport) -> str:
 
 
 def section_10_synthesis(text: str | None) -> str:
-    """Compiled Synthesis section (LLM-generated or placeholder)."""
+    """Compiled Synthesis section (LLM-generated or placeholder).
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_10_synthesis(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     if not text:
         return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.technologies.report_render.html.raw_html.markdown_to_html import (
@@ -268,7 +613,26 @@ def section_10_synthesis(text: str | None) -> str:
 
 
 def section_11_opportunity(text: str | None) -> str:
-    """Opportunity Analysis section (LLM-generated or placeholder)."""
+    """Opportunity Analysis section (LLM-generated or placeholder).
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_11_opportunity(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     if not text:
         return "<p><em>(LLM synthesis unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.technologies.report_render.html.raw_html.markdown_to_html import (
@@ -279,7 +643,26 @@ def section_11_opportunity(text: str | None) -> str:
 
 
 def section_12_summary(text: str | None) -> str:
-    """Final Summary section (LLM-generated or placeholder)."""
+    """Final Summary section (LLM-generated or placeholder).
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            section_12_summary(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     if not text:
         return "<p><em>(LLM summary unavailable — runner disabled or all runners failed; see terminal logs)</em></p>"
     from social_research_probe.technologies.report_render.html.raw_html.markdown_to_html import (
@@ -290,7 +673,26 @@ def section_12_summary(text: str | None) -> str:
 
 
 def _bulletise(text: str) -> str:
-    """Convert a semicolon-separated summary string to an HTML bullet list."""
+    """Convert a semicolon-separated summary string to an HTML bullet list.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _bulletise(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     parts = [p.strip() for p in text.split(";") if p.strip()]
     if not parts:
         return "<p><em>(no data)</em></p>"

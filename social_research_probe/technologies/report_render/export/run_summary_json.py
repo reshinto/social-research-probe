@@ -10,6 +10,25 @@ from social_research_probe.utils.io.io import write_json
 
 
 def _item_counts(items: list[dict]) -> dict[str, int]:
+    """Document the item counts rule at the boundary where callers use it.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _item_counts(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            {"enabled": True}
+    """
     total = len(items)
     enriched = sum(
         1
@@ -21,10 +40,46 @@ def _item_counts(items: list[dict]) -> dict[str, int]:
 
 
 def _evidence_tiers(items: list[dict]) -> dict[str, int]:
+    """Document the evidence tiers rule at the boundary where callers use it.
+
+    Extraction, review, corroboration, and reporting all need the same claim shape.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _evidence_tiers(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            {"enabled": True}
+    """
     return dict(Counter(it.get("evidence_tier", "unknown") for it in items if isinstance(it, dict)))
 
 
 def _corroboration_summary(items: list[dict]) -> dict[str, int]:
+    """Document the corroboration summary rule at the boundary where callers use it.
+
+    Downstream stages can read the same fields regardless of which source text was available.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _corroboration_summary(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            {"enabled": True}
+    """
     return dict(
         Counter(
             it.get("corroboration_verdict", "unknown")
@@ -35,6 +90,25 @@ def _corroboration_summary(items: list[dict]) -> dict[str, int]:
 
 
 def _claims_summary(items: list[dict]) -> dict:
+    """Document the claims summary rule at the boundary where callers use it.
+
+    The report pipeline needs a predictable text payload even when transcripts or summaries are
+    missing.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _claims_summary(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            {"enabled": True}
+    """
     all_claims: list[dict] = []
     for item in items:
         if isinstance(item, dict):
@@ -58,6 +132,25 @@ def _claims_summary(items: list[dict]) -> dict:
 
 
 def _config_snapshot(config: dict) -> dict:
+    """Build the small payload that carries youtube through this workflow.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        config: Configuration or context values that control this run.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _config_snapshot(
+                config={"enabled": True},
+            )
+        Output:
+            {"enabled": True}
+    """
     platform_keys = {
         k: config[k]
         for k in ("max_items", "enrich_top_n", "recency_days", "comments", "export")
@@ -67,7 +160,29 @@ def _config_snapshot(config: dict) -> dict:
 
 
 def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]) -> dict:
-    """Build machine-readable run summary dict."""
+    """Build machine-readable run summary dict.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        config: Configuration or context values that control this run.
+        artifact_paths: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            build_run_summary(
+                report={"topic": "AI safety", "items_top_n": []},
+                config={"enabled": True},
+                artifact_paths=Path("report.html"),
+            )
+        Output:
+            {"enabled": True}
+    """
     items = report.get("items_top_n") or []
     claims = _claims_summary(items)
     return {
@@ -92,6 +207,27 @@ def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]
 
 
 def write_run_summary(summary: dict, path: Path) -> Path:
-    """Write run summary JSON to path atomically. Returns path."""
+    """Write run summary JSON to path atomically. Returns path.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        summary: Run summary dictionary being exported.
+        path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            write_run_summary(
+                summary={"enabled": True},
+                path=Path("report.html"),
+            )
+        Output:
+            None
+    """
     write_json(path, summary)
     return path

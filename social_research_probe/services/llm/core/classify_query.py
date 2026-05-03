@@ -23,7 +23,14 @@ from social_research_probe.utils.purposes.registry import load
 
 @dataclass(frozen=True)
 class ClassifiedQuery:
-    """Result of classifying a free-form query into a topic and purpose."""
+    """Result of classifying a free-form query into a topic and purpose.
+
+    Examples:
+        Input:
+            ClassifiedQuery
+        Output:
+            ClassifiedQuery
+    """
 
     topic: str
     purpose_name: str
@@ -33,7 +40,20 @@ class ClassifiedQuery:
 
 
 def _validate_llm_config() -> str:
-    """Validate LLM config is enabled and return the preferred runner."""
+    """Validate LLM config is enabled and return the preferred runner.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _validate_llm_config()
+        Output:
+            "AI safety"
+    """
     cfg = load_active_config()
     if not cfg.service_enabled("llm"):
         raise ValidationError(
@@ -51,14 +71,56 @@ def _validate_llm_config() -> str:
 def _persist_classification_result(
     topic: str, purpose_name: str, purpose_method: str
 ) -> tuple[bool, bool]:
-    """Persist topic and purpose; return (topic_created, purpose_created)."""
+    """Persist topic and purpose; return (topic_created, purpose_created).
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        purpose_name: Purpose name or purpose definitions that shape the research goal.
+        purpose_method: Purpose method text that explains how the research should be evaluated.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _persist_classification_result(
+                topic="AI safety",
+                purpose_name="Opportunity Map",
+                purpose_method="Find unmet needs",
+            )
+        Output:
+            None
+    """
     topic_created = _persist_topic(topic)
     purpose_created = _persist_purpose(purpose_name, purpose_method)
     return topic_created, purpose_created
 
 
 def classify_query(query: str) -> ClassifiedQuery:
-    """Classify a free-form query into (topic, purpose) and persist new entries."""
+    """Document the classify query rule at the boundary where callers use it.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            classify_query(
+                query="AI safety benchmarks",
+            )
+        Output:
+            "AI safety"
+    """
     preferred_runner = _validate_llm_config()
 
     existing_topics = list_topics()
@@ -86,7 +148,28 @@ def classify_query(query: str) -> ClassifiedQuery:
 
 @log_with_time("[srp] _run_classification: classifying query")
 def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
-    """Try each runner in order and return the first valid classification result."""
+    """Try each runner in order and return the first valid classification result.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+        preferred: Provider or runner selected for this operation.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _run_classification(
+                prompt="Summarize this source.",
+                preferred="codex",
+            )
+        Output:
+            {"enabled": True}
+    """
     result = run_with_fallback(prompt, NL_QUERY_CLASSIFICATION_SCHEMA, preferred)
 
     if _is_valid_result(result):
@@ -99,7 +182,22 @@ def _run_classification(prompt: str, *, preferred: RunnerName) -> dict:
 
 
 def _is_valid_result(result: dict) -> bool:
-    """Return True when result contains all required non-empty string fields."""
+    """Return True when result contains all required non-empty string fields.
+
+    Args:
+        result: Service or technology result being inspected for payload and diagnostics.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            _is_valid_result(
+                result=ServiceResult(service_name="comments", input_key="demo", tech_results=[]),
+            )
+        Output:
+            True
+    """
     for key in ("topic", "purpose_name", "purpose_method"):
         value = result.get(key)
         if not isinstance(value, str) or not value.strip():
@@ -108,7 +206,23 @@ def _is_valid_result(result: dict) -> bool:
 
 
 def _persist_topic(topic: str) -> bool:
-    """Add the topic; return True if created, False if it already existed."""
+    """Add the topic; return True if created, False if it already existed.
+
+    Args:
+        topic: Research topic text or existing topic list used for classification and suggestions.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _persist_topic(
+                topic="AI safety",
+            )
+        Output:
+            None
+    """
     try:
         add_topics([topic], force=False)
         return True
@@ -117,7 +231,28 @@ def _persist_topic(topic: str) -> bool:
 
 
 def _persist_purpose(name: str, method: str) -> bool:
-    """Add the purpose; return True if created, False if it already existed."""
+    """Add the purpose; return True if created, False if it already existed.
+
+    Services turn platform items into adapter requests and normalize results so stages handle
+    success, skip, and failure the same way.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        method: Purpose method text that explains how the research should be evaluated.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _persist_purpose(
+                name="AI safety",
+                method="Find unmet needs",
+            )
+        Output:
+            None
+    """
     try:
         add_purpose(name=name, method=method, force=False)
         return True
@@ -130,7 +265,31 @@ def _build_classification_prompt(
     existing_topics: list[str],
     existing_purposes: list[str],
 ) -> str:
-    """Build the LLM prompt that instructs classification with existing-name preference."""
+    """Build the LLM prompt that instructs classification with existing-name preference.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        existing_topics: Research topic text or existing topic list used for classification and
+                         suggestions.
+        existing_purposes: Purpose name or purpose definitions that shape the research goal.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _build_classification_prompt(
+                query="AI safety benchmarks",
+                existing_topics=["AI safety"],
+                existing_purposes=[{"name": "Opportunity Map"}],
+            )
+        Output:
+            "AI safety"
+    """
     topics_str = ", ".join(existing_topics) if existing_topics else "(none yet)"
     purposes_str = ", ".join(existing_purposes) if existing_purposes else "(none yet)"
 

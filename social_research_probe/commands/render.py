@@ -22,7 +22,25 @@ from social_research_probe.utils.core.report import unwrap_report
 
 
 def _load_report(report_path: str) -> dict:
-    """Load and validate report JSON file."""
+    """Load and validate report JSON file.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _load_report(
+                report_path=Path("report.html"),
+            )
+        Output:
+            {"enabled": True}
+    """
     from social_research_probe.utils.core.errors import ValidationError
 
     try:
@@ -37,13 +55,51 @@ def _load_report(report_path: str) -> dict:
 
 
 def _extract_overall_scores(report: dict) -> list[float]:
-    """Extract overall scores from items in report."""
+    """Extract overall scores from items in report.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _extract_overall_scores(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     items = report.get("items_top_n", [])
     return [it.get("scores", {}).get("overall", 0.0) for it in items]
 
 
 def _format_report(stat_results, chart) -> dict:
-    """Format stats and chart into report structure."""
+    """Format stats and chart into report structure.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        stat_results: Statistical result records that should be embedded in the report.
+        chart: Chart output or caption selected for the formatted report.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _format_report(
+                stat_results="AI safety",
+                chart="AI safety",
+            )
+        Output:
+            {"enabled": True}
+    """
     return {
         "stats": [{"name": r.name, "value": r.value, "caption": r.caption} for r in stat_results],
         "chart": {"path": chart.path, "caption": chart.caption},
@@ -58,16 +114,26 @@ def run(report_path: str, output_dir: str | None = None) -> int:
     report with stat names/values/captions and chart path/caption to stdout.
 
     Args:
-        report_path: Path to the JSON report file produced by run-research.
-        output_dir: Directory to save chart image files. If None, the viz
-            selector uses a system temp directory.
+        report_path: Filesystem location used to read, write, or resolve project data.
+        output_dir: Filesystem location used to read, write, or resolve project data.
 
     Returns:
-        Exit code (0 on success).
+        Integer count, limit, status code, or timeout used by the caller.
 
     Raises:
-        ValidationError: If report_path does not exist, cannot be opened, or
-            is not valid JSON.
+                    ValidationError: If report_path does not exist, cannot be opened, or
+                        is not valid JSON.
+
+
+
+    Examples:
+        Input:
+            run(
+                report_path=Path("report.html"),
+                output_dir=Path(".skill-data"),
+            )
+        Output:
+            5
     """
     report = _load_report(report_path)
     overall_scores = _extract_overall_scores(report)

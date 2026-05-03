@@ -13,12 +13,46 @@ import re
 
 
 def md_to_html(text: str) -> str:
-    """Convert a Markdown string to an HTML fragment."""
+    """Convert a Markdown string to an HTML fragment.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            md_to_html(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "<section>Summary</section>"
+    """
     lines = text.split("\n")
     output: list[str] = []
     in_list: str | None = None  # "ul" or "ol"
 
     def close_list() -> None:
+        """Document the close list rule at the boundary where callers use it.
+
+        Report rendering has to turn loose research dictionaries into deterministic files, so each
+        formatting rule is isolated and easy to review.
+
+        Returns:
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
+
+        Examples:
+            Input:
+                close_list()
+            Output:
+                None
+        """
         nonlocal in_list
         if in_list:
             output.append(f"</{in_list}>")
@@ -80,7 +114,26 @@ def md_to_html(text: str) -> str:
 
 
 def _inline(text: str) -> str:
-    """Convert inline Markdown spans (bold, italic, code, links) to HTML."""
+    """Convert inline Markdown spans (bold, italic, code, links) to HTML.
+
+    Report rendering has to turn loose research dictionaries into deterministic files, so each
+    formatting rule is isolated and easy to review.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _inline(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     # HTML-escape first to protect literal < > & characters
     text = html.escape(text, quote=False)
     # Bold + italic

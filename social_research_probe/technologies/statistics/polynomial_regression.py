@@ -15,7 +15,31 @@ from social_research_probe.technologies.statistics.multi_regression import _solv
 
 
 def run(x: list[float], y: list[float], label: str = "y", degree: int = 2) -> list[StatResult]:
-    """Fit ``y = b0 + b1·x + b2·x² + ... + b_degree·x^degree`` and report R²."""
+    """Fit ``y = b0 + b1·x + b2·x² + ... + b_degree·x^degree`` and report R².
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        label: Human-readable metric label included in statistical and chart outputs.
+        degree: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                label="engagement",
+                degree=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(x)
     if n <= degree + 1 or degree < 1:
         return []
@@ -43,7 +67,29 @@ def run(x: list[float], y: list[float], label: str = "y", degree: int = 2) -> li
 
 
 def fit_coefficients(x: list[float], y: list[float], degree: int) -> list[float] | None:
-    """Return the raw coefficient vector for use by the viz renderer."""
+    """Return the raw coefficient vector for use by the viz renderer.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        degree: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            fit_coefficients(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                degree=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(x)
     if n <= degree + 1 or degree < 1:
         return None

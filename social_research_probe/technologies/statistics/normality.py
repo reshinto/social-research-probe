@@ -15,7 +15,27 @@ from social_research_probe.technologies.statistics import StatResult
 
 
 def run(data: list[float], label: str = "values") -> list[StatResult]:
-    """Return skewness, excess kurtosis, and a plain-English normality verdict."""
+    """Return skewness, excess kurtosis, and a plain-English normality verdict.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(data)
     if n < 4:
         return []
@@ -47,6 +67,25 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
 
 
 def _skew_verdict(skew: float) -> str:
+    """Return the skew verdict.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        skew: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _skew_verdict(
+                skew=0.75,
+            )
+        Output:
+            "AI safety"
+    """
     if abs(skew) < 0.5:
         return "approximately symmetric"
     if skew > 0:
@@ -55,6 +94,25 @@ def _skew_verdict(skew: float) -> str:
 
 
 def _kurt_verdict(kurt: float) -> str:
+    """Return the kurt verdict.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        kurt: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _kurt_verdict(
+                kurt=0.75,
+            )
+        Output:
+            "AI safety"
+    """
     if abs(kurt) < 1.0:
         return "near-normal tail weight"
     if kurt > 0:
@@ -63,6 +121,27 @@ def _kurt_verdict(kurt: float) -> str:
 
 
 def _classify(skew: float, kurt: float) -> str:
+    """Return the classify.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        skew: Numeric score, threshold, prior, or confidence value.
+        kurt: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _classify(
+                skew=0.75,
+                kurt=0.75,
+            )
+        Output:
+            "AI safety"
+    """
     if abs(skew) < 0.5 and abs(kurt) < 1.0:
         return "approximately normal"
     return "non-normal — prefer nonparametric tests"

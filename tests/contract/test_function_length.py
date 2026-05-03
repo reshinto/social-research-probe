@@ -65,13 +65,33 @@ class _FunctionLengthVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self._class_stack.pop()
 
+    def _docstring_line_count(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+        if not node.body:
+            return 0
+
+        first_stmt = node.body[0]
+        if not (
+            isinstance(first_stmt, ast.Expr)
+            and isinstance(first_stmt.value, ast.Constant)
+            and isinstance(first_stmt.value.value, str)
+        ):
+            return 0
+
+        end_lineno = first_stmt.end_lineno or first_stmt.lineno
+        return end_lineno - first_stmt.lineno + 1
+
     def _check(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         end = node.end_lineno or node.lineno
-        length = end - node.lineno + 1
+        raw_length = end - node.lineno + 1
+        length = raw_length - self._docstring_line_count(node)
+
         qual = f"{self._class_stack[-1]}.{node.name}" if self._class_stack else node.name
         key = f"{self._path}::{qual}"
+
         if length > _LIMIT and key not in _WHITELIST:
-            self.offenders.append(f"{self._path}:{node.lineno} {qual!r} ({length} lines)")
+            self.offenders.append(
+                f"{self._path}:{node.lineno} {qual!r} ({length} lines, excluding docstring)"
+            )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._check(node)

@@ -7,13 +7,53 @@ from social_research_probe.platforms.state import PipelineState
 
 
 class YouTubeTranscriptStage(BaseStage):
-    """Fetch transcripts for top-N items."""
+    """Fetch transcripts for top-N items.
+
+    Examples:
+        Input:
+            YouTubeTranscriptStage
+        Output:
+            YouTubeTranscriptStage()
+    """
 
     @property
     def stage_name(self) -> str:
+        """Return the `transcript` stage key used by config and PipelineState.
+
+        Config, cache, and PipelineState all key off this value, so it is kept beside the stage
+        implementation that owns it.
+
+        Returns:
+            The configured stage name setting.
+
+        Examples:
+            Input:
+                stage.stage_name
+            Output:
+                "transcript"
+        """
         return "transcript"
 
     async def execute(self, state: PipelineState) -> PipelineState:
+        """Run the YouTube transcript stage and publish its PipelineState output.
+
+        The YouTube transcript stage reads the state built so far and publishes the smallest output
+        later stages need.
+
+        Args:
+            state: PipelineState carrying config, inputs, and outputs accumulated by earlier stages.
+
+        Returns:
+            The same PipelineState instance after this stage has published its output.
+
+        Examples:
+            Input:
+                await execute(
+                    state=PipelineState(platform_type="youtube", cmd=None, cache=None),
+                )
+            Output:
+                PipelineState(platform_type="youtube", cmd=None, cache=None)
+        """
         from social_research_probe.services.enriching.transcript import TranscriptService
 
         top_n = list(state.get_stage_output("score").get("top_n", []))

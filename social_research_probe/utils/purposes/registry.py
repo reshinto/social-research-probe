@@ -14,7 +14,20 @@ _FILENAME = "purposes.json"
 
 
 def load() -> PurposesState:
-    """Load, migrate, validate, and return purposes.json."""
+    """Load the requested project state or configuration object.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            load()
+        Output:
+            "AI safety"
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -26,7 +39,26 @@ def load() -> PurposesState:
 
 
 def save(data: PurposesState) -> None:
-    """Validate and persist purposes.json atomically."""
+    """Validate and persist purposes.json atomically.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            save(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            None
+    """
     from social_research_probe.config import load_active_config
 
     data_dir = load_active_config().data_dir
@@ -35,7 +67,25 @@ def save(data: PurposesState) -> None:
 
 
 def get(name: str) -> PurposeEntry:
-    """Return one purpose entry by name."""
+    """Build the small payload that carries purposes through this workflow.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            get(
+                name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     data = load()
     if name not in data["purposes"]:
         raise KeyError(name)

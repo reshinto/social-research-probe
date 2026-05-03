@@ -7,13 +7,53 @@ from social_research_probe.platforms.state import PipelineState
 
 
 class YouTubeSynthesisStage(BaseStage):
-    """Generate LLM synthesis of all research findings."""
+    """Generate LLM synthesis of all research findings.
+
+    Examples:
+        Input:
+            YouTubeSynthesisStage
+        Output:
+            YouTubeSynthesisStage()
+    """
 
     @property
     def stage_name(self) -> str:
+        """Return the `synthesis` stage key used by config and PipelineState.
+
+        Config, cache, and PipelineState all key off this value, so it is kept beside the stage
+        implementation that owns it.
+
+        Returns:
+            The configured stage name setting.
+
+        Examples:
+            Input:
+                stage.stage_name
+            Output:
+                "synthesis"
+        """
         return "synthesis"
 
     def _build_synthesis_context(self, state: PipelineState) -> dict:
+        """Build build synthesis context in the shape consumed by the next project step.
+
+        The YouTube pipeline carries a shared PipelineState; this helper keeps this stage's input and
+        output contract explicit for the next stage.
+
+        Args:
+            state: PipelineState carrying config, inputs, and outputs accumulated by earlier stages.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                _build_synthesis_context(
+                    state=PipelineState(platform_type="youtube", cmd=None, cache=None),
+                )
+            Output:
+                {"enabled": True}
+        """
         corroborate = state.get_stage_output("corroborate")
         score = state.get_stage_output("score")
         fetch = state.get_stage_output("fetch")
@@ -30,6 +70,25 @@ class YouTubeSynthesisStage(BaseStage):
         }
 
     async def execute(self, state: PipelineState) -> PipelineState:
+        """Run the YouTube synthesis stage and publish its PipelineState output.
+
+        The YouTube synthesis stage reads the state built so far and publishes the smallest output later
+        stages need.
+
+        Args:
+            state: PipelineState carrying config, inputs, and outputs accumulated by earlier stages.
+
+        Returns:
+            The same PipelineState instance after this stage has published its output.
+
+        Examples:
+            Input:
+                await execute(
+                    state=PipelineState(platform_type="youtube", cmd=None, cache=None),
+                )
+            Output:
+                PipelineState(platform_type="youtube", cmd=None, cache=None)
+        """
         from social_research_probe.services.synthesizing.synthesis import SynthesisService
 
         if not self._is_enabled(state):

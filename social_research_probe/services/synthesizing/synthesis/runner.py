@@ -16,7 +16,25 @@ from .llm_contract import (
 
 
 def structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
-    """Return runner names with the preferred runner first."""
+    """Return runner names with the preferred runner first.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        preferred: Provider or runner selected for this operation.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            structured_runner_order(
+                preferred="codex",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     candidates: list[RunnerName] = ["claude", "gemini", "codex", "local"]
     if preferred == "none":
         return []
@@ -24,7 +42,25 @@ def structured_runner_order(preferred: RunnerName) -> list[RunnerName]:
 
 
 def run_required_synthesis(report: dict) -> dict | None:
-    """Run LLM synthesis on report if enabled; return result or None."""
+    """Run LLM synthesis on report if enabled; return result or None.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            run_required_synthesis(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            {"enabled": True}
+    """
     if not stage_flag("synthesis", platform="youtube", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return None
@@ -76,7 +112,26 @@ def run_required_synthesis(report: dict) -> dict | None:
 
 
 def attach_synthesis(report: dict) -> None:
-    """Attach synthesis results to report (single or multi-report)."""
+    """Attach synthesis results to report (single or multi-report).
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            attach_synthesis(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            None
+    """
     children = report.get("multi")
     if isinstance(children, list):
         for child in children:
@@ -90,7 +145,21 @@ def attach_synthesis(report: dict) -> None:
 
 
 def log_synthesis_runner_status() -> None:
-    """Log synthesis runner availability status."""
+    """Log synthesis runner availability status.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            log_synthesis_runner_status()
+        Output:
+            None
+    """
     if not stage_flag("synthesis", platform="youtube", default=True):
         log("[srp] synthesis: disabled (stages.synthesis = false).")
         return

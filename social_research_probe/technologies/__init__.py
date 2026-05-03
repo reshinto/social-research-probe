@@ -20,7 +20,17 @@ TOutput = TypeVar("TOutput")
 
 @dataclass
 class HealthCheckResult:
-    """Outcome of a single technology health probe."""
+    """Outcome of a single technology health probe.
+
+    Keeping these fields together makes pipeline handoffs easier to inspect and harder to
+    accidentally reorder.
+
+    Examples:
+        Input:
+            HealthCheckResult
+        Output:
+            HealthCheckResult(key="codex", healthy=True, message="available")
+    """
 
     key: str
     healthy: bool
@@ -30,8 +40,14 @@ class HealthCheckResult:
 class BaseTechnology(ABC, Generic[TInput, TOutput]):
     """Atomic async adapter: transforms one input into one output.
 
-    Subclasses set class-level ``name``, ``health_check_key``, and
-    ``enabled_config_key``, then implement ``_execute``.
+    Subclasses set class-level ``name``, ``health_check_key``, and ``enabled_config_key``,
+    then implement ``_execute``.
+
+    Examples:
+        Input:
+            BaseTechnology
+        Output:
+            BaseTechnology
     """
 
     name: ClassVar[str] = ""
@@ -40,12 +56,38 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
     cacheable: ClassVar[bool] = True
 
     def __init__(self) -> None:
+        """Store constructor options used by later method calls.
+
+        Returns:
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
+
+        Examples:
+            Input:
+                __init__()
+            Output:
+                None
+        """
         self.caller_service: str | None = None
 
     async def execute(self, data: TInput) -> TOutput | None:
         """Run technology with flag check, timing, and error isolation.
 
         Returns None on any error or when the technology is disabled.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
         """
         cfg = load_active_config()
         if self.enabled_config_key and not cfg.technology_enabled(self.enabled_config_key):
@@ -65,9 +107,23 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
         return result
 
     async def _cached_execute(self, data: TInput) -> TOutput:
-        """Wrap _execute with transparent disk caching.
+        """Document the cached execute rule at the boundary where callers use it.
 
-        Cache resolution: stage disable list → technology default → global disable.
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _cached_execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
         """
         from social_research_probe.utils.caching.pipeline_cache import (
             DEFAULT_TTL,
@@ -120,10 +176,39 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
 
     @abstractmethod
     async def _execute(self, data: TInput) -> TOutput:
-        """Perform the actual technology operation."""
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
 
     async def health_check(self) -> HealthCheckResult:
-        """Return health status; subclasses override for real checks."""
+        """Report whether this client or provider is usable before it is selected.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Returns:
+            HealthCheckResult with the checked key, status, and operator-facing message.
+
+        Examples:
+            Input:
+                await health_check()
+            Output:
+                HealthCheckResult(key="codex", healthy=True, message="available")
+        """
         return HealthCheckResult(
             key=self.health_check_key,
             healthy=True,
@@ -131,5 +216,20 @@ class BaseTechnology(ABC, Generic[TInput, TOutput]):
         )
 
     def _cache_key(self, data: TInput) -> str:
-        """Stable cache key derived from the input repr."""
+        """Stable cache key derived from the input repr.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized string used as a config key, provider value, or report field.
+
+        Examples:
+            Input:
+                _cache_key(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         return hashlib.sha256(repr(data).encode()).hexdigest()

@@ -29,7 +29,23 @@ _WEIGHTS: dict[str, float] = {
 
 
 def compute_quality_score(claim: dict) -> float:
-    """0.0-1.0 composite from 5 weighted factors."""
+    """0.0-1.0 composite from 5 weighted factors.
+
+    Args:
+        claim: Claim text or claim dictionary being extracted, classified, reviewed, or
+               corroborated.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            compute_quality_score(
+                claim={"text": "The model reduces latency by 30%."},
+            )
+        Output:
+            0.75
+    """
     raw_conf = claim.get("confidence")
     if isinstance(raw_conf, (int, float)) and not isinstance(raw_conf, bool):
         confidence = max(0.0, min(1.0, float(raw_conf)))

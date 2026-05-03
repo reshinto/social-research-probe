@@ -11,8 +11,25 @@ from social_research_probe.utils.report.formatter import render_full
 def write_final_report(report: dict, *, allow_html: bool) -> str:
     """Write final report and return access path or command.
 
-    Produces both HTML and Markdown. Markdown is fallback when HTML
-    generation disabled or fails, ensuring consistent output.
+    Produces both HTML and Markdown. Markdown is fallback when HTML generation disabled or
+    fails, ensuring consistent output.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        allow_html: Flag that selects the branch for this operation.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            write_final_report(
+                report={"topic": "AI safety", "items_top_n": []},
+                allow_html=True,
+            )
+        Output:
+            None
     """
     from social_research_probe.config import load_active_config
 

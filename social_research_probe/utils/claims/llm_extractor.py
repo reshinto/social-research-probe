@@ -22,6 +22,32 @@ _TEXT_LIMIT = 5000
 def _build_claim_extraction_prompt(
     text: str, source_title: str, max_claims: int, max_chars: int
 ) -> str:
+    """Build the claim extraction prompt structure consumed by the next step.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+        source_title: Human-readable source title stored with extracted claims or citations.
+        max_claims: Count, database id, index, or limit that bounds the work being performed.
+        max_chars: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _build_claim_extraction_prompt(
+                text="This tool reduces latency by 30%.",
+                source_title="Example video",
+                max_claims={"text": "The model reduces latency by 30%."},
+                max_chars=3,
+            )
+        Output:
+            "AI safety"
+    """
     from social_research_probe.utils.llm.prompts import CLAIM_EXTRACTION_PROMPT
 
     return CLAIM_EXTRACTION_PROMPT.format(
@@ -33,12 +59,46 @@ def _build_claim_extraction_prompt(
 
 
 def _preferred_runner() -> str:
+    """Choose the configured LLM runner before falling back to the default runner.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _preferred_runner()
+        Output:
+            "codex"
+    """
     from social_research_probe.config import load_active_config
 
     return load_active_config().llm_runner
 
 
 def _run_llm(prompt: str) -> object:
+    """Run the selected LLM runner and normalize its response for callers.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _run_llm(
+                prompt="Summarize this source.",
+            )
+        Output:
+            "AI safety"
+    """
     from social_research_probe.utils.llm.registry import run_with_fallback
     from social_research_probe.utils.llm.schemas import CLAIM_EXTRACTION_SCHEMA
 
@@ -46,6 +106,26 @@ def _run_llm(prompt: str) -> object:
 
 
 def _extract_json_object(response: object) -> dict | None:
+    """Extract a JSON object from an LLM response.
+
+    This shared utility keeps one parsing or normalization rule in a single place instead of letting
+    call sites drift apart.
+
+    Args:
+        response: Source text, prompt text, or raw value being parsed, normalized, classified, or
+                  sent to a provider.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _extract_json_object(
+                response="42",
+            )
+        Output:
+            {"enabled": True}
+    """
     if isinstance(response, dict):
         return response
     if isinstance(response, str):
@@ -59,6 +139,25 @@ def _extract_json_object(response: object) -> dict | None:
 
 
 def _coerce_claim_type(value: object) -> ClaimType | None:
+    """Convert an untyped value into a safe claim type value.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _coerce_claim_type(
+                value="42",
+            )
+        Output:
+            "AI safety"
+    """
     for ct in _VALID_CLAIM_TYPES:
         if value == ct:
             return ct
@@ -66,18 +165,75 @@ def _coerce_claim_type(value: object) -> ClaimType | None:
 
 
 def _coerce_confidence(value: object) -> float:
+    """Convert an untyped value into a safe confidence value.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _coerce_confidence(
+                value="42",
+            )
+        Output:
+            0.75
+    """
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return max(0.0, min(1.0, float(value)))
     return 0.75
 
 
 def _coerce_entities(value: object) -> list[str]:
+    """Convert an untyped value into a safe entities value.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _coerce_entities(
+                value="42",
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     if isinstance(value, list):
         return [e for e in value if isinstance(e, str)]
     return []
 
 
 def _derive_uncertainty(confidence: float) -> str:
+    """Translate a confidence score into a short uncertainty label.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        confidence: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _derive_uncertainty(
+                confidence=0.75,
+            )
+        Output:
+            "AI safety"
+    """
     if confidence >= 0.8:
         return "low"
     if confidence >= 0.5:
@@ -89,7 +245,28 @@ def _coerce_raw_claim(
     raw: dict,
     max_chars: int,
 ) -> tuple[str, ClaimType, float, list[str], str, bool] | None:
-    """Validate and coerce fields from a raw LLM claim dict. Returns None if invalid."""
+    """Validate and coerce fields from a raw LLM claim dict. Returns None if invalid.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        raw: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to
+             a provider.
+        max_chars: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _coerce_raw_claim(
+                raw="42",
+                max_chars=3,
+            )
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     claim_text: str = raw.get("claim_text") or ""
     if not isinstance(claim_text, str) or not claim_text.strip():
         return None
@@ -124,6 +301,44 @@ def _normalize_llm_claim(
     extracted_at: str,
     max_chars: int,
 ) -> ExtractedClaim | None:
+    """Normalize normalize llm claim before later code relies on its type.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        raw_claim: Claim text or claim dictionary being extracted, classified, reviewed, or
+                   corroborated.
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        source_url: Stable source identifier or URL used to join records across stages and exports.
+        source_title: Human-readable source title stored with extracted claims or citations.
+        evidence_layer: Evidence provenance label written with extracted claims.
+        evidence_tier: Evidence provenance label written with extracted claims.
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+        extracted_at: Timestamp used for recency filtering, age calculations, or persisted audit
+                      metadata.
+        max_chars: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _normalize_llm_claim(
+                raw_claim={"text": "The model reduces latency by 30%."},
+                source_id="youtube:abc123",
+                source_url="https://youtu.be/abc123",
+                source_title="Example video",
+                evidence_layer="transcript",
+                evidence_tier="direct",
+                text="This tool reduces latency by 30%.",
+                extracted_at="2026-01-01T00:00:00Z",
+                max_chars=3,
+            )
+        Output:
+            "AI safety"
+    """
     if not isinstance(raw_claim, dict):
         return None
     coerced = _coerce_raw_claim(raw_claim, max_chars)
@@ -173,6 +388,43 @@ def _collect_claims(
     max_claims: int,
     max_chars: int,
 ) -> list[ExtractedClaim]:
+    """Build the small payload that carries claim_id through this workflow.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        raw_claims: Claim text or claim dictionary being extracted, classified, reviewed, or
+                    corroborated.
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        source_url: Stable source identifier or URL used to join records across stages and exports.
+        source_title: Human-readable source title stored with extracted claims or citations.
+        evidence_layer: Evidence provenance label written with extracted claims.
+        evidence_tier: Evidence provenance label written with extracted claims.
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+        max_claims: Count, database id, index, or limit that bounds the work being performed.
+        max_chars: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _collect_claims(
+                raw_claims={"text": "The model reduces latency by 30%."},
+                source_id="youtube:abc123",
+                source_url="https://youtu.be/abc123",
+                source_title="Example video",
+                evidence_layer="transcript",
+                evidence_tier="direct",
+                text="This tool reduces latency by 30%.",
+                max_claims={"text": "The model reduces latency by 30%."},
+                max_chars=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     extracted_at = datetime.now(tz=UTC).isoformat()
     seen_ids: set[str] = set()
     claims: list[ExtractedClaim] = []
@@ -207,7 +459,40 @@ async def extract_claims_llm(
     max_claims: int = 10,
     max_chars: int = 500,
 ) -> list[ExtractedClaim] | None:
-    """Extract claims via LLM. Returns None on any failure (caller should fall back)."""
+    """Extract claims via LLM. Returns None on any failure (caller should fall back).
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+        source_id: Stable source identifier or URL used to join records across stages and exports.
+        source_url: Stable source identifier or URL used to join records across stages and exports.
+        source_title: Human-readable source title stored with extracted claims or citations.
+        evidence_layer: Evidence provenance label written with extracted claims.
+        evidence_tier: Evidence provenance label written with extracted claims.
+        max_claims: Count, database id, index, or limit that bounds the work being performed.
+        max_chars: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            await extract_claims_llm(
+                text="This tool reduces latency by 30%.",
+                source_id="youtube:abc123",
+                source_url="https://youtu.be/abc123",
+                source_title="Example video",
+                evidence_layer="transcript",
+                evidence_tier="direct",
+                max_claims={"text": "The model reduces latency by 30%."},
+                max_chars=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if not text or not text.strip():
         return None
     prompt = _build_claim_extraction_prompt(text, source_title, max_claims, max_chars)

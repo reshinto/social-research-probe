@@ -18,7 +18,17 @@ ClaimType = Literal[
 
 
 class ExtractedClaim(TypedDict):
-    """One structured claim extracted from an item's primary text."""
+    """One structured claim extracted from an item's primary text.
+
+    The project passes this data as dictionaries, so the type documents the keys that stages,
+    services, and renderers are allowed to rely on.
+
+    Examples:
+        Input:
+            ExtractedClaim
+        Output:
+            {"title": "Example"}
+    """
 
     claim_id: str
     source_id: str

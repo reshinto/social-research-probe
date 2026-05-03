@@ -28,13 +28,22 @@ EXIT_INVALID_USAGE = 2
 def _handle_version(args: argparse.Namespace) -> bool:
     """Print package version information when requested.
 
+    Command helpers keep user-facing parsing, validation, and output formatting out of pipeline and
+    service code.
+
     Args:
-        args: Parsed CLI arguments that may include the version flag.
+        args: Parsed argparse namespace for the command being dispatched.
 
     Returns:
-        ``True`` if version information was printed and normal command
-        execution should stop; otherwise ``False``.
+        True when the condition is satisfied; otherwise False.
 
+    Examples:
+        Input:
+            _handle_version(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            True
     """
     import social_research_probe as _srp_pkg
     from social_research_probe.commands import SpecialCommand
@@ -52,12 +61,18 @@ def _dispatch(args: argparse.Namespace) -> int:
     directory, then looks up and invokes the handler for ``args.command``.
 
     Args:
-        args: Parsed CLI arguments containing the selected command and any
-            command-specific options.
+        args: Parsed argparse namespace for the command being dispatched.
 
     Returns:
-        Process exit code returned by the selected handler, or
-        ``EXIT_INVALID_USAGE`` when no matching handler exists.
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _dispatch(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
     """
     resolve_data_dir(args.data_dir)
     handler = handlers_factory().get(args.command)
@@ -69,20 +84,27 @@ def _dispatch(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the Social Research Probe command-line interface.
 
-    Builds the parser, parses command-line input, handles global flags, validates
-    that a command was selected, and dispatches execution to the matching
-    subcommand handler. Application-level errors are rendered to stderr and
-    converted into process exit codes.
+    Builds the parser, parses command-line input, handles global flags, validates that a command was
+    selected, and dispatches execution to the matching subcommand handler. Application-level errors
+    are rendered to stderr and converted into process exit codes.
 
     Args:
-        argv: Optional argument list to parse. When omitted, argparse reads from
-            ``sys.argv``.
+        argv: Optional command-line argument list, excluding the executable name.
 
     Returns:
-        Process exit code suitable for ``sys.exit``.
+        Integer count, limit, status code, or timeout used by the caller.
 
     Raises:
-        SrpError: Handled internally when raised by command handlers.
+                SrpError: Handled internally when raised by command handlers.
+
+
+    Examples:
+        Input:
+            main(
+                argv=["AI safety"],
+            )
+        Output:
+            5
     """
     from social_research_probe.services.corroborating import (
         ensure_providers_registered,

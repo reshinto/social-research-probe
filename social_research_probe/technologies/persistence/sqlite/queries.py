@@ -7,11 +7,48 @@ from datetime import UTC, datetime
 
 
 def _rows_to_dicts(cursor: sqlite3.Cursor) -> list[dict]:
+    """Build tabular rows for CSV or HTML output.
+
+    Keeping export text here prevents renderers from duplicating wording and column order.
+
+    Args:
+        cursor: SQLite cursor whose current row or description is being inspected.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _rows_to_dicts(
+                cursor="AI safety",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     cols = [desc[0] for desc in cursor.description]
     return [dict(zip(cols, row, strict=True)) for row in cursor.fetchall()]
 
 
 def _row_to_dict(cursor: sqlite3.Cursor) -> dict | None:
+    """Convert one SQLite row into a plain dictionary.
+
+    Persistence helpers keep SQL and schema details at the storage boundary instead of leaking them
+    through pipeline code.
+
+    Args:
+        cursor: SQLite cursor whose current row or description is being inspected.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _row_to_dict(
+                cursor="AI safety",
+            )
+        Output:
+            {"enabled": True}
+    """
     row = cursor.fetchone()
     if row is None:
         return None
@@ -20,7 +57,28 @@ def _row_to_dict(cursor: sqlite3.Cursor) -> dict | None:
 
 
 def resolve_claim_pk(conn: sqlite3.Connection, claim_id: str) -> int | None:
-    """Look up claims.id from claim_id TEXT. Returns None if not found."""
+    """Look up claims.id from claim_id TEXT. Returns None if not found.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_id: Database id of the claim being queried, reviewed, or annotated.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            resolve_claim_pk(
+                conn=sqlite3.Connection(":memory:"),
+                claim_id={"text": "The model reduces latency by 30%."},
+            )
+        Output:
+            "AI safety"
+    """
     row = conn.execute("SELECT id FROM claims WHERE claim_id = ?", (claim_id,)).fetchone()
     return row[0] if row else None
 
@@ -37,7 +95,44 @@ def query_claims(
     extraction_method: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
-    """SELECT claims with optional filters. JOINs research_runs for topic, LEFT JOINs claim_reviews."""
+    """SELECT claims with optional filters. JOINs research_runs for topic, LEFT JOINs claim_reviews.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        run_id: Stable identifier for one research run.
+        topic: Research topic text or existing topic list used for classification and suggestions.
+        claim_type: Claim text or claim dictionary being extracted, classified, reviewed, or
+                    corroborated.
+        needs_review: Flag that selects the branch for this operation.
+        needs_corroboration: Flag that selects the branch for this operation.
+                corroboration_status: Stored corroboration status used to filter claim rows.
+        extraction_method: Extraction method value that changes the behavior described by this
+                           helper.
+        limit: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            query_claims(
+                conn=sqlite3.Connection(":memory:"),
+                run_id="AI safety",
+                topic="AI safety",
+                claim_type={"text": "The model reduces latency by 30%."},
+                needs_review=True,
+                needs_corroboration=True,
+                corroboration_status="AI safety",
+                extraction_method="AI safety",
+                limit=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     parts = [
         "SELECT c.*, rr.topic, cr.review_status, cr.importance",
         "FROM claims c",
@@ -76,7 +171,28 @@ def query_claims(
 
 
 def get_claim(conn: sqlite3.Connection, claim_id: str) -> dict | None:
-    """Single claim with source info and review status."""
+    """Single claim with source info and review status.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_id: Database id of the claim being queried, reviewed, or annotated.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            get_claim(
+                conn=sqlite3.Connection(":memory:"),
+                claim_id={"text": "The model reduces latency by 30%."},
+            )
+        Output:
+            {"enabled": True}
+    """
     sql = """
         SELECT c.*, rr.topic, cr.review_status, cr.importance, cr.review_note, cr.quality_score
         FROM claims c
@@ -89,7 +205,26 @@ def get_claim(conn: sqlite3.Connection, claim_id: str) -> dict | None:
 
 
 def claim_stats(conn: sqlite3.Connection) -> dict:
-    """Aggregated claim statistics."""
+    """Aggregated claim statistics.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            claim_stats(
+                conn=sqlite3.Connection(":memory:"),
+            )
+        Output:
+            {"enabled": True}
+    """
     total = conn.execute("SELECT COUNT(*) FROM claims").fetchone()[0]
     if total == 0:
         return {
@@ -148,7 +283,40 @@ def upsert_claim_review(
     importance: str | None = None,
     quality_score: float | None = None,
 ) -> int:
-    """INSERT OR REPLACE into claim_reviews. Returns rowid."""
+    """INSERT OR REPLACE into claim_reviews. Returns rowid.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_pk: Count, database id, index, or limit that bounds the work being performed.
+        claim_id: Database id of the claim being queried, reviewed, or annotated.
+        run_id: Count, database id, index, or limit that bounds the work being performed.
+        review_status: Human review status selected for the claim.
+        review_note: Reviewer note stored with the claim decision.
+        importance: Reviewer-provided importance score for the claim.
+        quality_score: Reviewer-provided quality score for the claim.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            upsert_claim_review(
+                conn=sqlite3.Connection(":memory:"),
+                claim_pk={"text": "The model reduces latency by 30%."},
+                claim_id={"text": "The model reduces latency by 30%."},
+                run_id=3,
+                review_status="AI safety",
+                review_note="AI safety",
+                importance="AI safety",
+                quality_score="AI safety",
+            )
+        Output:
+            5
+    """
     reviewed_at = datetime.now(tz=UTC).isoformat()
     cur = conn.execute(
         """
@@ -180,7 +348,34 @@ def insert_claim_note(
     run_id: int | None = None,
     note_text: str,
 ) -> int:
-    """Append note. Returns rowid."""
+    """Append note. Returns rowid.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_pk: Count, database id, index, or limit that bounds the work being performed.
+        claim_id: Database id of the claim being queried, reviewed, or annotated.
+        run_id: Stable identifier for one research run.
+        note_text: Free-form note text attached to the claim.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            insert_claim_note(
+                conn=sqlite3.Connection(":memory:"),
+                claim_pk={"text": "The model reduces latency by 30%."},
+                claim_id={"text": "The model reduces latency by 30%."},
+                run_id="AI safety",
+                note_text="AI safety",
+            )
+        Output:
+            5
+    """
     created_at = datetime.now(tz=UTC).isoformat()
     cur = conn.execute(
         """
@@ -194,7 +389,27 @@ def insert_claim_note(
 
 
 def get_claim_reviews(conn: sqlite3.Connection, claim_pk: int) -> list[dict]:
-    """Get all reviews for a claim."""
+    """Get all reviews for a claim.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_pk: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            get_claim_reviews(
+                conn=sqlite3.Connection(":memory:"),
+                claim_pk={"text": "The model reduces latency by 30%."},
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     cur = conn.execute(
         "SELECT * FROM claim_reviews WHERE claim_pk = ? ORDER BY reviewed_at DESC",
         (claim_pk,),
@@ -203,7 +418,27 @@ def get_claim_reviews(conn: sqlite3.Connection, claim_pk: int) -> list[dict]:
 
 
 def get_claim_notes(conn: sqlite3.Connection, claim_pk: int) -> list[dict]:
-    """Get all notes for a claim, ordered by creation time."""
+    """Get all notes for a claim, ordered by creation time.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+    SQL-shaped data through the pipeline.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        claim_pk: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            get_claim_notes(
+                conn=sqlite3.Connection(":memory:"),
+                claim_pk={"text": "The model reduces latency by 30%."},
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     cur = conn.execute(
         "SELECT * FROM claim_notes WHERE claim_pk = ? ORDER BY created_at ASC",
         (claim_pk,),

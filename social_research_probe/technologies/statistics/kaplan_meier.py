@@ -16,7 +16,31 @@ def run(
     label: str = "event",
     horizon_days: float = 30.0,
 ) -> list[StatResult]:
-    """Fit Kaplan-Meier and return median survival + S(t=horizon)."""
+    """Fit Kaplan-Meier and return median survival + S(t=horizon).
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        times: Numeric series used by the statistical calculation.
+        events: Numeric series used by the statistical calculation.
+        label: Human-readable metric label included in statistical and chart outputs.
+        horizon_days: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                times=[1.0, 2.0, 3.0],
+                events=[1.0, 2.0, 3.0],
+                label="engagement",
+                horizon_days=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(times)
     if n == 0 or n != len(events):
         return []
@@ -50,7 +74,27 @@ def run(
 
 
 def fit(times: list[float], events: list[int]) -> list[tuple[float, float]]:
-    """Return the survival curve as a list of (time, survival) points."""
+    """Return the survival curve as a list of (time, survival) points.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        times: Numeric series used by the statistical calculation.
+        events: Numeric series used by the statistical calculation.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            fit(
+                times=[1.0, 2.0, 3.0],
+                events=[1.0, 2.0, 3.0],
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if len(times) != len(events):
         return []
     rows = sorted(zip(times, events, strict=True), key=lambda r: r[0])
@@ -73,10 +117,47 @@ def fit(times: list[float], events: list[int]) -> list[tuple[float, float]]:
 
 
 def _recount_at_risk(rows: list[tuple[float, int]], t: float) -> int:
+    """Document the recount at risk rule at the boundary where callers use it.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        rows: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        t: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _recount_at_risk(
+                rows=[[1.0, 2.0], [3.0, 4.0]],
+                t=0.75,
+            )
+        Output:
+            5
+    """
     return sum(1 for rt, _ in rows if rt > t)
 
 
 def _median_survival(curve: list[tuple[float, float]]) -> float | None:
+    """Return the median survival.
+
+    Args:
+        curve: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _median_survival(
+                curve=[[1.0, 2.0], [3.0, 4.0]],
+            )
+        Output:
+            "AI safety"
+    """
     for t, s in curve:
         if s <= 0.5:
             return t
@@ -84,6 +165,27 @@ def _median_survival(curve: list[tuple[float, float]]) -> float | None:
 
 
 def survival_at(curve: list[tuple[float, float]], t: float) -> float:
+    """Document the survival at rule at the boundary where callers use it.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        curve: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        t: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            survival_at(
+                curve=[[1.0, 2.0], [3.0, 4.0]],
+                t=0.75,
+            )
+        Output:
+            0.75
+    """
     last = 1.0
     for point_t, point_s in curve:
         if point_t > t:

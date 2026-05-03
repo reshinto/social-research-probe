@@ -197,6 +197,25 @@ MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
 
 
 def _read_version(conn: sqlite3.Connection) -> int:
+    """Read the SQLite schema version from the database.
+
+    Persistence helpers keep SQL and schema details at the storage boundary instead of leaking them
+    through pipeline code.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _read_version(
+                conn=sqlite3.Connection(":memory:"),
+            )
+        Output:
+            5
+    """
     try:
         row = conn.execute("SELECT value FROM schema_meta WHERE key = 'version'").fetchone()
     except sqlite3.OperationalError:
@@ -205,12 +224,54 @@ def _read_version(conn: sqlite3.Connection) -> int:
 
 
 def _backup_db(db_path: Path) -> None:
+    """Document the backup db rule at the boundary where callers use it.
+
+    Persistence helpers keep database schema decisions at the storage boundary instead of spreading
+
+    SQL-shaped data through the pipeline.
+
+    Args:
+        db_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _backup_db(
+                db_path=Path("srp.db"),
+            )
+        Output:
+            None
+    """
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     backup = db_path.with_suffix(f".db.bak.{ts}")
     shutil.copy2(db_path, backup)
 
 
 def ensure_schema(conn: sqlite3.Connection, db_path: Path | None = None) -> int:
+    """Ensure schema exists before callers depend on it.
+
+    Keeping SQL details here lets pipeline code work with project records instead of database
+    plumbing.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        db_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            ensure_schema(
+                conn=sqlite3.Connection(":memory:"),
+                db_path=Path("srp.db"),
+            )
+        Output:
+            5
+    """
     current = _read_version(conn)
 
     if current > SCHEMA_VERSION:

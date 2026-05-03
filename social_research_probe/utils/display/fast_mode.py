@@ -26,5 +26,15 @@ FAST_MODE_MAX_PROVIDERS = 1
 
 
 def fast_mode_enabled() -> bool:
-    """Return True iff ``SRP_FAST_MODE`` env var selects the fast pipeline."""
+    """Return True iff ``SRP_FAST_MODE`` env var selects the fast pipeline.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            fast_mode_enabled()
+        Output:
+            True
+    """
     return os.environ.get("SRP_FAST_MODE", "").strip().lower() in _TRUTHY

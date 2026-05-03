@@ -14,6 +14,15 @@ from social_research_probe.utils.display.progress import log
 
 
 class YtDlpFlag(StrEnum):
+    """Yt dlp flag type.
+
+    Examples:
+        Input:
+            YtDlpFlag
+        Output:
+            YtDlpFlag
+    """
+
     EXTRACT_AUDIO = "--extract-audio"
     AUDIO_FORMAT = "--audio-format"
     AUDIO_QUALITY = "--audio-quality"
@@ -29,7 +38,26 @@ _bot_hint_shown = False
 
 
 def _log_ytdlp_failure(stderr: str) -> None:
-    """Log a diagnostic when yt-dlp audio download fails."""
+    """Log a diagnostic when yt-dlp audio download fails.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        stderr: Captured standard error from the runner process.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _log_ytdlp_failure(
+                stderr="AI safety",
+            )
+        Output:
+            None
+    """
     global _bot_hint_shown
     if not stderr:
         return
@@ -48,7 +76,27 @@ def _log_ytdlp_failure(stderr: str) -> None:
 
 
 def download_audio(url: str, tmpdir: str) -> Path | None:
-    """Download audio from url into tmpdir; return path to mp3 file or None."""
+    """Download audio from url into tmpdir; return path to mp3 file or None.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        url: Stable source identifier or URL used to join records across stages and exports.
+        tmpdir: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Resolved filesystem path, or None when the optional path is intentionally absent.
+
+    Examples:
+        Input:
+            download_audio(
+                url="https://youtu.be/abc123",
+                tmpdir=Path(".skill-data"),
+            )
+        Output:
+            Path("report.html")
+    """
     audio_path = os.path.join(tmpdir, "audio.%(ext)s")
     cmd = [
         "yt-dlp",
@@ -84,9 +132,14 @@ def download_audio(url: str, tmpdir: str) -> Path | None:
 class YtDlpFetch(BaseTechnology[str, Path]):
     """Download audio from a video URL via yt-dlp; return local audio file path.
 
-    Input: video URL string.
-    Output: Path to the downloaded mp3 file (inside a temp dir managed by caller),
-            or None on failure.
+    Input: video URL string. Output: Path to the downloaded mp3 file (inside a temp dir
+    managed by caller), or None on failure.
+
+    Examples:
+        Input:
+            YtDlpFetch
+        Output:
+            YtDlpFetch
     """
 
     name: ClassVar[str] = "yt_dlp"
@@ -94,7 +147,25 @@ class YtDlpFetch(BaseTechnology[str, Path]):
     enabled_config_key: ClassVar[str] = "yt_dlp"
 
     async def _execute(self, data: str) -> Path:
-        """Download audio from data (video URL) to a temp dir."""
+        """Download audio from data (video URL) to a temp dir.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Resolved filesystem path, or None when the optional path is intentionally absent.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                Path("report.html")
+        """
         import asyncio
 
         with tempfile.TemporaryDirectory(prefix="srp-ytdlp-") as tmpdir:

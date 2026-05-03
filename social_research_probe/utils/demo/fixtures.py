@@ -30,6 +30,25 @@ _PARTIAL = "partially_verified"
 
 
 def _source_validation_summary(items: list[ScoredItem]) -> SourceValidationSummary:
+    """Document the source validation summary rule at the boundary where callers use it.
+
+    The report pipeline needs a predictable text payload even when transcripts or summaries are
+    missing.
+
+    Args:
+        items: Ordered source items being carried through the current pipeline step.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _source_validation_summary(
+                items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+            )
+        Output:
+            "AI safety"
+    """
     classes = Counter(item.get("source_class", "unknown") for item in items)
     verdicts = Counter(item.get("corroboration_verdict", "unverified") for item in items)
     low_trust = sum(1 for item in items if item.get("scores", {}).get("trust", 0.0) < 0.4)
@@ -49,6 +68,20 @@ def _source_validation_summary(items: list[ScoredItem]) -> SourceValidationSumma
 
 
 def _stats_summary() -> StatsSummary:
+    """Document the stats summary rule at the boundary where callers use it.
+
+    The report pipeline needs a predictable text payload even when transcripts or summaries are
+    missing.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _stats_summary()
+        Output:
+            "AI safety"
+    """
     return {
         "models_run": [],
         "highlights": [
@@ -61,6 +94,20 @@ def _stats_summary() -> StatsSummary:
 
 
 def _chart_captions() -> list[str]:
+    """Document the chart captions rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _chart_captions()
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     return [
         "Synthetic chart: trust vs. trend distribution across 12 demo items.",
         "Synthetic chart: comment volume per source class.",
@@ -69,6 +116,20 @@ def _chart_captions() -> list[str]:
 
 
 def _chart_takeaways() -> list[str]:
+    """Document the chart takeaways rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _chart_takeaways()
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     return [
         f"{DEMO_DISCLAIMER} Trust scores cluster around primary-class items.",
         f"Comment engagement concentrates on {DEMO_THEMES[1]}.",
@@ -77,6 +138,20 @@ def _chart_takeaways() -> list[str]:
 
 
 def _compiled_synthesis() -> str:
+    """Document the compiled synthesis rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _compiled_synthesis()
+        Output:
+            "AI safety"
+    """
     return (
         f"{DEMO_DISCLAIMER} The demo report illustrates how a real run "
         f"surfaces narrative themes such as {DEMO_THEMES[0]}, "
@@ -86,6 +161,20 @@ def _compiled_synthesis() -> str:
 
 
 def _opportunity_analysis() -> str:
+    """Document the opportunity analysis rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _opportunity_analysis()
+        Output:
+            "AI safety"
+    """
     return (
         f"{DEMO_DISCLAIMER} Opportunity framing in a real run would weigh "
         f"signal strength against source credibility; here the framing "
@@ -95,6 +184,19 @@ def _opportunity_analysis() -> str:
 
 
 def _report_summary() -> str:
+    """Document the report summary rule at the boundary where callers use it.
+
+    Downstream stages can read the same fields regardless of which source text was available.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _report_summary()
+        Output:
+            "AI safety"
+    """
     return (
         f"{DEMO_DISCLAIMER} This summary demonstrates the layout of the "
         "executive overview block produced by a normal research run."
@@ -102,6 +204,19 @@ def _report_summary() -> str:
 
 
 def _platform_engagement_summary() -> str:
+    """Document the platform engagement summary rule at the boundary where callers use it.
+
+    Downstream stages can read the same fields regardless of which source text was available.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _platform_engagement_summary()
+        Output:
+            "AI safety"
+    """
     return (
         f"{DEMO_DISCLAIMER} Engagement figures across the 12 synthetic "
         "items mimic the spread observed in real YouTube research runs."
@@ -109,6 +224,19 @@ def _platform_engagement_summary() -> str:
 
 
 def _evidence_summary() -> str:
+    """Document the evidence summary rule at the boundary where callers use it.
+
+    Downstream stages can read the same fields regardless of which source text was available.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _evidence_summary()
+        Output:
+            "AI safety"
+    """
     return (
         f"{DEMO_DISCLAIMER} Evidence coverage spans metadata-only items "
         "through full transcript-plus-comment-plus-external corroboration."
@@ -116,6 +244,20 @@ def _evidence_summary() -> str:
 
 
 def _warnings() -> list[str]:
+    """Document the warnings rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _warnings()
+        Output:
+            ["AI safety", "model evaluation"]
+    """
     return [
         DEMO_DISCLAIMER,
         "YouTube sample skewed to English-language uploads.",
@@ -124,6 +266,20 @@ def _warnings() -> list[str]:
 
 
 def _stage_timings() -> list[dict]:
+    """Document the stage timings rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _stage_timings()
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     return [
         {"stage": "fetch", "elapsed_s": 1.42, "status": "ok"},
         {"stage": "score", "elapsed_s": 0.31, "status": "ok"},
@@ -133,7 +289,20 @@ def _stage_timings() -> list[dict]:
 
 
 def build_demo_report() -> ResearchReport:
-    """Build a complete synthetic ResearchReport for the offline demo command."""
+    """Build build demo report in the shape consumed by the next project step.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            build_demo_report()
+        Output:
+            "AI safety"
+    """
     items = build_demo_items()
     report: ResearchReport = {
         "topic": DEMO_TOPIC,

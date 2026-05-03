@@ -8,13 +8,53 @@ from social_research_probe.utils.display.progress import log
 
 
 class YouTubeAssembleStage(BaseStage):
-    """Assemble all stage outputs into the final research report."""
+    """Assemble all stage outputs into the final research report.
+
+    Examples:
+        Input:
+            YouTubeAssembleStage
+        Output:
+            YouTubeAssembleStage()
+    """
 
     @property
     def stage_name(self) -> str:
+        """Return the `assemble` stage key used by config and PipelineState.
+
+        Config, cache, and PipelineState all key off this value, so it is kept beside the stage
+        implementation that owns it.
+
+        Returns:
+            The configured stage name setting.
+
+        Examples:
+            Input:
+                stage.stage_name
+            Output:
+                "assemble"
+        """
         return "assemble"
 
     def _build_source_validation_summary(self, top_n: list) -> dict:
+        """Build build source validation summary in the shape consumed by the next project step.
+
+        The report pipeline needs a predictable text payload even when transcripts or summaries are
+        missing.
+
+        Args:
+            top_n: Ordered source items being carried through the current pipeline step.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                _build_source_validation_summary(
+                    top_n=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                )
+            Output:
+                {"enabled": True}
+        """
         from collections import Counter
 
         from social_research_probe.config import load_active_config
@@ -62,6 +102,45 @@ class YouTubeAssembleStage(BaseStage):
         chart_takeaways: list,
         warnings: list[str],
     ) -> dict:
+        """Build the small payload that carries source_validation_summary through this workflow.
+
+        The YouTube pipeline carries a shared PipelineState; this helper keeps this stage's input and
+        output contract explicit for the next stage.
+
+        Args:
+            topic: Research topic text or existing topic list used for classification and suggestions.
+            platform: Platform name, such as youtube or all, used to select config and pipeline
+                      behavior.
+            purpose_names: Purpose name or purpose definitions that shape the research goal.
+            top_n: Ordered source items being carried through the current pipeline step.
+            items: Ordered source items being carried through the current pipeline step.
+            engagement_metrics: Engagement metric dictionary used to build report evidence and warnings.
+            stats_summary: Statistical summary records shown in the report.
+            chart_captions: Chart captions shown next to rendered chart artifacts.
+            chart_takeaways: Chart takeaways value that changes the behavior described by this
+                             helper.
+            warnings: Warning or penalty records that explain reduced evidence quality.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                _compose_research_report_data(
+                    topic="AI safety",
+                    platform="AI safety",
+                    purpose_names=("Opportunity Map",),
+                    top_n=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                    items=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                    engagement_metrics={"views": 1200, "likes": 80},
+                    stats_summary={"enabled": True},
+                    chart_captions=["AI safety"],
+                    chart_takeaways=["AI safety"],
+                    warnings=["Transcript unavailable"],
+                )
+            Output:
+                {"enabled": True}
+        """
         from social_research_probe.services.synthesizing.synthesis.helpers.evidence import (
             summarize as summarize_evidence,
         )
@@ -94,6 +173,25 @@ class YouTubeAssembleStage(BaseStage):
         return report
 
     async def execute(self, state: PipelineState) -> PipelineState:
+        """Run the YouTube assemble stage and publish its PipelineState output.
+
+        The YouTube assemble stage reads the state built so far and publishes the smallest output later
+        stages need.
+
+        Args:
+            state: PipelineState carrying config, inputs, and outputs accumulated by earlier stages.
+
+        Returns:
+            The same PipelineState instance after this stage has published its output.
+
+        Examples:
+            Input:
+                await execute(
+                    state=PipelineState(platform_type="youtube", cmd=None, cache=None),
+                )
+            Output:
+                PipelineState(platform_type="youtube", cmd=None, cache=None)
+        """
         from social_research_probe.utils.pipeline.helpers import collect_divergence_warnings
 
         if not self._is_enabled(state):

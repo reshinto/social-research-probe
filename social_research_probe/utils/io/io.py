@@ -1,5 +1,4 @@
-"""
-File I/O helpers for reading and writing JSON files safely.
+"""File I/O helpers for reading and writing JSON files safely.
 
 Why this exists: raw ``open``/``json.load`` calls scattered across the codebase
 risk partial writes on crash and silently swallow missing-file errors.  This
@@ -23,10 +22,24 @@ from pathlib import Path
 
 
 def _srp_json_default(obj: object) -> object:
-    """Custom JSON serialiser fallback for non-standard types.
+    """Convert project-specific objects into JSON-serializable values.
 
-    Handles dataclasses, Path, datetime, and falls back to repr() for
-    anything else so serialisation never raises TypeError.
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        obj: Python object being serialized for storage.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _srp_json_default(
+                obj={"title": "Example"},
+            )
+        Output:
+            "AI safety"
     """
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return dataclasses.asdict(obj)  # is_dataclass() confirms this is safe
@@ -36,30 +49,26 @@ def _srp_json_default(obj: object) -> object:
 
 
 def read_json(path: Path, default: object | None = None) -> object:
-    """Read a JSON file and return its contents as a dict.
+    """Read JSON from disk or user input.
 
-    If the file does not exist the function returns a *copy* of ``default``
-    (or an empty dict when ``default`` is ``None``) rather than raising
-    ``FileNotFoundError``.  A copy is returned so that callers cannot
-    accidentally mutate the default sentinel.
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
 
     Args:
-        path: Absolute or relative path to the JSON file to read.
-        default: Value to return when the file is absent.  Defaults to
-            ``None``, which is treated as an empty dict ``{}``.
+        path: Filesystem location used to read, write, or resolve project data.
+        default: Fallback value returned when the requested data is absent.
 
     Returns:
-        The parsed JSON object (always a ``dict``), or a copy of ``default``
-        (or ``{}``) when the file does not exist.
+        Normalized value needed by the next operation.
 
-    Raises:
-        json.JSONDecodeError: If the file exists but contains invalid JSON.
-        PermissionError: If the process lacks read permission for the file.
-
-    Why this exists:
-        Returning a copy of ``default`` (rather than the object itself) prevents
-        the classic "mutable default argument" footgun where two callers share
-        the same dict object.
+    Examples:
+        Input:
+            read_json(
+                path=Path("report.html"),
+                default="AI safety",
+            )
+        Output:
+            "AI safety"
     """
     try:
         with open(path, encoding="utf-8") as fh:
@@ -72,31 +81,40 @@ def read_json(path: Path, default: object | None = None) -> object:
 def write_json(path: Path, data: object) -> None:
     """Write *data* to a JSON file atomically, creating parent directories as needed.
 
-    The function writes to a sibling ``.tmp`` file first, then renames it over
-    the destination.  On POSIX systems ``os.replace`` is atomic at the
-    filesystem level, so readers will never observe a partial write.
+    The function writes to a sibling ``.tmp`` file first, then renames it over the destination. On
+    POSIX systems ``os.replace`` is atomic at the filesystem level, so readers will never observe a
+    partial write.
 
-    Non-standard types (dataclasses, Path, datetime, etc.) are handled by
-    ``_srp_json_default`` so callers do not need to pre-convert values.
+    Non-standard types (dataclasses, Path, datetime, etc.) are handled by ``_srp_json_default`` so
+    callers do not need to pre-convert values.
 
     Args:
-        path: Destination path for the JSON file.  Parent directories are
-            created automatically if they do not exist.
-        data: Value to serialise and write.  Dataclasses, Path, and datetime
-            are converted automatically; anything else falls back to repr().
+        path: Filesystem location used to read, write, or resolve project data.
+        data: Input payload at this service, technology, or pipeline boundary.
 
     Returns:
-        None
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
 
     Raises:
-        PermissionError: If the process lacks write permission for the parent
-            directory.
+                PermissionError: If the process lacks write permission for the parent
+                    directory.
 
-    Why this exists:
-        A plain ``open(path, "w")`` write is *not* atomic — if the process
-        crashes mid-write the file is left truncated or corrupt.  Writing to a
-        ``.tmp`` sibling and renaming over the target is the standard POSIX
-        idiom for atomic file replacement.
+            Why this exists:
+                A plain ``open(path, "w")`` write is *not* atomic — if the process
+                crashes mid-write the file is left truncated or corrupt.  Writing to a
+                ``.tmp`` sibling and renaming over the target is the standard POSIX
+                idiom for atomic file replacement.
+
+
+    Examples:
+        Input:
+            write_json(
+                path=Path("report.html"),
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            None
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

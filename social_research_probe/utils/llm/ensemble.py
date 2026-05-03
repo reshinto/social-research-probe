@@ -32,7 +32,17 @@ _PROVIDERS: tuple[FreeTextRunnerName, ...] = ("claude", "gemini", "codex")
 
 
 def _llm_enabled() -> bool:
-    """Return True when the LLM service gate is enabled."""
+    """Return True when the LLM service gate is enabled.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            _llm_enabled()
+        Output:
+            True
+    """
     cfg = load_active_config()
     service_enabled = getattr(cfg, "service_enabled", None)
     if callable(service_enabled):
@@ -43,8 +53,27 @@ def _llm_enabled() -> bool:
 async def _run_provider(name: str, prompt: str, task: str = "generating response") -> str | None:
     """Call one LLM CLI subprocess asynchronously; return stripped stdout or None on failure.
 
-    Silently catches all exceptions so a missing or rate-limited CLI never
-    crashes the caller — it simply contributes nothing to the ensemble.
+    Silently catches all exceptions so a missing or rate-limited CLI never crashes the
+    caller — it simply contributes nothing to the ensemble.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+        task: LLM task label used for routing, logging, and fallback decisions.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            await _run_provider(
+                name="AI safety",
+                prompt="Summarize this source.",
+                task="AI safety",
+            )
+        Output:
+            "AI safety"
     """
     log(f"[srp] LLM ({name}): {task}")
     try:
@@ -94,8 +123,28 @@ async def _collect_responses(
 ) -> dict[str, str]:
     """Fan out the prompt to all providers concurrently via asyncio.gather.
 
-    Returns a dict mapping provider name to response text for every provider
-    that succeeded. Missing or failed providers are absent from the dict.
+    Returns a dict mapping provider name to response text for every provider that succeeded.
+
+    Missing or failed providers are absent from the dict.
+
+    Args:
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+        task: LLM task label used for routing, logging, and fallback decisions.
+        providers: Provider names selected for corroboration, search, or fallback execution.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            await _collect_responses(
+                prompt="Summarize this source.",
+                task="AI safety",
+                providers="AI safety",
+            )
+        Output:
+            {"enabled": True}
     """
     if not providers:
         return {}
@@ -111,7 +160,28 @@ async def _collect_responses(
 
 
 def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> str:
-    """Construct a meta-prompt instructing the synthesizer to merge all responses."""
+    """Construct a meta-prompt instructing the synthesizer to merge all responses.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        original_prompt: Original prompt value that changes the behavior described by this
+                         helper.
+        responses: LLM responses collected before ensemble selection.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _build_synthesis_prompt(
+                original_prompt="AI safety",
+                responses={"enabled": True},
+            )
+        Output:
+            "AI safety"
+    """
     blocks = "\n\n".join(f"[Response {i + 1}]\n{text}" for i, text in enumerate(responses.values()))
     return (
         "You received these responses from multiple AI assistants answering the same request. "
@@ -126,11 +196,28 @@ def _build_synthesis_prompt(original_prompt: str, responses: dict[str, str]) -> 
 async def _synthesize(responses: dict[str, str], original_prompt: str) -> str | None:
     """Produce the final answer from collected responses.
 
-    If only one provider responded, returns it directly.
-    Otherwise uses Claude → Gemini → Codex to synthesize all responses.
-    Falls back to the best available single response if synthesis also fails.
-    Providers disabled via ``<name>_service_enabled`` are skipped unless they
-    are the configured primary runner.
+    If only one provider responded, returns it directly. Otherwise uses Claude → Gemini →
+
+    Codex to synthesize all responses. Falls back to the best available single response if
+    synthesis also fails. Providers disabled via ``<name>_service_enabled`` are skipped
+    unless they are the configured primary runner.
+
+    Args:
+        responses: LLM responses collected before ensemble selection.
+        original_prompt: Original prompt value that changes the behavior described by this
+                         helper.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            await _synthesize(
+                responses={"enabled": True},
+                original_prompt="AI safety",
+            )
+        Output:
+            "AI safety"
     """
     if not responses:
         return None
@@ -156,6 +243,20 @@ def _service_enabled(provider: str) -> bool:
     The primary runner is always allowed; secondary providers are gated by
     their technology flags so users can disable one provider without
     disabling the rest of the LLM service.
+
+    Args:
+        provider: Provider or runner selected for this operation.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            _service_enabled(
+                provider="brave",
+            )
+        Output:
+            True
     """
     if not _llm_enabled():
         return False
@@ -171,10 +272,27 @@ def _service_enabled(provider: str) -> bool:
 async def multi_llm_prompt(prompt: str, task: str = "generating response") -> str | None:
     """Run a free-text prompt through the configured default runner or ensemble.
 
-    When runner is ``none``, returns None immediately without calling any LLM.
-    When a specific provider is configured, that provider is used directly.
-    Falls back to the ensemble fan-out only if preferred_free_text_runner
-    returns None for an unrecognised runner value.
+    When runner is ``none``, returns None immediately without calling any LLM. When a
+    specific provider is configured, that provider is used directly. Falls back to the
+    ensemble fan-out only if preferred_free_text_runner returns None for an unrecognised
+    runner value.
+
+    Args:
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+        task: LLM task label used for routing, logging, and fallback decisions.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            await multi_llm_prompt(
+                prompt="Summarize this source.",
+                task="AI safety",
+            )
+        Output:
+            "AI safety"
     """
     if not _llm_enabled():
         return None

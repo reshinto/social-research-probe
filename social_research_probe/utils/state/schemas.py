@@ -85,17 +85,56 @@ PENDING_SUGGESTIONS_SCHEMA: JSONObject = {
 
 
 def default_topics() -> TopicsState:
-    """Return the default structure for a new topics.json file."""
+    """Document the default topics rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            default_topics()
+        Output:
+            "AI safety"
+    """
     return {"schema_version": SCHEMA_VERSION, "topics": []}
 
 
 def default_purposes() -> PurposesState:
-    """Return the default structure for a new purposes.json file."""
+    """Document the default purposes rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            default_purposes()
+        Output:
+            "AI safety"
+    """
     return {"schema_version": SCHEMA_VERSION, "purposes": {}}
 
 
 def default_pending_suggestions() -> PendingSuggestionsState:
-    """Return the default structure for a new pending_suggestions.json file."""
+    """Document the default pending suggestions rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            default_pending_suggestions()
+        Output:
+            "AI safety"
+    """
     return {
         "schema_version": SCHEMA_VERSION,
         "pending_topic_suggestions": [],

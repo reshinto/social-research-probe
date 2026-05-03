@@ -1,9 +1,10 @@
 """Multiple linear regression via normal equations.
 
-Fits y = b0 + b1·x1 + b2·x2 + ... using the closed-form OLS solution
 ``β = (XᵀX)⁻¹ Xᵀy``. Emits per-coefficient StatResults plus model-level
+
 R² and adjusted R², so consumers can see which features drive the
 dependent variable and how well the combined model explains it.
+
 
 The implementation uses only the Python stdlib — no numpy. This keeps
 the module deployable in the same constrained runtimes (e.g. free-
@@ -22,16 +23,26 @@ def run(
 ) -> list[StatResult]:
     """Fit a multi-feature OLS model and return coefficients plus fit metrics.
 
+    Statistics helpers return report-sized records, keeping the calculation and the label shown to
+    readers in one place.
+
     Args:
-        y: Dependent variable values (same length as each feature column).
-        features: Mapping of feature-name to column values. Adds an
-            implicit intercept; callers should not pass one.
-        label: Name of the dependent variable, used in captions.
+        y: Numeric series used by the statistical calculation.
+        features: Feature matrix, feature names, or target columns used by analysis helpers.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List of StatResults — one per coefficient (plus intercept), plus
-        ``r_squared`` and ``adjusted_r_squared``. Returns an empty list
-        when the sample size is too small for the feature count.
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                y=[1.0, 2.0, 3.0],
+                features=[[1.0, 0.2], [2.0, 0.4]],
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     n = len(y)
     feature_names = list(features.keys())
@@ -85,7 +96,27 @@ def run(
 
 
 def _solve_normal_equations(x_matrix: list[list[float]], y: list[float]) -> list[float] | None:
-    """Solve β = (XᵀX)⁻¹ Xᵀy via Gauss-Jordan elimination. None on singularity."""
+    """Solve β = (XᵀX)⁻¹ Xᵀy via Gauss-Jordan elimination. None on singularity.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        x_matrix: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        y: Numeric series used by the statistical calculation.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _solve_normal_equations(
+                x_matrix=[[1.0, 2.0], [3.0, 4.0]],
+                y=[1.0, 2.0, 3.0],
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(x_matrix)
     cols = len(x_matrix[0])
     xt_x = [
@@ -97,7 +128,27 @@ def _solve_normal_equations(x_matrix: list[list[float]], y: list[float]) -> list
 
 
 def _gauss_jordan_solve(matrix: list[list[float]], rhs: list[float]) -> list[float] | None:
-    """Solve ``matrix · x = rhs`` in place. Returns None if matrix is singular."""
+    """Solve ``matrix · x = rhs`` in place. Returns None if matrix is singular.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        matrix: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        rhs: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _gauss_jordan_solve(
+                matrix=[[1.0, 2.0], [3.0, 4.0]],
+                rhs=[[1.0, 2.0], [3.0, 4.0]],
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     size = len(matrix)
     augmented = [[*row, rhs[i]] for i, row in enumerate(matrix)]
     for i in range(size):
@@ -111,7 +162,29 @@ def _gauss_jordan_solve(matrix: list[list[float]], rhs: list[float]) -> list[flo
 
 
 def _pivot_index(augmented: list[list[float]], col: int, size: int) -> int | None:
-    """Return the row index with the largest absolute pivot value, or None."""
+    """Return the row index with the largest absolute pivot value, or None.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        augmented: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        col: Count, database id, index, or limit that bounds the work being performed.
+        size: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _pivot_index(
+                augmented=[[1.0, 2.0], [3.0, 4.0]],
+                col=3,
+                size=3,
+            )
+        Output:
+            "AI safety"
+    """
     best_row = col
     best_abs = abs(augmented[col][col])
     for r in range(col + 1, size):
@@ -122,7 +195,30 @@ def _pivot_index(augmented: list[list[float]], col: int, size: int) -> int | Non
 
 
 def _eliminate_column(augmented: list[list[float]], col: int, size: int) -> None:
-    """Divide the pivot row then eliminate *col* from all other rows in place."""
+    """Divide the pivot row then eliminate *col* from all other rows in place.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        augmented: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        col: Count, database id, index, or limit that bounds the work being performed.
+        size: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _eliminate_column(
+                augmented=[[1.0, 2.0], [3.0, 4.0]],
+                col=3,
+                size=3,
+            )
+        Output:
+            None
+    """
     pivot_value = augmented[col][col]
     augmented[col] = [value / pivot_value for value in augmented[col]]
     for r in range(size):

@@ -13,6 +13,15 @@ NEAR_DUPLICATE_THRESHOLD = 80
 
 
 class DuplicateStatus(StrEnum):
+    """Duplicate status type.
+
+    Examples:
+        Input:
+            DuplicateStatus
+        Output:
+            DuplicateStatus
+    """
+
     NEW = "new"
     NEAR_DUPLICATE = "near-duplicate"
     DUPLICATE = "duplicate"
@@ -20,16 +29,68 @@ class DuplicateStatus(StrEnum):
 
 @dataclass(frozen=True)
 class DedupeResult:
+    """Typed shape for dedupe result data.
+
+    Keeping these fields together makes pipeline handoffs easier to inspect and harder to
+    accidentally reorder.
+
+    Examples:
+        Input:
+            DedupeResult
+        Output:
+            DedupeResult(status="new", matches=())
+    """
+
     status: DuplicateStatus
     matches: tuple[str, ...]
 
 
 def _normalize(s: str) -> str:
+    """Normalize a value before it is stored or compared.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        s: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to a
+           provider.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _normalize(
+                s="This tool reduces latency by 30%.",
+            )
+        Output:
+            "AI safety"
+    """
     return " ".join(s.strip().lower().split())
 
 
 def classify(candidate: str, existing: list[str]) -> DedupeResult:
-    """Return DedupeResult comparing candidate to existing entries."""
+    """Document the classify rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        candidate: Candidate topic or purpose name being compared for duplicates.
+        existing: Intermediate collection used to preserve ordering while stage results are merged.
+
+    Returns:
+        DedupeResult with the duplicate status and matched existing names.
+
+    Examples:
+        Input:
+            classify(
+                candidate="AI safety",
+                existing=[],
+            )
+        Output:
+            DedupeResult(status="new", matches=())
+    """
     if not existing:
         return DedupeResult(DuplicateStatus.NEW, ())
 

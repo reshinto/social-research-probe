@@ -8,7 +8,25 @@ from social_research_probe.technologies import BaseTechnology
 
 
 def _coerce_word_limit(value: object, default: int = 100) -> int:
-    """Return a positive integer word limit."""
+    """Return a positive integer word limit.
+
+    Args:
+        value: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        default: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _coerce_word_limit(
+                value="42",
+                default=3,
+            )
+        Output:
+            5
+    """
     try:
         limit = int(value)
     except (TypeError, ValueError):
@@ -17,18 +35,61 @@ def _coerce_word_limit(value: object, default: int = 100) -> int:
 
 
 def _limit_words(text: str, word_limit: int) -> str:
-    """Cap text to at most word_limit whitespace-delimited words."""
+    """Cap text to at most word_limit whitespace-delimited words.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+        word_limit: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _limit_words(
+                text="This tool reduces latency by 30%.",
+                word_limit=3,
+            )
+        Output:
+            "AI safety"
+    """
     words = text.split()
     return " ".join(words[:word_limit])
 
 
 class SummaryEnsembleTech(BaseTechnology[object, str]):
-    """Technology using the LLM ensemble to generate summaries."""
+    """Technology using the LLM ensemble to generate summaries.
+
+    Examples:
+        Input:
+            SummaryEnsembleTech
+        Output:
+            SummaryEnsembleTech
+    """
 
     name: ClassVar[str] = "llm_ensemble"
     enabled_config_key: ClassVar[str] = "llm_ensemble"
 
     async def _execute(self, data: object) -> str | None:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         from social_research_probe.utils.llm.ensemble import multi_llm_prompt
 
         title = data.get("title", "") if isinstance(data, dict) else ""
@@ -56,12 +117,37 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
 
 
 class TranscriptWhisperTech(BaseTechnology[str, str]):
-    """Fallback technology using yt-dlp to download audio and Whisper to transcribe."""
+    """Fallback technology using yt-dlp to download audio and Whisper to transcribe.
+
+    Examples:
+        Input:
+            TranscriptWhisperTech
+        Output:
+            TranscriptWhisperTech
+    """
 
     name: ClassVar[str] = "whisper_fallback"
     enabled_config_key: ClassVar[str] = "whisper"
 
     async def _execute(self, input_data: str) -> str | None:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            input_data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    input_data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         import asyncio
         import tempfile
 

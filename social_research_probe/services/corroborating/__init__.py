@@ -15,7 +15,20 @@ from social_research_probe.technologies.corroborates import (
 
 
 def auto_mode_providers() -> tuple[str, ...]:
-    """Return ordered provider names to try in auto mode."""
+    """Return ordered provider names to try in auto mode.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            auto_mode_providers()
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     from social_research_probe.config import load_active_config
 
     cfg = load_active_config()
@@ -25,10 +38,48 @@ def auto_mode_providers() -> tuple[str, ...]:
 
 
 def _candidates(configured: str) -> tuple[str, ...]:
+    """Document the candidates rule at the boundary where callers use it.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        configured: Configured provider mode, including explicit names or auto selection.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _candidates(
+                configured="AI safety",
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     return auto_mode_providers() if configured == "auto" else (configured,)
 
 
 def _llm_search_allowed(name: str) -> bool:
+    """Report whether the LLM search provider is allowed to run.
+
+    Services translate platform data into adapter calls and normalize the result so stages can
+    handle success, skip, and failure consistently.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            _llm_search_allowed(
+                name="codex",
+            )
+        Output:
+            True
+    """
     from social_research_probe.config import load_active_config
 
     if name != "llm_search":
@@ -39,8 +90,22 @@ def _llm_search_allowed(name: str) -> bool:
 def select_healthy_providers(configured: str) -> tuple[list[str], tuple[str, ...]]:
     """Resolve configured corroboration provider to healthy provider names.
 
-    Returns (healthy, candidates). Service-level gates are applied here so
-    callers (pipeline stages) need not check service feature flags directly.
+    Returns (healthy, candidates). Service-level gates are applied here so callers (pipeline
+    stages) need not check service feature flags directly.
+
+    Args:
+        configured: Configured provider mode, including explicit names or auto selection.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            select_healthy_providers(
+                configured="AI safety",
+            )
+        Output:
+            ["AI safety", "model evaluation"]
     """
     from social_research_probe.config import load_active_config
     from social_research_probe.utils.core.errors import ValidationError

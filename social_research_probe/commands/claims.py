@@ -6,7 +6,25 @@ import argparse
 
 
 def run(args: argparse.Namespace) -> int:
-    """Dispatch claims subcommands."""
+    """Dispatch claims subcommands.
+
+    This is the command boundary: argparse passes raw options in, and the rest of the application
+    receives validated project data or a clear error.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            run(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     parser = getattr(args, "_claims_parser", None)
     if not getattr(args, "claims_cmd", None):
         if parser:
@@ -30,6 +48,25 @@ def run(args: argparse.Namespace) -> int:
 
 
 def _list(args: argparse.Namespace) -> int:
+    """List stored claim rows for the claims command.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of pipeline and
+    service code.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _list(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.config import load_active_config
     from social_research_probe.technologies.persistence.sqlite.connection import open_connection
     from social_research_probe.technologies.persistence.sqlite.queries import query_claims
@@ -58,6 +95,25 @@ def _list(args: argparse.Namespace) -> int:
 
 
 def _show(args: argparse.Namespace) -> int:
+    """Document the show rule at the boundary where callers use it.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _show(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.config import load_active_config
     from social_research_probe.technologies.persistence.sqlite.connection import open_connection
     from social_research_probe.technologies.persistence.sqlite.queries import (
@@ -86,6 +142,25 @@ def _show(args: argparse.Namespace) -> int:
 
 
 def _stats(args: argparse.Namespace) -> int:
+    """Collect claim review statistics for the claims command.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of pipeline and
+    service code.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _stats(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.config import load_active_config
     from social_research_probe.technologies.persistence.sqlite.connection import open_connection
     from social_research_probe.technologies.persistence.sqlite.queries import claim_stats
@@ -108,6 +183,25 @@ _VALID_IMPORTANCE = frozenset({"low", "medium", "high", "critical"})
 
 
 def _review(args: argparse.Namespace) -> int:
+    """Document the review rule at the boundary where callers use it.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _review(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.config import load_active_config
     from social_research_probe.technologies.persistence.sqlite.connection import open_connection
     from social_research_probe.technologies.persistence.sqlite.queries import (
@@ -160,6 +254,25 @@ def _review(args: argparse.Namespace) -> int:
 
 
 def _note(args: argparse.Namespace) -> int:
+    """Document the note rule at the boundary where callers use it.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            _note(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.config import load_active_config
     from social_research_probe.technologies.persistence.sqlite.connection import open_connection
     from social_research_probe.technologies.persistence.sqlite.queries import (
