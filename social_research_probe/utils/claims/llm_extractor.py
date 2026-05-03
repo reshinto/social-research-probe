@@ -14,7 +14,7 @@ from social_research_probe.utils.claims.extractor import (
 )
 from social_research_probe.utils.claims.types import ClaimType, ExtractedClaim
 
-_VALID_CLAIM_TYPES: frozenset[str] = frozenset(get_args(ClaimType))
+_VALID_CLAIM_TYPES: list[ClaimType] = list(get_args(ClaimType))
 _VALID_UNCERTAINTY: frozenset[str] = frozenset({"low", "medium", "high"})
 _TEXT_LIMIT = 5000
 
@@ -59,8 +59,9 @@ def _extract_json_object(response: object) -> dict | None:
 
 
 def _coerce_claim_type(value: object) -> ClaimType | None:
-    if isinstance(value, str) and value in _VALID_CLAIM_TYPES:
-        return value  # type: ignore[return-value]
+    for ct in _VALID_CLAIM_TYPES:
+        if value == ct:
+            return ct
     return None
 
 

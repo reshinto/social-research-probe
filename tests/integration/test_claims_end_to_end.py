@@ -13,6 +13,7 @@ from social_research_probe.commands._demo_items import build_demo_items
 from social_research_probe.config import reset_config_cache
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube.pipeline import YouTubePersistStage
+from social_research_probe.technologies.claims import ClaimExtractionTech
 from social_research_probe.technologies.persistence.sqlite.connection import open_connection
 
 REQUIRED_CLAIM_TYPES = {
@@ -177,3 +178,141 @@ def test_demo_report_persists_claims_to_db(tmp_path: Path):
         conn.close()
 
     assert claim_count >= 1
+
+
+# --- LLM-backed extraction (mocked) ---
+
+_ALL_EXTRACTED_CLAIM_FIELDS = {
+    "claim_id",
+    "source_id",
+    "source_url",
+    "source_title",
+    "claim_text",
+    "evidence_text",
+    "claim_type",
+    "entities",
+    "confidence",
+    "evidence_layer",
+    "evidence_tier",
+    "needs_corroboration",
+    "corroboration_status",
+    "contradiction_status",
+    "needs_review",
+    "uncertainty",
+    "extraction_method",
+    "source_sentence",
+    "position_in_text",
+    "context_before",
+    "context_after",
+    "extracted_at",
+}
+
+_ITEM_WITH_TRANSCRIPT = {
+    "transcript": "Revenue grew by 42% last year.",
+    "url": "https://youtube.com/watch?v=abc",
+    "title": "Test Video",
+    "id": "abc",
+}
+
+_VALID_LLM_RESPONSE = {
+    "claims": [
+        {
+            "claim_text": "Revenue grew by 42% last year.",
+            "claim_type": "fact_claim",
+            "confidence": 0.9,
+            "entities": ["42%"],
+            "needs_corroboration": True,
+            "uncertainty": "low",
+        }
+    ]
+}
+
+
+def _mock_cfg_llm(use_llm: bool = True) -> MagicMock:
+    cfg = MagicMock()
+    cfg.raw = {
+        "platforms": {
+            "youtube": {
+                "claims": {
+                    "max_claims_per_source": 10,
+                    "max_claim_chars": 500,
+                    "use_llm": use_llm,
+                }
+            }
+        }
+    }
+    return cfg
+
+
+class TestLLMClaimExtractionIntegration:
+    def test_llm_success_path_returns_llm_claims(self) -> None:
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg_llm(use_llm=True),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor._run_llm",
+                return_value=_VALID_LLM_RESPONSE,
+            ),
+        ):
+            result = _run(ClaimExtractionTech()._execute(_ITEM_WITH_TRANSCRIPT))
+
+        assert len(result) == 1
+        claim = result[0]
+        assert claim["extraction_method"] == "llm"
+        assert claim["claim_type"] == "fact_claim"
+        assert claim["claim_text"] == "Revenue grew by 42% last year."
+        assert len(claim["claim_id"]) == 16
+        missing = _ALL_EXTRACTED_CLAIM_FIELDS - set(claim.keys())
+        assert not missing, f"Claim missing fields: {missing}"
+
+    def test_llm_invalid_response_falls_back_to_deterministic(self) -> None:
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg_llm(use_llm=True),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor._run_llm",
+                return_value={"bad": "no_claims_key"},
+            ),
+        ):
+            result = _run(ClaimExtractionTech()._execute(_ITEM_WITH_TRANSCRIPT))
+
+        assert len(result) >= 1
+        assert all(c["extraction_method"] == "deterministic" for c in result)
+
+    def test_llm_exception_falls_back_to_deterministic(self) -> None:
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg_llm(use_llm=True),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor._run_llm",
+                side_effect=RuntimeError("LLM unavailable"),
+            ),
+        ):
+            result = _run(ClaimExtractionTech()._execute(_ITEM_WITH_TRANSCRIPT))
+
+        assert len(result) >= 1
+        assert all(c["extraction_method"] == "deterministic" for c in result)
+
+    def test_deterministic_default_llm_never_called(self) -> None:
+        mock_run_llm = MagicMock()
+        with (
+            patch(
+                "social_research_probe.technologies.claims.load_active_config",
+                return_value=_mock_cfg_llm(use_llm=False),
+            ),
+            patch(
+                "social_research_probe.utils.claims.llm_extractor._run_llm",
+                mock_run_llm,
+            ),
+        ):
+            result = _run(ClaimExtractionTech()._execute(_ITEM_WITH_TRANSCRIPT))
+
+        assert len(result) >= 1
+        assert all(c["extraction_method"] == "deterministic" for c in result)
+        mock_run_llm.assert_not_called()
