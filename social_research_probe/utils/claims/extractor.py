@@ -204,3 +204,48 @@ def extract_claims_deterministic(
             )
         )
     return claims
+
+
+async def extract_claims_auto(
+    text: str,
+    source_id: str,
+    source_url: str,
+    source_title: str,
+    evidence_layer: str,
+    evidence_tier: str,
+    max_claims: int = 10,
+    max_chars: int = 500,
+    *,
+    use_llm: bool = False,
+) -> list[ExtractedClaim]:
+    """Route to LLM or deterministic extraction; always falls back to deterministic."""
+    if not text or not text.strip():
+        return []
+    if use_llm:
+        try:
+            from social_research_probe.utils.claims.llm_extractor import extract_claims_llm
+
+            result = await extract_claims_llm(
+                text,
+                source_id,
+                source_url,
+                source_title,
+                evidence_layer,
+                evidence_tier,
+                max_claims=max_claims,
+                max_chars=max_chars,
+            )
+            if result:
+                return result
+        except Exception:
+            pass
+    return extract_claims_deterministic(
+        text,
+        source_id,
+        source_url,
+        source_title,
+        evidence_layer,
+        evidence_tier,
+        max_claims=max_claims,
+        max_chars=max_chars,
+    )

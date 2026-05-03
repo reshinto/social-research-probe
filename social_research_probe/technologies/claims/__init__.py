@@ -34,10 +34,14 @@ def _pick_source_meta(data: dict) -> tuple[str, str, str, str]:
     return source_id, source_url, source_title, evidence_tier
 
 
-def _load_claims_config() -> tuple[int, int]:
+def _load_claims_config() -> tuple[int, int, bool]:
     raw = load_active_config().raw
     claims = ((raw.get("platforms") or {}).get("youtube") or {}).get("claims") or {}
-    return int(claims.get("max_claims_per_source", 10)), int(claims.get("max_claim_chars", 500))
+    return (
+        int(claims.get("max_claims_per_source", 10)),
+        int(claims.get("max_claim_chars", 500)),
+        bool(claims.get("use_llm", False)),
+    )
 
 
 class ClaimExtractionTech(BaseTechnology[dict, list[ExtractedClaim]]):
@@ -47,14 +51,14 @@ class ClaimExtractionTech(BaseTechnology[dict, list[ExtractedClaim]]):
     enabled_config_key: ClassVar[str] = "claim_extractor"
 
     async def _execute(self, data: dict) -> list[ExtractedClaim]:
-        from social_research_probe.utils.claims.extractor import extract_claims_deterministic
+        from social_research_probe.utils.claims.extractor import extract_claims_auto
 
         text, evidence_layer = _pick_text(data)
         if not text:
             return []
         source_id, source_url, source_title, evidence_tier = _pick_source_meta(data)
-        max_claims, max_chars = _load_claims_config()
-        return extract_claims_deterministic(
+        max_claims, max_chars, use_llm = _load_claims_config()
+        return await extract_claims_auto(
             text,
             source_id,
             source_url,
@@ -63,4 +67,5 @@ class ClaimExtractionTech(BaseTechnology[dict, list[ExtractedClaim]]):
             evidence_tier,
             max_claims=max_claims,
             max_chars=max_chars,
+            use_llm=use_llm,
         )
