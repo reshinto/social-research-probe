@@ -180,7 +180,7 @@ def test_srp_db_stats_shows_persisted_rows(tmp_path: Path) -> None:
 
 
 def test_demo_report_persists_run(tmp_path: Path) -> None:
-    from social_research_probe.commands._demo_fixtures import build_demo_report
+    from social_research_probe.utils.demo.fixtures import build_demo_report
 
     db_path = tmp_path / "srp.db"
     report = build_demo_report()

@@ -20,12 +20,12 @@ import asyncio
 import sys
 from pathlib import Path
 
-from social_research_probe.commands._demo_fixtures import build_demo_report
 from social_research_probe.config import Config, load_active_config
 from social_research_probe.services.persistence import PersistenceService
 from social_research_probe.services.reporting.export import ExportService
 from social_research_probe.services.reporting.report import ReportService
 from social_research_probe.utils.core.exit_codes import ExitCode
+from social_research_probe.utils.demo.fixtures import build_demo_report
 from social_research_probe.utils.display.progress import log_with_time
 from social_research_probe.utils.pipeline.helpers import resolve_html_report_path
 

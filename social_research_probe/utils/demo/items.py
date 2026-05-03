@@ -7,13 +7,13 @@ source_class values. Pure function, no I/O.
 
 from __future__ import annotations
 
-from social_research_probe.commands._demo_constants import DEMO_THEMES
 from social_research_probe.utils.core.types import (
     ExtractedClaim,
     ScoredItem,
     SourceComment,
     TextSurrogate,
 )
+from social_research_probe.utils.demo.constants import DEMO_THEMES
 
 _DEMO_AUTHORS = (
     "viewerOne",

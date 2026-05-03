@@ -11,19 +11,19 @@ from __future__ import annotations
 
 from collections import Counter
 
-from social_research_probe.commands._demo_constants import (
-    DEMO_DISCLAIMER,
-    DEMO_PURPOSE_SET,
-    DEMO_THEMES,
-    DEMO_TOPIC,
-)
-from social_research_probe.commands._demo_items import build_demo_items
 from social_research_probe.utils.core.types import (
     ResearchReport,
     ScoredItem,
     SourceValidationSummary,
     StatsSummary,
 )
+from social_research_probe.utils.demo.constants import (
+    DEMO_DISCLAIMER,
+    DEMO_PURPOSE_SET,
+    DEMO_THEMES,
+    DEMO_TOPIC,
+)
+from social_research_probe.utils.demo.items import build_demo_items
 
 _VERIFIED = "verified"
 _PARTIAL = "partially_verified"

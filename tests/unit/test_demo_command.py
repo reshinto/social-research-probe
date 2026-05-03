@@ -11,9 +11,9 @@ from unittest.mock import patch
 import pytest
 
 from social_research_probe.commands import demo
-from social_research_probe.commands._demo_constants import DEMO_DISCLAIMER
 from social_research_probe.config import reset_config_cache
 from social_research_probe.utils.core.exit_codes import ExitCode
+from social_research_probe.utils.demo.constants import DEMO_DISCLAIMER
 
 
 @pytest.fixture

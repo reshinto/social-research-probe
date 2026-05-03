@@ -9,12 +9,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from social_research_probe.commands._demo_items import build_demo_items
 from social_research_probe.config import reset_config_cache
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube.pipeline import YouTubePersistStage
 from social_research_probe.technologies.claims import ClaimExtractionTech
 from social_research_probe.technologies.persistence.sqlite.connection import open_connection
+from social_research_probe.utils.demo.items import build_demo_items
 
 REQUIRED_CLAIM_TYPES = {
     "fact_claim",
@@ -158,7 +158,7 @@ def test_demo_report_claims_csv_has_rows(isolated_data_dir):
 
 
 def test_demo_report_persists_claims_to_db(tmp_path: Path):
-    from social_research_probe.commands._demo_fixtures import build_demo_report
+    from social_research_probe.utils.demo.fixtures import build_demo_report
 
     db_path = tmp_path / "srp.db"
     report = build_demo_report()

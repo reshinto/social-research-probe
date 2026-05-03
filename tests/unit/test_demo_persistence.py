@@ -7,9 +7,9 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from social_research_probe.commands._demo_fixtures import build_demo_report
 from social_research_probe.commands.demo import _persist_if_enabled
 from social_research_probe.services import ServiceResult, TechResult
+from social_research_probe.utils.demo.fixtures import build_demo_report
 
 
 def _cfg_for_db(db_path: Path, enabled: bool = True) -> MagicMock:

@@ -16,7 +16,7 @@ _WHITELIST: frozenset[str] = frozenset(
         # argparse registration: flat API forces verbose option declarations
         "social_research_probe/cli/parsers.py::_add_research_subparsers",
         # builds one ScoredItem TypedDict with 18 fields — inherently verbose assembly
-        "social_research_probe/commands/_demo_items.py::_build_item",
+        "social_research_probe/utils/demo/items.py::_build_item",
         # single-purpose arg parser; 20-line docstring with examples inflates count
         "social_research_probe/commands/research.py::_parse_research_input",
         # infrastructure caching layer: cache miss/hit + debug logging + async dispatch
