@@ -230,6 +230,9 @@ class YouTubeAssembleStage(BaseStage):
             warnings=warnings,
         )
 
+        narratives_output = state.get_stage_output("narratives")
+        report["narratives"] = narratives_output.get("clusters", [])
+
         state.set_stage_output("assemble", {"report": report})
         state.outputs["report"] = report
         return state

@@ -42,6 +42,7 @@ from social_research_probe.technologies.report_render.html.raw_html._sections im
     section_10_synthesis,
     section_11_opportunity,
     section_12_summary,
+    section_narratives,
 )
 from social_research_probe.utils.core.types import ResearchReport
 from social_research_probe.utils.display.service_log import service_log_sync
@@ -61,9 +62,10 @@ _SECTIONS = [
     ("s7", "7. Statistics"),
     ("s8", "8. Charts"),
     ("s9", "9. Warnings"),
-    ("compiled-synthesis", "10. Compiled Synthesis"),
-    ("opportunity-analysis", "11. Opportunity Analysis"),
-    ("final-summary", "12. Final Summary"),
+    ("narratives", "10. Narrative Clusters"),
+    ("compiled-synthesis", "11. Compiled Synthesis"),
+    ("opportunity-analysis", "12. Opportunity Analysis"),
+    ("final-summary", "13. Final Summary"),
 ]
 
 
@@ -161,6 +163,7 @@ def render_html(
         section_7_statistics(report),
         section_8_charts(report, charts_dir),
         section_9_warnings(report),
+        section_narratives(report),
         section_10_synthesis(report.get("compiled_synthesis")),
         section_11_opportunity(report.get("opportunity_analysis")),
         section_12_summary(resolve_report_summary(report)),

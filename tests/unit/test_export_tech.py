@@ -54,6 +54,7 @@ def test_execute_writes_all_artifacts(tmp_path: Path):
         "methodology_md",
         "run_summary_json",
         "claims_csv",
+        "narratives_csv",
     }
     for p in paths.values():
         assert Path(p).exists()
@@ -95,11 +96,12 @@ def test_execute_respects_disabled_comments_csv(tmp_path: Path):
         "methodology_md": True,
         "run_summary_json": True,
         "claims_csv": True,
+        "narratives_csv": True,
     }
     data = _make_data(tmp_path, export_cfg=cfg)
     paths = _run(ExportPackageTech()._execute(data))
     assert "comments_csv" not in paths
-    assert len(paths) == 4
+    assert len(paths) == 5
 
 
 def test_execute_respects_disabled_methodology(tmp_path: Path):
@@ -110,11 +112,12 @@ def test_execute_respects_disabled_methodology(tmp_path: Path):
         "methodology_md": False,
         "run_summary_json": True,
         "claims_csv": True,
+        "narratives_csv": True,
     }
     data = _make_data(tmp_path, export_cfg=cfg)
     paths = _run(ExportPackageTech()._execute(data))
     assert "methodology_md" not in paths
-    assert len(paths) == 4
+    assert len(paths) == 5
 
 
 def test_execute_respects_disabled_run_summary(tmp_path: Path):
@@ -125,11 +128,12 @@ def test_execute_respects_disabled_run_summary(tmp_path: Path):
         "methodology_md": True,
         "run_summary_json": False,
         "claims_csv": True,
+        "narratives_csv": True,
     }
     data = _make_data(tmp_path, export_cfg=cfg)
     paths = _run(ExportPackageTech()._execute(data))
     assert "run_summary_json" not in paths
-    assert len(paths) == 4
+    assert len(paths) == 5
 
 
 def test_execute_missing_optional_config(tmp_path: Path):
@@ -147,6 +151,7 @@ def test_execute_missing_optional_config(tmp_path: Path):
         "methodology_md",
         "run_summary_json",
         "claims_csv",
+        "narratives_csv",
     }
 
 
@@ -158,11 +163,12 @@ def test_execute_respects_disabled_claims_csv(tmp_path: Path):
         "methodology_md": True,
         "run_summary_json": True,
         "claims_csv": False,
+        "narratives_csv": True,
     }
     data = _make_data(tmp_path, export_cfg=cfg)
     paths = _run(ExportPackageTech()._execute(data))
     assert "claims_csv" not in paths
-    assert len(paths) == 4
+    assert len(paths) == 5
 
 
 def test_flat_platform_config_enabled_false_suppresses_all_artifacts(tmp_path: Path):

@@ -34,6 +34,9 @@ EXPECTED_TABLES = {
     "claims",
     "claim_reviews",
     "claim_notes",
+    "narrative_clusters",
+    "narrative_claims",
+    "narrative_sources",
 }
 
 EXPECTED_INDEXES = {
@@ -55,6 +58,12 @@ EXPECTED_INDEXES = {
     "idx_claim_reviews_claim",
     "idx_claim_reviews_status",
     "idx_claim_notes_claim",
+    "idx_narr_run",
+    "idx_narr_type",
+    "idx_narr_opportunity",
+    "idx_narr_risk",
+    "idx_narr_claims_narr",
+    "idx_narr_sources_narr",
 }
 
 
@@ -118,7 +127,7 @@ def test_schema_ddl_creates_indexes():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION == 4
 
 
 def test_ensure_schema_backs_up_on_version_crossing(

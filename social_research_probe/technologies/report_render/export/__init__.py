@@ -151,6 +151,37 @@ def _write_claims(report: dict, reports_dir: Path, stem: str) -> str:
     return str(write_claims_csv(rows, path))
 
 
+def _write_narratives(report: dict, reports_dir: Path, stem: str) -> str:
+    """Write narrative clusters CSV export.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        reports_dir: Filesystem location used to read, write, or resolve project data.
+        stem: Filename stem used to keep related export artifacts grouped together.
+
+    Returns:
+        String path of the written CSV file.
+
+    Examples:
+        Input:
+            _write_narratives(
+                report={"narratives": [{"narrative_id": "abc"}]},
+                reports_dir=Path(".skill-data"),
+                stem="report",
+            )
+        Output:
+            ".skill-data/report-narratives.csv"
+    """
+    from social_research_probe.technologies.report_render.export.narratives_csv import (
+        build_narratives_rows,
+        write_narratives_csv,
+    )
+
+    rows = build_narratives_rows(report.get("narratives") or [])
+    path = reports_dir / f"{stem}-narratives.csv"
+    return str(write_narratives_csv(rows, path))
+
+
 def _write_run_summary(
     report: dict,
     config: dict,
@@ -248,6 +279,8 @@ class ExportPackageTech(BaseTechnology[dict, dict[str, str]]):
             paths["methodology_md"] = _write_methodology(report, config, reports_dir, stem)
         if export_cfg.get("claims_csv", True):
             paths["claims_csv"] = _write_claims(report, reports_dir, stem)
+        if export_cfg.get("narratives_csv", True):
+            paths["narratives_csv"] = _write_narratives(report, reports_dir, stem)
         if export_cfg.get("run_summary_json", True):
             summary_paths = dict(paths)
             html_path = resolve_html_report_path(report)

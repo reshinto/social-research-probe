@@ -717,6 +717,106 @@ def insert_claims(
     return count
 
 
+def _insert_narrative_junctions(conn: sqlite3.Connection, narr_pk: int, cluster: dict) -> None:
+    """Insert narrative_claims and narrative_sources junction rows."""
+    for cid in cluster.get("claim_ids") or []:
+        conn.execute(
+            "INSERT OR IGNORE INTO narrative_claims (narrative_pk, claim_id) VALUES (?, ?)",
+            (narr_pk, cid),
+        )
+    source_urls = cluster.get("source_urls") or []
+    for i, sid in enumerate(cluster.get("source_ids") or []):
+        url = source_urls[i] if i < len(source_urls) else None
+        conn.execute(
+            "INSERT OR IGNORE INTO narrative_sources (narrative_pk, source_id, source_url) VALUES (?, ?, ?)",
+            (narr_pk, sid, url),
+        )
+
+
+def _insert_cluster_row(
+    conn: sqlite3.Connection, run_pk: int, cluster: dict, created_at: str
+) -> int:
+    """Insert one narrative_clusters row (OR IGNORE) and return its pk."""
+    narrative_id = cluster["narrative_id"]
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO narrative_clusters (
+            narrative_id, run_id, title, summary, cluster_type,
+            entities_json, keywords_json, evidence_tiers_json,
+            corroboration_statuses_json, representative_claims_json,
+            source_count, claim_count, confidence,
+            opportunity_score, risk_score,
+            contradiction_count, needs_review_count, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            narrative_id,
+            run_pk,
+            cluster.get("title") or "",
+            cluster.get("summary"),
+            cluster.get("cluster_type") or "mixed",
+            dumps(cluster.get("entities") or []),
+            dumps(cluster.get("keywords") or []),
+            dumps(cluster.get("evidence_tiers") or []),
+            dumps(cluster.get("corroboration_statuses") or []),
+            dumps(cluster.get("representative_claims") or []),
+            cluster.get("source_count", 0),
+            cluster.get("claim_count", 0),
+            cluster.get("confidence"),
+            cluster.get("opportunity_score"),
+            cluster.get("risk_score"),
+            cluster.get("contradiction_count", 0),
+            cluster.get("needs_review_count", 0),
+            created_at,
+        ),
+    )
+    return conn.execute(
+        "SELECT id FROM narrative_clusters WHERE run_id = ? AND narrative_id = ?",
+        (run_pk, narrative_id),
+    ).fetchone()[0]
+
+
+def insert_narratives(
+    conn: sqlite3.Connection,
+    run_pk: int,
+    clusters: list[dict],
+    *,
+    created_at: str,
+) -> int:
+    """Insert narrative cluster records and junction tables into SQLite.
+
+    Args:
+        conn: Open SQLite connection for the current transaction.
+        run_pk: Primary key of the research_runs row.
+        clusters: List of NarrativeCluster dicts from the report.
+        created_at: Timestamp written with the created database record.
+
+    Returns:
+        Number of clusters inserted.
+
+    Examples:
+        Input:
+            insert_narratives(
+                conn=sqlite3.Connection(":memory:"),
+                run_pk=1,
+                clusters=[{"narrative_id": "abc", "title": "t", "cluster_type": "theme"}],
+                created_at="2024-01-01T00:00:00",
+            )
+        Output:
+            1
+    """
+    count = 0
+    for cluster in clusters:
+        if not isinstance(cluster, dict):
+            continue
+        if not (cluster.get("narrative_id") or ""):
+            continue
+        narr_pk = _insert_cluster_row(conn, run_pk, cluster, created_at)
+        _insert_narrative_junctions(conn, narr_pk, cluster)
+        count += 1
+    return count
+
+
 def insert_artifacts(
     conn: sqlite3.Connection,
     run_pk: int,

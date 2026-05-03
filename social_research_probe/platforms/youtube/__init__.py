@@ -17,6 +17,7 @@ from .corroborate_stage import YouTubeCorroborateStage
 from .export_stage import YouTubeExportStage
 from .fetch_stage import YouTubeFetchStage
 from .narration_stage import YouTubeNarrationStage
+from .narratives_stage import YouTubeNarrativesStage
 from .persist_stage import YouTubePersistStage
 from .report_stage import YouTubeReportStage
 from .score_stage import YouTubeScoreStage
@@ -61,6 +62,7 @@ class YouTubePipeline(BaseResearchPlatform):
             [YouTubeSummaryStage()],
             [YouTubeClaimsStage()],
             [YouTubeCorroborateStage()],
+            [YouTubeNarrativesStage()],
             [YouTubeSynthesisStage()],
             [YouTubeAssembleStage()],
             [YouTubeStructuredSynthesisStage()],
@@ -108,6 +110,7 @@ __all__ = [
     "YouTubeExportStage",
     "YouTubeFetchStage",
     "YouTubeNarrationStage",
+    "YouTubeNarrativesStage",
     "YouTubePersistStage",
     "YouTubePipeline",
     "YouTubeReportStage",

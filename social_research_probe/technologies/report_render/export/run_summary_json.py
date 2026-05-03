@@ -131,6 +131,47 @@ def _claims_summary(items: list[dict]) -> dict:
     }
 
 
+def _top_narrative_items(clusters: list[dict], score_key: str) -> list[dict]:
+    """Return top 3 cluster dicts sorted by score_key descending."""
+    valid = [c for c in clusters if isinstance(c, dict)]
+    ranked = sorted(valid, key=lambda c: c.get(score_key, 0.0), reverse=True)
+    return [
+        {
+            "narrative_id": c.get("narrative_id", ""),
+            "title": c.get("title", ""),
+            score_key: c.get(score_key, 0.0),
+        }
+        for c in ranked[:3]
+    ]
+
+
+def _narratives_summary(report: dict) -> dict:
+    """Build narrative clustering summary for run_summary JSON."""
+    clusters = report.get("narratives") or []
+    if not clusters:
+        return {
+            "cluster_count": 0,
+            "by_type": {},
+            "avg_confidence": 0.0,
+            "total_claims_clustered": 0,
+            "top_opportunities": [],
+            "top_risks": [],
+        }
+    valid = [c for c in clusters if isinstance(c, dict)]
+    by_type: dict[str, int] = dict(Counter(c.get("cluster_type", "mixed") for c in valid))
+    confidences = [c.get("confidence", 0.0) for c in valid]
+    avg_confidence = round(sum(confidences) / len(confidences), 4) if confidences else 0.0
+    total_claims = sum(c.get("claim_count", 0) for c in valid)
+    return {
+        "cluster_count": len(clusters),
+        "by_type": by_type,
+        "avg_confidence": avg_confidence,
+        "total_claims_clustered": total_claims,
+        "top_opportunities": _top_narrative_items(clusters, "opportunity_score"),
+        "top_risks": _top_narrative_items(clusters, "risk_score"),
+    }
+
+
 def _config_snapshot(config: dict) -> dict:
     """Build the small payload that carries youtube through this workflow.
 
@@ -199,6 +240,7 @@ def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]
         "claims_needing_review": claims["claims_needing_review"],
         "claims_needing_corroboration": claims["claims_needing_corroboration"],
         "corroborated_claims": claims["corroborated_claims"],
+        "narratives_summary": _narratives_summary(report),
         "stage_timings": list(report.get("stage_timings") or []),
         "config_snapshot": _config_snapshot(config),
         "artifact_paths": dict(artifact_paths),

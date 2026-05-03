@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 3
+SCHEMA_VERSION: int = 4
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -189,10 +189,57 @@ CREATE TABLE IF NOT EXISTS claim_notes (
 CREATE INDEX IF NOT EXISTS idx_claim_notes_claim ON claim_notes(claim_pk);
 """
 
+SCHEMA_DDL_V4: str = """\
+CREATE TABLE IF NOT EXISTS narrative_clusters (
+    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    narrative_id                TEXT NOT NULL,
+    run_id                      INTEGER NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    title                       TEXT NOT NULL,
+    summary                     TEXT,
+    cluster_type                TEXT NOT NULL,
+    entities_json               TEXT NOT NULL DEFAULT '[]',
+    keywords_json               TEXT NOT NULL DEFAULT '[]',
+    evidence_tiers_json         TEXT NOT NULL DEFAULT '[]',
+    corroboration_statuses_json TEXT NOT NULL DEFAULT '[]',
+    representative_claims_json  TEXT NOT NULL DEFAULT '[]',
+    source_count                INTEGER NOT NULL DEFAULT 0,
+    claim_count                 INTEGER NOT NULL DEFAULT 0,
+    confidence                  REAL,
+    opportunity_score           REAL,
+    risk_score                  REAL,
+    contradiction_count         INTEGER NOT NULL DEFAULT 0,
+    needs_review_count          INTEGER NOT NULL DEFAULT 0,
+    created_at                  TEXT NOT NULL,
+    UNIQUE(run_id, narrative_id)
+);
+CREATE INDEX IF NOT EXISTS idx_narr_run ON narrative_clusters(run_id);
+CREATE INDEX IF NOT EXISTS idx_narr_type ON narrative_clusters(cluster_type);
+CREATE INDEX IF NOT EXISTS idx_narr_opportunity ON narrative_clusters(opportunity_score);
+CREATE INDEX IF NOT EXISTS idx_narr_risk ON narrative_clusters(risk_score);
+
+CREATE TABLE IF NOT EXISTS narrative_claims (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    narrative_pk INTEGER NOT NULL REFERENCES narrative_clusters(id) ON DELETE CASCADE,
+    claim_id     TEXT NOT NULL,
+    UNIQUE(narrative_pk, claim_id)
+);
+CREATE INDEX IF NOT EXISTS idx_narr_claims_narr ON narrative_claims(narrative_pk);
+
+CREATE TABLE IF NOT EXISTS narrative_sources (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    narrative_pk INTEGER NOT NULL REFERENCES narrative_clusters(id) ON DELETE CASCADE,
+    source_id    TEXT NOT NULL,
+    source_url   TEXT,
+    UNIQUE(narrative_pk, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_narr_sources_narr ON narrative_sources(narrative_pk);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
     lambda conn: conn.executescript(SCHEMA_DDL_V2),
     lambda conn: conn.executescript(SCHEMA_DDL_V3),
+    lambda conn: conn.executescript(SCHEMA_DDL_V4),
 ]
 
 
