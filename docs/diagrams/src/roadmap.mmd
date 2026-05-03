@@ -1,9 +1,11 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Today["Current source: YouTube platform"] --> Adapter["New source adapter"]
-  Adapter --> Contract["RawItem + EngagementMetrics"]
-  Contract --> Shared["shared scoring, analysis, synthesis"]
-  Shared --> Reports["same report outputs"]
+  YouTube["current youtube pipeline"] --> Shared["shared services technologies"]
+  NewPlatform["future platform"] --> Normalize["normalize items"] --> Shared
+  Shared --> Reports["reports exports SQLite"]
+  class YouTube,NewPlatform input;
+  class Normalize,Shared process;
+  class Reports output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -12,6 +14,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Today input;
-  class Adapter,Contract,Shared process;
-  class Reports output;

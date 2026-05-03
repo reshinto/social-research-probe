@@ -1,39 +1,19 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
-flowchart TB
-  Items["scored_items"] --> Targets["derived targets"]
-  Targets --> Numeric["numeric report targets"]
-  Targets --> Binary["binary and categorical targets"]
-  Targets --> Event["event-time targets"]
-
-  Numeric --> Selector["automatic selector"]
-  Selector --> Desc["descriptive statistics"]
-  Selector --> Spread["spread statistics"]
-  Selector --> Regression["rank regression"]
-  Selector --> Growth["growth rates"]
-  Selector --> Outliers["outlier checks"]
-  Desc --> Highlights["report highlights"]
-  Spread --> Highlights
-  Regression --> Highlights
-  Growth --> Highlights
-  Outliers --> Highlights
-
-  Numeric --> Corr["correlation helper"]
-  Numeric --> Advanced["advanced modules"]
-  Binary --> Advanced
-  Event --> Advanced
-  Advanced --> Models["bootstrap, tests, PCA, clustering, classifiers, survival"]
-
-  Highlights --> Report["JSON packet and reports"]
-  Models --> Future["deeper analysis and future report features"]
+flowchart LR
+  Items["scored items"] --> Targets["numeric targets"] --> Selector["select_and_run"]
+  Selector --> Desc["descriptive"]
+  Selector --> Spread["spread 2+"]
+  Selector --> Reg["regression 2+"]
+  Selector --> Growth["growth 3+"]
+  Selector --> Outliers["outliers 3+"]
+  class Items input;
+  class Targets,Selector process;
+  class Desc,Spread,Reg,Growth,Outliers output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
   classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
   classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
-
-  class Items input;
-  class Targets,Numeric,Binary,Event,Selector process;
-  class Desc,Spread,Regression,Growth,Outliers,Corr,Advanced,Models analysis;
-  class Future external;
-  class Highlights,Report output;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;

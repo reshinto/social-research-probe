@@ -1,21 +1,18 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
-flowchart TD
-  Report["Completed report HTML"] --> Check{"Narration enabled?"}
-  Check -- "no" --> Skip["Skip narration"]
-  Check -- "yes" --> Extract["Extract text from report sections"]
-  Extract --> Provider{"TTS provider"}
-  Provider -- "mac" --> Mac["MacTTS"]
-  Provider -- "voicebox" --> VBox["VoiceboxTTS"]
-  Mac --> Audio["Audio file"]
-  VBox --> Audio
-  Audio --> Attach["Attach to report output"]
+flowchart LR
+  Report["report text"] --> AudioService["AudioReportService"] --> Voicebox["VoiceboxTTS"]
+  AudioService --> Mac["MacTTS"]
+  Voicebox --> Audio["audio output"]
+  Mac --> Audio
+  class Report input;
+  class AudioService process;
+  class Voicebox,Mac external;
+  class Audio output;
 
-  classDef input fill:#dbeafe,stroke:#2563eb,color:#111111,stroke-width:2px;
-  classDef decision fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
-  classDef process fill:#f3f4f6,stroke:#6b7280,color:#111111,stroke-width:1px;
-  classDef output fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
-
-  class Report input
-  class Check,Provider decision
-  class Extract,Mac,VBox process
-  class Skip,Audio,Attach output
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;

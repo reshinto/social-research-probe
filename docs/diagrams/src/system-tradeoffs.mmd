@@ -1,11 +1,11 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Goal["repeatable low-cost research"] --> Local["local-first computation"]
-  Goal --> Pluggable["pluggable runners/providers"]
-  Goal --> Cache["filesystem cache"]
-  Local --> Trade1["more local dependencies"]
-  Pluggable --> Trade2["adapter contracts to maintain"]
-  Cache --> Trade3["freshness vs speed"]
+  Local["local-first files"] --> Audit["easy inspection"]
+  Adapters["CLI/API adapters"] --> Replace["replaceable providers"]
+  TopN["top-N enrichment"] --> Cost["cost control"]
+  SQLite["final persistence"] --> History["queryable history"]
+  class Local,Adapters,TopN,SQLite input;
+  class Audit,Replace,Cost,History output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,6 +14,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Goal input;
-  class Local,Pluggable,Cache process;
-  class Trade1,Trade2,Trade3 risk;

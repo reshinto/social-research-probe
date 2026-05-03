@@ -1,11 +1,10 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  State["PipelineState"] --> Stage1["fetch"] --> Stage2["score"] --> Stage3["analysis group"] --> Stage4["summary"] --> Stage5["report"]
-  Stage1 --> State
-  Stage2 --> State
-  Stage3 --> State
-  Stage4 --> State
-  Stage5 --> State
+  State["PipelineState"] --> StageA["stage A"] --> StateB["same state with output"] --> StageB["stage B"] --> Report["state.outputs.report"]
+  class State input;
+  class StageA,StageB process;
+  class StateB config;
+  class Report output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,7 +13,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class State config;
-  class Stage1,Stage2,Stage4 process;
-  class Stage3 analysis;
-  class Stage5 output;

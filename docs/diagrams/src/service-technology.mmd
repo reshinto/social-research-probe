@@ -1,16 +1,11 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Service["BaseService"] --> Batch["execute_batch gathers inputs"]
-  Batch --> One["execute_one checks service gate"]
-  One --> Shape["_technology_input"]
-  Shape --> TechA["technology A execute"]
-  Shape --> TechB["technology B execute"]
-  TechA --> GateA["technology flag and cache"]
-  TechB --> GateB["technology flag and cache"]
-  GateA --> Result["TechResult list"]
-  GateB --> Result
-  Result --> Custom["execute_service merges outputs"]
-  Custom --> ServiceResult["ServiceResult"]
+  Stage["stage"] --> Batch["service.execute_batch"] --> One["execute_one gate check"] --> Shape["technology input"]
+  Shape --> Tech["technology.execute"] --> Cache["flag cache exception handling"] --> Result["TechResult"] --> Normalize["execute_service"] --> ServiceResult["ServiceResult"]
+  class Stage,Batch,One,Shape,Normalize process;
+  class Tech external;
+  class Cache config;
+  class Result,ServiceResult output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -19,7 +14,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Service,Batch,One,Shape,Custom process;
-  class TechA,TechB external;
-  class GateA,GateB,Result config;
-  class ServiceResult output;

@@ -1,14 +1,13 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Score["score top-N"] --> Group["pipeline group"]
-  Group --> Transcript["TranscriptStage"]
-  Group --> Stats["StatsStage"]
-  Group --> Charts["ChartsStage"]
-  Transcript --> Join["next stage waits"]
-  Stats --> Join
-  Charts --> Join
-  Join --> Summary["SummaryStage"]
-  Summary --> Corr["CorroborateStage semaphore=3"]
+  Pipeline["YouTubePipeline.run"] --> Group1["single stage: await run"]
+  Pipeline --> GroupN["multi-stage group: asyncio.gather"]
+  GroupN --> TSC["transcript stats charts"]
+  GroupN --> RN["report narration"]
+  Service["BaseService.execute_batch"] --> Gather["gather execute_one per input"]
+  Gather --> Techs["technology calls per input"]
+  class Pipeline,Group1,GroupN,Service,Gather process;
+  class TSC,RN,Techs analysis;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -17,5 +16,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Score,Group,Transcript,Join,Summary,Corr process;
-  class Stats,Charts analysis;

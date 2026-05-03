@@ -1,11 +1,13 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Corpus["eval corpus"] --> Samples["multiple runner samples"]
-  Samples --> Judge["optional judge runner"]
-  Samples --> Metrics["length, coverage, drift"]
-  Judge --> Report["eval markdown"]
-  Metrics --> Report
-  Report --> Gate["CI or manual quality decision"]
+  Fixtures["tests/fixtures/golden"] --> Harness["tests/evals/harness.py"]
+  Harness --> Metrics["metrics.py"]
+  Harness --> Judge["judge.py"]
+  Metrics --> Reports["eval report"]
+  Judge --> Reports
+  class Fixtures input;
+  class Harness,Metrics,Judge process;
+  class Reports output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,7 +16,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Corpus input;
-  class Samples,Metrics,Gate process;
-  class Judge external;
-  class Report output;

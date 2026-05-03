@@ -1,12 +1,10 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Pipeline["platform pipeline"] --> Fetch["fetch native items"]
-  Fetch --> Normalize["normalize shared item fields"]
-  Normalize --> Classify["source_class"]
-  Classify --> Score["shared scoring"]
-  Score --> Enrich["shared enrichment services where compatible"]
-  Enrich --> Analyze["stats, charts, claims, narratives"]
-  Analyze --> Report["assemble, report, export, persist"]
+  Platform["new platform pipeline"] --> Stages["BaseStage classes"] --> Items["normalized item dicts"]
+  Items --> Shared["shared scoring enrichment analysis"] --> Outputs["report export persist"]
+  class Platform input;
+  class Stages,Items,Shared process;
+  class Outputs output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -15,6 +13,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Pipeline input;
-  class Fetch,Normalize,Classify,Score,Enrich,Analyze process;
-  class Report output;

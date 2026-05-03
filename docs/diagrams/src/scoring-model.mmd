@@ -1,13 +1,11 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Raw["raw item + engagement metrics"] --> Features["velocity, engagement, age, subscribers"]
-  Features --> Trust["trust"]
-  Features --> Trend["trend"]
-  Features --> Opportunity["opportunity"]
-  Trust --> Overall["0.45 trust"]
-  Trend --> Overall["0.30 trend"]
-  Opportunity --> Overall["0.25 opportunity"]
-  Overall --> Rank["rank descending"]
+  Items["items + engagement metrics"] --> Normalize["normalize_with_metrics"] --> Axes["trust trend opportunity"]
+  Axes --> Overall["weighted overall"] --> Rank["sort descending"]
+  Weights["DEFAULT + config + purpose weights"] --> Overall
+  class Items input;
+  class Normalize,Axes,Overall,Rank process;
+  class Weights config;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -16,8 +14,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Raw input;
-  class Features config;
-  class Trust,Trend,Opportunity analysis;
-  class Overall process;
-  class Rank output;
