@@ -161,6 +161,13 @@ class TestExtractContext:
         assert before == "cde"
         assert after == "fgh"
 
+    def test_sentence_len_shifts_after(self) -> None:
+        text = "Revenue grew. This is key."
+        sentence = "Revenue grew."
+        before, after = _extract_context(text, 0, sentence_len=len(sentence), width=10)
+        assert before == ""
+        assert after == " This is k"
+
     def test_start_position_clamps(self) -> None:
         text = "hello world"
         before, _after = _extract_context(text, 0, width=50)

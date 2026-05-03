@@ -123,7 +123,8 @@ def _section_claims_extraction(config: dict) -> str:
         llm_line,
         f"- Max claims per source: {max_per_source}",
         f"- Max claim length (chars): {max_chars}",
-        "- Limitations: pattern-based rules; may miss nuanced or implicit claims",
+        "- Limitations: pattern-based rules; may miss nuanced or implicit claims; "
+        "recommendations matched only when keyword appears at sentence start (imperative form)",
     ]
     return "## Claims Extraction\n\n" + "\n".join(lines) + "\n\n"
 

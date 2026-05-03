@@ -114,11 +114,14 @@ def _derive_claim_id(source_id: str, claim_text: str) -> str:
     return digest[:16]
 
 
-def _extract_context(text: str, position: int, width: int = 50) -> tuple[str, str]:
+def _extract_context(
+    text: str, position: int, sentence_len: int = 0, width: int = 50
+) -> tuple[str, str]:
     before_start = max(0, position - width)
     before = text[before_start:position]
-    after_end = min(len(text), position + width)
-    after = text[position:after_end]
+    after_start = position + sentence_len
+    after_end = min(len(text), after_start + width)
+    after = text[after_start:after_end]
     return before, after
 
 
@@ -136,7 +139,7 @@ def _build_claim(
     extracted_at: str,
 ) -> ExtractedClaim:
     claim_id = _derive_claim_id(source_id, sentence)
-    context_before, context_after = _extract_context(text, position)
+    context_before, context_after = _extract_context(text, position, sentence_len=len(sentence))
     return {
         "claim_id": claim_id,
         "source_id": source_id,

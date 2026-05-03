@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from social_research_probe.commands._demo_constants import DEMO_THEMES
 from social_research_probe.utils.core.types import (
+    ExtractedClaim,
     ScoredItem,
     SourceComment,
     TextSurrogate,
@@ -196,7 +197,9 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
         "opportunity": 0.74,
         "transcript_text": (
             "Engineering managers report that junior roles are compressing as "
-            "AI coding agents absorb routine implementation work."
+            "AI coding agents absorb routine implementation work. "
+            "AI coding agents will automate an estimated 50% of routine implementation tasks. "
+            "However, some managers report higher error rates when agents work unsupervised."
         ),
         "layers": ["title", "description", "transcript", "comments"],
     },
@@ -215,7 +218,11 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
         "opportunity": 0.81,
         "transcript_text": (
             "Senior engineers describe pair-programming with agents as the "
-            "highest-leverage activity of their week."
+            "highest-leverage activity of their week. "
+            "Recommend adopting agent-assisted pair-programming as the baseline for all "
+            "engineering teams. "
+            "In my experience, pair-programming with agents cuts implementation time by at "
+            "least 40%."
         ),
         "layers": [
             "title",
@@ -240,7 +247,9 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
         "opportunity": 0.62,
         "transcript_text": (
             "Hiring panels increasingly evaluate code-review competence as "
-            "the differentiator between mid-level and senior candidates."
+            "the differentiator between mid-level and senior candidates. "
+            "I believe code review is now the most critical skill for any senior engineer. "
+            "Many junior developers struggle to keep up with the volume of AI-generated code."
         ),
         "layers": ["title", "description", "transcript"],
     },
@@ -355,7 +364,9 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
         "opportunity": 0.65,
         "transcript_text": (
             "Cross-industry data suggests AI agents are reshaping the entire "
-            "software development lifecycle, not only individual coding tasks."
+            "software development lifecycle, not only individual coding tasks. "
+            "Adoption of agent-assisted workflows is growing rapidly across the industry. "
+            "Should developers prioritize learning to work alongside AI agents?"
         ),
         "layers": ["title", "description", "transcript", "external_corroboration"],
     },
@@ -406,6 +417,24 @@ _DEMO_ITEM_SPECS: tuple[dict, ...] = (
 )
 
 
+def _extract_item_claims(item: ScoredItem) -> list[ExtractedClaim]:
+    from social_research_probe.utils.claims.extractor import extract_claims_deterministic
+
+    surrogate: TextSurrogate = item.get("text_surrogate") or {}
+    text: str = surrogate.get("primary_text") or ""
+    return extract_claims_deterministic(
+        text=text,
+        source_id=surrogate.get("source_id") or "",
+        source_url=item.get("url") or "",
+        source_title=item.get("title") or "",
+        evidence_layer=surrogate.get("primary_text_source") or "title",
+        evidence_tier=surrogate.get("evidence_tier") or "metadata_only",
+    )
+
+
 def build_demo_items() -> list[ScoredItem]:
     """Return 12 deterministic synthetic ScoredItem dicts."""
-    return [_build_item(idx, **spec) for idx, spec in enumerate(_DEMO_ITEM_SPECS)]
+    items = [_build_item(idx, **spec) for idx, spec in enumerate(_DEMO_ITEM_SPECS)]
+    for item in items:
+        item["extracted_claims"] = _extract_item_claims(item)
+    return items
