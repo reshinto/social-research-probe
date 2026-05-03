@@ -1,4 +1,4 @@
-"""Tests for SQLite schema v1 and migration infrastructure."""
+"""Tests for SQLite schema v1/v2 and migration infrastructure."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import pytest
 
 from social_research_probe.technologies.persistence.sqlite.schema import (
     SCHEMA_DDL_V1,
+    SCHEMA_DDL_V2,
     SCHEMA_VERSION,
     ensure_schema,
 )
@@ -30,6 +31,7 @@ EXPECTED_TABLES = {
     "text_surrogates",
     "warnings",
     "artifacts",
+    "claims",
 }
 
 EXPECTED_INDEXES = {
@@ -43,6 +45,11 @@ EXPECTED_INDEXES = {
     "idx_warnings_run",
     "idx_artifacts_run",
     "idx_artifacts_kind",
+    "idx_claims_run",
+    "idx_claims_source",
+    "idx_claims_type",
+    "idx_claims_review",
+    "idx_claims_corrob",
 }
 
 
@@ -106,7 +113,7 @@ def test_schema_ddl_creates_indexes():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == 1
+    assert SCHEMA_VERSION == 2
 
 
 def test_ensure_schema_backs_up_on_version_crossing(
@@ -119,15 +126,17 @@ def test_ensure_schema_backs_up_on_version_crossing(
     conn.execute("PRAGMA foreign_keys=ON")
 
     conn.executescript(SCHEMA_DDL_V1)
-    conn.execute("INSERT OR REPLACE INTO schema_meta(key, value) VALUES ('version', '1')")
+    conn.executescript(SCHEMA_DDL_V2)
+    conn.execute("INSERT OR REPLACE INTO schema_meta(key, value) VALUES ('version', '2')")
     conn.commit()
 
-    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 2)
+    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 3)
     monkeypatch.setattr(
         schema_mod,
         "MIGRATIONS",
         [
             schema_mod.MIGRATIONS[0],
+            schema_mod.MIGRATIONS[1],
             lambda c: None,
         ],
     )
@@ -138,8 +147,8 @@ def test_ensure_schema_backs_up_on_version_crossing(
     backups = list(tmp_path.glob("test.db.bak.*"))
     assert len(backups) == 1
 
-    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 1)
-    monkeypatch.setattr(schema_mod, "MIGRATIONS", schema_mod.MIGRATIONS[:1])
+    monkeypatch.setattr(schema_mod, "SCHEMA_VERSION", 2)
+    monkeypatch.setattr(schema_mod, "MIGRATIONS", schema_mod.MIGRATIONS[:2])
 
 
 def test_ensure_schema_no_backup_on_fresh_db(tmp_path: Path):

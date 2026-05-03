@@ -15,6 +15,7 @@ from social_research_probe.technologies.persistence.sqlite.repository import (
     derive_run_id,
     derive_source_key,
     insert_artifacts,
+    insert_claims,
     insert_comments,
     insert_run,
     insert_snapshot,
@@ -151,6 +152,16 @@ class SQLitePersistTech(BaseTechnology[dict, dict]):
         insert_transcript(conn, snap_pk, item, persist_text=persist_transcript_text, fetched_at=now)
         if surrogate:
             insert_text_surrogate(conn, snap_pk, surrogate)
+        insert_claims(
+            conn,
+            run_pk,
+            snap_pk,
+            source_pk,
+            item.get("extracted_claims") or [],
+            source_url=item.get("url") or "",
+            source_title=item.get("title") or "",
+            created_at=now,
+        )
         return comment_count
 
     def _persist_items(

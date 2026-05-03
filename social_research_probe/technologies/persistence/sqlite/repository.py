@@ -311,6 +311,67 @@ def insert_warnings(
     return count
 
 
+def insert_claims(
+    conn: sqlite3.Connection,
+    run_pk: int,
+    snapshot_pk: int,
+    source_pk: int,
+    claims: list,
+    *,
+    source_url: str,
+    source_title: str,
+    created_at: str,
+) -> int:
+    count = 0
+    for c in claims:
+        if not isinstance(c, dict):
+            continue
+        claim_id = c.get("claim_id") or ""
+        if not claim_id:
+            continue
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO claims (
+                claim_id, run_id, source_snapshot_id, source_id,
+                source_url, source_title, claim_text, evidence_text,
+                claim_type, entities_json, confidence, evidence_layer,
+                evidence_tier, needs_corroboration, corroboration_status,
+                contradiction_status, needs_review, uncertainty,
+                extraction_method, source_sentence, position_in_text,
+                context_before, context_after, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                claim_id,
+                run_pk,
+                snapshot_pk,
+                source_pk,
+                source_url,
+                source_title,
+                c.get("claim_text") or "",
+                c.get("evidence_text"),
+                c.get("claim_type"),
+                dumps(c.get("entities") or []),
+                c.get("confidence"),
+                c.get("evidence_layer"),
+                c.get("evidence_tier"),
+                1 if c.get("needs_corroboration") else 0,
+                c.get("corroboration_status"),
+                c.get("contradiction_status"),
+                1 if c.get("needs_review") else 0,
+                c.get("uncertainty"),
+                c.get("extraction_method"),
+                c.get("source_sentence"),
+                c.get("position_in_text"),
+                c.get("context_before"),
+                c.get("context_after"),
+                created_at,
+            ),
+        )
+        count += 1
+    return count
+
+
 def insert_artifacts(
     conn: sqlite3.Connection,
     run_pk: int,

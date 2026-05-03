@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 1
+SCHEMA_VERSION: int = 2
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -126,8 +126,45 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_run  ON artifacts(run_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_kind ON artifacts(kind);
 """
 
+SCHEMA_DDL_V2: str = """\
+CREATE TABLE IF NOT EXISTS claims (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_id             TEXT NOT NULL,
+    run_id               INTEGER NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    source_snapshot_id   INTEGER REFERENCES source_snapshots(id) ON DELETE CASCADE,
+    source_id            INTEGER REFERENCES sources(id) ON DELETE CASCADE,
+    source_url           TEXT,
+    source_title         TEXT,
+    claim_text           TEXT NOT NULL,
+    evidence_text        TEXT,
+    claim_type           TEXT,
+    entities_json        TEXT NOT NULL DEFAULT '[]',
+    confidence           REAL,
+    evidence_layer       TEXT,
+    evidence_tier        TEXT,
+    needs_corroboration  INTEGER DEFAULT 0,
+    corroboration_status TEXT,
+    contradiction_status TEXT,
+    needs_review         INTEGER DEFAULT 0,
+    uncertainty          TEXT,
+    extraction_method    TEXT,
+    source_sentence      TEXT,
+    position_in_text     INTEGER,
+    context_before       TEXT,
+    context_after        TEXT,
+    created_at           TEXT NOT NULL,
+    UNIQUE(source_snapshot_id, claim_id)
+);
+CREATE INDEX IF NOT EXISTS idx_claims_run    ON claims(run_id);
+CREATE INDEX IF NOT EXISTS idx_claims_source ON claims(source_id);
+CREATE INDEX IF NOT EXISTS idx_claims_type   ON claims(claim_type);
+CREATE INDEX IF NOT EXISTS idx_claims_review ON claims(needs_review);
+CREATE INDEX IF NOT EXISTS idx_claims_corrob ON claims(corroboration_status);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
+    lambda conn: conn.executescript(SCHEMA_DDL_V2),
 ]
 
 
