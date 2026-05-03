@@ -88,7 +88,7 @@ _concrete_pipelines: dict[str, type] | None = None
 def _get_concrete_pipelines() -> dict[str, type]:
     global _concrete_pipelines
     if _concrete_pipelines is None:
-        from social_research_probe.platforms.youtube.pipeline import YouTubePipeline
+        from social_research_probe.platforms.youtube import YouTubePipeline
 
         _concrete_pipelines = {"youtube": YouTubePipeline}
     return _concrete_pipelines

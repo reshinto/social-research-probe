@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube.pipeline import YouTubePersistStage, YouTubePipeline
+from social_research_probe.platforms.youtube import YouTubePersistStage, YouTubePipeline
 
 
 def _run(coro):

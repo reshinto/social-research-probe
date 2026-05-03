@@ -6,7 +6,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-import social_research_probe.platforms.youtube.pipeline as yt_pipeline
+import social_research_probe.platforms.youtube as yt_pipeline
 from social_research_probe.platforms import FetchLimits, RawItem
 from social_research_probe.services.sourcing.youtube import YouTubeSourcingService
 from social_research_probe.technologies.media_fetch import (

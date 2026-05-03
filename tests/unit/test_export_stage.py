@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube.pipeline import YouTubeExportStage, YouTubePipeline
+from social_research_probe.platforms.youtube import YouTubeExportStage, YouTubePipeline
 from social_research_probe.utils.pipeline.helpers import resolve_html_report_path
 
 

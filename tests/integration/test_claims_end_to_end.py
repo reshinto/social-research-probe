@@ -11,7 +11,7 @@ import pytest
 
 from social_research_probe.config import reset_config_cache
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube.pipeline import YouTubePersistStage
+from social_research_probe.platforms.youtube import YouTubePersistStage
 from social_research_probe.technologies.claims import ClaimExtractionTech
 from social_research_probe.technologies.persistence.sqlite.connection import open_connection
 from social_research_probe.utils.demo.items import build_demo_items

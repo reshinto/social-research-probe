@@ -329,7 +329,7 @@ def _get_concrete_pipelines() -> dict[str, type]:
         import social_research_probe.services.sourcing.youtube
         import social_research_probe.services.sourcing.web
         from social_research_probe.platforms.web.pipeline import WebPipeline
-        from social_research_probe.platforms.youtube.pipeline import YouTubePipeline
+        from social_research_probe.platforms.youtube import YouTubePipeline
 
         _concrete_pipelines = {
             "youtube": YouTubePipeline,
