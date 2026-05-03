@@ -14,7 +14,12 @@ from __future__ import annotations
 import argparse
 from enum import StrEnum
 
-from social_research_probe.commands import Command, ConfigSubcommand, DbSubcommand
+from social_research_probe.commands import (
+    ClaimsSubcommand,
+    Command,
+    ConfigSubcommand,
+    DbSubcommand,
+)
 
 
 class Action(StrEnum):
@@ -317,6 +322,43 @@ def _add_db_subparsers(sub: argparse._SubParsersAction) -> None:
     db_sub.add_parser(DbSubcommand.PATH, help="Print the resolved database path")
 
 
+def _add_claims_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register claims query and review subcommands."""
+    claims = sub.add_parser(Command.CLAIMS, help="Query and review extracted claims")
+    claims.set_defaults(_claims_parser=claims)
+    claims_sub = claims.add_subparsers(dest="claims_cmd", metavar="ACTION")
+
+    list_p = claims_sub.add_parser(ClaimsSubcommand.LIST, help="List claims with filters")
+    list_p.add_argument("--run-id", type=int, default=None)
+    list_p.add_argument("--topic", default=None)
+    list_p.add_argument("--claim-type", default=None)
+    list_p.add_argument("--needs-review", action="store_true")
+    list_p.add_argument("--needs-corroboration", action="store_true")
+    list_p.add_argument("--corroboration-status", default=None)
+    list_p.add_argument("--extraction-method", default=None)
+    list_p.add_argument("--limit", type=int, default=100)
+    _add_output_arg(list_p)
+
+    show_p = claims_sub.add_parser(ClaimsSubcommand.SHOW, help="Show claim details")
+    show_p.add_argument("claim_id", help="Claim ID to display")
+    _add_output_arg(show_p)
+
+    stats_p = claims_sub.add_parser(ClaimsSubcommand.STATS, help="Claim statistics")
+    _add_output_arg(stats_p)
+
+    review_p = claims_sub.add_parser(ClaimsSubcommand.REVIEW, help="Set review status")
+    review_p.add_argument("claim_id", help="Claim ID to review")
+    review_p.add_argument("--status", required=True)
+    review_p.add_argument("--importance", default=None)
+    review_p.add_argument("--notes", default="")
+    _add_output_arg(review_p)
+
+    note_p = claims_sub.add_parser(ClaimsSubcommand.NOTE, help="Add a note to a claim")
+    note_p.add_argument("claim_id", help="Claim ID")
+    note_p.add_argument("text", help="Note text")
+    _add_output_arg(note_p)
+
+
 def global_parser() -> argparse.ArgumentParser:
     """Build the root ``srp`` argument parser.
 
@@ -344,4 +386,5 @@ def global_parser() -> argparse.ArgumentParser:
     _add_research_subparsers(sub)
     _add_config_subparsers(sub)
     _add_db_subparsers(sub)
+    _add_claims_subparsers(sub)
     return parser

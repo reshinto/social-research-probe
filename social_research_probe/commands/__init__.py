@@ -61,6 +61,17 @@ class Command(StrEnum):
     DEMO_REPORT = "demo-report"
     CONFIG = "config"
     DB = "db"
+    CLAIMS = "claims"
+
+
+class ClaimsSubcommand(StrEnum):
+    """Claims subcommand names dispatched within claims.run()."""
+
+    LIST = "list"
+    SHOW = "show"
+    STATS = "stats"
+    REVIEW = "review"
+    NOTE = "note"
 
 
 class DbSubcommand(StrEnum):
@@ -370,6 +381,7 @@ def add_pending_suggestions(
 
 
 __all__ = [
+    "ClaimsSubcommand",
     "Command",
     "ConfigSubcommand",
     "DbSubcommand",

@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 2
+SCHEMA_VERSION: int = 3
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -162,9 +162,37 @@ CREATE INDEX IF NOT EXISTS idx_claims_review ON claims(needs_review);
 CREATE INDEX IF NOT EXISTS idx_claims_corrob ON claims(corroboration_status);
 """
 
+SCHEMA_DDL_V3: str = """\
+CREATE TABLE IF NOT EXISTS claim_reviews (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_pk       INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    claim_id       TEXT NOT NULL,
+    run_id         INTEGER NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    review_status  TEXT NOT NULL DEFAULT 'unreviewed',
+    review_note    TEXT,
+    importance     TEXT,
+    quality_score  REAL,
+    reviewed_at    TEXT NOT NULL,
+    UNIQUE(claim_pk)
+);
+CREATE INDEX IF NOT EXISTS idx_claim_reviews_claim ON claim_reviews(claim_pk);
+CREATE INDEX IF NOT EXISTS idx_claim_reviews_status ON claim_reviews(review_status);
+
+CREATE TABLE IF NOT EXISTS claim_notes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_pk   INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    claim_id   TEXT NOT NULL,
+    run_id     INTEGER REFERENCES research_runs(id) ON DELETE CASCADE,
+    note_text  TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_claim_notes_claim ON claim_notes(claim_pk);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
     lambda conn: conn.executescript(SCHEMA_DDL_V2),
+    lambda conn: conn.executescript(SCHEMA_DDL_V3),
 ]
 
 

@@ -16,6 +16,9 @@ _TABLES = [
     "text_surrogates",
     "warnings",
     "artifacts",
+    "claims",
+    "claim_reviews",
+    "claim_notes",
 ]
 
 

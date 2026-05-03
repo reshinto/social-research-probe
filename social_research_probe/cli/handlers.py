@@ -140,6 +140,12 @@ def _dispatch_db(args: argparse.Namespace) -> int:
     return db.run(args)
 
 
+def _dispatch_claims(args: argparse.Namespace) -> int:
+    from social_research_probe.commands import claims
+
+    return claims.run(args)
+
+
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions."""
     from social_research_probe.commands import Command
@@ -165,4 +171,5 @@ def handlers_factory() -> dict[str, callable]:
         Command.DEMO_REPORT: _handle_demo_report,
         Command.CONFIG: _dispatch_config,
         Command.DB: _dispatch_db,
+        Command.CLAIMS: _dispatch_claims,
     }

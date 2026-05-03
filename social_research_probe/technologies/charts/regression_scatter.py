@@ -49,7 +49,8 @@ def _render_with_matplotlib(
             x_line, y_line, color="red", linewidth=2, label=f"y = {slope:.3f}x + {intercept:.3f}"
         )
     plt.title(f"{label}  (R²={r_squared:.3f})")
-    plt.legend(loc="best")
+    if x:
+        plt.legend(loc="best")
     plt.savefig(path)
     plt.close(fig)
 
