@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, TypeAlias, TypedDict
 
+from social_research_probe.utils.claims.types import ExtractedClaim
+
 JSONScalar: TypeAlias = None | bool | int | float | str
 JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
 JSONObject: TypeAlias = dict[str, JSONValue]
@@ -121,12 +123,22 @@ class CommentsConfig(TypedDict, total=False):
     order: str
 
 
+class ClaimsConfig(TypedDict, total=False):
+    """Per-platform claim extraction configuration."""
+
+    enabled: bool
+    max_claims_per_source: int
+    use_llm: bool
+    max_claim_chars: int
+
+
 class ExportConfig(TypedDict, total=False):
     """Per-platform export artifact configuration."""
 
     enabled: bool
     sources_csv: bool
     comments_csv: bool
+    claims_csv: bool
     methodology_md: bool
     run_summary_json: bool
 
@@ -138,6 +150,7 @@ class YouTubePlatformConfig(TypedDict, total=False):
     max_items: int
     enrich_top_n: int
     comments: CommentsConfig
+    claims: ClaimsConfig
     export: ExportConfig
 
 
@@ -440,6 +453,7 @@ class ScoredItem(TypedDict, total=False):
     comments_status: CommentsStatus
     source_comments: list[SourceComment]
     comments: list[str]
+    extracted_claims: list[ExtractedClaim]
 
 
 class SourceValidationSummary(TypedDict):
