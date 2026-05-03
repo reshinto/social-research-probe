@@ -152,3 +152,38 @@ def test_build_stage_timings_skips_non_dict_entries():
     out = build_methodology(report, _minimal_config())
     assert "fetch" in out
     assert "Stage Timings" in out
+
+
+def test_build_includes_claims_extraction_section():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "## Claims Extraction" in out
+
+
+def test_build_claims_extraction_mentions_deterministic():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "deterministic" in out
+
+
+def test_build_claims_extraction_mentions_llm_disabled():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "LLM extraction: disabled" in out
+
+
+def test_build_claims_extraction_llm_enabled_when_configured():
+    config = _minimal_config(
+        claims={"use_llm": True, "max_claims_per_source": 10, "max_claim_chars": 500}
+    )
+    out = build_methodology(_minimal_report(), config)
+    assert "LLM extraction: enabled" in out
+
+
+def test_build_claims_extraction_section_before_warnings():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    claims_pos = out.index("## Claims Extraction")
+    warnings_pos = out.index("## Warnings")
+    assert claims_pos < warnings_pos
+
+
+def test_build_claims_extraction_mentions_limitations():
+    out = build_methodology(_minimal_report(), _minimal_config())
+    assert "pattern-based" in out or "Limitations" in out

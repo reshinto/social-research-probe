@@ -42,6 +42,17 @@ def _write_methodology(report: dict, config: dict, reports_dir: Path, stem: str)
     return str(write_methodology(content, path))
 
 
+def _write_claims(report: dict, reports_dir: Path, stem: str) -> str:
+    from social_research_probe.technologies.report_render.export.claims_csv import (
+        build_claims_rows,
+        write_claims_csv,
+    )
+
+    rows = build_claims_rows(report.get("items_top_n") or [])
+    path = reports_dir / f"{stem}-claims.csv"
+    return str(write_claims_csv(rows, path))
+
+
 def _write_run_summary(
     report: dict,
     config: dict,
@@ -83,6 +94,8 @@ class ExportPackageTech(BaseTechnology[dict, dict[str, str]]):
             paths["comments_csv"] = _write_comments(report, reports_dir, stem)
         if export_cfg.get("methodology_md", True):
             paths["methodology_md"] = _write_methodology(report, config, reports_dir, stem)
+        if export_cfg.get("claims_csv", True):
+            paths["claims_csv"] = _write_claims(report, reports_dir, stem)
         if export_cfg.get("run_summary_json", True):
             summary_paths = dict(paths)
             html_path = resolve_html_report_path(report)
