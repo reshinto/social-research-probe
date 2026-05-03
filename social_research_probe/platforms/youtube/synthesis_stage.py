@@ -54,12 +54,13 @@ class YouTubeSynthesisStage(BaseStage):
             Output:
                 {"enabled": True}
         """
+        narratives = state.get_stage_output("narratives")
         corroborate = state.get_stage_output("corroborate")
         score = state.get_stage_output("score")
         fetch = state.get_stage_output("fetch")
         stats = state.get_stage_output("stats")
         charts = state.get_stage_output("charts")
-        top_n = list(corroborate.get("top_n") or score.get("top_n", []))
+        top_n = list(narratives.get("top_n") or corroborate.get("top_n") or score.get("top_n", []))
         return {
             "top_n": top_n,
             "stats_results": stats.get("stats_summary", {}),

@@ -99,6 +99,16 @@ use_llm = false
 # Maximum character length for a single extracted claim sentence.
 max_claim_chars = 500
 
+[platforms.youtube.narratives]
+# Minimum claims to form a narrative cluster.
+min_cluster_size = 2
+
+# Split threshold for oversized clusters.
+max_cluster_size = 12
+
+# Optional LLM-generated cluster titles/summaries (disabled by default).
+llm_summarize = false
+
 [platforms.youtube.export]
 # Enables export artifact generation (CSV, markdown, JSON) alongside the HTML
 # report after each research run.
@@ -112,6 +122,9 @@ comments_csv = true
 
 # Write a claims.csv with one row per extracted claim across all sources.
 claims_csv = true
+
+# Write a narratives.csv with one row per narrative cluster.
+narratives_csv = true
 
 # Write a methodology.md documenting the pipeline configuration and coverage.
 methodology_md = true
@@ -137,6 +150,7 @@ report = true                # Render the HTML report.
 narration = true             # Render audio narration through Voicebox or fallback TTS.
 comments = true              # Fetch YouTube comments for top-scored videos.
 claims = true                # Extract structured claims from item primary text.
+narratives = true            # Group claims into narrative clusters.
 export = true                # Write export artifacts (CSV, MD, JSON) alongside the HTML report.
 
 [services.youtube.sourcing]
@@ -192,6 +206,9 @@ statistics = true
 
 # Enables chart rendering from the statistics and ranked result tables.
 charts = true
+
+# Enables narrative clustering of claims into higher-level themes.
+narratives = true
 
 [services.youtube.synthesizing]
 # Enables final narrative synthesis from the assembled research evidence.
@@ -303,6 +320,9 @@ mac_tts = true
 
 # Enables the claim extractor technology for identifying verifiable claims.
 claim_extractor = true
+
+# Enables deterministic narrative clustering of claims into theme groups.
+narrative_clusterer = true
 
 # Enables the AI slop detector technology for filtering low-quality AI-generated content.
 ai_slop_detector = true
