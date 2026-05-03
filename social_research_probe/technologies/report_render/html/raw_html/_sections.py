@@ -582,6 +582,54 @@ def section_9_warnings(report: ResearchReport) -> str:
     return f'<ul class="warning-list">{lis}</ul>'
 
 
+def section_narratives(report: ResearchReport) -> str:
+    """Narrative clusters section rendered as a collapsible details/table.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        HTML string for the narratives section, or empty string if no clusters.
+
+    Examples:
+        Input:
+            section_narratives(
+                report={"narratives": [{"cluster_type": "theme", "title": "AI"}]},
+            )
+        Output:
+            "<details>"
+    """
+    clusters = report.get("narratives") or []
+    if not clusters:
+        return ""
+    sorted_clusters = sorted(
+        (c for c in clusters if isinstance(c, dict)),
+        key=lambda c: c.get("opportunity_score", 0.0),
+        reverse=True,
+    )
+    rows = ""
+    for c in sorted_clusters:
+        rows += (
+            f"<tr>"
+            f"<td>{_esc(c.get('cluster_type', ''))}</td>"
+            f"<td>{_esc(c.get('title', ''))}</td>"
+            f"<td>{c.get('claim_count', 0)}</td>"
+            f"<td>{c.get('source_count', 0)}</td>"
+            f"<td>{c.get('confidence', 0.0):.2f}</td>"
+            f"<td>{c.get('opportunity_score', 0.0):.2f}</td>"
+            f"<td>{c.get('risk_score', 0.0):.2f}</td>"
+            f"</tr>"
+        )
+    header = (
+        "<tr><th>Type</th><th>Title</th><th>Claims</th>"
+        "<th>Sources</th><th>Confidence</th><th>Opportunity</th><th>Risk</th></tr>"
+    )
+    return (
+        f"<details open><summary>Narrative Clusters ({len(sorted_clusters)})</summary>"
+        f"<table>{header}{rows}</table></details>"
+    )
+
+
 def section_10_synthesis(text: str | None) -> str:
     """Compiled Synthesis section (LLM-generated or placeholder).
 

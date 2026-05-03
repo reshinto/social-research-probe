@@ -303,12 +303,15 @@ def build_demo_report() -> ResearchReport:
         Output:
             "AI safety"
     """
+    from social_research_probe.utils.demo.narratives import build_demo_narratives
+
     items = build_demo_items()
     report: ResearchReport = {
         "topic": DEMO_TOPIC,
         "platform": "youtube",
         "purpose_set": list(DEMO_PURPOSE_SET),
         "items_top_n": items,
+        "narratives": build_demo_narratives(items),
         "source_validation_summary": _source_validation_summary(items),
         "platform_engagement_summary": _platform_engagement_summary(),
         "evidence_summary": _evidence_summary(),

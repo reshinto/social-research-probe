@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from datetime import UTC, datetime
 
@@ -11,6 +12,8 @@ from social_research_probe.utils.narratives.scoring import (
     compute_opportunity_score,
     compute_risk_score,
 )
+
+logger = logging.getLogger(__name__)
 
 _TYPE_MAP: dict[str, str] = {
     "fact_claim": "theme",
@@ -24,9 +27,130 @@ _TYPE_MAP: dict[str, str] = {
     "market_signal": "market_signal",
 }
 
-_HIGH_SIGNAL_TYPES: frozenset[str] = frozenset({"opportunity", "risk", "market_signal"})
+_HIGH_SIGNAL_TYPES: frozenset[str] = frozenset({"opportunity", "market_signal"})
 
 _MAX_CLAIMS_SAFETY_CAP: int = 500
+
+_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "need",
+        "dare",
+        "ought",
+        "used",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "out",
+        "off",
+        "over",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "that",
+        "this",
+        "these",
+        "those",
+        "it",
+        "its",
+        "and",
+        "but",
+        "or",
+        "nor",
+        "not",
+        "so",
+        "very",
+        "just",
+        "about",
+        "up",
+        "than",
+        "too",
+        "also",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "only",
+        "same",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "many",
+        "much",
+        "any",
+        "i",
+        "me",
+        "my",
+        "we",
+        "our",
+        "you",
+        "your",
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "they",
+        "them",
+        "their",
+        "what",
+        "which",
+        "who",
+        "whom",
+        "when",
+        "where",
+        "why",
+        "how",
+        "if",
+        "because",
+        "while",
+        "although",
+    }
+)
 
 
 def cluster_claims(
@@ -34,6 +158,7 @@ def cluster_claims(
     *,
     min_cluster_size: int = 2,
     max_cluster_size: int = 12,
+    created_at: str | None = None,
 ) -> list[dict]:
     """Group claims from items into narrative clusters.
 
@@ -52,6 +177,11 @@ def cluster_claims(
     if not flat_claims:
         return []
     if len(flat_claims) > _MAX_CLAIMS_SAFETY_CAP:
+        logger.warning(
+            "cluster_claims: input has %d claims (cap=%d); returning empty.",
+            len(flat_claims),
+            _MAX_CLAIMS_SAFETY_CAP,
+        )
         return []
 
     groups = _group_by_entity_cooccurrence(flat_claims)
@@ -59,7 +189,7 @@ def cluster_claims(
     groups = _merge_singletons(groups, min_cluster_size)
     groups = _filter_small(groups, min_cluster_size)
 
-    clusters = [_build_cluster(group) for group in groups]
+    clusters = [_build_cluster(group, created_at=created_at) for group in groups]
     clusters.sort(key=lambda c: c["claim_count"], reverse=True)
     return clusters
 
@@ -151,9 +281,7 @@ def _merge_singletons(groups: list[list[dict]], min_size: int) -> list[list[dict
             best_idx = 0
             claim_entities = {e.lower() for e in claim.get("entities") or []}
             for i, lg in enumerate(large):
-                group_entities = {
-                    e.lower() for c in lg for e in (c.get("entities") or [])
-                }
+                group_entities = {e.lower() for c in lg for e in (c.get("entities") or [])}
                 overlap = len(claim_entities & group_entities)
                 if overlap > best_overlap:
                     best_overlap = overlap
@@ -188,7 +316,7 @@ def _resolve_cluster_type(claims: list[dict]) -> str:
     return top[0][0]
 
 
-def _build_cluster(claims: list[dict]) -> dict:
+def _build_cluster(claims: list[dict], *, created_at: str | None = None) -> dict:
     """Build a NarrativeCluster dict from a group of claims."""
     claim_ids = sorted({c["claim_id"] for c in claims})
     source_ids = sorted({c.get("_source_id", "") for c in claims} - {""})
@@ -209,9 +337,7 @@ def _build_cluster(claims: list[dict]) -> dict:
     title = _build_title(cluster_type, entities)
     summary = "; ".join(representative_claims[:2])
 
-    contradiction_count = sum(
-        1 for c in claims if c.get("contradiction_status", "none") != "none"
-    )
+    contradiction_count = sum(1 for c in claims if c.get("contradiction_status", "none") != "none")
     needs_review_count = sum(1 for c in claims if c.get("needs_review"))
 
     keywords = _extract_keywords(claims)
@@ -236,7 +362,7 @@ def _build_cluster(claims: list[dict]) -> dict:
         "risk_score": compute_risk_score(claims, cluster_type),
         "contradiction_count": contradiction_count,
         "needs_review_count": needs_review_count,
-        "created_at": datetime.now(tz=UTC).isoformat(),
+        "created_at": created_at or datetime.now(tz=UTC).isoformat(),
     }
 
 
@@ -252,28 +378,10 @@ def _build_title(cluster_type: str, entities: list[str]) -> str:
 def _extract_keywords(claims: list[dict]) -> list[str]:
     """Extract top keywords from claim texts via word frequency."""
     word_counts: Counter[str] = Counter()
-    stopwords = frozenset(
-        {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-            "have", "has", "had", "do", "does", "did", "will", "would", "could",
-            "should", "may", "might", "shall", "can", "need", "dare", "ought",
-            "used", "to", "of", "in", "for", "on", "with", "at", "by", "from",
-            "as", "into", "through", "during", "before", "after", "above", "below",
-            "between", "out", "off", "over", "under", "again", "further", "then",
-            "once", "that", "this", "these", "those", "it", "its", "and", "but",
-            "or", "nor", "not", "so", "very", "just", "about", "up", "than",
-            "too", "also", "more", "most", "other", "some", "such", "no", "only",
-            "same", "all", "each", "every", "both", "few", "many", "much", "any",
-            "i", "me", "my", "we", "our", "you", "your", "he", "him", "his",
-            "she", "her", "they", "them", "their", "what", "which", "who", "whom",
-            "when", "where", "why", "how", "if", "because", "while", "although",
-        }
-    )
     for claim in claims:
         text = claim.get("claim_text", "").lower()
         words = [w.strip(".,;:!?\"'()[]{}") for w in text.split()]
         for word in words:
-            if len(word) > 2 and word not in stopwords and word.isalpha():
+            if len(word) > 2 and word not in _STOPWORDS and word.isalpha():
                 word_counts[word] += 1
-
     return [word for word, _count in word_counts.most_common(10)]

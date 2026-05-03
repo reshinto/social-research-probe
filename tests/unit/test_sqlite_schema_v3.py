@@ -77,8 +77,8 @@ def _insert_claim(conn: sqlite3.Connection, run_id: int, snap_id: int) -> int:
     return conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
 
-def test_schema_version_is_3():
-    assert SCHEMA_VERSION == 3
+def test_schema_version_is_at_least_3():
+    assert SCHEMA_VERSION >= 3
 
 
 def test_fresh_ensure_schema_creates_review_and_notes_tables():

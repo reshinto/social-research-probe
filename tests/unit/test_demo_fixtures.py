@@ -128,8 +128,12 @@ def test_no_html_or_export_paths_set():
 
 
 def test_deterministic():
-    with patch("social_research_probe.utils.claims.extractor.datetime") as mock_dt:
+    with (
+        patch("social_research_probe.utils.claims.extractor.datetime") as mock_dt,
+        patch("social_research_probe.utils.narratives.clusterer.datetime") as mock_dt2,
+    ):
         mock_dt.now.return_value = _FIXED_NOW
+        mock_dt2.now.return_value = _FIXED_NOW
         a = build_demo_report()
         b = build_demo_report()
     assert a == b

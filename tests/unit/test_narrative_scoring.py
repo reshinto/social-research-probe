@@ -68,9 +68,7 @@ class TestComputeOpportunityScore:
         )
 
     def test_clamped_to_one(self) -> None:
-        claims = [
-            _claim(corroboration_status="supported", source_id=f"s{i}") for i in range(20)
-        ]
+        claims = [_claim(corroboration_status="supported", source_id=f"s{i}") for i in range(20)]
         assert compute_opportunity_score(claims, "opportunity") <= 1.0
 
 

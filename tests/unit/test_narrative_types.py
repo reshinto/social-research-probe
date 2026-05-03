@@ -43,7 +43,6 @@ class TestNarrativeClusterTypedDict:
             "objection",
             "pain_point",
             "opportunity",
-            "risk",
             "market_signal",
             "question",
             "prediction",

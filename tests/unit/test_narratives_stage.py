@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from social_research_probe.platforms.state import PipelineState
 from social_research_probe.platforms.youtube import YouTubeNarrativesStage, YouTubePipeline
@@ -128,6 +128,74 @@ class TestNarrativesStageEnabled:
         for item in output["top_n"]:
             assert "narrative_ids" in item
             assert len(item["narrative_ids"]) >= 1
+
+    def test_non_dict_item_in_top_n_skipped(self) -> None:
+        items: list = [
+            _item("v1", [_claim("c1", ["AI"]), _claim("c2", ["AI"])]),
+            "not_a_dict",
+        ]
+        state = _state_with_corroborate(items)
+        mock_cfg = _mock_cfg()
+
+        with (
+            patch("social_research_probe.config.load_active_config", return_value=mock_cfg),
+            patch("social_research_probe.technologies.load_active_config", return_value=mock_cfg),
+            patch(
+                "social_research_probe.technologies.narratives.load_active_config",
+                return_value=mock_cfg,
+            ),
+        ):
+            result = asyncio.run(YouTubeNarrativesStage().execute(state))
+
+        output = result.get_stage_output("narratives")
+        assert "not_a_dict" in output["top_n"]
+
+    def test_failed_tech_result_yields_empty_clusters(self) -> None:
+        items = [_item("v1", [_claim("c1", ["AI"]), _claim("c2", ["AI"])])]
+        state = _state_with_corroborate(items)
+        mock_cfg = _mock_cfg()
+
+        failed_tr = MagicMock()
+        failed_tr.success = False
+        mock_result = MagicMock()
+        mock_result.tech_results = [failed_tr]
+        mock_service = MagicMock()
+        mock_service.execute_batch = AsyncMock(return_value=[mock_result])
+
+        with (
+            patch("social_research_probe.config.load_active_config", return_value=mock_cfg),
+            patch("social_research_probe.technologies.load_active_config", return_value=mock_cfg),
+            patch(
+                "social_research_probe.technologies.narratives.load_active_config",
+                return_value=mock_cfg,
+            ),
+            patch(
+                "social_research_probe.services.analyzing.narratives.NarrativeClusteringService",
+                return_value=mock_service,
+            ),
+        ):
+            result = asyncio.run(YouTubeNarrativesStage().execute(state))
+
+        output = result.get_stage_output("narratives")
+        assert output["clusters"] == []
+
+    def test_non_dict_claim_in_extracted_claims_skipped(self) -> None:
+        items = [_item("v1", [_claim("c1", ["AI"]), _claim("c2", ["AI"]), "bad_claim"])]
+        state = _state_with_corroborate(items)
+        mock_cfg = _mock_cfg()
+
+        with (
+            patch("social_research_probe.config.load_active_config", return_value=mock_cfg),
+            patch("social_research_probe.technologies.load_active_config", return_value=mock_cfg),
+            patch(
+                "social_research_probe.technologies.narratives.load_active_config",
+                return_value=mock_cfg,
+            ),
+        ):
+            result = asyncio.run(YouTubeNarrativesStage().execute(state))
+
+        output = result.get_stage_output("narratives")
+        assert "narrative_ids" in output["top_n"][0]
 
 
 class TestPipelineStageOrder:

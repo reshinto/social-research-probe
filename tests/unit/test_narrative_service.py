@@ -15,8 +15,7 @@ class TestNarrativeClusteringServiceMeta:
 
     def test_enabled_config_key(self) -> None:
         assert (
-            NarrativeClusteringService.enabled_config_key
-            == "services.youtube.analyzing.narratives"
+            NarrativeClusteringService.enabled_config_key == "services.youtube.analyzing.narratives"
         )
 
     def test_get_technologies_returns_clusterer(self) -> None:
@@ -28,7 +27,9 @@ class TestNarrativeClusteringServiceMeta:
 
 def _make_config_mock() -> MagicMock:
     cfg = MagicMock()
-    cfg.raw = {"platforms": {"youtube": {"narratives": {"min_cluster_size": 2, "max_cluster_size": 12}}}}
+    cfg.raw = {
+        "platforms": {"youtube": {"narratives": {"min_cluster_size": 2, "max_cluster_size": 12}}}
+    }
     cfg.technology_enabled.return_value = True
     cfg.debug_enabled.return_value = False
     cfg.service_enabled.return_value = True
@@ -88,9 +89,7 @@ class TestNarrativeClusteringServiceExecute:
                 return_value=mock_cfg,
             ),
         ):
-            result = asyncio.run(
-                NarrativeClusteringService().execute_batch([{"items": items}])
-            )
+            result = asyncio.run(NarrativeClusteringService().execute_batch([{"items": items}]))
 
         assert len(result) == 1
         tech_results = result[0].tech_results

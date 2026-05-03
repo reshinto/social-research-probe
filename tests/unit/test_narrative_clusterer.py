@@ -137,9 +137,7 @@ class TestMinClusterSize:
         assert len(clusters) == 0
 
     def test_high_signal_singleton_kept(self) -> None:
-        items = [
-            _item("v1", [_claim("c1", claim_type="market_signal", entities=["Signal"])])
-        ]
+        items = [_item("v1", [_claim("c1", claim_type="market_signal", entities=["Signal"])])]
         clusters = cluster_claims(items, min_cluster_size=2)
         assert len(clusters) == 1
         assert clusters[0]["cluster_type"] == "market_signal"
@@ -157,15 +155,15 @@ class TestDeterminism:
             ),
             _item("v2", [_claim("c3", entities=["ML"])]),
         ]
-        r1 = cluster_claims(items)
-        r2 = cluster_claims(items)
+        ts = "2024-01-01T00:00:00+00:00"
+        r1 = cluster_claims(items, created_at=ts)
+        r2 = cluster_claims(items, created_at=ts)
         assert r1[0]["narrative_id"] == r2[0]["narrative_id"]
         assert r1[0]["claim_ids"] == r2[0]["claim_ids"]
+        assert r1[0]["created_at"] == r2[0]["created_at"]
 
     def test_narrative_id_stable(self) -> None:
-        items = [
-            _item("v1", [_claim("c1", entities=["X"]), _claim("c2", entities=["X"])])
-        ]
+        items = [_item("v1", [_claim("c1", entities=["X"]), _claim("c2", entities=["X"])])]
         clusters = cluster_claims(items)
         expected_id = derive_narrative_id(["c1", "c2"])
         assert clusters[0]["narrative_id"] == expected_id
@@ -320,3 +318,35 @@ class TestSingletonMergingWithEntities:
         clusters = cluster_claims(items, min_cluster_size=2)
         ai_cluster = next(c for c in clusters if "c1" in c["claim_ids"])
         assert "c5" in ai_cluster["claim_ids"]
+
+    def test_no_overlap_singleton_falls_back_to_first_large_group(self) -> None:
+        items = [
+            _item(
+                "v1",
+                [
+                    _claim("c1", entities=["PythonLang"]),
+                    _claim("c2", entities=["PythonLang"]),
+                    _claim("c3", entities=["JavaLang"]),
+                    _claim("c4", entities=["JavaLang"]),
+                    _claim("c5", entities=["RubyLang"]),
+                ],
+            ),
+        ]
+        clusters = cluster_claims(items, min_cluster_size=2)
+        assert any("c5" in c["claim_ids"] for c in clusters)
+
+
+class TestUnionFindAlreadySameRoot:
+    def test_claims_sharing_two_entities_grouped_once(self) -> None:
+        items = [
+            _item(
+                "v1",
+                [
+                    _claim("c1", entities=["Python", "Go"]),
+                    _claim("c2", entities=["Python", "Go"]),
+                ],
+            ),
+        ]
+        clusters = cluster_claims(items, min_cluster_size=2)
+        assert len(clusters) == 1
+        assert set(clusters[0]["claim_ids"]) == {"c1", "c2"}

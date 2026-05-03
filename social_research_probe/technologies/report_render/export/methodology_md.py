@@ -398,6 +398,42 @@ def _section_claims_extraction(config: dict) -> str:
     return "## Claims Extraction\n\n" + "\n".join(lines) + "\n\n"
 
 
+def _section_narrative_clustering(config: dict) -> str:
+    """Build the narrative clustering section for the methodology export.
+
+    Args:
+        config: Configuration or context values that control this run.
+
+    Returns:
+        Methodology section documenting narrative clustering configuration.
+
+    Examples:
+        Input:
+            _section_narrative_clustering(
+                config={"narratives": {"min_cluster_size": 2}},
+            )
+        Output:
+            "## Narrative Clustering"
+    """
+    narr_cfg = config.get("narratives") or {}
+    min_size = narr_cfg.get("min_cluster_size", 2)
+    max_size = narr_cfg.get("max_cluster_size", 12)
+    llm_summarize = narr_cfg.get("llm_summarize", False)
+    lines = [
+        "- Algorithm: deterministic entity co-occurrence (Union-Find)",
+        f"- Minimum cluster size: {min_size}",
+        f"- Maximum cluster size: {max_size} (split by claim_type when exceeded)",
+        f"- LLM summarization: {'enabled' if llm_summarize else 'disabled'}",
+        "- Cluster types: theme, objection, pain_point, opportunity, risk, "
+        "market_signal, question, prediction, mixed",
+        "- Scoring: confidence (mean), opportunity_score, risk_score per cluster",
+        "- Fully local: no embeddings, no network calls, no LLM dependencies by default",
+        "- Limitations: entity-less claims grouped by claim_type only; "
+        "capped at 500 claims per run",
+    ]
+    return "## Narrative Clustering\n\n" + "\n".join(lines) + "\n\n"
+
+
 def _section_stage_timings(report: dict) -> str:
     """Build the stage timings section for the methodology export.
 
@@ -477,6 +513,7 @@ def build_methodology(report: dict, config: dict) -> str:
         _section_technologies(config),
         _section_evidence_coverage(report),
         _section_claims_extraction(config),
+        _section_narrative_clustering(config),
         _section_stage_timings(report),
         _section_warnings(report),
     ]

@@ -17,6 +17,7 @@ from social_research_probe.technologies.persistence.sqlite.repository import (
     insert_artifacts,
     insert_claims,
     insert_comments,
+    insert_narratives,
     insert_run,
     insert_snapshot,
     insert_text_surrogate,
@@ -173,6 +174,7 @@ class SQLitePersistTech(BaseTechnology[dict, dict]):
             "now": datetime.now(UTC).isoformat(),
             "items": [it for it in (report.get("items_top_n") or []) if isinstance(it, dict)],
             "warnings_raw": report.get("warnings") or [],
+            "narratives": report.get("narratives") or [],
             "export_paths": report.get("export_paths") or {},
             "html_report_path_str": str(html_path) if html_path else None,
             "output_dir": str(html_path.parent) if html_path else None,
@@ -430,6 +432,9 @@ class SQLitePersistTech(BaseTechnology[dict, dict]):
                 persist_transcript_text,
             )
             insert_warnings(conn, run_pk, ctx["warnings_raw"])
+            narratives = ctx.get("narratives") or []
+            if narratives:
+                insert_narratives(conn, run_pk, narratives, created_at=ctx["now"])
             insert_artifacts(
                 conn,
                 run_pk,
