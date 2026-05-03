@@ -110,6 +110,25 @@ def _timing_table(timings: list) -> str:
     return header + rows if rows else ""
 
 
+def _section_claims_extraction(config: dict) -> str:
+    claims_cfg = config.get("claims") or {}
+    use_llm = claims_cfg.get("use_llm", False)
+    max_per_source = claims_cfg.get("max_claims_per_source", 10)
+    max_chars = claims_cfg.get("max_claim_chars", 500)
+    llm_line = "- LLM extraction: enabled" if use_llm else "- LLM extraction: disabled (Phase 5B)"
+    lines = [
+        "- Extraction method: deterministic (pattern-matching)",
+        "- Rule types: fact_claim, opinion, prediction, recommendation, experience, "
+        "question, objection, pain_point, market_signal",
+        llm_line,
+        f"- Max claims per source: {max_per_source}",
+        f"- Max claim length (chars): {max_chars}",
+        "- Limitations: pattern-based rules; may miss nuanced or implicit claims; "
+        "recommendations matched only when keyword appears at sentence start (imperative form)",
+    ]
+    return "## Claims Extraction\n\n" + "\n".join(lines) + "\n\n"
+
+
 def _section_stage_timings(report: dict) -> str:
     timings = report.get("stage_timings") or []
     table = _timing_table(timings)
@@ -132,6 +151,7 @@ def build_methodology(report: dict, config: dict) -> str:
         _section_pipeline_config(config),
         _section_technologies(config),
         _section_evidence_coverage(report),
+        _section_claims_extraction(config),
         _section_stage_timings(report),
         _section_warnings(report),
     ]

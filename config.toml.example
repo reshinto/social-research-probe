@@ -85,6 +85,20 @@ max_comments_per_video = 20
 # top-liked comments; "time" returns newest first.
 order = "relevance" # relevance | time
 
+[platforms.youtube.claims]
+# Enables structured claim extraction from item primary text.
+enabled = true
+
+# Maximum number of claims extracted per source item.
+max_claims_per_source = 10
+
+# Use LLM-backed extraction (Phase 5B). When false, deterministic pattern-
+# matching is used exclusively. LLM extraction is not yet implemented.
+use_llm = false
+
+# Maximum character length for a single extracted claim sentence.
+max_claim_chars = 500
+
 [platforms.youtube.export]
 # Enables export artifact generation (CSV, markdown, JSON) alongside the HTML
 # report after each research run.
@@ -95,6 +109,9 @@ sources_csv = true
 
 # Write a comments.csv with one row per fetched comment linked to its source.
 comments_csv = true
+
+# Write a claims.csv with one row per extracted claim across all sources.
+claims_csv = true
 
 # Write a methodology.md documenting the pipeline configuration and coverage.
 methodology_md = true
@@ -119,6 +136,7 @@ structured_synthesis = true  # Ask an LLM for structured report sections.
 report = true                # Render the HTML report.
 narration = true             # Render audio narration through Voicebox or fallback TTS.
 comments = true              # Fetch YouTube comments for top-scored videos.
+claims = true                # Extract structured claims from item primary text.
 export = true                # Write export artifacts (CSV, MD, JSON) alongside the HTML report.
 
 [services.youtube.sourcing]
@@ -160,6 +178,9 @@ summary = true
 # Enables YouTube comment fetching for top-scored videos. Requires
 # SRP_YOUTUBE_API_KEY or a youtube_api_key secret.
 comments = true
+
+# Enables structured claim extraction from item primary text.
+claims = true
 
 [services.youtube.corroborating]
 # Enables claim extraction and provider-based corroboration.

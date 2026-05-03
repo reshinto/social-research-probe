@@ -232,9 +232,71 @@ class CorroborationHostTech(BaseTechnology[object, dict]):
         self.providers = providers
 
     async def _execute(self, input_data: object) -> dict:
+        if not isinstance(input_data, dict):
+            return await self._corroborate_title_fallback(str(input_data), None)
+        corroborable = self._corroborable_claims(input_data)
+        if corroborable:
+            return await self._corroborate_from_extracted(input_data, corroborable)
+        return await self._corroborate_title_fallback(
+            input_data.get("title", ""),
+            input_data.get("url"),
+        )
+
+    def _corroborable_claims(self, data: dict) -> list[dict]:
+        from social_research_probe.config import load_active_config
+
+        max_n = int(load_active_config().raw.get("corroboration", {}).get("max_claims_per_item", 5))
+        extracted = data.get("extracted_claims") or []
+        needs = [c for c in extracted if isinstance(c, dict) and c.get("needs_corroboration")]
+        return needs[:max_n]
+
+    async def _corroborate_title_fallback(self, title: str, url: object) -> dict:
         from social_research_probe.technologies.validation.claim_extractor import Claim
 
-        title = input_data.get("title", "") if isinstance(input_data, dict) else str(input_data)
-        url = input_data.get("url") if isinstance(input_data, dict) else None
         claim = Claim(text=title, source_text=title, index=0, source_url=url)
         return await corroborate_claim(claim, self.providers)
+
+    async def _corroborate_from_extracted(self, data: dict, claims: list[dict]) -> dict:
+        from social_research_probe.technologies.validation.claim_extractor import Claim
+
+        claim_results: list[dict] = []
+        for i, c in enumerate(claims):
+            claim_obj = Claim(
+                text=c["claim_text"],
+                source_text=c.get("evidence_text", c["claim_text"]),
+                index=i,
+                source_url=c.get("source_url"),
+            )
+            result = await self._try_corroborate(claim_obj)
+            if result:
+                c["corroboration_status"] = result.get("aggregate_verdict", "inconclusive")
+                claim_results.append(result)
+        return self._build_claims_result(data, claim_results)
+
+    async def _try_corroborate(self, claim_obj: object) -> dict | None:
+        try:
+            return await corroborate_claim(claim_obj, self.providers)
+        except Exception:
+            return None
+
+    def _build_claims_result(self, data: dict, claim_results: list[dict]) -> dict:
+        from collections import Counter
+
+        verdicts = [r.get("aggregate_verdict", "inconclusive") for r in claim_results]
+        counts: Counter[str] = Counter(verdicts)
+        verdict = "inconclusive"
+        if counts:
+            top = counts.most_common(2)
+            if len(top) == 1 or top[0][1] != top[1][1]:
+                verdict = top[0][0]
+        confidence = (
+            sum(r.get("aggregate_confidence", 0.0) for r in claim_results) / len(claim_results)
+            if claim_results
+            else 0.0
+        )
+        return {
+            "claim_text": data.get("title", ""),
+            "results": claim_results,
+            "aggregate_verdict": verdict,
+            "aggregate_confidence": confidence,
+        }

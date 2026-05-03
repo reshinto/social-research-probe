@@ -34,6 +34,25 @@ def _corroboration_summary(items: list[dict]) -> dict[str, int]:
     )
 
 
+def _claims_summary(items: list[dict]) -> dict:
+    all_claims: list[dict] = []
+    for item in items:
+        if isinstance(item, dict):
+            all_claims.extend(
+                c for c in (item.get("extracted_claims") or []) if isinstance(c, dict)
+            )
+    by_type: dict[str, int] = dict(Counter(c.get("claim_type", "unknown") for c in all_claims))
+    return {
+        "claims_extracted": len(all_claims),
+        "claims_by_type": by_type,
+        "claims_needing_review": sum(1 for c in all_claims if c.get("needs_review")),
+        "claims_needing_corroboration": sum(1 for c in all_claims if c.get("needs_corroboration")),
+        "corroborated_claims": sum(
+            1 for c in all_claims if c.get("corroboration_status") not in (None, "pending")
+        ),
+    }
+
+
 def _config_snapshot(config: dict) -> dict:
     platform_keys = {
         k: config[k]
@@ -46,6 +65,7 @@ def _config_snapshot(config: dict) -> dict:
 def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]) -> dict:
     """Build machine-readable run summary dict."""
     items = report.get("items_top_n") or []
+    claims = _claims_summary(items)
     return {
         "topic": report.get("topic", ""),
         "platform": report.get("platform", ""),
@@ -54,6 +74,11 @@ def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]
         "item_count": _item_counts(items),
         "evidence_tiers": _evidence_tiers(items),
         "corroboration_summary": _corroboration_summary(items),
+        "claims_extracted": claims["claims_extracted"],
+        "claims_by_type": claims["claims_by_type"],
+        "claims_needing_review": claims["claims_needing_review"],
+        "claims_needing_corroboration": claims["claims_needing_corroboration"],
+        "corroborated_claims": claims["corroborated_claims"],
         "stage_timings": list(report.get("stage_timings") or []),
         "config_snapshot": _config_snapshot(config),
         "artifact_paths": dict(artifact_paths),

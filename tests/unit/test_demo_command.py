@@ -83,7 +83,7 @@ def test_run_summary_json_marks_topic_synthetic_and_lists_disclaimer(isolated_da
 def test_stdout_lists_five_paths(isolated_data_dir, capsys):
     _run_demo()
     out = capsys.readouterr().out.strip().splitlines()
-    assert len(out) == 5
+    assert len(out) == 6
     for line in out:
         assert line.strip()
 
@@ -170,4 +170,5 @@ def test_run_populates_export_paths_on_report(isolated_data_dir):
         "comments_csv",
         "methodology_md",
         "run_summary_json",
+        "claims_csv",
     }

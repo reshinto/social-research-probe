@@ -23,6 +23,8 @@ _WHITELIST: frozenset[str] = frozenset(
         "social_research_probe/technologies/__init__.py::BaseTechnology._cached_execute",
         # single SQL INSERT with 12 columns; column verbosity is inherent to the schema
         "social_research_probe/technologies/persistence/sqlite/repository.py::insert_snapshot",
+        # single SQL INSERT with 24 columns; column verbosity is inherent to the claims schema
+        "social_research_probe/technologies/persistence/sqlite/repository.py::insert_claims",
         # single-purpose markdown→HTML conversion; regex patterns are inherently verbose
         "social_research_probe/technologies/report_render/html/raw_html/markdown_to_html.py::md_to_html",
         # assembles one HTML report from 12 pre-built section strings

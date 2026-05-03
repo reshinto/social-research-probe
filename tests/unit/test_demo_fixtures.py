@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from unittest.mock import patch
+
 from social_research_probe.commands._demo_constants import (
     DEMO_DISCLAIMER,
     DEMO_PURPOSE_SET,
 )
 from social_research_probe.commands._demo_fixtures import build_demo_report
 from social_research_probe.commands._demo_items import build_demo_items
+
+_FIXED_NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
 
 
 def test_topic_marked_synthetic():
@@ -123,7 +128,11 @@ def test_no_html_or_export_paths_set():
 
 
 def test_deterministic():
-    assert build_demo_report() == build_demo_report()
+    with patch("social_research_probe.utils.claims.extractor.datetime") as mock_dt:
+        mock_dt.now.return_value = _FIXED_NOW
+        a = build_demo_report()
+        b = build_demo_report()
+    assert a == b
 
 
 def test_disclaimer_in_chart_takeaway():

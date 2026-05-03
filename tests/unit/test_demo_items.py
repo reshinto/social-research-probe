@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from unittest.mock import patch
+
 from social_research_probe.commands._demo_constants import DEMO_THEMES
 from social_research_probe.commands._demo_items import build_demo_items
+
+_FIXED_NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
 
 
 def test_item_count():
@@ -126,7 +131,11 @@ def test_summaries_reference_themes():
 
 
 def test_deterministic_across_calls():
-    assert build_demo_items() == build_demo_items()
+    with patch("social_research_probe.utils.claims.extractor.datetime") as mock_dt:
+        mock_dt.now.return_value = _FIXED_NOW
+        a = build_demo_items()
+        b = build_demo_items()
+    assert a == b
 
 
 def test_corroboration_verdicts_mixed():
