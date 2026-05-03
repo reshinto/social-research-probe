@@ -124,12 +124,28 @@ class TestCompareClaims:
         assert result[0]["status"] == "repeated"
 
     def test_none_claim_text_handled(self) -> None:
-        baseline = [{"claim_id": "c1", "claim_text": None, "confidence": 0.5,
-                     "corroboration_status": "x", "needs_review": 0,
-                     "claim_type": "fact", "source_url": ""}]
-        target = [{"claim_id": "c2", "claim_text": None, "confidence": 0.5,
-                   "corroboration_status": "x", "needs_review": 0,
-                   "claim_type": "fact", "source_url": ""}]
+        baseline = [
+            {
+                "claim_id": "c1",
+                "claim_text": None,
+                "confidence": 0.5,
+                "corroboration_status": "x",
+                "needs_review": 0,
+                "claim_type": "fact",
+                "source_url": "",
+            }
+        ]
+        target = [
+            {
+                "claim_id": "c2",
+                "claim_text": None,
+                "confidence": 0.5,
+                "corroboration_status": "x",
+                "needs_review": 0,
+                "claim_type": "fact",
+                "source_url": "",
+            }
+        ]
         result = compare_claims(baseline, target)
         assert len(result) == 2
 

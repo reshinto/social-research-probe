@@ -17,9 +17,7 @@ def build_counts(result: ComparisonResult) -> dict[str, int]:
         ("narratives", result["narrative_changes"]),
     ]:
         for status in ("new", "repeated", "disappeared"):
-            counts[f"{prefix}_{status}"] = sum(
-                1 for c in changes if c["status"] == status
-            )
+            counts[f"{prefix}_{status}"] = sum(1 for c in changes if c["status"] == status)
 
     narr_changes = result["narrative_changes"]
     counts["narratives_strengthened"] = sum(
@@ -82,21 +80,18 @@ def build_follow_ups(result: ComparisonResult) -> list[str]:
             suggestions.append(f"Investigate emerging narrative: {n['title']}")
 
     corr_changed = [
-        c for c in result["claim_changes"]
+        c
+        for c in result["claim_changes"]
         if c["status"] == "repeated" and c["corroboration_changed"]
     ]
     if corr_changed:
-        suggestions.append(
-            f"Review {len(corr_changed)} claims with changed corroboration status"
-        )
+        suggestions.append(f"Review {len(corr_changed)} claims with changed corroboration status")
 
     for n in result["narrative_changes"]:
         if n.get("strength_signal") == "weakened" and len(suggestions) < _MAX_FOLLOW_UPS:
             suggestions.append(f"Monitor weakening narrative: {n['title']}")
 
-    new_sources = sum(
-        1 for s in result["source_changes"] if s["status"] == "new"
-    )
+    new_sources = sum(1 for s in result["source_changes"] if s["status"] == "new")
     if new_sources > 0 and len(suggestions) < _MAX_FOLLOW_UPS:
         suggestions.append(f"Assess {new_sources} newly discovered sources")
 

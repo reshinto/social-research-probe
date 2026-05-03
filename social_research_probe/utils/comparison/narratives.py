@@ -28,9 +28,7 @@ def entity_jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(union)
 
 
-def _strength_signal(
-    confidence_change: float, claim_count_change: int
-) -> str:
+def _strength_signal(confidence_change: float, claim_count_change: int) -> str:
     if claim_count_change > 0 or confidence_change > 0.1:
         return "strengthened"
     if claim_count_change < 0 or confidence_change < -0.1:
@@ -38,12 +36,9 @@ def _strength_signal(
     return "stable"
 
 
-def compare_narratives(
-    baseline: list[dict], target: list[dict]
-) -> list[NarrativeChange]:
+def compare_narratives(baseline: list[dict], target: list[dict]) -> list[NarrativeChange]:
     """Compute narrative deltas between baseline and target runs."""
     baseline_by_id = {n["narrative_id"]: n for n in baseline}
-    target_by_id = {n["narrative_id"]: n for n in target}
 
     matched_baseline_ids: set[str] = set()
     changes: list[NarrativeChange] = []
@@ -107,9 +102,7 @@ def _fuzzy_match(
     return best, best_id
 
 
-def _build_repeated(
-    t: dict, b: dict, match_method: str, matched_id: str
-) -> NarrativeChange:
+def _build_repeated(t: dict, b: dict, match_method: str, matched_id: str) -> NarrativeChange:
     conf_change = (t.get("confidence") or 0.0) - (b.get("confidence") or 0.0)
     opp_change = (t.get("opportunity_score") or 0.0) - (b.get("opportunity_score") or 0.0)
     risk_change = (t.get("risk_score") or 0.0) - (b.get("risk_score") or 0.0)

@@ -151,10 +151,19 @@ class TestCompareNarratives:
         assert all(r["status"] == "disappeared" for r in result)
 
     def test_malformed_entities_no_crash(self) -> None:
-        baseline = [{"narrative_id": "n1", "title": "T", "cluster_type": "theme",
-                     "entities_json": "not valid json", "confidence": 0.5,
-                     "opportunity_score": 0.1, "risk_score": 0.1,
-                     "claim_count": 2, "source_count": 1}]
+        baseline = [
+            {
+                "narrative_id": "n1",
+                "title": "T",
+                "cluster_type": "theme",
+                "entities_json": "not valid json",
+                "confidence": 0.5,
+                "opportunity_score": 0.1,
+                "risk_score": 0.1,
+                "claim_count": 2,
+                "source_count": 1,
+            }
+        ]
         target = [_narr("n2", entities=["AI"])]
         result = compare_narratives(baseline, target)
         assert len(result) == 2

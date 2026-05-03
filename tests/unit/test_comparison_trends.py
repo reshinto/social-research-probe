@@ -105,18 +105,14 @@ class TestDeriveTrends:
         assert any(s["signal_type"] == "rising_objections" for s in result)
 
     def test_claim_surge(self) -> None:
-        claims = [
-            _claim_change(f"c{i}", status="repeated") for i in range(3)
-        ] + [
+        claims = [_claim_change(f"c{i}", status="repeated") for i in range(3)] + [
             _claim_change(f"new{i}", status="new") for i in range(5)
         ]
         result = derive_trends([], claims)
         assert any(s["signal_type"] == "claim_surge" for s in result)
 
     def test_no_claim_surge_below_threshold(self) -> None:
-        claims = [
-            _claim_change(f"c{i}", status="repeated") for i in range(5)
-        ] + [
+        claims = [_claim_change(f"c{i}", status="repeated") for i in range(5)] + [
             _claim_change("new1", status="new"),
         ]
         result = derive_trends([], claims)
@@ -124,8 +120,13 @@ class TestDeriveTrends:
 
     def test_improving_corroboration(self) -> None:
         claims = [
-            _claim_change(f"c{i}", status="repeated", corroboration_changed=True,
-                          baseline_corroboration="pending", target_corroboration="confirmed")
+            _claim_change(
+                f"c{i}",
+                status="repeated",
+                corroboration_changed=True,
+                baseline_corroboration="pending",
+                target_corroboration="confirmed",
+            )
             for i in range(4)
         ] + [
             _claim_change("c99", status="repeated"),
@@ -135,8 +136,13 @@ class TestDeriveTrends:
 
     def test_weakening_corroboration(self) -> None:
         claims = [
-            _claim_change(f"c{i}", status="repeated", corroboration_changed=True,
-                          baseline_corroboration="confirmed", target_corroboration="pending")
+            _claim_change(
+                f"c{i}",
+                status="repeated",
+                corroboration_changed=True,
+                baseline_corroboration="confirmed",
+                target_corroboration="pending",
+            )
             for i in range(4)
         ] + [
             _claim_change("c99", status="repeated"),
@@ -153,9 +159,6 @@ class TestDeriveTrends:
         assert result[0]["score"] >= result[1]["score"]
 
     def test_cap_at_10(self) -> None:
-        narr = [
-            _narr_change(f"n{i}", risk_change=0.2 + i * 0.01)
-            for i in range(15)
-        ]
+        narr = [_narr_change(f"n{i}", risk_change=0.2 + i * 0.01) for i in range(15)]
         result = derive_trends(narr, [])
         assert len(result) <= 10

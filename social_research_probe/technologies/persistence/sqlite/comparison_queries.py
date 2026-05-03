@@ -116,9 +116,7 @@ def count_for_run(conn: sqlite3.Connection, run_pk: int) -> dict[str, int]:
     sources = conn.execute(
         "SELECT COUNT(*) FROM source_snapshots WHERE run_id = ?", (run_pk,)
     ).fetchone()[0]
-    claims = conn.execute(
-        "SELECT COUNT(*) FROM claims WHERE run_id = ?", (run_pk,)
-    ).fetchone()[0]
+    claims = conn.execute("SELECT COUNT(*) FROM claims WHERE run_id = ?", (run_pk,)).fetchone()[0]
     narratives = conn.execute(
         "SELECT COUNT(*) FROM narrative_clusters WHERE run_id = ?", (run_pk,)
     ).fetchone()[0]

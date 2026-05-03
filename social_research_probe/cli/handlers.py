@@ -524,6 +524,28 @@ def _dispatch_claims(args: argparse.Namespace) -> int:
     return claims.run(args)
 
 
+def _dispatch_compare(args: argparse.Namespace) -> int:
+    """Pick the `compare` subcommand handler from parsed arguments.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer exit code.
+
+    Examples:
+        Input:
+            _dispatch_compare(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            0
+    """
+    from social_research_probe.commands import compare
+
+    return compare.run(args)
+
+
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions.
 
@@ -563,4 +585,5 @@ def handlers_factory() -> dict[str, callable]:
         Command.CONFIG: _dispatch_config,
         Command.DB: _dispatch_db,
         Command.CLAIMS: _dispatch_claims,
+        Command.COMPARE: _dispatch_compare,
     }

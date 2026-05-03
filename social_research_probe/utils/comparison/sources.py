@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from social_research_probe.utils.comparison.types import ChangeStatus, SourceChange
+from social_research_probe.utils.comparison.types import SourceChange
 
 
 def _parse_scores(scores_json: str | None) -> dict[str, float]:
@@ -19,9 +19,60 @@ def _parse_scores(scores_json: str | None) -> dict[str, float]:
     return {k: float(v) for k, v in parsed.items() if isinstance(v, (int, float))}
 
 
-def compare_sources(
-    baseline: list[dict], target: list[dict]
-) -> list[SourceChange]:
+def _process_new_source(sid: str, t: dict) -> SourceChange:
+    """Process a new source."""
+    return SourceChange(
+        source_id=sid,
+        platform=t.get("platform", ""),
+        external_id=t.get("external_id", ""),
+        url=t.get("url", ""),
+        title=t.get("title", ""),
+        status="new",
+        score_changes={},
+        evidence_tier_baseline="",
+        evidence_tier_target=t.get("evidence_tier", ""),
+    )
+
+
+def _process_repeated_source(sid: str, b: dict, t: dict) -> SourceChange:
+    """Process a repeated source."""
+    b_scores = _parse_scores(b.get("scores_json"))
+    t_scores = _parse_scores(t.get("scores_json"))
+    all_keys = set(b_scores) | set(t_scores)
+    score_changes = {}
+    for k in sorted(all_keys):
+        delta = t_scores.get(k, 0.0) - b_scores.get(k, 0.0)
+        if delta != 0.0:
+            score_changes[k] = round(delta, 4)
+    return SourceChange(
+        source_id=sid,
+        platform=t.get("platform", ""),
+        external_id=t.get("external_id", ""),
+        url=t.get("url", ""),
+        title=t.get("title", ""),
+        status="repeated",
+        score_changes=score_changes,
+        evidence_tier_baseline=b.get("evidence_tier", ""),
+        evidence_tier_target=t.get("evidence_tier", ""),
+    )
+
+
+def _process_disappeared_source(sid: str, b: dict) -> SourceChange:
+    """Process a disappeared source."""
+    return SourceChange(
+        source_id=sid,
+        platform=b.get("platform", ""),
+        external_id=b.get("external_id", ""),
+        url=b.get("url", ""),
+        title=b.get("title", ""),
+        status="disappeared",
+        score_changes={},
+        evidence_tier_baseline=b.get("evidence_tier", ""),
+        evidence_tier_target="",
+    )
+
+
+def compare_sources(baseline: list[dict], target: list[dict]) -> list[SourceChange]:
     """Compute source deltas between baseline and target run snapshots."""
     baseline_by_sid = {s["source_id"]: s for s in baseline}
     target_by_sid = {s["source_id"]: s for s in target}
@@ -36,54 +87,12 @@ def compare_sources(
     changes: list[SourceChange] = []
 
     for sid in new_ids:
-        t = target_by_sid[sid]
-        changes.append(SourceChange(
-            source_id=sid,
-            platform=t.get("platform", ""),
-            external_id=t.get("external_id", ""),
-            url=t.get("url", ""),
-            title=t.get("title", ""),
-            status="new",
-            score_changes={},
-            evidence_tier_baseline="",
-            evidence_tier_target=t.get("evidence_tier", ""),
-        ))
+        changes.append(_process_new_source(sid, target_by_sid[sid]))
 
     for sid in repeated_ids:
-        b = baseline_by_sid[sid]
-        t = target_by_sid[sid]
-        b_scores = _parse_scores(b.get("scores_json"))
-        t_scores = _parse_scores(t.get("scores_json"))
-        all_keys = set(b_scores) | set(t_scores)
-        score_changes = {}
-        for k in sorted(all_keys):
-            delta = t_scores.get(k, 0.0) - b_scores.get(k, 0.0)
-            if delta != 0.0:
-                score_changes[k] = round(delta, 4)
-        changes.append(SourceChange(
-            source_id=sid,
-            platform=t.get("platform", ""),
-            external_id=t.get("external_id", ""),
-            url=t.get("url", ""),
-            title=t.get("title", ""),
-            status="repeated",
-            score_changes=score_changes,
-            evidence_tier_baseline=b.get("evidence_tier", ""),
-            evidence_tier_target=t.get("evidence_tier", ""),
-        ))
+        changes.append(_process_repeated_source(sid, baseline_by_sid[sid], target_by_sid[sid]))
 
     for sid in disappeared_ids:
-        b = baseline_by_sid[sid]
-        changes.append(SourceChange(
-            source_id=sid,
-            platform=b.get("platform", ""),
-            external_id=b.get("external_id", ""),
-            url=b.get("url", ""),
-            title=b.get("title", ""),
-            status="disappeared",
-            score_changes={},
-            evidence_tier_baseline=b.get("evidence_tier", ""),
-            evidence_tier_target="",
-        ))
+        changes.append(_process_disappeared_source(sid, baseline_by_sid[sid]))
 
     return changes

@@ -17,6 +17,7 @@ from enum import StrEnum
 from social_research_probe.commands import (
     ClaimsSubcommand,
     Command,
+    CompareSubcommand,
     ConfigSubcommand,
     DbSubcommand,
 )
@@ -508,6 +509,46 @@ def _add_claims_subparsers(sub: argparse._SubParsersAction) -> None:
     _add_output_arg(note_p)
 
 
+def _add_compare_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register run comparison subcommands.
+
+    Args:
+        sub: Argparse subparser collection where command parsers are registered.
+
+    Returns:
+        None.
+
+    Examples:
+        Input:
+            _add_compare_subparsers(
+                sub=subparsers,
+            )
+        Output:
+            None
+    """
+    cmp = sub.add_parser(Command.COMPARE, help="Compare research runs and detect trends")
+    cmp.set_defaults(_compare_parser=cmp)
+    cmp_sub = cmp.add_subparsers(dest="compare_cmd", metavar="ACTION")
+
+    run_p = cmp_sub.add_parser(CompareSubcommand.RUN, help="Compare two specific runs")
+    run_p.add_argument("run_a", help="Baseline run (PK or run_id)")
+    run_p.add_argument("run_b", help="Target run (PK or run_id)")
+    run_p.add_argument("--export-dir", default=None, help="Directory for export artifacts")
+    _add_output_arg(run_p)
+
+    latest_p = cmp_sub.add_parser(CompareSubcommand.LATEST, help="Compare two most recent runs")
+    latest_p.add_argument("--topic", default=None)
+    latest_p.add_argument("--platform", default=None)
+    latest_p.add_argument("--export-dir", default=None, help="Directory for export artifacts")
+    _add_output_arg(latest_p)
+
+    list_p = cmp_sub.add_parser(CompareSubcommand.LIST, help="List available runs")
+    list_p.add_argument("--topic", default=None)
+    list_p.add_argument("--platform", default=None)
+    list_p.add_argument("--limit", type=int, default=20)
+    _add_output_arg(list_p)
+
+
 def global_parser() -> argparse.ArgumentParser:
     """Build the root ``srp`` argument parser.
 
@@ -541,4 +582,5 @@ def global_parser() -> argparse.ArgumentParser:
     _add_config_subparsers(sub)
     _add_db_subparsers(sub)
     _add_claims_subparsers(sub)
+    _add_compare_subparsers(sub)
     return parser
