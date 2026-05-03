@@ -2,7 +2,13 @@
   - Writes default config if missing, prompts runner/secrets.
 - Install this skill: `srp install-skill [--target DIR]`
   - Default target `~/.claude/skills/srp`.
-- Claims: `srp corroborate-claims --input claims.json [--providers llm_search,exa,brave,tavily] [--output out.json]`
+- Demo report: `srp demo-report`
+  - Writes a deterministic sample HTML report, exports, and SQLite DB without live APIs.
+- Database: `srp db path|init|stats`
+  - Prints, initializes/migrates, or summarizes the local SQLite store.
+- Stored claims: `srp claims list|show|stats|review|note ...`
+  - Reads and reviews claims persisted by research runs.
+- Standalone claim corroboration: `srp corroborate-claims --input claims.json [--providers llm_search,exa,brave,tavily] [--output out.json]`
 - Charts/stats from saved report JSON: `srp render --packet report.json [--output-dir DIR]`
 - Re-render HTML: `srp report --packet report.json [--compiled-synthesis FILE] [--opportunity-analysis FILE] [--final-summary FILE] [--out out.html]`
 - Serve HTML + Voicebox proxy: `srp serve-report --report report.html [--host 127.0.0.1] [--port 8000] [--voicebox-base URL]`

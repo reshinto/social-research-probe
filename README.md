@@ -1,78 +1,81 @@
 # social-research-probe
 
-**Evidence-first social-media research CLI + Claude Code skill**
+**Local-first social-media research CLI and bundled `/srp` operator skill**
 
 [![CI](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/reshinto/social-research-probe/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/social-research-probe)](https://pypi.org/project/social-research-probe/)
 [![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://pypi.org/project/social-research-probe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/reshinto/social-research-probe/blob/main/LICENSE)
 
-`srp` is a local-first research CLI for turning platform search results into a structured evidence packet. YouTube is the first implemented platform, but the design is meant to grow toward TikTok, Instagram, X, web search, RSS, forums, and other public sources. A run fetches candidate items, ranks them by trust/trend/opportunity, enriches the strongest items, corroborates claims when providers are configured, runs statistics, renders charts, and writes Markdown/HTML reports.
+`srp` turns a research question into an auditable evidence packet. It fetches platform results, classifies source type, scores sources, enriches the strongest items, extracts and corroborates claims when providers are available, clusters narratives, computes statistics, renders charts, writes reports, exports CSV/Markdown/JSON artifacts, and can persist the run to SQLite.
+
+YouTube is the only concrete source adapter in the current codebase. The CLI also exposes an `all` platform that runs every registered concrete platform; today that means YouTube.
 
 ## Quickstart
+
+```bash
+srp research youtube "what are researchers saying about model collapse?" "latest-news"
+```
+
+If you omit the platform, `srp research` targets `all`:
 
 ```bash
 srp research "what are researchers saying about model collapse?" "latest-news"
 ```
 
-This command uses the default platform, currently YouTube, and the saved purpose named `latest-news`. A purpose tells the system what kind of research lens to apply. For example, a breaking-news purpose should value freshness and corroboration, while an evergreen-analysis purpose might value source quality and transcript depth more heavily.
+Install, configure a YouTube key, and choose optional LLM/corroboration providers with [docs/installation.md](docs/installation.md).
 
-For installation steps, API keys, and runner setup, use [docs/installation.md](docs/installation.md). That file is the setup reference.
-
-## What happens during research
+## Pipeline
 
 ![Research data flow](docs/diagrams/data-flow.svg)
 
-1. Parse the topic and purpose.
-2. Fetch platform items and engagement metrics.
-3. Rank items with trust, trend, opportunity, and overall score.
-4. Run transcript fetching, statistics, and charts.
-5. Summarize top-N items when an LLM runner is enabled.
-6. Corroborate claims through healthy configured providers.
-7. Assemble and render the final report.
+One YouTube run follows this order:
 
-## Why it exists
+1. Parse topic and purpose.
+2. Fetch YouTube items and engagement metrics.
+3. Classify source type: `primary`, `secondary`, `commentary`, or `unknown`.
+4. Score and rank by trust, trend, opportunity, and overall score.
+5. Run transcripts, statistics, and chart rendering after scoring.
+6. Fetch comments, build text surrogates, and summarize top-N items.
+7. Extract claims, corroborate them, and cluster narratives.
+8. Generate synthesis, assemble the report packet, and attach structured synthesis.
+9. Render HTML/Markdown, optional narration, export files, and SQLite persistence.
 
-Raw platform search results are hard to audit. A normal research workflow often leaves important decisions hidden: why one source was chosen, which claims were checked, whether summaries came from transcripts or guesses, and how much of the process depended on paid providers. This project turns a research question into a repeatable evidence packet: source items, scores, transcripts, summaries, corroboration evidence, statistical highlights, charts, and a report.
-
-The design keeps cheap local work first. Search, scoring, caching, statistics, and charting can happen before any LLM or paid search provider is used. Expensive work is gated behind configuration and focused on the top-ranked items, so users can understand and control the cost of a run.
+The design keeps cheap deterministic work first. LLM calls and paid/search-provider work are gated by config and concentrated on top-ranked items.
 
 ## Common commands
 
 ```bash
-srp research "AI agents" "latest-news"
-srp research youtube "AI agents" "latest-news,trends" --no-shorts
+srp setup
+srp config path
 srp config show
-srp config set llm.runner gemini
-srp config set platforms.youtube.enrich_top_n 3
 srp config set-secret youtube_api_key
+srp config set llm.runner gemini
+srp config set technologies.gemini true
+srp research youtube "AI agents" "latest-news,trends" --no-shorts
+srp demo-report
+srp db stats
+srp claims list --needs-review
 srp serve-report --report ~/.social-research-probe/reports/report.html
 ```
 
 ## Documentation
 
-Start with [docs/README.md](docs/README.md). Key pages:
+Start with [docs/README.md](docs/README.md). The docs are organized as a curriculum:
 
-| Page | Purpose |
+| Read | Purpose |
 | --- | --- |
-| [Objective](docs/objective.md) | Why this project exists. |
-| [How it works](docs/how-it-works.md) | Plain-English pipeline walkthrough. |
-| [Architecture](docs/architecture.md) | System design, diagrams, and tradeoffs. |
-| [Design patterns](docs/design-patterns.md) | Patterns used in the codebase with examples. |
-| [Usage](docs/usage.md) | Day-to-day CLI workflows. |
-| [Configuration](docs/configuration.md) | Config, secrets, gates, and data directory behavior. |
-| [API costs and keys](docs/api-costs-and-keys.md) | Which features are free, quota-based, paid, or authenticated through external CLIs. |
-| [Commands](docs/commands.md) | Full command surface, including Claude Code `/srp` forms. |
-| [Root files](docs/root-files.md) | Purpose of every repository root file and support directory. |
-| [Scoring](docs/scoring.md) | How trust, trend, opportunity, and overall ranking are calculated. |
-| [Python guide](docs/python-language-guide.md) | Python concepts used in the repository. |
+| [Objective](docs/objective.md) and [How it works](docs/how-it-works.md) | Understand the product and one end-to-end run. |
+| [Installation](docs/installation.md), [Usage](docs/usage.md), and [Commands](docs/commands.md) | Install and operate the CLI. |
+| [Configuration](docs/configuration.md), [Data directory](docs/data-directory.md), and [Security](docs/security.md) | Control local state, secrets, providers, and outputs. |
+| [Architecture](docs/architecture.md), [Module reference](docs/module-reference.md), and [Design patterns](docs/design-patterns.md) | Learn the codebase boundaries. |
+| [Python guide](docs/python-language-guide.md) | Learn enough Python to work in this repository. |
+| [Adding a platform](docs/adding-a-platform.md), [Adding a service](docs/adding-a-service.md), and [Adding a technology](docs/adding-a-technology.md) | Extend the system safely. |
 
 ## Architecture in one paragraph
 
-The CLI dispatches commands into a platform orchestrator. A platform adapter owns source-specific fetching and stage order; today that adapter is YouTube. Services coordinate reusable tasks such as scoring, enrichment, statistics, synthesis, and reporting. Technologies are atomic adapters or pure algorithms, such as a transcript fetcher, chart renderer, LLM runner, or search provider. Shared utilities handle config, cache, local state, validation, display, and subprocess calls.
-
-See [docs/architecture.md](docs/architecture.md) for the full system design.
+The CLI parses commands and dispatches to command modules. Research commands build a `PipelineState` and send it to the platform orchestrator. Platform stages decide order and source-specific behavior. Services coordinate one reusable task and return `ServiceResult` objects. Technologies are atomic adapters or algorithms behind feature flags and cache. Utilities hold shared config, state, cache, display, parsing, report, and persistence helpers.
 
 ## License
 
-MIT © 2026 Terence — see [LICENSE](LICENSE).
+MIT © 2026 Terence. See [LICENSE](LICENSE).

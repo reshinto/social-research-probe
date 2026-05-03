@@ -461,6 +461,85 @@ Expected output shape:
 }
 ```
 
+## Database
+
+The research pipeline can persist runs to a local SQLite database. The database
+path is controlled by `[database].path`; when it is empty, srp writes
+`srp.db` in the active data directory.
+
+Print the resolved path:
+
+```bash
+srp db path
+```
+
+Create or migrate the schema:
+
+```bash
+srp db init
+```
+
+Expected output shape:
+
+```text
+Database ready at /Users/example/.social-research-probe/srp.db (schema v4)
+```
+
+Show row counts by table:
+
+```bash
+srp db stats
+```
+
+Expected output shape:
+
+```text
+research_runs: 1
+sources: 5
+claims: 18
+claim_reviews: 0
+```
+
+## Claims
+
+The `claims` command reads extracted claims from SQLite after a research run has
+persisted results. Use it to audit, filter, review, and annotate claim records.
+
+List claims:
+
+```bash
+srp claims list --limit 20 --output text
+srp claims list --topic "AI agents" --needs-review --output json
+srp claims list --claim-type market_signal --corroboration-status supported
+```
+
+Show one claim with reviews and notes:
+
+```bash
+srp claims show CLAIM_ID --output markdown
+```
+
+Show aggregate claim counts:
+
+```bash
+srp claims stats --output json
+```
+
+Review a claim:
+
+```bash
+srp claims review CLAIM_ID --status verified --importance high --notes "Matched source evidence"
+```
+
+Valid review statuses are `unreviewed`, `verified`, `rejected`, `disputed`, and
+`ignored`. Valid importance values are `low`, `medium`, `high`, and `critical`.
+
+Add an operator note without changing review status:
+
+```bash
+srp claims note CLAIM_ID "Check this against a primary source before publication"
+```
+
 ## Corroborate claims
 
 Use this when you already have claims in a JSON file and want provider evidence without running a full research pipeline.

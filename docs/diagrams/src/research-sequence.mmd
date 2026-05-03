@@ -6,13 +6,20 @@ sequenceDiagram
   participant P as YouTubePipeline
   participant S as Services
   participant T as Technologies
-  U->>C: srp research "topic" "purpose"
-  C->>O: ParsedRunResearch
+  participant D as DataDir
+  U->>C: srp research youtube "topic" "purposes"
+  C->>O: parsed platform, topic, purposes, flags
   O->>P: PipelineState
-  P->>S: execute stages
-  S->>T: adapter calls
-  T-->>S: results or isolated failures
-  S-->>P: stage outputs
-  P-->>O: report
-  O-->>C: JSON-like report dict
-  C-->>U: path or serve command
+  P->>S: fetch, classify, score
+  S->>T: YouTube API and scoring adapters
+  T-->>S: normalized items or isolated failures
+  S-->>P: ranked top-N
+  P->>S: transcript, comments, summary, claims, corroborate
+  S->>T: transcript, LLM, comment, claim, search adapters
+  T-->>S: evidence, summaries, claims, verdicts
+  S-->>P: enriched stage outputs
+  P->>S: narratives, synthesis, report, export, persist
+  S->>D: charts, HTML, CSV, JSON, SQLite rows
+  P-->>O: report metadata
+  O-->>C: report path or serve command
+  C-->>U: operator-facing path

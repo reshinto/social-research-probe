@@ -2,96 +2,115 @@
 
 # Adding A Technology
 
-A **Technology** is the most granular, atomic unit of work in the Social Research Probe. It represents a single algorithm, a specific third-party API, a local ML model, or an external database query.
+A technology is the smallest executable adapter in the project. It performs one provider call, one CLI invocation, one renderer action, one persistence write, or one pure algorithm.
 
-Technologies are orchestrated by **Services**. They do not know about the CLI, the reporting logic, or the platforms. They take a specific input, do one thing, and return an output.
+![Service-Technology relationship](diagrams/service-technology.svg)
 
-![Service–Technology relationship](diagrams/service-technology.svg)
+## Contract
 
-## Architecture
+Technologies inherit from `BaseTechnology[TInput, TOutput]` in `social_research_probe/technologies/__init__.py`.
 
-A Technology extends `BaseTechnology[TInput, TOutput]` from `social_research_probe.technologies`.
+Set these class variables:
 
-The base class provides:
-- **Error isolation**: Exceptions are caught and logged so one failing API doesn't crash the run.
-- **Timing metrics**: Execution time is automatically logged.
-- **Feature flags**: The technology won't run if its `enabled_config_key` is set to `false`.
-- **Health Checks**: A standard interface to verify credentials or dependencies.
-- **Disk caching**: Transparent caching via `_cached_execute` when the class variable `cacheable` is `True`.
+| Variable | Meaning |
+| --- | --- |
+| `name` | Stable technology name used in logs and cache path. |
+| `enabled_config_key` | Flat key under `[technologies]`; if false, `execute()` returns `None`. |
+| `health_check_key` | Optional key used by health-check output. |
+| `cacheable` | Defaults to `True`; set `False` for writes, non-idempotent work, or local state mutation. |
 
-## Implementation Checklist
+Implement `_execute(data)`. Do not catch every exception inside `_execute()` just to hide failures. `BaseTechnology.execute()` catches exceptions, logs a safe message, and returns `None`.
 
-| Step | Action | Why |
-| --- | --- | --- |
-| 1 | Create the class | Inherit from `BaseTechnology[Input, Output]`. |
-| 2 | Set class variables | Define `name`, `health_check_key`, `enabled_config_key`, and optionally `cacheable`. |
-| 3 | Implement `_execute()` | Put the actual network request, parsing, or algorithm here. |
-| 4 | Implement `health_check()` | Check for CLI dependencies or API keys. |
+## Lifecycle
 
-## Concrete Example
+```text
+service -> tech.execute(data)
+  -> check [technologies].<enabled_config_key>
+  -> check per-stage cache bypass
+  -> read cache unless disabled
+  -> await _execute(data)
+  -> write cache if result is not None and cacheable
+  -> return result or None
+```
 
-Let's add a new "Reddit Search" technology that a sourcing service could use.
+Cache entries live under `cache/technologies/<name>/`.
 
-### 1. Create the Technology
-
-Create `social_research_probe/technologies/media_fetch/reddit.py`:
+## Minimal Example
 
 ```python
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import ClassVar
+
 import httpx
+
 from social_research_probe.technologies import BaseTechnology, HealthCheckResult
 
-@dataclass
-class RedditSearchInput:
-    query: str
-    limit: int = 10
 
-@dataclass
-class RedditSearchOutput:
-    posts: list[dict]
-
-class RedditSearchTech(BaseTechnology[RedditSearchInput, RedditSearchOutput]):
-    name = "reddit_search"
-    health_check_key = "reddit"
-    enabled_config_key = "technologies.reddit_search"
-
-    async def _execute(self, data: RedditSearchInput) -> RedditSearchOutput:
-        # 1. Perform the atomic action
-        url = f"https://www.reddit.com/search.json?q={data.query}&limit={data.limit}"
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers={"User-Agent": "SRP/1.0"})
-            response.raise_for_status()
-            
-            # 2. Parse and return structured output
-            raw_data = response.json()
-            posts = [child["data"] for child in raw_data.get("data", {}).get("children", [])]
-            return RedditSearchOutput(posts=posts)
+class ExampleSearchTech(BaseTechnology[dict, list[dict]]):
+    name: ClassVar[str] = "example_search"
+    health_check_key: ClassVar[str] = "example_api_key"
+    enabled_config_key: ClassVar[str] = "example_search"
 
     async def health_check(self) -> HealthCheckResult:
-        # Verify required configuration or network reachability
+        from social_research_probe.commands.config import read_secret
+
+        present = bool(read_secret("example_api_key"))
         return HealthCheckResult(
             key=self.health_check_key,
-            healthy=True,
-            message="Reddit API is reachable"
+            healthy=present,
+            message="configured" if present else "missing example_api_key",
         )
+
+    async def _execute(self, data: dict) -> list[dict]:
+        query = str(data.get("query") or "")
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get("https://example.com/search", params={"q": query})
+            response.raise_for_status()
+            payload = response.json()
+        return [
+            {"title": str(row.get("title", "")), "url": str(row.get("url", ""))}
+            for row in payload.get("results", [])
+            if isinstance(row, dict)
+        ]
 ```
 
-### 2. Add Configuration
-
-Register the new configuration flags in `social_research_probe/config.py` and `config.toml.example`:
+Add the flat technology gate:
 
 ```toml
-[technologies.reddit_search]
-enabled = true
-# Add other keys like `api_key` if needed
+[technologies]
+example_search = true
 ```
 
-## Best Practices
+## When To Disable Caching
 
-- **Keep it atomic.** A technology should not try to fetch, score, and summarize. It should only do one of those things.
-- **Fail loud inside `_execute`.** You don't need to catch `httpx.RequestError` inside `_execute`. Let it raise. The `BaseTechnology` class catches all exceptions and logs them securely.
-- **Use Dataclasses.** Pass a dataclass into `_execute` and return a dataclass. This keeps the type signatures strong and refactoring easy.
-- **No Side Effects.** Do not write to the file system or modify global state inside a technology. Return data and let the caller manage state.
+Use `cacheable = False` when `_execute()` writes files, mutates a database, sends audio to a playback service, or depends on wall-clock side effects. Current persistence technology uses this pattern because writing a run to SQLite must execute each time.
+
+## Health Checks
+
+Use health checks for credentials, binaries, or local services:
+
+| Dependency | Health check should verify |
+| --- | --- |
+| API key | Secret or env var exists and is well-formed enough to try. |
+| CLI runner | Binary is on `PATH` or configured path exists. |
+| Local service | Base URL is reachable or clearly configured. |
+| Pure algorithm | Usually always healthy. |
+
+## Tests
+
+Add tests for:
+
+- Technology returns the normalized project shape.
+- Disabled technology gate returns `None`.
+- Exceptions inside `_execute()` are isolated by `execute()`.
+- Cacheable technologies read/write expected cache entries when safe.
+- Non-cacheable technologies do not use the cache.
+
+## Rules
+
+- Keep technologies atomic. Do not fetch, score, summarize, and report in one adapter.
+- Normalize provider output before it leaves the technology.
+- Do not parse CLI arguments in a technology.
+- Do not decide stage order in a technology.
+- Use typed dictionaries or plain dictionaries that match existing project shapes when the rest of the pipeline expects dictionaries.

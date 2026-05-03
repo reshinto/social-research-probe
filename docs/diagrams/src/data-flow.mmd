@@ -1,12 +1,24 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Query["topic + purpose"] --> Fetch["fetch items"] --> Classify["classify source type"] --> Score["score and rank"]
-  Score --> Parallel["parallel analysis"]
-  Parallel --> Transcript["transcripts"]
-  Parallel --> Stats["statistics"]
-  Parallel --> Charts["PNG charts"]
-  Transcript --> Summary["top-N summaries"] --> Corroborate["claim corroboration"]
-  Corroborate --> Synthesis["synthesis"] --> Assemble["report packet"] --> Render["HTML and Markdown"]
+  Query["topic + purposes"] --> Fetch["fetch items"]
+  Fetch --> Classify["classify source_class"]
+  Classify --> Score["score and rank"]
+  Score --> Analysis["analysis group"]
+  Analysis --> Transcript["transcripts and text surrogates"]
+  Analysis --> Stats["statistics"]
+  Analysis --> Charts["PNG charts"]
+  Analysis --> Comments["YouTube comments"]
+  Transcript --> Summary["top-N summaries"]
+  Comments --> Claims["structured claims"]
+  Summary --> Claims
+  Claims --> Corroborate["claim corroboration"]
+  Corroborate --> Narratives["narrative clusters"]
+  Narratives --> Synthesis["synthesis"]
+  Synthesis --> Assemble["report packet"]
+  Assemble --> Structured["structured synthesis sections"]
+  Structured --> Report["HTML report and narration"]
+  Report --> Export["CSV, markdown, JSON exports"]
+  Export --> Persist["SQLite persistence"]
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -16,6 +28,6 @@ flowchart LR
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
   class Query input;
-  class Fetch,Classify,Score,Transcript,Summary,Corroborate,Synthesis,Assemble process;
-  class Parallel,Stats,Charts analysis;
-  class Render output;
+  class Fetch,Classify,Score,Transcript,Comments,Summary,Claims,Corroborate,Narratives,Synthesis,Assemble,Structured process;
+  class Analysis,Stats,Charts analysis;
+  class Report,Export,Persist output;

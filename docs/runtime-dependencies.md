@@ -19,7 +19,7 @@ This matters for users because the tool should remain installable in ordinary Py
 | `openai-whisper` | Local transcript fallback. |
 | `httpx` | HTTP calls for provider integrations. |
 
-Optional runner CLIs such as Claude, Gemini, Codex, or Ollama are not Python dependencies. They are external programs called by subprocess adapters.
+Optional runner CLIs such as Claude, Gemini, or Codex are not Python dependencies. They are external programs called by subprocess adapters. The local runner path is a user-provided stdin/stdout wrapper named by `SRP_LOCAL_LLM_BIN`.
 
 ## Why not one SDK per provider?
 
@@ -36,6 +36,6 @@ SDKs are useful when a provider needs deep API coverage. This project usually ne
 | Local analysis and rendering | `matplotlib`, pure Python statistics modules | Charts or analysis outputs may be skipped on renderer failure. |
 | Optional local media work | `openai-whisper` | Transcript fallback may be unavailable. |
 | Provider HTTP clients | `httpx` | External evidence providers depend on network and secrets. |
-| Runner CLIs | Claude, Gemini, Codex, Ollama-style tools | Generated text may be absent if the runner is not installed or configured. |
+| Runner CLIs | Claude, Gemini, Codex, or a custom local wrapper | Generated text may be absent if the runner is not installed or configured. |
 
 When debugging dependency issues, first identify the category. A missing runner should not be treated like a broken install if the user only wants local scoring and charts.

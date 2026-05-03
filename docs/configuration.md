@@ -4,50 +4,133 @@
 
 ![Configuration lifecycle](diagrams/config_lifecycle.svg)
 
-Configuration is loaded from `DEFAULT_CONFIG` in `social_research_probe/config.py`, then merged with `config.toml` in the active data directory. Secrets are separate. This split matters because normal configuration can be shown, copied, and committed as examples, while API keys should stay masked and local.
+Configuration starts with `DEFAULT_CONFIG` in `social_research_probe/config.py`, then merges `config.toml` from the active data directory. Secrets are separate and are read from environment variables or `secrets.toml`.
 
-The configuration system is intentionally boring: it is a layered set of TOML values and environment variables. That makes it easy to answer "why did this run behave this way?" by checking the active data directory, the config file, and any environment overrides.
+## Data Directory Resolution
 
-## Data directory resolution
-
-Order:
+The active data directory is resolved before commands run:
 
 1. `--data-dir PATH`
 2. `SRP_DATA_DIR`
-3. local `.skill-data` if that directory exists
+3. `.skill-data` in the current working directory, only if that directory already exists
 4. `~/.social-research-probe`
 
-Use `--data-dir` when you want one command to use a specific workspace. Use `SRP_DATA_DIR` when a shell session, CI job, or scripted workflow should consistently use the same directory. Use `.skill-data` when a project should carry its own local state during development. Use the home directory default for personal long-lived settings.
+Use `srp config path` to see the active `config.toml` and `secrets.toml` paths.
 
-## Main sections
+## Main Sections
 
 | Section | Controls |
 | --- | --- |
-| `[llm]` | Runner name, timeout, and runner-specific CLI settings. |
-| `[corroboration]` | Provider selection and claim caps. |
-| `[platforms.youtube]` | Search result count, recency, top-N enrichment, cache TTLs. |
-| `[scoring.weights]` | Optional trust/trend/opportunity weight overrides. |
-| `[stages.youtube]` | Stage-level gates. |
-| `[services.youtube.*]` | Service-level gates (e.g. `classifying.provider`, `corroborating`). |
-| `[technologies]` | Provider and adapter gates (e.g. `classifying`, `tavily`, `exa`). |
-| `[tunables]` | Summary divergence and summary word limits. |
-| `[voicebox]` | Optional narration defaults. |
-| `[debug]` | Debug gates (e.g. `technology_logs_enabled`). |
+| `[llm]` | Runner name, timeout, and runner-specific CLI flags. |
+| `[llm.claude]`, `[llm.gemini]`, `[llm.codex]`, `[llm.local]` | Runner binary/flag settings used by subprocess adapters. |
+| `[corroboration]` | Provider mode and claim caps. |
+| `[platforms.youtube]` | YouTube search recency, max results, top-N enrichment, comments, claims, narratives, and export options. |
+| `[scoring.weights]` | Optional global weights for `trust`, `trend`, and `opportunity`. |
+| `[stages.youtube]` | Whole-stage gates. |
+| `[services.youtube.*]` | Service gates and service-level options, including source classification provider. |
+| `[services.corroborate]`, `[services.enrich]`, `[services.persistence]` | Compatibility/service gates still read by commands and service selection. |
+| `[technologies]` | Concrete provider, renderer, algorithm, runner, and persistence gates. |
+| `[tunables]` | Summary divergence threshold and per-item summary word target. |
+| `[debug]` | Runtime logging gates. |
+| `[voicebox]` | Optional Voicebox profile and API base URL. |
+| `[database]` | SQLite enablement, path, and text-persistence policy. |
 
-## Gates
+## Stage Gates
 
-A stage runs only if its stage gate allows it. A service or technology also checks its own gate. This gives three levels of control: pipeline step, service family, and concrete provider.
+The current YouTube stage gates are:
+
+```toml
+[stages.youtube]
+fetch = true
+classify = true
+score = true
+transcript = true
+stats = true
+charts = true
+comments = true
+summary = true
+claims = true
+corroborate = true
+narratives = true
+synthesis = true
+assemble = true
+structured_synthesis = true
+report = true
+narration = true
+export = true
+persist = true
+```
+
+A disabled stage publishes an empty or pass-through output when downstream stages need a stable shape.
+
+## Service And Technology Gates
+
+A stage can run only if its stage gate allows it. Services and technologies then apply their own gates.
+
+Examples:
 
 ```bash
 srp config set llm.runner gemini
+srp config set technologies.gemini true
 srp config set platforms.youtube.enrich_top_n 3
 srp config set technologies.tavily false
+srp config set stages.youtube.persist false
 ```
 
-Think of gates as switches at different heights. A stage gate disables a whole part of the pipeline. A service gate disables one service inside that part. A technology gate disables one concrete provider or implementation. Prefer the narrowest gate that solves the problem: turn off `technologies.tavily` if only Tavily should be skipped, but turn off a service when the entire category should be skipped.
+Use the narrowest gate that matches your intent:
+
+| Goal | Prefer |
+| --- | --- |
+| Skip one provider | `technologies.<provider> = false` |
+| Skip a service family | `services.youtube.<group>.<service> = false` |
+| Skip a whole pipeline step | `stages.youtube.<stage> = false` |
+| Disable all hosted LLM text generation | `llm.runner = "none"` |
+| Disable SQLite writes | `[database].enabled = false` or `stages.youtube.persist = false` |
 
 ## Secrets
 
-Secrets can come from environment variables such as `SRP_YOUTUBE_API_KEY` or from `secrets.toml`. Environment variables win. The secrets file is written with `0600` permissions.
+Secrets are resolved by name. Environment variables win over `secrets.toml`.
 
-Use environment variables for CI, temporary shells, and secrets managed by another tool. Use `srp config set-secret` for local development when you want the value stored in the data directory. If a provider is configured but its secret is missing, the provider should be treated as unavailable rather than silently making unauthenticated calls.
+| Secret | Environment variable | Used by |
+| --- | --- | --- |
+| `youtube_api_key` | `SRP_YOUTUBE_API_KEY` | YouTube search, metadata, and comments. |
+| `brave_api_key` | `SRP_BRAVE_API_KEY` | Brave corroboration provider. |
+| `exa_api_key` | `SRP_EXA_API_KEY` | Exa corroboration provider. |
+| `tavily_api_key` | `SRP_TAVILY_API_KEY` | Tavily corroboration provider. |
+
+Set secrets without echoing values in shell history:
+
+```bash
+srp config set-secret youtube_api_key
+```
+
+Or pipe from a secret manager:
+
+```bash
+printf "%s" "$SRP_YOUTUBE_API_KEY" | srp config set-secret youtube_api_key --from-stdin
+```
+
+Check what is required before a run:
+
+```bash
+srp config check-secrets --needed-for research --platform youtube --output json
+```
+
+## Runner Configuration
+
+Hosted runner CLIs authenticate outside `srp`; `srp` only shells out to the configured binary and parses output.
+
+```toml
+[llm]
+runner = "codex"
+timeout_seconds = 60
+
+[llm.codex]
+binary = "codex"
+extra_flags = ["--model", "gpt-5.4"]
+
+[technologies]
+codex = true
+```
+
+For a local runner, set `llm.runner = "local"`, enable `technologies.local`, and set `SRP_LOCAL_LLM_BIN` to a wrapper that reads a prompt from stdin and writes plain text to stdout.

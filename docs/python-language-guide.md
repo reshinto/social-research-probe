@@ -386,7 +386,7 @@ A class defines a kind of object with data and behavior:
 class StatisticsService(BaseService):
     service_name = "youtube.analyzing.statistics"
 
-    async def execute_one(self, data: object) -> ServiceResult:
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
         ...
 ```
 
@@ -880,23 +880,64 @@ This repository separates orchestration from concrete work.
 
 | Concept | Meaning |
 | --- | --- |
-| Service | Coordinates a task in the pipeline. |
-| Technology | Performs one concrete operation or algorithm. |
-| Platform | Fetches source-specific data and owns source stage order. |
+| Platform | Owns source-specific stage order and maps platform data into shared pipeline state. |
+| Stage | Reads and writes `PipelineState` for one named step such as `summary`, `claims`, or `report`. |
+| Service | Coordinates one task and normalizes success, skipped work, and failures. |
+| Technology | Performs one concrete operation, provider call, renderer call, or algorithm. |
 
-Example:
+Services inherit from `BaseService`. A service subclass sets `service_name`,
+sets `enabled_config_key`, returns technology instances from `_get_technologies`,
+and implements `execute_service`.
 
 ```python
-class ChartsService(BaseService):
-    async def execute_one(self, data: object) -> ServiceResult:
+from typing import ClassVar
+
+from social_research_probe.services import BaseService, ServiceResult
+
+
+class ExampleService(BaseService[dict, dict]):
+    service_name: ClassVar[str] = "youtube.example"
+    enabled_config_key: ClassVar[str] = "services.youtube.enriching.example"
+
+    def _get_technologies(self) -> list[object]:
+        return [ExampleTechnology()]
+
+    async def execute_service(self, data: dict, result: ServiceResult) -> ServiceResult:
         ...
 ```
 
-The service decides when and how charting runs. Chart technology modules create
-specific chart outputs.
+Do not override `execute_batch` or `execute_one` in a service subclass. The base
+class owns those methods so all services share the same disabled-service
+behavior, concurrent execution, timing logs, and per-technology error isolation.
+If a service has no technology layer, `_get_technologies()` returns `[None]` and
+`execute_service()` performs the work directly.
+
+Technologies inherit from `BaseTechnology`. A technology subclass sets `name`,
+`health_check_key`, and `enabled_config_key`, then implements `_execute`.
+
+```python
+from typing import ClassVar
+
+from social_research_probe.technologies import BaseTechnology
+
+
+class ExampleTechnology(BaseTechnology[dict, dict]):
+    name: ClassVar[str] = "example"
+    health_check_key: ClassVar[str] = "example"
+    enabled_config_key: ClassVar[str] = "example"
+
+    async def _execute(self, data: dict) -> dict:
+        return {"ok": True, "input": data}
+```
+
+The base technology checks `[technologies]`, applies cache rules when
+`cacheable` is true, times the call, catches provider errors, and returns
+`None` when the adapter is disabled or fails.
 
 Why not put everything in one function: one large function is hard to test and
-hard to extend. Services and technologies keep failure boundaries clear.
+hard to extend. Services and technologies keep failure boundaries clear: stages
+decide order, services decide coordination, and technologies decide concrete
+provider or algorithm behavior.
 
 ## Config gates
 
@@ -906,15 +947,29 @@ Many services and technologies have an `enabled_config_key`:
 enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
 ```
 
-The base class can check config before running the implementation. This lets
-users disable expensive or unavailable work without editing code.
+For services, the full dotted key documents ownership, while
+`Config.service_enabled()` currently checks the final leaf name. For example,
+`services.youtube.reporting.html` maps to the `html` service flag.
+
+Technology keys are flat leaves under `[technologies]`:
+
+```python
+enabled_config_key: ClassVar[str] = "youtube_comments"
+```
+
+This lets users disable expensive or unavailable work without editing code.
+Stage gates under `[stages.youtube]` sit above service and technology gates. If
+`stages.youtube.comments = false`, the comments stage does not run even if
+`services.youtube.enriching.comments` and `technologies.youtube_comments` are
+true.
 
 When adding a provider or service, add a clear config key and document what it
-controls.
+controls in `config.toml.example`, [Configuration](configuration.md), and the
+skill reference.
 
 ## Caching
 
-Caching stores outputs so repeated runs can reuse work:
+Technology caching stores outputs so repeated runs can reuse work:
 
 ```python
 cached = get_json(cache, key)
@@ -925,9 +980,18 @@ set_json(cache, key, result)
 return result
 ```
 
+`BaseTechnology` writes cache files below `cache/technologies/<technology-name>`
+inside the active data directory. Cache entries include the input representation
+and the output. Technologies that write local files or perform intentionally
+fresh work should set `cacheable = False`.
+
 Cache keys must represent the input that affects the output. If the key is too
 broad, stale data can be reused incorrectly. If the key is too narrow, the cache
 will miss too often.
+
+The environment variable `SRP_DISABLE_CACHE=1` bypasses technology cache reads
+and writes for the process. Tests often use this when they need to prove that a
+real code path executes.
 
 ## Testing with pytest
 
@@ -992,11 +1056,11 @@ handler should focus on behavior.
 | Pattern | What it looks like | Why it is used |
 | --- | --- | --- |
 | Small pure helper | `def _numeric_series(...): ...` | Easy to test and reason about. |
-| Service class | `class StatisticsService(BaseService)` | Shared execution and failure behavior. |
-| Technology adapter | `class GeminiRunner(...)` | Isolates external tool behavior. |
+| Service class | `class StatisticsService(BaseService)` with `execute_service()` | Shared execution and failure behavior. |
+| Technology adapter | `class GeminiRunner(...)` or `class YouTubeCommentsTech(...)` | Isolates external tool behavior. |
 | Dataclass record | `@dataclass class PipelineState` | Makes structured data explicit. |
 | Config key | `enabled_config_key = "..."` | Lets users disable behavior. |
-| Cache wrapper | `get_json` / `set_json` | Avoids repeated expensive work. |
+| Cache wrapper | `get_json` / `set_json` under `cache/technologies/*` | Avoids repeated expensive work. |
 | Fake in tests | `tests/fixtures/fake_youtube.py` | Keeps tests deterministic. |
 
 ## How to read a new file

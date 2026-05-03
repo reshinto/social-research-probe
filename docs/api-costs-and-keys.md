@@ -4,32 +4,25 @@
 
 ![API cost map](diagrams/api-cost-map.svg)
 
-This guide explains which parts of `srp` can cost money, which parts are local or free to start, and why some tools need API keys while Claude, Gemini, and Codex usually do not use `SRP_*` keys.
+This page explains where external services can be called and how to control that work. It deliberately avoids hard-coding provider pricing because quotas, free tiers, model access, and billing rules change. Check each provider's own dashboard/docs before high-volume runs.
 
-Pricing and free tiers change. The notes below reflect the public provider pages checked on 2026-04-27. Always confirm the linked provider page before running a high-volume job.
+## Cost Map
 
-## Quick Cost Map
-
-| Feature | Needs `SRP_*` key? | Can spend money? | What pays for it |
+| Area | Needs SRP-managed secret? | Can spend money or quota? | Control |
 | --- | --- | --- | --- |
-| YouTube search and metadata | Yes, `SRP_YOUTUBE_API_KEY` or `youtube_api_key` | Usually quota-based first; paid only if your Google project is configured beyond free quota | Google Cloud project quota/billing |
-| YouTube transcript API | No | No direct SRP API charge | Public captions access; may be blocked or rate-limited |
-| yt-dlp fallback | No | No direct SRP API charge | Local network/compute; may need browser cookies |
-| Whisper fallback | No | No direct SRP API charge | Local CPU/GPU time and disk |
-| Charts/statistics/scoring/cache/HTML | No | No direct API charge | Local compute |
-| Voicebox narration | Usually no `SRP_*` API key | Depends on your Voicebox setup | Local Voicebox server or your own TTS setup |
-| Brave corroboration | Yes, `SRP_BRAVE_API_KEY` or `brave_api_key` | Yes after included credits/free allowance | Brave Search API account |
-| Exa corroboration | Yes, `SRP_EXA_API_KEY` or `exa_api_key` | Yes after free requests/credits | Exa account |
-| Tavily corroboration | Yes, `SRP_TAVILY_API_KEY` or `tavily_api_key` | Yes after free monthly credits | Tavily account |
-| `llm_search` corroboration | No separate SRP key | Yes if the chosen LLM runner spends paid usage | Claude/Gemini/Codex account or local model |
-| Claude runner | No SRP key | Yes, depending on Claude plan/API/provider setup | Claude Code authentication outside `srp` |
-| Gemini runner | No SRP key | Yes, depending on Gemini account, API key, or Vertex setup | Gemini CLI authentication outside `srp` |
-| Codex runner | No SRP key | Yes, depending on ChatGPT/Codex plan or API-key usage | Codex CLI authentication outside `srp` |
-| Local LLM runner | `SRP_LOCAL_LLM_BIN`, not an API key | No vendor API charge | Local machine or your own model server |
+| YouTube search/metadata/comments | Yes: `youtube_api_key` or `SRP_YOUTUBE_API_KEY` | Yes, through Google API quota/billing rules | Lower `platforms.youtube.max_items`; disable comments; use cache. |
+| Public transcript fetch | No | Usually no direct SRP-managed API charge, but can be rate-limited | Disable transcript stage/service/technology if needed. |
+| `yt-dlp` and Whisper fallback | No SRP key | Local compute/network/disk cost | Disable `yt_dlp` or `whisper`; use `--no-transcripts`. |
+| Scoring/statistics/charts | No | Local compute only | Always local unless chart dependencies are missing. |
+| Hosted LLM runners | No SRP key; runner CLI authenticates outside SRP | Depends on the runner account and model configuration | `llm.runner = "none"` or disable runner technology gates. |
+| `llm_search` corroboration | No separate SRP key | Depends on runner account/search capability | Set `corroboration.provider = "none"` or lower claim caps. |
+| Brave/Exa/Tavily corroboration | Yes: provider-specific secret | Depends on provider account/quota/billing | Disable provider technology gates or set provider to `none`. |
+| Voicebox narration | Usually no SRP key | Depends on local Voicebox/TTS setup | Disable `stages.youtube.narration` or audio service. |
+| SQLite persistence | No | Local disk only | Disable `[database].enabled` or `stages.youtube.persist`. |
 
-## Why Some Tools Need SRP Keys
+## Secrets
 
-`srp` directly calls the YouTube, Brave, Exa, and Tavily HTTP APIs. Because the project itself sends those HTTP requests, it must know the provider credential. You can provide each credential in one of two ways:
+Set secrets through the environment:
 
 ```bash
 export SRP_YOUTUBE_API_KEY="..."
@@ -38,7 +31,7 @@ export SRP_EXA_API_KEY="..."
 export SRP_TAVILY_API_KEY="..."
 ```
 
-or store it in the active data directory:
+Or store them in the active data directory:
 
 ```bash
 srp config set-secret youtube_api_key
@@ -47,21 +40,21 @@ srp config set-secret exa_api_key
 srp config set-secret tavily_api_key
 ```
 
-Environment variables win over `secrets.toml`. This is useful in CI because the same data directory can be reused while secrets are injected by the shell or secret manager.
+Environment variables win over `secrets.toml`.
 
-## Why Claude, Gemini, And Codex Do Not Need SRP Keys
+## Why Runner CLIs Do Not Use SRP Keys
 
-`srp` does not call the Anthropic, Google Gemini, or OpenAI model APIs directly. It shells out to installed command-line tools:
+`srp` shells out to local runner CLIs:
 
 ```text
-claude -p "<prompt>"
-gemini -p "<prompt>"
-codex exec "<prompt>"
+claude ...
+gemini ...
+codex exec ...
 ```
 
-Those CLIs own authentication, account selection, model selection, and billing. `srp` only checks whether the binary is available, runs the command, waits for output, and parses the response. That is why `.env.example` does not define `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `OPENAI_API_KEY`: those names may be valid for the vendor CLIs, but SRP itself does not read them.
+Those CLIs own authentication, account selection, model selection, and billing. `srp` checks whether the binary is available, passes prompts, enforces timeouts, and parses output.
 
-Enable a hosted runner only after the CLI works by itself:
+Enable a runner with both the selected runner and its technology gate:
 
 ```toml
 [llm]
@@ -71,28 +64,27 @@ runner = "codex"
 codex = true
 ```
 
-If the CLI needs model flags, account flags, or sandbox flags, put the vendor-specific arguments in `extra_flags`. SRP removed stale `model` example keys because the old values did not change runtime behavior and could mislead users.
+Runner-specific CLI flags live under the runner section:
 
 ```toml
 [llm.codex]
 binary = "codex"
-extra_flags = ["--model", "gpt-5.1-codex"]
+extra_flags = ["--model", "gpt-5.4"]
 ```
 
-Use the equivalent flag syntax for the specific CLI version you installed.
+## LLM Cost Controls
 
-## How LLM Spending Happens
-
-LLM spending is driven by how many prompts SRP sends and how much text each prompt contains. The main LLM-using areas are:
-
-| Area | What triggers it | Cost control |
+| LLM-using area | Trigger | Control |
 | --- | --- | --- |
-| Per-item summaries | `summary = true`, `services.youtube.enriching.summary = true`, and `llm.runner != "none"` | Lower `platforms.youtube.enrich_top_n`; use cache; enable `SRP_FAST_MODE=1` |
-| Structured synthesis | `structured_synthesis = true` and an enabled runner | Disable the stage or keep `llm.runner = "none"` |
-| Final synthesis | `synthesis = true` and an enabled runner | Disable the stage, reduce fetched items, or use local runner |
-| `llm_search` corroboration | `corroboration.provider = "llm_search"` or `auto` chooses it | Lower `max_claims_per_item` and `max_claims_per_session` |
+| Natural-language research query classification | One-argument `srp research "QUERY"` form | Use explicit `TOPIC PURPOSES`. |
+| Source classification LLM fallback | `services.youtube.classifying.provider = "llm"` or `"hybrid"` and unknown channel | Use `heuristic` or disable classifying technology. |
+| Per-item summaries | `llm.runner != "none"` and summary gates enabled | Lower `platforms.youtube.enrich_top_n`; use cache; disable summary stage. |
+| Free-form synthesis | `stages.youtube.synthesis = true` and runner enabled | Disable synthesis or set `llm.runner = "none"`. |
+| Structured synthesis | `stages.youtube.structured_synthesis = true` and runner enabled | Disable structured synthesis. |
+| `llm_search` corroboration | Provider is `llm_search` or auto selects it | Lower `max_claims_per_item` and `max_claims_per_session`; disable `llm_search`. |
+| LLM claim extraction | `platforms.youtube.claims.use_llm = true` | Keep deterministic extraction with `use_llm = false`. |
 
-The safest no-model configuration is:
+The safest no-hosted-model profile is:
 
 ```toml
 [llm]
@@ -102,62 +94,45 @@ runner = "none"
 summary = false
 synthesis = false
 structured_synthesis = false
+
+[technologies]
+llm_search = false
+claude = false
+gemini = false
+codex = false
 ```
 
-That still allows fetching, scoring, statistics, charts, and basic HTML report generation.
+## Corroboration Cost Controls
 
-## Provider Notes
+Corroboration can call multiple providers per claim. Control it with:
 
-### YouTube Data API
+```toml
+[corroboration]
+provider = "auto" # auto | none | llm_search | exa | brave | tavily
+max_claims_per_item = 5
+max_claims_per_session = 15
+```
 
-YouTube needs `SRP_YOUTUBE_API_KEY` because SRP calls the Data API directly. Google documents a default quota allocation of 10,000 units per day for projects that enable the YouTube Data API. A search request costs 100 units, while common metadata reads such as `videos.list` and `channels.list` cost 1 unit.
+Set `provider = "none"` for no corroboration calls. Use an explicit provider when you want only one provider. Use `auto` when you want the service to select healthy configured providers.
 
-This means YouTube usage is mostly controlled by search volume and pagination. `max_items = 20` normally needs fewer search pages than a large broad crawl. If you hit quota, reduce `max_items`, narrow the topic, wait for quota reset, or request additional quota in Google Cloud.
+## Recommended Profiles
 
-### Brave
-
-Brave needs `SRP_BRAVE_API_KEY` because SRP calls the Brave Search API directly. Brave currently advertises free monthly credits/allowance on its Search API page and paid request pricing above that. Brave is useful as the most conventional keyword web-index signal.
-
-### Exa
-
-Exa needs `SRP_EXA_API_KEY`. Exa currently advertises up to 1,000 free requests per month and paid endpoint pricing above that. Exa is useful when a source discusses the same idea with different wording because it is semantic-search oriented.
-
-### Tavily
-
-Tavily needs `SRP_TAVILY_API_KEY`. Tavily currently documents 1,000 free API credits per month and paid plans or pay-as-you-go above that. Tavily is useful as an independent search signal and tiebreaker when other providers disagree.
-
-### Claude
-
-Claude runner usage goes through Claude Code. Anthropic documents multiple Claude Code authentication methods, including Claude.ai accounts, team or enterprise authentication, Console/API, and cloud providers. SRP does not know which one you chose. Cost therefore depends on the account, plan, provider, and model behind your local `claude` CLI.
-
-### Gemini
-
-Gemini runner usage goes through Gemini CLI. The Gemini CLI authentication docs describe Google login, Gemini API key, Vertex AI, and headless/non-interactive setups. SRP does not choose among those; it only calls the local `gemini` command. Cost depends on whether the CLI is using free quota, a paid Gemini API key, Vertex AI billing, or a subscribed Google account setup.
-
-### Codex
-
-Codex runner usage goes through Codex CLI. OpenAI documents ChatGPT sign-in for Codex CLI and notes that Codex usage depends on the user plan or API-key usage. Current OpenAI help also states GPT-4o is not available in Codex and that supported Codex model families should be selected through the Codex client or supported CLI/config flags.
-
-SRP therefore treats Codex as an external CLI, not as an OpenAI SDK client. If you authenticate Codex with ChatGPT, the Codex CLI handles that. If you authenticate it with an API key, the Codex CLI handles that too.
-
-## Recommended Setups
-
-| Goal | Configuration |
+| Goal | Settings |
 | --- | --- |
-| Cheapest learning run | Use YouTube key, keep `llm.runner = "none"`, keep corroboration low or off. |
-| Balanced research | Use YouTube key, one search provider key, and one hosted LLM runner for summaries. |
-| Strong claim checking | Use Brave + Exa + Tavily or `llm_search`, with `max_claims_per_session` set to a clear budget. |
-| Private/local experimentation | Use YouTube only, local charts/statistics, local LLM wrapper, and no hosted search providers. |
-| Fast first draft | Set `SRP_FAST_MODE=1`, reduce `enrich_top_n`, and rely on cache for later reruns. |
+| Local learning run | YouTube key, `llm.runner = "none"`, corroboration provider `none`. |
+| Fast first pass | `SRP_FAST_MODE=1`, lower `enrich_top_n`, keep cache enabled. |
+| Summarized report | Enable one runner and keep `enrich_top_n` small. |
+| Claim-heavy review | Enable one or more corroboration providers and set explicit claim caps. |
+| Sensitive project | Use a dedicated `--data-dir`, disable hosted runners/search providers, review reports before sharing. |
 
-## Sources
+## Provider Links
+
+Use provider documentation for current quota, billing, authentication, and model-access details:
 
 - [YouTube Data API quota costs](https://developers.google.com/youtube/v3/determine_quota_cost)
-- [Brave Search API pricing](https://brave.com/search/api/)
-- [Exa API pricing](https://exa.ai/pricing)
-- [Tavily API credits and pricing](https://docs.tavily.com/documentation/api-credits)
+- [Brave Search API](https://brave.com/search/api/)
+- [Exa API](https://exa.ai/)
+- [Tavily API](https://docs.tavily.com/)
 - [Gemini CLI authentication](https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html)
-- [Claude Code authentication](https://code.claude.com/docs/en/authentication)
-- [Claude API pricing](https://platform.claude.com/docs/en/docs/about-claude/pricing)
-- [Codex CLI sign in with ChatGPT](https://help.openai.com/en/articles/11381614)
-- [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
+- [Claude Code authentication](https://docs.anthropic.com/)
+- [OpenAI Codex CLI](https://github.com/openai/codex)

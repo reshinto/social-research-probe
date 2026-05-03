@@ -5,7 +5,8 @@ flowchart TB
   SRP --> Topics["show/update topics"]
   SRP --> Purposes["show/update purposes"]
   SRP --> Suggestions["suggest/stage/show/apply/discard"]
-  SRP --> Render["corroborate-claims/render/report/serve-report/install-skill/setup"]
+  SRP --> Review["db and claims"]
+  SRP --> Render["demo-report/corroborate-claims/render/report/serve-report/install-skill/setup"]
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -15,5 +16,5 @@ flowchart TB
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
   class SRP input;
-  class Research,Topics,Purposes,Suggestions,Render process;
+  class Research,Topics,Purposes,Suggestions,Render,Review process;
   class Config config;

@@ -22,9 +22,9 @@ For account setup, key behavior, and cost implications, read [API costs and keys
 
 ![Runner registry](diagrams/dp_registry.svg)
 
-## Pinned model flags
+## Default model flags
 
-Each runner pins a default model via `extra_flags` in `DEFAULT_CONFIG` to avoid incompatibility when CLIs auto-select newer models.
+Each runner has default `extra_flags` in `DEFAULT_CONFIG` so srp does not rely on a CLI's automatic model choice.
 
 | Runner | Default flag | Model |
 | --- | --- | --- |
@@ -36,8 +36,12 @@ Override per-runner in `config.toml`:
 
 ```toml
 [llm.claude]
-extra_flags = ["--model", "claude-sonnet-4-6"]
+extra_flags = ["--model", "MODEL_SUPPORTED_BY_YOUR_CLAUDE_CLI"]
 ```
+
+Runner CLIs change over time. Treat these defaults as project configuration,
+not as a guarantee that a vendor will keep accepting a model name forever.
+Verify the model flag against the installed CLI when upgrading runners.
 
 ## How it works
 

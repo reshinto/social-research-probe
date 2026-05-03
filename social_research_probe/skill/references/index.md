@@ -14,6 +14,6 @@ Output fmt where supported: `--output text|json|markdown` (`text` default).
 | make/stage suggestions | [suggest.md](suggest.md) |
 | run research | [research.md](research.md) |
 | config/secrets | [config.md](config.md) |
-| setup/report/render/serve/corroborate/install | [advanced.md](advanced.md) |
+| setup/report/render/serve/corroborate/install/db/claims/demo | [advanced.md](advanced.md) |
 
 Exit: `0` ok, `2` error/validation.

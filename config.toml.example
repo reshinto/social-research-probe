@@ -92,8 +92,9 @@ enabled = true
 # Maximum number of claims extracted per source item.
 max_claims_per_source = 10
 
-# Use LLM-backed extraction (Phase 5B). When false, deterministic pattern-
-# matching is used exclusively. LLM extraction is not yet implemented.
+# Use LLM-backed extraction first. When false, deterministic pattern-matching
+# is used exclusively. When true, srp falls back to deterministic extraction if
+# the configured runner is unavailable or returns invalid structured output.
 use_llm = false
 
 # Maximum character length for a single extracted claim sentence.
@@ -152,6 +153,7 @@ comments = true              # Fetch YouTube comments for top-scored videos.
 claims = true                # Extract structured claims from item primary text.
 narratives = true            # Group claims into narrative clusters.
 export = true                # Write export artifacts (CSV, MD, JSON) alongside the HTML report.
+persist = true               # Persist the run, sources, claims, narratives, and artifact paths to SQLite.
 
 [services.youtube.sourcing]
 # Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
@@ -371,7 +373,3 @@ persist_comment_text = true
 [services.persistence]
 # Enables the persistence service that writes research runs to SQLite.
 sqlite = true
-
-[stages.youtube]
-# Enables the end-of-run SQLite persistence stage (runs after export).
-persist = true

@@ -2,90 +2,132 @@
 
 # Adding A Service
 
-A **Service** in the Social Research Probe coordinates a specific task (e.g., scoring, transcript fetching, summarizing) across one or multiple underlying **Technologies**. Services are called by **Platform Pipelines** and their job is to handle the concurrent execution of technologies, aggregate the results, and handle any tech-level failures gracefully.
-
-## Architecture
+A service coordinates one reusable task across one or more technology adapters. Platform stages call services; services call technologies; technologies do the concrete work.
 
 ![Add service interaction](diagrams/add_service_interaction.svg)
 
-A Service extends `BaseService[TInput, TOutput]` from `social_research_probe.services`.
+## Contract
 
-## Implementation Checklist
+Services inherit from `BaseService[TInput, TOutput]` in `social_research_probe/services/__init__.py`.
 
-| Step | Action | Why |
-| --- | --- | --- |
-| 1 | Create the service class | Inherit from `BaseService`. Set `service_name` and `enabled_config_key`. |
-| 2 | Implement `_get_technologies()` | Return the list of `BaseTechnology` instances this service should orchestrate. |
-| 3 | Define input/output types | Use Dataclasses to keep a strict contract with the platform pipeline. |
-| 4 | Add to pipeline | Call `await service.execute_batch(items)` from the appropriate pipeline stage. |
+Every service subclass must:
 
-## Concrete Example
+1. Set `service_name`.
+2. Set `enabled_config_key` when it should be feature-gated.
+3. Implement `_get_technologies()`.
+4. Implement `execute_service(data, result)`.
 
-Let's say you want to add an "Image Analysis Service" that uses different AI vision models to analyze images.
+Do not override `execute_batch()` or `execute_one()`. `BaseService.__init_subclass__()` rejects subclasses that override those lifecycle methods.
 
-### 1. Create the Service
+## Lifecycle
 
-Create `social_research_probe/services/image_analysis/__init__.py` and `service.py`:
+```text
+platform stage
+  -> service.execute_batch(inputs)
+  -> BaseService.execute_one(input)
+  -> technology.execute(technology_input)
+  -> TechResult list
+  -> service.execute_service(data, result)
+  -> ServiceResult
+```
+
+`execute_service()` is where the service converts technology outputs into the shape the next pipeline stage expects.
+
+## Minimal Example
 
 ```python
 from __future__ import annotations
 
-from dataclasses import dataclass
-from social_research_probe.services import BaseService
-from social_research_probe.technologies import BaseTechnology
-from social_research_probe.technologies.vision.model_a import ModelATech
-from social_research_probe.technologies.vision.model_b import ModelBTech
+from typing import ClassVar
 
-@dataclass
-class ImageAnalysisInput:
-    image_url: str
-    context: str
+from social_research_probe.services import BaseService, ServiceResult
+from social_research_probe.technologies.example.sentiment import SentimentTech
 
-@dataclass
-class ImageAnalysisOutput:
-    description: str
-    tags: list[str]
 
-class ImageAnalysisService(BaseService[ImageAnalysisInput, ImageAnalysisOutput]):
-    service_name = "image_analysis"
-    enabled_config_key = "services.image_analysis"
+class SentimentService(BaseService[dict, dict]):
+    service_name: ClassVar[str] = "youtube.enriching.sentiment"
+    enabled_config_key: ClassVar[str] = "services.youtube.enriching.sentiment"
 
-    def _get_technologies(self) -> list[BaseTechnology]:
-        # Return the technologies you want to run. 
-        # The base service handles executing them concurrently.
-        return [
-            ModelATech(),
-            ModelBTech(),
-        ]
+    def _get_technologies(self) -> list[object]:
+        return [SentimentTech()]
+
+    async def execute_service(self, data: dict, result: ServiceResult) -> ServiceResult:
+        sentiment = next(
+            (tr.output for tr in result.tech_results if tr.success and isinstance(tr.output, dict)),
+            {},
+        )
+        if result.tech_results:
+            result.tech_results[0].output = {**data, "sentiment": sentiment}
+            result.tech_results[0].success = bool(sentiment)
+        return result
 ```
 
-### 2. Connect the Service in the Pipeline
+The service does not call an API directly. The concrete provider lives in `SentimentTech`.
 
-In a platform pipeline stage (e.g., `platforms/instagram/pipeline.py`), instantiate and call the service:
+## Connecting A Stage
 
 ```python
-class InstagramAnalyzeStage(BaseStage):
+from social_research_probe.platforms import BaseStage
+from social_research_probe.platforms.state import PipelineState
+from social_research_probe.services.enriching.sentiment import SentimentService
+
+
+class YouTubeSentimentStage(BaseStage):
+    @property
     def stage_name(self) -> str:
-        return "analyze_images"
+        return "sentiment"
 
     async def execute(self, state: PipelineState) -> PipelineState:
-        items = state.get_stage_output("fetch").get("items", [])
-        
-        # Prepare inputs
-        inputs = [ImageAnalysisInput(image_url=item.url, context=item.title) for item in items]
-        
-        # Run service
-        service = ImageAnalysisService()
-        results = await service.execute_batch(inputs)
-        
-        # Process ServiceResults
-        # Each ServiceResult contains `tech_results` from Model A and Model B
-        state.set_stage_output("analyze_images", {"results": results})
+        top_n = list(state.get_stage_output("summary").get("top_n", []))
+        if not self._is_enabled(state) or not top_n:
+            state.set_stage_output("sentiment", {"top_n": top_n})
+            return state
+
+        inputs = [item for item in top_n if isinstance(item, dict)]
+        results = await SentimentService().execute_batch(inputs)
+        enriched = [
+            tr.output
+            for result in results
+            for tr in result.tech_results
+            if tr.success and isinstance(tr.output, dict)
+        ]
+        state.set_stage_output("sentiment", {"top_n": enriched})
         return state
 ```
 
-## Best Practices
+Add the stage to `YouTubePipeline.stages()` only after deciding where it belongs in the evidence order.
 
-- **Never put API keys or direct network calls in a Service.** A Service should only delegate to Technologies.
-- **Fail gracefully.** `BaseService` automatically catches exceptions raised by a Technology. It returns `TechResult.success = False` rather than crashing the pipeline. Check `TechResult.output` before using it.
-- **Isolate configuration.** Define a toggle for your service in `config.py` and `config.toml.example` so users can turn the entire service off.
+## Config
+
+Add defaults in `DEFAULT_CONFIG` and `config.toml.example`:
+
+```toml
+[stages.youtube]
+sentiment = true
+
+[services.youtube.enriching]
+sentiment = true
+
+[technologies]
+sentiment_provider = true
+```
+
+The service gate name should be discoverable by `Config.service_enabled()`. Current service gates are nested under `[services.youtube.*]` with simple boolean leaves.
+
+## Tests
+
+Add focused tests for:
+
+| Test | What it proves |
+| --- | --- |
+| Service unit test | `execute_service()` handles success, failure, and empty technology output. |
+| Stage unit test | Stage reads the right prior output and writes a stable output key. |
+| Config test | Stage/service/technology gates disable the new behavior correctly. |
+| Integration test | Pipeline still assembles a report when the service succeeds or is disabled. |
+
+## Rules
+
+- Keep API keys, subprocess calls, HTTP calls, and provider response parsing in technologies.
+- Keep platform-specific ordering in platform stages.
+- Return stable dictionaries from stages; downstream stages should not parse raw `ServiceResult` unless that stage owns the boundary.
+- Preserve partial success. A failed technology should not erase unrelated evidence.
