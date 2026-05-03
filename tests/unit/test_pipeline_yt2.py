@@ -384,7 +384,7 @@ class TestSummaryStage:
 
 class TestCorroborateStage:
     def test_execute_disabled_or_empty(self, enabled_state):
-        enabled_state.set_stage_output("summary", {"top_n": []})
+        enabled_state.set_stage_output("claims", {"top_n": []})
         out = asyncio.run(yt.YouTubeCorroborateStage().execute(enabled_state))
         assert out.get_stage_output("corroborate")["top_n"] == []
 
@@ -399,7 +399,7 @@ class TestCorroborateStage:
         assert healthy == []
 
     def test_execute_with_providers(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("summary", {"top_n": [{"id": "1"}]})
+        enabled_state.set_stage_output("claims", {"top_n": [{"id": "1"}]})
 
         async def fake_one(self, item):
             return _mk_service_result("corroboration", {"id": "1", "corroboration": "ok"})
@@ -416,7 +416,7 @@ class TestCorroborateStage:
         assert out.get_stage_output("corroborate")["top_n"][0]["corroboration"] == "ok"
 
     def test_execute_with_no_healthy_providers_passes_through(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("summary", {"top_n": [{"id": "1"}]})
+        enabled_state.set_stage_output("claims", {"top_n": [{"id": "1"}]})
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.corroborate.CorroborationService.__init__",
             lambda self: setattr(self, "providers", []) or None,
@@ -425,7 +425,7 @@ class TestCorroborateStage:
         assert out.get_stage_output("corroborate")["top_n"] == [{"id": "1"}]
 
     def test_execute_skips_non_dict_items(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("summary", {"top_n": ["not-a-dict"]})
+        enabled_state.set_stage_output("claims", {"top_n": ["not-a-dict"]})
         monkeypatch.setattr(
             "social_research_probe.services.corroborating.corroborate.CorroborationService.__init__",
             lambda self: setattr(self, "providers", ["exa"]) or None,
@@ -442,7 +442,7 @@ class TestCorroborateStage:
         assert out.get_stage_output("corroborate")["top_n"] == []
 
     def test_omits_corroboration_result_without_item_output(self, enabled_state, monkeypatch):
-        enabled_state.set_stage_output("summary", {"top_n": [{"id": "1"}]})
+        enabled_state.set_stage_output("claims", {"top_n": [{"id": "1"}]})
 
         async def fake_one(self, item):
             return ServiceResult(
