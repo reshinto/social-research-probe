@@ -115,9 +115,16 @@ def _section_claims_extraction(config: dict) -> str:
     use_llm = claims_cfg.get("use_llm", False)
     max_per_source = claims_cfg.get("max_claims_per_source", 10)
     max_chars = claims_cfg.get("max_claim_chars", 500)
-    llm_line = "- LLM extraction: enabled" if use_llm else "- LLM extraction: disabled (Phase 5B)"
+    method_line = (
+        "- Extraction method: LLM-backed with deterministic fallback"
+        if use_llm
+        else "- Extraction method: deterministic (pattern-matching)"
+    )
+    llm_line = (
+        "- LLM-backed extraction enabled: yes" if use_llm else "- LLM-backed extraction enabled: no"
+    )
     lines = [
-        "- Extraction method: deterministic (pattern-matching)",
+        method_line,
         "- Rule types: fact_claim, opinion, prediction, recommendation, experience, "
         "question, objection, pain_point, market_signal",
         llm_line,

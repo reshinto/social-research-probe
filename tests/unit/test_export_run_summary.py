@@ -238,9 +238,72 @@ def test_build_claims_fields_present_with_empty_items():
     out = build_run_summary(_minimal_report(items_top_n=[]), _minimal_config(), {})
     assert "claims_extracted" in out
     assert "claims_by_type" in out
+    assert "claims_by_extraction_method" in out
     assert "claims_needing_review" in out
     assert "claims_needing_corroboration" in out
     assert "corroborated_claims" in out
+
+
+def test_build_claims_by_extraction_method_empty_when_no_claims():
+    out = build_run_summary(_minimal_report(), _minimal_config(), {})
+    assert out["claims_by_extraction_method"] == {}
+
+
+def test_build_claims_by_extraction_method_counts_deterministic():
+    items = [
+        {
+            "extracted_claims": [
+                {
+                    "claim_type": "prediction",
+                    "needs_corroboration": True,
+                    "needs_review": False,
+                    "corroboration_status": "pending",
+                    "extraction_method": "deterministic",
+                },
+                {
+                    "claim_type": "opinion",
+                    "needs_corroboration": False,
+                    "needs_review": False,
+                    "corroboration_status": "pending",
+                    "extraction_method": "deterministic",
+                },
+            ]
+        }
+    ]
+    out = build_run_summary(_minimal_report(items_top_n=items), _minimal_config(), {})
+    assert out["claims_by_extraction_method"] == {"deterministic": 2}
+
+
+def test_build_claims_by_extraction_method_counts_mixed():
+    items = [
+        {
+            "extracted_claims": [
+                {
+                    "claim_type": "prediction",
+                    "needs_corroboration": True,
+                    "needs_review": False,
+                    "corroboration_status": "pending",
+                    "extraction_method": "llm",
+                },
+                {
+                    "claim_type": "opinion",
+                    "needs_corroboration": False,
+                    "needs_review": False,
+                    "corroboration_status": "pending",
+                    "extraction_method": "deterministic",
+                },
+                {
+                    "claim_type": "fact_claim",
+                    "needs_corroboration": True,
+                    "needs_review": True,
+                    "corroboration_status": "pending",
+                    "extraction_method": "llm",
+                },
+            ]
+        }
+    ]
+    out = build_run_summary(_minimal_report(items_top_n=items), _minimal_config(), {})
+    assert out["claims_by_extraction_method"] == {"llm": 2, "deterministic": 1}
 
 
 def test_build_claims_skips_non_dict_items():

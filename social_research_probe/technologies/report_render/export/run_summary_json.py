@@ -42,9 +42,13 @@ def _claims_summary(items: list[dict]) -> dict:
                 c for c in (item.get("extracted_claims") or []) if isinstance(c, dict)
             )
     by_type: dict[str, int] = dict(Counter(c.get("claim_type", "unknown") for c in all_claims))
+    by_method: dict[str, int] = dict(
+        Counter(c.get("extraction_method", "unknown") for c in all_claims)
+    )
     return {
         "claims_extracted": len(all_claims),
         "claims_by_type": by_type,
+        "claims_by_extraction_method": by_method,
         "claims_needing_review": sum(1 for c in all_claims if c.get("needs_review")),
         "claims_needing_corroboration": sum(1 for c in all_claims if c.get("needs_corroboration")),
         "corroborated_claims": sum(
@@ -76,6 +80,7 @@ def build_run_summary(report: dict, config: dict, artifact_paths: dict[str, str]
         "corroboration_summary": _corroboration_summary(items),
         "claims_extracted": claims["claims_extracted"],
         "claims_by_type": claims["claims_by_type"],
+        "claims_by_extraction_method": claims["claims_by_extraction_method"],
         "claims_needing_review": claims["claims_needing_review"],
         "claims_needing_corroboration": claims["claims_needing_corroboration"],
         "corroborated_claims": claims["corroborated_claims"],
