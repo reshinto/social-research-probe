@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,12 @@ def test_load_merges_user_overrides(tmp_path):
     (tmp_path / "config.toml").write_text('[llm]\nrunner = "claude"\n')
     cfg = Config.load(tmp_path)
     assert cfg.llm_runner == "claude"
+
+
+def test_example_config_is_valid_toml():
+    root = Path(__file__).parents[2]
+    data = tomllib.loads((root / "config.toml.example").read_text())
+    assert data["stages"]["youtube"]["persist"] is True
 
 
 def test_llm_settings_none_returns_empty(tmp_path):
@@ -293,3 +300,19 @@ def test_config_toml_example_has_database_section():
 def test_database_property_returns_section(tmp_path):
     cfg = Config.load(tmp_path)
     assert cfg.database["enabled"] is True
+
+
+def test_default_config_has_notifications(tmp_path):
+    cfg = Config.load(tmp_path)
+    notifications = cfg.raw["notifications"]
+    assert notifications["enabled"] is True
+    assert notifications["default_channels"] == ["file"]
+    assert notifications["console"]["enabled"] is True
+    assert notifications["file"]["output_dir"] == ""
+    assert notifications["telegram"]["enabled"] is False
+
+
+def test_default_config_has_schedule(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["schedule"]["enabled"] is True
+    assert cfg.raw["schedule"]["default_interval"] == "daily"

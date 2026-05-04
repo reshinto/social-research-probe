@@ -524,6 +524,49 @@ def _dispatch_claims(args: argparse.Namespace) -> int:
     return claims.run(args)
 
 
+def _dispatch_compare(args: argparse.Namespace) -> int:
+    """Pick the `compare` subcommand handler from parsed arguments.
+
+    Args:
+        args: Parsed argparse namespace for the command being dispatched.
+
+    Returns:
+        Integer exit code.
+
+    Examples:
+        Input:
+            _dispatch_compare(
+                args=argparse.Namespace(output="json"),
+            )
+        Output:
+            0
+    """
+    from social_research_probe.commands import compare
+
+    return compare.run(args)
+
+
+def _dispatch_watch(args: argparse.Namespace) -> int:
+    """Pick the `watch` subcommand handler from parsed arguments."""
+    from social_research_probe.commands import watch
+
+    return watch.run(args)
+
+
+def _dispatch_notify(args: argparse.Namespace) -> int:
+    """Pick the `notify` subcommand handler from parsed arguments."""
+    from social_research_probe.commands import notify
+
+    return notify.run(args)
+
+
+def _dispatch_schedule(args: argparse.Namespace) -> int:
+    """Pick the `schedule` subcommand handler from parsed arguments."""
+    from social_research_probe.commands import schedule
+
+    return schedule.run(args)
+
+
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions.
 
@@ -563,4 +606,8 @@ def handlers_factory() -> dict[str, callable]:
         Command.CONFIG: _dispatch_config,
         Command.DB: _dispatch_db,
         Command.CLAIMS: _dispatch_claims,
+        Command.COMPARE: _dispatch_compare,
+        Command.WATCH: _dispatch_watch,
+        Command.NOTIFY: _dispatch_notify,
+        Command.SCHEDULE: _dispatch_schedule,
     }

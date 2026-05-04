@@ -66,6 +66,10 @@ class Command(StrEnum):
     CONFIG = "config"
     DB = "db"
     CLAIMS = "claims"
+    COMPARE = "compare"
+    WATCH = "watch"
+    NOTIFY = "notify"
+    SCHEDULE = "schedule"
 
 
 class ClaimsSubcommand(StrEnum):
@@ -118,6 +122,45 @@ class ConfigSubcommand(StrEnum):
     SET_SECRET = "set-secret"
     UNSET_SECRET = "unset-secret"
     CHECK_SECRETS = "check-secrets"
+
+
+class CompareSubcommand(StrEnum):
+    """Compare subcommand names dispatched within compare.run().
+
+    Examples:
+        Input:
+            CompareSubcommand
+        Output:
+            CompareSubcommand
+    """
+
+    RUN = "run"
+    LATEST = "latest"
+    LIST = "list"
+
+
+class WatchSubcommand(StrEnum):
+    """Watch subcommand names dispatched within watch.run()."""
+
+    ADD = "add"
+    LIST = "list"
+    REMOVE = "remove"
+    RUN = "run"
+    RUN_DUE = "run-due"
+    ALERTS = "alerts"
+
+
+class NotifySubcommand(StrEnum):
+    """Notification subcommand names dispatched within notify.run()."""
+
+    TEST = "test"
+
+
+class ScheduleSubcommand(StrEnum):
+    """Schedule helper subcommand names dispatched within schedule.run()."""
+
+    CRON = "cron"
+    LAUNCHD = "launchd"
 
 
 class SpecialCommand(StrEnum):

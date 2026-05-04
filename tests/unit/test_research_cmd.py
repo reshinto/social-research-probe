@@ -97,6 +97,15 @@ def test_apply_cli_overrides(monkeypatch):
     cfg.apply_platform_overrides.assert_called_once()
 
 
+def test_run_research_for_watch(monkeypatch):
+    monkeypatch.setattr(research, "_apply_cli_overrides", lambda a: None)
+    monkeypatch.setattr(
+        research, "_execute_research_pipeline", lambda p, t, ps: {"run_id": "run-1"}
+    )
+    out = research.run_research_for_watch("youtube", "ai", ("latest-news",), no_html=True)
+    assert out["run_id"] == "run-1"
+
+
 def test_run_basic(monkeypatch, capsys):
     monkeypatch.setattr(
         "social_research_probe.platforms.PIPELINES",

@@ -57,7 +57,7 @@ def test_db_init_creates_db_file(tmp_path: Path, capsys):
     assert (tmp_path / "srp.db").exists()
     out = capsys.readouterr().out
     assert "Database ready" in out
-    assert "schema v4" in out
+    assert "schema v6" in out
 
 
 def test_db_init_is_idempotent(tmp_path: Path):
