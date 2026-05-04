@@ -20,6 +20,9 @@ from social_research_probe.commands import (
     CompareSubcommand,
     ConfigSubcommand,
     DbSubcommand,
+    NotifySubcommand,
+    ScheduleSubcommand,
+    WatchSubcommand,
 )
 
 
@@ -131,6 +134,16 @@ class Arg(StrEnum):
     NEEDED_FOR = "--needed-for"
     PLATFORM = "--platform"
     CORROBORATION = "--corroboration"
+    TOPIC = "--topic"
+    PURPOSE = "--purpose"
+    ENABLED = "--enabled"
+    DISABLED = "--disabled"
+    INTERVAL = "--interval"
+    ALERT_RULE = "--alert-rule"
+    WATCH_ID = "--watch-id"
+    LIMIT = "--limit"
+    CHANNEL = "--channel"
+    NOTIFY = "--notify"
     # Global flags
     DATA_DIR = "--data-dir"
     VERBOSE = "--verbose"
@@ -549,6 +562,74 @@ def _add_compare_subparsers(sub: argparse._SubParsersAction) -> None:
     _add_output_arg(list_p)
 
 
+def _add_watch_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register local watch and alert commands."""
+    watch = sub.add_parser(Command.WATCH, help="Manage local topic watches and alerts")
+    watch.set_defaults(_watch_parser=watch)
+    watch_sub = watch.add_subparsers(dest="watch_cmd", metavar="ACTION")
+
+    add_p = watch_sub.add_parser(WatchSubcommand.ADD, help="Add a local watch")
+    add_p.add_argument(Arg.TOPIC, required=True)
+    add_p.add_argument(Arg.PLATFORM, default="youtube")
+    add_p.add_argument(Arg.PURPOSE, action="append", dest="purposes", default=[])
+    add_p.add_argument(Arg.INTERVAL, default=None)
+    add_p.add_argument(Arg.ALERT_RULE, action="append", dest="alert_rules", default=[])
+    add_p.add_argument(Arg.OUTPUT_DIR, default=None)
+    add_p.add_argument(Arg.DISABLED, action=Action.STORE_TRUE)
+    _add_output_arg(add_p)
+
+    list_p = watch_sub.add_parser(WatchSubcommand.LIST, help="List local watches")
+    list_p.add_argument(Arg.ENABLED, action=Action.STORE_TRUE)
+    _add_output_arg(list_p)
+
+    remove_p = watch_sub.add_parser(WatchSubcommand.REMOVE, help="Remove a local watch")
+    remove_p.add_argument("watch_id")
+    _add_output_arg(remove_p)
+
+    run_p = watch_sub.add_parser(WatchSubcommand.RUN, help="Run one or all local watches")
+    run_p.add_argument("watch_id", nargs="?")
+    run_p.add_argument("--export-dir", default=None, help="Directory for comparison artifacts")
+    run_p.add_argument(Arg.NOTIFY, action=Action.STORE_TRUE)
+    run_p.add_argument(Arg.CHANNEL, action="append", dest="channels", default=[])
+    _add_output_arg(run_p)
+
+    due_p = watch_sub.add_parser(WatchSubcommand.RUN_DUE, help="Run due enabled watches")
+    due_p.add_argument("--export-dir", default=None, help="Directory for comparison artifacts")
+    due_p.add_argument(Arg.NOTIFY, action=Action.STORE_TRUE)
+    due_p.add_argument(Arg.CHANNEL, action="append", dest="channels", default=[])
+    _add_output_arg(due_p)
+
+    alerts_p = watch_sub.add_parser(WatchSubcommand.ALERTS, help="List alert events")
+    alerts_p.add_argument(Arg.WATCH_ID, default=None)
+    alerts_p.add_argument(Arg.LIMIT, type=int, default=100)
+    _add_output_arg(alerts_p)
+
+
+def _add_notify_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register local notification commands."""
+    notify = sub.add_parser(Command.NOTIFY, help="Test local notification channels")
+    notify.set_defaults(_notify_parser=notify)
+    notify_sub = notify.add_subparsers(dest="notify_cmd", metavar="ACTION")
+
+    test_p = notify_sub.add_parser(NotifySubcommand.TEST, help="Send a test notification")
+    test_p.add_argument(Arg.CHANNEL, required=True, choices=["console", "file", "telegram"])
+    _add_output_arg(test_p)
+
+
+def _add_schedule_subparsers(sub: argparse._SubParsersAction) -> None:
+    """Register local schedule helper commands."""
+    schedule = sub.add_parser(Command.SCHEDULE, help="Print local scheduling helpers")
+    schedule.set_defaults(_schedule_parser=schedule)
+    schedule_sub = schedule.add_subparsers(dest="schedule_cmd", metavar="ACTION")
+
+    cron_p = schedule_sub.add_parser(ScheduleSubcommand.CRON, help="Print a cron entry")
+    cron_p.add_argument(Arg.INTERVAL, choices=["hourly", "daily", "weekly"], default=None)
+
+    launchd_p = schedule_sub.add_parser(ScheduleSubcommand.LAUNCHD, help="Print a launchd plist")
+    launchd_p.add_argument(Arg.INTERVAL, choices=["hourly", "daily", "weekly"], default=None)
+    launchd_p.add_argument("--output-path", default=None)
+
+
 def global_parser() -> argparse.ArgumentParser:
     """Build the root ``srp`` argument parser.
 
@@ -583,4 +664,7 @@ def global_parser() -> argparse.ArgumentParser:
     _add_db_subparsers(sub)
     _add_claims_subparsers(sub)
     _add_compare_subparsers(sub)
+    _add_watch_subparsers(sub)
+    _add_notify_subparsers(sub)
+    _add_schedule_subparsers(sub)
     return parser

@@ -41,66 +41,16 @@ def _resolve_run(conn: object, arg: str) -> dict | None:
 
 def _build_run_info(row: dict, counts: dict) -> dict:
     """Build a RunInfo object from a row and counts dict."""
-    from social_research_probe.utils.comparison.types import RunInfo
+    from social_research_probe.utils.comparison.runner import build_run_info
 
-    return RunInfo(
-        run_pk=row["id"],
-        run_id=row["run_id"],
-        topic=row["topic"],
-        platform=row["platform"],
-        started_at=row.get("started_at") or "",
-        finished_at=row.get("finished_at") or "",
-        source_count=counts["sources"],
-        claim_count=counts["claims"],
-        narrative_count=counts["narratives"],
-    )
+    return build_run_info(row, counts)
 
 
 def _build_comparison(baseline_row: dict, target_row: dict, conn: object) -> dict:
     """Execute full comparison pipeline between two runs."""
-    from social_research_probe.technologies.persistence.sqlite.comparison_queries import (
-        count_for_run,
-        get_claims_for_run,
-        get_narratives_for_run,
-        get_sources_for_run,
-    )
-    from social_research_probe.utils.comparison.claims import compare_claims
-    from social_research_probe.utils.comparison.narratives import compare_narratives
-    from social_research_probe.utils.comparison.sources import compare_sources
-    from social_research_probe.utils.comparison.summary import build_follow_ups
-    from social_research_probe.utils.comparison.trends import derive_trends
-    from social_research_probe.utils.comparison.types import ComparisonResult
+    from social_research_probe.utils.comparison.runner import build_comparison
 
-    b_pk = baseline_row["id"]
-    t_pk = target_row["id"]
-
-    b_counts = count_for_run(conn, b_pk)
-    t_counts = count_for_run(conn, t_pk)
-
-    baseline_info = _build_run_info(baseline_row, b_counts)
-    target_info = _build_run_info(target_row, t_counts)
-
-    source_changes = compare_sources(
-        get_sources_for_run(conn, b_pk), get_sources_for_run(conn, t_pk)
-    )
-    claim_changes = compare_claims(get_claims_for_run(conn, b_pk), get_claims_for_run(conn, t_pk))
-    narrative_changes = compare_narratives(
-        get_narratives_for_run(conn, b_pk), get_narratives_for_run(conn, t_pk)
-    )
-    trends = derive_trends(narrative_changes, claim_changes)
-
-    result = ComparisonResult(
-        baseline=baseline_info,
-        target=target_info,
-        source_changes=source_changes,
-        claim_changes=claim_changes,
-        narrative_changes=narrative_changes,
-        trends=trends,
-        counts={"baseline": b_counts, "target": t_counts},
-        follow_ups=[],
-    )
-    result["follow_ups"] = build_follow_ups(result)
-    return result
+    return build_comparison(conn, baseline_row, target_row)
 
 
 def _output_result(result: dict, args: argparse.Namespace) -> int:

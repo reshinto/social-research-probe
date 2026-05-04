@@ -30,6 +30,22 @@ class _FakeRunner(LLMRunner):
         return self._payload
 
 
+def test_services_llm_lazy_public_exports():
+    import social_research_probe.services.llm as llm_pkg
+    import social_research_probe.utils.llm.registry as util_registry
+    from social_research_probe.services.llm.core import LLMService, LLMTech
+    from social_research_probe.services.llm.core.classify_query import classify_query
+    from social_research_probe.services.llm.core.output import emit_report as core_emit_report
+
+    assert llm_pkg.LLMService is LLMService
+    assert llm_pkg.LLMTech is LLMTech
+    assert llm_pkg.classify_query is classify_query
+    assert llm_pkg.emit_report is core_emit_report
+    assert llm_pkg.registry is util_registry
+    with pytest.raises(AttributeError):
+        llm_pkg.__getattr__("missing_export")
+
+
 class TestRegistry:
     def test_register_requires_name(self):
         class Bad(LLMRunner):

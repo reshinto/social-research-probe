@@ -131,6 +131,22 @@ def test_calls_persistence_service_when_enabled():
     assert stage_out["run_id"] == "abc123"
 
 
+def test_success_without_run_id_keeps_stage_output_without_report_run_id():
+    fake_output = {"db_path": "/tmp/srp.db", "run_pk": 1}
+    state = _state(report={"topic": "test"})
+    with patch("social_research_probe.config.load_active_config", return_value=_enabled_cfg()):
+        with patch(
+            "social_research_probe.services.persistence.PersistenceService.execute_batch",
+            new=AsyncMock(return_value=_fake_success_results(fake_output)),
+        ):
+            result_state = _run(YouTubePersistStage().execute(state))
+
+    stage_out = result_state.outputs["stages"]["persist"]
+    assert stage_out["db_path"] == "/tmp/srp.db"
+    assert stage_out["run_id"] is None
+    assert "run_id" not in result_state.outputs["report"]
+
+
 # --- failure path ---
 
 

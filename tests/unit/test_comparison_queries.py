@@ -10,6 +10,7 @@ from social_research_probe.technologies.persistence.sqlite.comparison_queries im
     get_claims_for_run,
     get_latest_pair,
     get_narratives_for_run,
+    get_previous_matching_run,
     get_run,
     get_run_by_text_id,
     get_sources_for_run,
@@ -212,6 +213,17 @@ class TestGetLatestPair:
         _seed_runs(conn)
         assert get_latest_pair(conn, topic="Nonexistent") is None
         conn.close()
+
+
+def test_previous_matching_run_missing_target_returns_none() -> None:
+    conn = _conn()
+    assert (
+        get_previous_matching_run(
+            conn, topic="AI agents", platform="youtube", target_run_id="missing"
+        )
+        is None
+    )
+    conn.close()
 
 
 class TestGetSourcesForRun:

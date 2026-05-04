@@ -12,18 +12,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from social_research_probe.technologies.llms import LLMRunner
 from social_research_probe.utils.core.errors import ValidationError
 
 if TYPE_CHECKING:
+    from social_research_probe.technologies.llms import LLMRunner
     from social_research_probe.utils.core.types import RunnerName
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.
 # Populated at import time as each runners/*.py module is loaded.
-_REGISTRY: dict[str, type[LLMRunner]] = {}
+_REGISTRY: dict[str, type[object]] = {}
 
 
-def register(cls: type[LLMRunner]) -> type[LLMRunner]:
+def register(cls: type[object]) -> type[object]:
     """Register an LLMRunner implementation so it can be selected by name.
 
     This decorator adds each concrete runner class to the shared registry under its class-

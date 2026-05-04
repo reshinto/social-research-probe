@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 4
+SCHEMA_VERSION: int = 6
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -235,11 +235,93 @@ CREATE TABLE IF NOT EXISTS narrative_sources (
 CREATE INDEX IF NOT EXISTS idx_narr_sources_narr ON narrative_sources(narrative_pk);
 """
 
+SCHEMA_DDL_V5: str = """\
+CREATE TABLE IF NOT EXISTS watches (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    watch_id           TEXT NOT NULL UNIQUE,
+    topic              TEXT NOT NULL,
+    platform           TEXT NOT NULL,
+    purposes_json      TEXT NOT NULL DEFAULT '[]',
+    enabled            INTEGER NOT NULL DEFAULT 1,
+    interval           TEXT,
+    alert_rules_json   TEXT NOT NULL DEFAULT '[]',
+    output_dir         TEXT,
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL,
+    last_run_at        TEXT,
+    last_target_run_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_watches_enabled ON watches(enabled);
+CREATE INDEX IF NOT EXISTS idx_watches_topic_platform ON watches(topic, platform);
+
+CREATE TABLE IF NOT EXISTS watch_runs (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    watch_run_id              TEXT NOT NULL UNIQUE,
+    watch_id                  TEXT NOT NULL REFERENCES watches(watch_id) ON DELETE CASCADE,
+    baseline_run_id           TEXT,
+    target_run_id             TEXT,
+    started_at                TEXT NOT NULL,
+    finished_at               TEXT,
+    status                    TEXT NOT NULL,
+    error_kind                TEXT,
+    error_message             TEXT,
+    comparison_artifacts_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_watch_runs_watch ON watch_runs(watch_id);
+CREATE INDEX IF NOT EXISTS idx_watch_runs_target ON watch_runs(target_run_id);
+CREATE INDEX IF NOT EXISTS idx_watch_runs_started ON watch_runs(started_at);
+
+CREATE TABLE IF NOT EXISTS alert_events (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_id             TEXT NOT NULL UNIQUE,
+    watch_id             TEXT NOT NULL REFERENCES watches(watch_id) ON DELETE CASCADE,
+    baseline_run_id      TEXT,
+    target_run_id        TEXT,
+    created_at           TEXT NOT NULL,
+    severity             TEXT,
+    title                TEXT,
+    message              TEXT,
+    matched_rules_json   TEXT NOT NULL DEFAULT '[]',
+    trend_signals_json   TEXT NOT NULL DEFAULT '[]',
+    artifact_paths_json  TEXT NOT NULL DEFAULT '{}',
+    acknowledged         INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_alert_events_watch ON alert_events(watch_id);
+CREATE INDEX IF NOT EXISTS idx_alert_events_target ON alert_events(target_run_id);
+CREATE INDEX IF NOT EXISTS idx_alert_events_created ON alert_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_alert_events_ack ON alert_events(acknowledged);
+"""
+
+SCHEMA_DDL_V6: str = """\
+CREATE TABLE IF NOT EXISTS notification_deliveries (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    delivery_id         TEXT NOT NULL UNIQUE,
+    alert_id            TEXT,
+    watch_id            TEXT,
+    channel             TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    error_message       TEXT,
+    sent_at             TEXT NOT NULL,
+    message_title       TEXT,
+    artifact_paths_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_alert
+    ON notification_deliveries(alert_id);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_watch
+    ON notification_deliveries(watch_id);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_channel
+    ON notification_deliveries(channel);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_status
+    ON notification_deliveries(status);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
     lambda conn: conn.executescript(SCHEMA_DDL_V2),
     lambda conn: conn.executescript(SCHEMA_DDL_V3),
     lambda conn: conn.executescript(SCHEMA_DDL_V4),
+    lambda conn: conn.executescript(SCHEMA_DDL_V5),
+    lambda conn: conn.executescript(SCHEMA_DDL_V6),
 ]
 
 

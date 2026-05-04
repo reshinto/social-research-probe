@@ -514,6 +514,48 @@ class VoiceboxConfigSection(TypedDict):
     api_base: str
 
 
+class NotificationConsoleConfig(TypedDict, total=False):
+    """Console notification channel settings."""
+
+    enabled: bool
+
+
+class NotificationFileConfig(TypedDict, total=False):
+    """Local file notification channel settings."""
+
+    enabled: bool
+    output_dir: str
+
+
+class NotificationTelegramConfig(TypedDict, total=False):
+    """Telegram notification channel settings.
+
+    Secret values are never stored here; only environment variable names are configured.
+    """
+
+    enabled: bool
+    bot_token_env: str
+    chat_id_env: str
+    timeout_seconds: int
+
+
+class NotificationsConfigSection(TypedDict, total=False):
+    """Top-level local notification settings."""
+
+    enabled: bool
+    default_channels: list[str]
+    console: NotificationConsoleConfig
+    file: NotificationFileConfig
+    telegram: NotificationTelegramConfig
+
+
+class ScheduleConfigSection(TypedDict, total=False):
+    """Local schedule helper settings."""
+
+    enabled: bool
+    default_interval: str
+
+
 class AppConfig(TypedDict):
     """Canonical in-memory shape of config.toml after defaults are applied.
 
@@ -538,6 +580,8 @@ class AppConfig(TypedDict):
     debug: DebugConfigSection
     voicebox: VoiceboxConfigSection
     database: DatabaseConfigSection
+    notifications: NotificationsConfigSection
+    schedule: ScheduleConfigSection
 
 
 class AdapterConfig(TypedDict, total=False):

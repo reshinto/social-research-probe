@@ -19,6 +19,9 @@ _TABLES = [
     "claims",
     "claim_reviews",
     "claim_notes",
+    "watches",
+    "watch_runs",
+    "alert_events",
 ]
 
 

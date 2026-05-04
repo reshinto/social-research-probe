@@ -68,6 +68,30 @@ def get_latest_pair(
     return (runs[1], runs[0])
 
 
+def get_previous_matching_run(
+    conn: sqlite3.Connection,
+    *,
+    topic: str,
+    platform: str,
+    target_run_id: str,
+) -> dict | None:
+    """Return the most recent matching run before the target run."""
+    target = get_run_by_text_id(conn, target_run_id)
+    if target is None:
+        return None
+    cur = conn.execute(
+        """
+        SELECT *
+        FROM research_runs
+        WHERE topic = ? AND platform = ? AND run_id != ? AND started_at <= ?
+        ORDER BY started_at DESC, id DESC
+        LIMIT 1
+        """,
+        (topic, platform, target_run_id, target.get("started_at") or ""),
+    )
+    return _row_to_dict(cur)
+
+
 def get_sources_for_run(conn: sqlite3.Connection, run_pk: int) -> list[dict]:
     """Source + snapshot data for a run."""
     sql = """
@@ -121,3 +145,11 @@ def count_for_run(conn: sqlite3.Connection, run_pk: int) -> dict[str, int]:
         "SELECT COUNT(*) FROM narrative_clusters WHERE run_id = ?", (run_pk,)
     ).fetchone()[0]
     return {"sources": sources, "claims": claims, "narratives": narratives}
+
+
+def count_claims_needing_review(conn: sqlite3.Connection, run_pk: int) -> int:
+    """Count target-run claims that need review."""
+    row = conn.execute(
+        "SELECT COUNT(*) FROM claims WHERE run_id = ? AND needs_review = 1", (run_pk,)
+    )
+    return int(row.fetchone()[0])

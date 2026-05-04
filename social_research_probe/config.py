@@ -170,6 +170,22 @@ DEFAULT_CONFIG: AppConfig = {
         "persist_transcript_text": False,
         "persist_comment_text": True,
     },
+    "notifications": {
+        "enabled": True,
+        "default_channels": ["file"],
+        "console": {"enabled": True},
+        "file": {"enabled": True, "output_dir": ""},
+        "telegram": {
+            "enabled": False,
+            "bot_token_env": "TELEGRAM_BOT_TOKEN",
+            "chat_id_env": "TELEGRAM_CHAT_ID",
+            "timeout_seconds": 10,
+        },
+    },
+    "schedule": {
+        "enabled": True,
+        "default_interval": "daily",
+    },
 }
 
 

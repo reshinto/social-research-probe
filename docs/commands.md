@@ -501,6 +501,82 @@ Expected output file shape:
 
 Exact fields inside each result depend on the provider implementation and available evidence.
 
+## Watch topics and alerts
+
+Use `watch` for local-first monitoring. Watch definitions, watch run history, and alert events are stored in the local SQLite database under the active data directory.
+
+Create a watch:
+
+```bash
+srp watch add --topic "AI coding agents" --platform youtube --purpose latest-news
+```
+
+List watches:
+
+```bash
+srp watch list
+srp watch list --output json
+```
+
+Run one watch or all enabled watches:
+
+```bash
+srp watch run
+srp watch run WATCH_ID
+srp watch run --notify
+srp watch run WATCH_ID --notify --channel file
+```
+
+Each watch run executes the normal research pipeline, requires SQLite persistence, compares the new run to the previous matching run when one exists, evaluates deterministic alert rules, and records the result locally. One failed watch does not stop other watches in the same command. Notifications are sent only when `--notify` is passed.
+
+Run watches that are due based on their configured interval:
+
+```bash
+srp watch run-due
+srp watch run-due --notify
+```
+
+Supported intervals are `hourly`, `daily`, and `weekly`. A watch with no interval is manual-only and is skipped by `run-due`. A watch that has never run is due immediately. Unsupported intervals are skipped with a clear message rather than failing the whole command.
+
+List alerts:
+
+```bash
+srp watch alerts
+srp watch alerts --watch-id WATCH_ID --output markdown
+```
+
+Add a custom alert rule:
+
+```bash
+srp watch add \
+  --topic "AI coding agents" \
+  --platform youtube \
+  --purpose latest-news \
+  --alert-rule '{"metric":"new_claims_count","op":">=","value":5,"severity":"warning"}'
+```
+
+Supported rule metrics include `new_narratives_count`, `new_claims_count`, `new_sources_count`, `claims_needing_review`, `rising_risk_score`, `growing_opportunity_score`, `trend_signal_type`, and `narrative_type`.
+
+Test a notification channel:
+
+```bash
+srp notify test --channel console
+srp notify test --channel file
+srp notify test --channel telegram
+```
+
+Notifications are local-first. Console and file channels are local. Telegram is optional, disabled by default, and reads token/chat ID from environment variable names configured in `config.toml`; secrets are not stored in SQLite.
+
+Print local scheduling helpers:
+
+```bash
+srp schedule cron
+srp schedule launchd
+srp schedule launchd --output-path ~/Library/LaunchAgents/local.social-research-probe.watch-run-due.plist
+```
+
+Schedule helpers print commands that run `srp watch run-due --notify` with the active `--data-dir`. They do not install cron entries, load launchd jobs, start a daemon, or contact a hosted scheduler.
+
 ## Render charts and stats from a saved packet
 
 Use `render` when you have a saved report or packet JSON and want chart/stat output for the top-N overall scores.

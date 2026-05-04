@@ -29,11 +29,11 @@ def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
 
 
 class TestSchemaV4Constants:
-    def test_schema_version_is_4(self) -> None:
-        assert SCHEMA_VERSION == 4
+    def test_current_schema_version_is_6(self) -> None:
+        assert SCHEMA_VERSION == 6
 
-    def test_migrations_list_has_4_entries(self) -> None:
-        assert len(MIGRATIONS) == 4
+    def test_migrations_list_has_6_entries(self) -> None:
+        assert len(MIGRATIONS) == 6
 
     def test_ddl_v4_defined(self) -> None:
         assert "narrative_clusters" in SCHEMA_DDL_V4
@@ -54,7 +54,7 @@ class TestFreshSchema:
         conn = _fresh_db()
         ensure_schema(conn)
         row = conn.execute("SELECT value FROM schema_meta WHERE key = 'version'").fetchone()
-        assert int(row[0]) == 4
+        assert int(row[0]) == 6
         conn.close()
 
 
