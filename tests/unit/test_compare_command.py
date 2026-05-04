@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from social_research_probe.commands import CompareSubcommand
-from social_research_probe.commands.compare import run
+from social_research_probe.commands.compare import _build_run_info, run
 from social_research_probe.technologies.persistence.sqlite.schema import ensure_schema
 from social_research_probe.utils.core.exit_codes import ExitCode
 
@@ -62,6 +62,19 @@ def _args(**kwargs) -> argparse.Namespace:
     defaults = {"output": "text", "export_dir": None}
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
+
+
+def test_build_run_info_wrapper() -> None:
+    row = {
+        "id": 1,
+        "run_id": "run-1",
+        "topic": "AI",
+        "platform": "youtube",
+        "started_at": "s",
+        "finished_at": "f",
+    }
+    counts = {"sources": 1, "claims": 2, "narratives": 3}
+    assert _build_run_info(row, counts)["claim_count"] == 2
 
 
 class TestRunDispatch:

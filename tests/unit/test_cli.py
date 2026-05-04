@@ -80,6 +80,14 @@ class TestHandlersFactory:
         assert Command.SHOW_TOPICS in h
         assert Command.RESEARCH in h
         assert Command.CONFIG in h
+        assert Command.WATCH in h
+
+
+def test_dispatch_watch_handler():
+    ns = argparse.Namespace(command=Command.WATCH)
+    with patch("social_research_probe.commands.watch.run", return_value=0) as mock:
+        assert handlers_factory()[Command.WATCH](ns) == 0
+    mock.assert_called_once_with(ns)
 
 
 class TestDispatch:

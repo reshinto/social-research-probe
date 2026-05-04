@@ -501,6 +501,53 @@ Expected output file shape:
 
 Exact fields inside each result depend on the provider implementation and available evidence.
 
+## Watch topics and alerts
+
+Use `watch` for local-first monitoring. Watch definitions, watch run history, and alert events are stored in the local SQLite database under the active data directory.
+
+Create a watch:
+
+```bash
+srp watch add --topic "AI coding agents" --platform youtube --purpose latest-news
+```
+
+List watches:
+
+```bash
+srp watch list
+srp watch list --output json
+```
+
+Run one watch or all enabled watches:
+
+```bash
+srp watch run
+srp watch run WATCH_ID
+```
+
+Each watch run executes the normal research pipeline, requires SQLite persistence, compares the new run to the previous matching run when one exists, evaluates deterministic alert rules, and records the result locally. One failed watch does not stop other watches in the same command.
+
+List alerts:
+
+```bash
+srp watch alerts
+srp watch alerts --watch-id WATCH_ID --output markdown
+```
+
+Add a custom alert rule:
+
+```bash
+srp watch add \
+  --topic "AI coding agents" \
+  --platform youtube \
+  --purpose latest-news \
+  --alert-rule '{"metric":"new_claims_count","op":">=","value":5,"severity":"warning"}'
+```
+
+Supported rule metrics include `new_narratives_count`, `new_claims_count`, `new_sources_count`, `claims_needing_review`, `rising_risk_score`, `growing_opportunity_score`, `trend_signal_type`, and `narrative_type`.
+
+Phase 8 notifications are intentionally local: console output, SQLite `alert_events`, and JSON/Markdown alert files. There is no hosted scheduler, daemon, cron integration, dashboard, Telegram, or email notification layer.
+
 ## Render charts and stats from a saved packet
 
 Use `render` when you have a saved report or packet JSON and want chart/stat output for the top-N overall scores.

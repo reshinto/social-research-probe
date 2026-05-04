@@ -33,6 +33,7 @@ Use `--data-dir` when you want one command to use a specific workspace. Use `SRP
 | `[tunables]` | Summary divergence and summary word limits. |
 | `[voicebox]` | Optional narration defaults. |
 | `[debug]` | Debug gates (e.g. `technology_logs_enabled`). |
+| `[database]` | SQLite path and persistence controls used by research runs, watches, and alerts. |
 
 ## Gates
 
@@ -45,6 +46,8 @@ srp config set technologies.tavily false
 ```
 
 Think of gates as switches at different heights. A stage gate disables a whole part of the pipeline. A service gate disables one service inside that part. A technology gate disables one concrete provider or implementation. Prefer the narrowest gate that solves the problem: turn off `technologies.tavily` if only Tavily should be skipped, but turn off a service when the entire category should be skipped.
+
+`srp watch run` requires SQLite persistence. It fails clearly if `database.enabled=false`, `services.persistence.sqlite=false`, `technologies.sqlite_persist=false`, or the platform persist stage is disabled. Watch tests should monkeypatch the research runner and use temporary data directories; they should not make network calls.
 
 ## Secrets
 

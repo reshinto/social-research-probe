@@ -67,6 +67,7 @@ class Command(StrEnum):
     DB = "db"
     CLAIMS = "claims"
     COMPARE = "compare"
+    WATCH = "watch"
 
 
 class ClaimsSubcommand(StrEnum):
@@ -134,6 +135,16 @@ class CompareSubcommand(StrEnum):
     RUN = "run"
     LATEST = "latest"
     LIST = "list"
+
+
+class WatchSubcommand(StrEnum):
+    """Watch subcommand names dispatched within watch.run()."""
+
+    ADD = "add"
+    LIST = "list"
+    REMOVE = "remove"
+    RUN = "run"
+    ALERTS = "alerts"
 
 
 class SpecialCommand(StrEnum):

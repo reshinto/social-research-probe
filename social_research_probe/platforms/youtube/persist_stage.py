@@ -81,11 +81,14 @@ class YouTubePersistStage(BaseStage):
                         f"persistence: {tr.error or 'sqlite persist failed'}"
                     )
                 elif isinstance(tr.output, dict):
+                    run_id = tr.output.get("run_id")
+                    if run_id:
+                        report["run_id"] = run_id
                     state.set_stage_output(
                         "persist",
                         {
                             "db_path": tr.output.get("db_path"),
-                            "run_id": tr.output.get("run_id"),
+                            "run_id": run_id,
                         },
                     )
         state.outputs["report"] = report

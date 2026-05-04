@@ -37,6 +37,9 @@ EXPECTED_TABLES = {
     "narrative_clusters",
     "narrative_claims",
     "narrative_sources",
+    "watches",
+    "watch_runs",
+    "alert_events",
 }
 
 EXPECTED_INDEXES = {
@@ -64,6 +67,15 @@ EXPECTED_INDEXES = {
     "idx_narr_risk",
     "idx_narr_claims_narr",
     "idx_narr_sources_narr",
+    "idx_watches_enabled",
+    "idx_watches_topic_platform",
+    "idx_watch_runs_watch",
+    "idx_watch_runs_target",
+    "idx_watch_runs_started",
+    "idx_alert_events_watch",
+    "idx_alert_events_target",
+    "idx_alert_events_created",
+    "idx_alert_events_ack",
 }
 
 
@@ -127,7 +139,7 @@ def test_schema_ddl_creates_indexes():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == 4
+    assert SCHEMA_VERSION == 5
 
 
 def test_ensure_schema_backs_up_on_version_crossing(

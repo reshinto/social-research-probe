@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,12 @@ def test_load_merges_user_overrides(tmp_path):
     (tmp_path / "config.toml").write_text('[llm]\nrunner = "claude"\n')
     cfg = Config.load(tmp_path)
     assert cfg.llm_runner == "claude"
+
+
+def test_example_config_is_valid_toml():
+    root = Path(__file__).parents[2]
+    data = tomllib.loads((root / "config.toml.example").read_text())
+    assert data["stages"]["youtube"]["persist"] is True
 
 
 def test_llm_settings_none_returns_empty(tmp_path):

@@ -199,6 +199,25 @@ def _execute_research_pipeline(platform: str, topic: str, purposes: tuple[str, .
     return asyncio.run(run_pipeline(cmd))
 
 
+def run_research_for_watch(
+    platform: str,
+    topic: str,
+    purposes: tuple[str, ...],
+    *,
+    no_shorts: bool = False,
+    no_transcripts: bool = False,
+    no_html: bool = False,
+) -> dict:
+    """Run research for one local watch and return the report."""
+    args = argparse.Namespace(
+        no_shorts=no_shorts,
+        no_transcripts=no_transcripts,
+        no_html=no_html,
+    )
+    _apply_cli_overrides(args)
+    return _execute_research_pipeline(platform, topic, purposes)
+
+
 @log_with_time("[srp] research")
 def run(args: argparse.Namespace) -> int:
     """Execute the research pipeline for the 'research' subcommand.

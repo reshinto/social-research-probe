@@ -546,6 +546,13 @@ def _dispatch_compare(args: argparse.Namespace) -> int:
     return compare.run(args)
 
 
+def _dispatch_watch(args: argparse.Namespace) -> int:
+    """Pick the `watch` subcommand handler from parsed arguments."""
+    from social_research_probe.commands import watch
+
+    return watch.run(args)
+
+
 def handlers_factory() -> dict[str, callable]:
     """Return the mapping of command names to handler functions.
 
@@ -586,4 +593,5 @@ def handlers_factory() -> dict[str, callable]:
         Command.DB: _dispatch_db,
         Command.CLAIMS: _dispatch_claims,
         Command.COMPARE: _dispatch_compare,
+        Command.WATCH: _dispatch_watch,
     }
