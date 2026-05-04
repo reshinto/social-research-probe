@@ -188,6 +188,18 @@ def _run_watches(args: argparse.Namespace) -> int:
     return ExitCode.ERROR if any(s["status"] == "failed" for s in summaries) else ExitCode.SUCCESS
 
 
+def _run_due_watches(args: argparse.Namespace) -> int:
+    conn, cfg = _open_db(require_persistence=True)
+    try:
+        watches, skipped = _select_due_watches(conn)
+        summaries = [_execute_watch(conn, cfg, watch, args) for watch in watches]
+        summaries.extend(skipped)
+    finally:
+        conn.close()
+    _print_run_result(summaries, args)
+    return ExitCode.ERROR if any(s["status"] == "failed" for s in summaries) else ExitCode.SUCCESS
+
+
 def _select_watches(conn: object, args: argparse.Namespace) -> list[dict]:
     from social_research_probe.technologies.persistence.sqlite.watch_repository import (
         get_watch,
@@ -201,6 +213,21 @@ def _select_watches(conn: object, args: argparse.Namespace) -> list[dict]:
             raise ValidationError(f"watch not found: {watch_id}")
         return [watch]
     return list_watches(conn, enabled_only=True)
+
+
+def _select_due_watches(conn: object) -> tuple[list[dict], list[dict]]:
+    from social_research_probe.technologies.persistence.sqlite.watch_repository import list_watches
+    from social_research_probe.utils.monitoring.schedule import due_status
+
+    due: list[dict] = []
+    skipped: list[dict] = []
+    for watch in list_watches(conn, enabled_only=True):
+        is_due, reason = due_status(watch)
+        if is_due:
+            due.append(watch)
+        else:
+            skipped.append(_skipped_summary(watch, reason))
+    return due, skipped
 
 
 def _execute_watch(conn: object, cfg: object, watch: dict, args: argparse.Namespace) -> dict:
@@ -244,14 +271,21 @@ def _complete_watch_run(
     baseline_row: dict | None,
 ) -> dict:
     comparison, artifacts = _compare_if_possible(conn, cfg, watch, args, target_row, baseline_row)
-    alert_count = _persist_alerts(conn, cfg, watch, comparison, artifacts) if comparison else 0
+    alerts = _persist_alerts(conn, cfg, watch, comparison, artifacts) if comparison else []
     finished = _now()
     with conn:
         _insert_success_run(
             conn, watch, watch_run_id, started, finished, target_row, baseline_row, artifacts
         )
         _update_watch_state(conn, watch, target_row, finished)
-    return _success_summary(watch, watch_run_id, target_row, baseline_row, alert_count, artifacts)
+    summary = _success_summary(
+        watch, watch_run_id, target_row, baseline_row, len(alerts), artifacts
+    )
+    deliveries = _notify_alerts(conn, cfg, alerts, args)
+    if deliveries:
+        summary["notification_count"] = len(deliveries)
+        summary["notification_failures"] = sum(1 for d in deliveries if d["status"] == "failed")
+    return summary
 
 
 def _compare_if_possible(
@@ -276,7 +310,7 @@ def _compare_if_possible(
 
 def _persist_alerts(
     conn: object, cfg: object, watch: dict, comparison: dict, artifacts: dict[str, str]
-) -> int:
+) -> list[dict]:
     from social_research_probe.technologies.persistence.sqlite.comparison_queries import (
         count_claims_needing_review,
     )
@@ -286,10 +320,24 @@ def _persist_alerts(
     extra = {"claims_needing_review": count_claims_needing_review(conn, target_pk)}
     matched = evaluate_alert_rules(comparison, watch["alert_rules"], extra)
     if not matched:
-        return 0
+        return []
     alert = _build_alert_event(cfg, watch, comparison, matched, artifacts)
     _write_and_insert_alert(conn, cfg, watch, alert)
-    return 1
+    return [alert]
+
+
+def _notify_alerts(
+    conn: object, cfg: object, alerts: list[dict], args: argparse.Namespace
+) -> list[dict]:
+    if not getattr(args, "notify", False):
+        return []
+    from social_research_probe.utils.notifications.dispatcher import dispatch_alert_notifications
+
+    try:
+        channels = getattr(args, "channels", []) or None
+        return list(dispatch_alert_notifications(conn, cfg, alerts, channels))
+    except Exception:
+        return []
 
 
 def _build_alert_event(
@@ -491,6 +539,14 @@ def _failure_summary(watch: dict, watch_run_id: str, started_at: str, exc: Excep
     }
 
 
+def _skipped_summary(watch: dict, reason: str) -> dict:
+    return {
+        "watch_id": watch["watch_id"],
+        "status": "skipped",
+        "reason": reason,
+    }
+
+
 def _print_watch_result(data: object, args: argparse.Namespace) -> None:
     output = getattr(args, "output", "text")
     if output == "json":
@@ -574,6 +630,8 @@ def _format_run_text(summaries: list[dict]) -> str:
     for item in summaries:
         if item["status"] == "failed":
             lines.append(f"{item['watch_id']} failed: {item['error_message']}")
+        elif item["status"] == "skipped":
+            lines.append(f"{item['watch_id']} skipped: {item['reason']}")
         else:
             lines.append(
                 f"{item['watch_id']} ok: target={item['target_run_id']} alerts={item['alert_count']}"
@@ -598,6 +656,8 @@ def run(args: argparse.Namespace) -> int:
         return _remove_watch(args)
     if args.watch_cmd == WatchSubcommand.RUN:
         return _run_watches(args)
+    if args.watch_cmd == WatchSubcommand.RUN_DUE:
+        return _run_due_watches(args)
     if args.watch_cmd == WatchSubcommand.ALERTS:
         return _list_alerts(args)
     return ExitCode.ERROR

@@ -370,6 +370,34 @@ persist_transcript_text = false
 # When false, comments.text is NULL in the DB; only metadata and digest stored.
 persist_comment_text = true
 
+[notifications]
+# Enables local notification sending when a command explicitly passes --notify.
+enabled = true
+
+# Channels used by --notify when no --channel is provided.
+default_channels = ["file"]
+
+[notifications.console]
+# Prints a concise alert summary to stdout.
+enabled = true
+
+[notifications.file]
+# Writes one local Markdown file per notification. Empty -> <data_dir>/notifications.
+enabled = true
+output_dir = ""
+
+[notifications.telegram]
+# Optional and disabled by default. Only environment variable names are stored here.
+enabled = false
+bot_token_env = "TELEGRAM_BOT_TOKEN"
+chat_id_env = "TELEGRAM_CHAT_ID"
+timeout_seconds = 10
+
+[schedule]
+# Enables local schedule helper output. srp does not install or run a daemon.
+enabled = true
+default_interval = "daily" # hourly | daily | weekly
+
 [services.persistence]
 # Enables the persistence service that writes research runs to SQLite. Local
 # watch execution requires this to stay enabled.

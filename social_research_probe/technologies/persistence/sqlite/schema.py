@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION: int = 5
+SCHEMA_VERSION: int = 6
 
 SCHEMA_DDL_V1: str = """\
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -292,12 +292,36 @@ CREATE INDEX IF NOT EXISTS idx_alert_events_created ON alert_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_alert_events_ack ON alert_events(acknowledged);
 """
 
+SCHEMA_DDL_V6: str = """\
+CREATE TABLE IF NOT EXISTS notification_deliveries (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    delivery_id         TEXT NOT NULL UNIQUE,
+    alert_id            TEXT,
+    watch_id            TEXT,
+    channel             TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    error_message       TEXT,
+    sent_at             TEXT NOT NULL,
+    message_title       TEXT,
+    artifact_paths_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_alert
+    ON notification_deliveries(alert_id);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_watch
+    ON notification_deliveries(watch_id);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_channel
+    ON notification_deliveries(channel);
+CREATE INDEX IF NOT EXISTS idx_notification_deliveries_status
+    ON notification_deliveries(status);
+"""
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     lambda conn: conn.executescript(SCHEMA_DDL_V1),
     lambda conn: conn.executescript(SCHEMA_DDL_V2),
     lambda conn: conn.executescript(SCHEMA_DDL_V3),
     lambda conn: conn.executescript(SCHEMA_DDL_V4),
     lambda conn: conn.executescript(SCHEMA_DDL_V5),
+    lambda conn: conn.executescript(SCHEMA_DDL_V6),
 ]
 
 

@@ -8,11 +8,14 @@ from social_research_probe.technologies.persistence.sqlite.schema import ensure_
 from social_research_probe.technologies.persistence.sqlite.watch_repository import (
     _loads,
     get_watch,
+    has_successful_delivery,
     insert_alert_event,
+    insert_notification_delivery,
     insert_watch,
     insert_watch_run,
     latest_successful_watch_run,
     list_alert_events,
+    list_notification_deliveries,
     list_watches,
     remove_watch,
     update_watch_after_run,
@@ -105,6 +108,30 @@ def test_alert_events_round_trip_json() -> None:
     assert list_alert_events(conn, watch_id="watch-ai")[0]["alert_id"] == "alert-1"
     assert alert["matched_rules"][0]["metric"] == "new_claims_count"
     assert alert["acknowledged"] is False
+    conn.close()
+
+
+def test_notification_deliveries_round_trip_json_and_filters() -> None:
+    conn = _conn()
+    insert_notification_delivery(
+        conn,
+        delivery_id="delivery-1",
+        alert_id="alert-1",
+        watch_id="watch-ai",
+        channel="file",
+        status="sent",
+        error_message=None,
+        sent_at="2026-01-02T00:00:00",
+        message_title="New claims detected",
+        artifact_paths={"notification_markdown": "/tmp/notification.md"},
+    )
+    delivery = list_notification_deliveries(conn, alert_id="alert-1")[0]
+    assert delivery["artifact_paths"]["notification_markdown"].endswith("notification.md")
+    assert has_successful_delivery(conn, alert_id="alert-1", channel="file") is True
+    assert list_notification_deliveries(conn, watch_id="watch-ai")[0]["delivery_id"] == "delivery-1"
+    assert list_notification_deliveries(conn, channel="file")[0]["status"] == "sent"
+    assert list_notification_deliveries(conn, status="sent")[0]["watch_id"] == "watch-ai"
+    assert has_successful_delivery(conn, alert_id="missing", channel="file") is False
     conn.close()
 
 

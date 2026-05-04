@@ -34,6 +34,8 @@ Use `--data-dir` when you want one command to use a specific workspace. Use `SRP
 | `[voicebox]` | Optional narration defaults. |
 | `[debug]` | Debug gates (e.g. `technology_logs_enabled`). |
 | `[database]` | SQLite path and persistence controls used by research runs, watches, and alerts. |
+| `[notifications]` | Local watch-alert notification channels and defaults. |
+| `[schedule]` | Defaults for printed local scheduling helper commands. |
 
 ## Gates
 
@@ -48,6 +50,10 @@ srp config set technologies.tavily false
 Think of gates as switches at different heights. A stage gate disables a whole part of the pipeline. A service gate disables one service inside that part. A technology gate disables one concrete provider or implementation. Prefer the narrowest gate that solves the problem: turn off `technologies.tavily` if only Tavily should be skipped, but turn off a service when the entire category should be skipped.
 
 `srp watch run` requires SQLite persistence. It fails clearly if `database.enabled=false`, `services.persistence.sqlite=false`, `technologies.sqlite_persist=false`, or the platform persist stage is disabled. Watch tests should monkeypatch the research runner and use temporary data directories; they should not make network calls.
+
+`srp watch run --notify` and `srp watch run-due --notify` send notifications only for newly created alert events. `notifications.enabled=false` disables sending globally. Channel-specific `enabled=false` disables that channel even when it is requested explicitly. Notification delivery attempts are recorded locally in SQLite when possible, but delivery failures do not fail the watch run.
+
+`srp schedule cron` and `srp schedule launchd` print local helper configuration only. They include the active `--data-dir` in generated commands and do not install cron entries, load launchd jobs, or start a daemon.
 
 ## Secrets
 
