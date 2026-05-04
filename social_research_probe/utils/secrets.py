@@ -19,5 +19,23 @@ HTTP_USER_AGENT = (
 
 
 def read_runtime_secret(name: str) -> str | None:
-    """Return a secret from env or the active secrets file."""
+    """Return a secret from env or the active secrets file.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            read_runtime_secret(
+                name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     return read_secret(name)

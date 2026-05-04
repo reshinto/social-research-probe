@@ -1,16 +1,19 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Item["top-N item"] --> Extract["claim extraction"]
-  Extract --> Select["provider auto selection"]
-  Select --> Exa["exa"]
-  Select --> Brave["brave"]
-  Select --> Tavily["tavily"]
-  Select --> LLM["llm_search via active runner"]
-  Exa --> Evidence["citations + verdicts"]
-  Brave --> Evidence
-  Tavily --> Evidence
-  LLM --> Evidence
-  Evidence --> Item2["item with corroboration"]
+  Text["primary text"] --> Extract["ClaimExtractionTech"] --> Claims["extracted_claims"]
+  Claims --> Host["CorroborationHostTech"]
+  Host --> LLM["llm_search"]
+  Host --> Exa["exa"]
+  Host --> Brave["brave"]
+  Host --> Tavily["tavily"]
+  LLM --> Verdict["aggregate status"]
+  Exa --> Verdict
+  Brave --> Verdict
+  Tavily --> Verdict
+  Verdict --> Narratives["narrative clusters"]
+  class Text input;
+  class Extract,Claims,Host,Verdict,Narratives process;
+  class LLM,Exa,Brave,Tavily external;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -19,7 +22,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Item input;
-  class Extract,Select,Evidence process;
-  class Exa,Brave,Tavily,LLM external;
-  class Item2 output;

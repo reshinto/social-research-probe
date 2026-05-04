@@ -12,33 +12,38 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from social_research_probe.technologies.llms import LLMRunner
 from social_research_probe.utils.core.errors import ValidationError
 
 if TYPE_CHECKING:
+    from social_research_probe.technologies.llms import LLMRunner
     from social_research_probe.utils.core.types import RunnerName
 
 # Maps runner name strings (e.g. "claude") to their concrete class objects.
 # Populated at import time as each runners/*.py module is loaded.
-_REGISTRY: dict[str, type[LLMRunner]] = {}
+_REGISTRY: dict[str, type[object]] = {}
 
 
-def register(cls: type[LLMRunner]) -> type[LLMRunner]:
+def register(cls: type[object]) -> type[object]:
     """Register an LLMRunner implementation so it can be selected by name.
 
-    This decorator adds each concrete runner class to the shared registry under
-    its class-level ``name`` value. That lets orchestration code look up runners
-    dynamically instead of hard-coding specific classes.
-
-    Args:
-        cls: LLMRunner subclass to register. Must define a non-empty ``name``.
+    This decorator adds each concrete runner class to the shared registry under its class-
+    level ``name`` value. That lets orchestration code look up runners dynamically instead
+    of hard-coding specific classes.
 
     Returns:
-        The same class unchanged, so this can be used transparently as
-        ``@register``.
+        Normalized value needed by the next operation.
 
     Raises:
-        ValueError: If the runner does not define a non-empty ``name``.
+                        ValueError: If the runner does not define a non-empty ``name``.
+
+
+
+
+    Examples:
+        Input:
+            register()
+        Output:
+            "AI safety"
     """
     if not hasattr(cls, "name") or not cls.name:
         raise ValueError(f"{cls!r} must define class var `name`")
@@ -49,18 +54,29 @@ def register(cls: type[LLMRunner]) -> type[LLMRunner]:
 def get_runner(name: str) -> LLMRunner:
     """Create the runner selected by name.
 
-    Looks up the requested runner in the registry and returns a fresh instance.
-    This keeps callers decoupled from concrete runner classes and centralizes
-    validation of supported runner names.
+    Looks up the requested runner in the registry and returns a fresh instance. This keeps
+    callers decoupled from concrete runner classes and centralizes validation of supported
+    runner names.
 
     Args:
-        name: Registered runner name, such as ``"claude"`` or ``"gemini"``.
+        name: Registry, config, or CLI name used to select the matching project value.
 
     Returns:
-        A new instance of the matching LLMRunner subclass.
+        Normalized value needed by the next operation.
 
     Raises:
-        ValidationError: If no runner has been registered with that name.
+                        ValidationError: If no runner has been registered with that name.
+
+
+
+
+    Examples:
+        Input:
+            get_runner(
+                name="codex",
+            )
+        Output:
+            "AI safety"
     """
     from social_research_probe.config import load_active_config
 
@@ -81,7 +97,13 @@ def list_runners() -> list[str]:
     before falling back to the remaining enabled runners.
 
     Returns:
-        Ordered list of enabled runner name strings.
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            list_runners()
+        Output:
+            ["AI safety", "model evaluation"]
     """
     from social_research_probe.config import load_active_config
 
@@ -90,29 +112,63 @@ def list_runners() -> list[str]:
 
 
 def prioritize_runner(candidates: list[RunnerName], preferred: RunnerName) -> list[RunnerName]:
-    """Return runner names with the preferred runner first."""
+    """Return runner names with the preferred runner first.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        candidates: Ordered source items being carried through the current pipeline step.
+        preferred: Provider or runner selected for this operation.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            prioritize_runner(
+                candidates=[{"title": "Example", "url": "https://youtu.be/demo"}],
+                preferred="codex",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     return [preferred, *[n for n in candidates if n != preferred]]
 
 
 def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
     """Run the prompt using the preferred runner, then fallback runners.
 
-    The preferred runner is tried first so caller intent is respected. Remaining
-    registered runners are tried afterward, excluding the preferred runner to
-    avoid duplicate attempts. Unhealthy runners and runners that raise during
-    execution are skipped so another available runner can still handle the
-    request.
+    The preferred runner is tried first so caller intent is respected. Remaining registered
+    runners are tried afterward, excluding the preferred runner to avoid duplicate attempts.
+
+    Unhealthy runners and runners that raise during execution are skipped so another
+    available runner can still handle the request.
 
     Args:
-        prompt: Input prompt to send to the runner.
-        schema: JSON schema used to request structured output.
-        preferred: Runner to try before all fallback runners.
+        prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                to a provider.
+        schema: JSON schema that the LLM or validator must satisfy.
+        preferred: Provider or runner selected for this operation.
 
     Returns:
-        The first successful runner result.
+        Dictionary with stable keys consumed by downstream project code.
 
     Raises:
-        ValidationError: If every runner is unhealthy or fails execution.
+                        ValidationError: If every runner is unhealthy or fails execution.
+
+
+
+
+    Examples:
+        Input:
+            run_with_fallback(
+                prompt="Summarize this source.",
+                schema={"enabled": True},
+                preferred="codex",
+            )
+        Output:
+            {"enabled": True}
     """
     candidates = list_runners()
     if preferred in candidates:
@@ -135,7 +191,21 @@ def run_with_fallback(prompt: str, schema: dict, preferred: RunnerName) -> dict:
 
 
 def ensure_runners_registered() -> None:
-    """Import concrete LLM runner modules so their @register decorators run."""
+    """Import concrete LLM runner modules so their @register decorators run.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            ensure_runners_registered()
+        Output:
+            None
+    """
     import importlib
 
     for module in ("claude_cli", "codex_cli", "gemini_cli"):

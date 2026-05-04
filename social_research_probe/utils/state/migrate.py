@@ -15,7 +15,25 @@ Migrator = Callable[[JSONObject], JSONObject]
 
 
 def _tag_version_1(data: JSONObject) -> JSONObject:
-    """v0 -> v1: stamp schema_version=1 on bare pre-versioned files."""
+    """v0 -> v1: stamp schema_version=1 on bare pre-versioned files.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        data: Input payload at this service, technology, or pipeline boundary.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _tag_version_1(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            {"enabled": True}
+    """
     out = dict(data)
     out["schema_version"] = 1
     return out
@@ -29,14 +47,55 @@ _MIGRATORS: dict[str, list[Migrator]] = {
 
 
 def migrators_for(kind: str) -> list[Migrator]:
-    """Return the forward-migration chain for one state-file kind."""
+    """Return the forward-migration chain for one state-file kind.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        kind: Output kind or record category used to select the formatting branch.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            migrators_for(
+                kind="AI safety",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     if kind not in _MIGRATORS:
         raise MigrationError(f"no migrators registered for kind={kind!r}")
     return _MIGRATORS[kind]
 
 
 def _write_backup(path: Path, data: JSONObject, version: int) -> None:
-    """Persist the pre-migration payload before mutating the on-disk file."""
+    """Persist the pre-migration payload before mutating the on-disk file.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        path: Filesystem location used to read, write, or resolve project data.
+        data: Input payload at this service, technology, or pipeline boundary.
+        version: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _write_backup(
+                path=Path("report.html"),
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                version=3,
+            )
+        Output:
+            None
+    """
     backup_dir = path.parent / ".backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
     ts = int(time.time())
@@ -45,7 +104,29 @@ def _write_backup(path: Path, data: JSONObject, version: int) -> None:
 
 
 def migrate_to_current(path: Path, data: JSONObject, *, kind: str) -> JSONObject:
-    """Run forward migrators until data.schema_version == SCHEMA_VERSION."""
+    """Run forward migrators until data.schema_version == SCHEMA_VERSION.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        path: Filesystem location used to read, write, or resolve project data.
+        data: Input payload at this service, technology, or pipeline boundary.
+        kind: Output kind or record category used to select the formatting branch.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            migrate_to_current(
+                path=Path("report.html"),
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                kind="AI safety",
+            )
+        Output:
+            {"enabled": True}
+    """
     current = int(data.get("schema_version", 0))
     target = SCHEMA_VERSION
 

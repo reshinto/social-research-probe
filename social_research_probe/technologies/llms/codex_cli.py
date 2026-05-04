@@ -22,6 +22,15 @@ from social_research_probe.utils.llm.registry import register
 
 
 class CodexCliFlag(StrEnum):
+    """Codex CLI flag type.
+
+    Examples:
+        Input:
+            CodexCliFlag
+        Output:
+            CodexCliFlag
+    """
+
     OUTPUT_LAST_MESSAGE = "--output-last-message"
     OUTPUT_SCHEMA = "--output-schema"
     SEARCH = "--search"
@@ -29,7 +38,14 @@ class CodexCliFlag(StrEnum):
 
 @register
 class CodexRunner(JsonCliRunner):
-    """Structured JSON runner for the Codex CLI."""
+    """Structured JSON runner for the Codex CLI.
+
+    Examples:
+        Input:
+            CodexRunner
+        Output:
+            CodexRunner
+    """
 
     name: ClassVar[str] = "codex"
     binary_name: ClassVar[str] = "codex"
@@ -40,7 +56,28 @@ class CodexRunner(JsonCliRunner):
     supports_agentic_search: ClassVar[bool] = True
 
     def run(self, prompt: str, *, schema: JSONObject | None = None) -> dict:
-        """Send prompt to Codex exec and parse the final message as JSON."""
+        """Send prompt to Codex exec and parse the final message as JSON.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                    to a provider.
+            schema: JSON schema that the LLM or validator must satisfy.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                run(
+                    prompt="Summarize this source.",
+                    schema="AI safety",
+                )
+            Output:
+                {"enabled": True}
+        """
         from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
         timeout = load_active_config().llm_timeout_seconds
@@ -68,7 +105,30 @@ class CodexRunner(JsonCliRunner):
         max_results: int = 5,
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
-        """Run ``query`` via Codex CLI with its ``--search`` flag."""
+        """Document the agentic search rule at the boundary where callers use it.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                   to a provider.
+            max_results: Count, database id, index, or limit that bounds the work being performed.
+            timeout_s: Numeric score, threshold, prior, or confidence value.
+
+        Returns:
+            AgenticSearchResult with the answer text, citations, and runner name.
+
+        Examples:
+            Input:
+                await agentic_search(
+                    query="AI safety benchmarks",
+                    max_results=3,
+                    timeout_s=0.75,
+                )
+            Output:
+                AgenticSearchResult(answer="Supported by two sources.", citations=[], runner_name="codex")
+        """
         from social_research_probe.utils.io.subprocess_runner import run as sp_run
 
         prompt = CODEX_SEARCH_PROMPT.format(query=query)

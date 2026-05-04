@@ -22,6 +22,15 @@ from social_research_probe.utils.llm.registry import register
 
 
 class GeminiCliFlag(StrEnum):
+    """Gemini CLI flag type.
+
+    Examples:
+        Input:
+            GeminiCliFlag
+        Output:
+            GeminiCliFlag
+    """
+
     OUTPUT_FORMAT = "--output-format"
     PROMPT = "--prompt"
     GOOGLE_SEARCH = "--google-search"
@@ -35,7 +44,17 @@ _AVAILABILITY_CACHE: bool | None = None
 
 
 class Citation(TypedDict):
-    """One grounding citation returned by Gemini google-search."""
+    """One grounding citation returned by Gemini google-search.
+
+    The project passes this data as dictionaries, so the type documents the keys that stages,
+    services, and renderers are allowed to rely on.
+
+    Examples:
+        Input:
+            Citation
+        Output:
+            {"title": "Example"}
+    """
 
     title: str
     url: str
@@ -43,19 +62,52 @@ class Citation(TypedDict):
 
 
 class GeminiSearchResult(TypedDict):
-    """Structured payload returned by ``gemini_search``."""
+    """Structured payload returned by ``gemini_search``.
+
+    The project passes this data as dictionaries, so the type documents the keys that stages,
+    services, and renderers are allowed to rely on.
+
+    Examples:
+        Input:
+            GeminiSearchResult
+        Output:
+            {"answer": "Supported by two sources.", "sources": []}
+    """
 
     answer: str
     citations: list[Citation]
 
 
 def _search_binary() -> str:
-    """Return the configured Gemini CLI binary name."""
+    """Return the configured Gemini CLI binary name.
+
+    LLM helpers isolate prompt, process, and schema handling so services can request structured
+    results without knowing the runner details.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _search_binary()
+        Output:
+            "AI safety"
+    """
     return load_active_config().llm_settings("gemini").get("binary", "gemini")
 
 
 async def gemini_cli_available() -> bool:
-    """Return True iff the Gemini CLI binary is on PATH. Memoised per process."""
+    """Return True iff the Gemini CLI binary is on PATH. Memoised per process.
+
+    Returns:
+        True when the condition is satisfied; otherwise False.
+
+    Examples:
+        Input:
+            await gemini_cli_available()
+        Output:
+            True
+    """
     global _AVAILABILITY_CACHE
     if _AVAILABILITY_CACHE is not None:
         return _AVAILABILITY_CACHE
@@ -65,7 +117,25 @@ async def gemini_cli_available() -> bool:
 
 
 def _unwrap_envelope(stdout: str) -> dict:
-    """Parse Gemini's ``--output-format json`` envelope."""
+    """Parse Gemini's ``--output-format json`` envelope.
+
+    LLM helpers isolate prompt, process, and schema handling so services can request structured
+    results without knowing the runner details.
+
+    Args:
+        stdout: Captured standard output from the runner process.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _unwrap_envelope(
+                stdout="AI safety",
+            )
+        Output:
+            {"enabled": True}
+    """
     envelope = json.loads(stdout)
     if not isinstance(envelope, dict):
         raise ValueError("gemini envelope is not a JSON object")
@@ -73,7 +143,25 @@ def _unwrap_envelope(stdout: str) -> dict:
 
 
 def _extract_answer(envelope: dict) -> str:
-    """Return the textual answer, stripping a wrapping markdown fence if any."""
+    """Return the textual answer, stripping a wrapping markdown fence if any.
+
+    LLM helpers isolate prompt, process, and schema handling so services can request structured
+    results without knowing the runner details.
+
+    Args:
+        envelope: Structured response envelope returned by the LLM runner.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _extract_answer(
+                envelope={"enabled": True},
+            )
+        Output:
+            "AI safety"
+    """
     text = envelope.get("response", "")
     if not isinstance(text, str):
         return ""
@@ -81,7 +169,25 @@ def _extract_answer(envelope: dict) -> str:
 
 
 def _extract_citations(envelope: dict) -> list[Citation]:
-    """Return citation list from the envelope, tolerating schema variation."""
+    """Return citation list from the envelope, tolerating schema variation.
+
+    LLM helpers isolate prompt, process, and schema handling so services can request structured
+    results without knowing the runner details.
+
+    Args:
+        envelope: Structured response envelope returned by the LLM runner.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _extract_citations(
+                envelope={"enabled": True},
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     raw_sources: list = []
     for key in ("grounding", "citations", "sources"):
         value = envelope.get(key)
@@ -108,7 +214,24 @@ def _extract_citations(envelope: dict) -> list[Citation]:
 
 
 def _parse_search_stdout(stdout: str) -> GeminiSearchResult:
-    """Parse the Gemini CLI stdout into a ``GeminiSearchResult``."""
+    """Parse search stdout into the project format.
+
+    Normalizing here keeps loosely typed external values from spreading into business logic.
+
+    Args:
+        stdout: Captured standard output from the runner process.
+
+    Returns:
+        Dictionary containing Gemini answer text and source citations.
+
+    Examples:
+        Input:
+            _parse_search_stdout(
+                stdout="AI safety",
+            )
+        Output:
+            {"answer": "Supported by two sources.", "sources": []}
+    """
     envelope = _unwrap_envelope(stdout)
     return GeminiSearchResult(
         answer=_extract_answer(envelope),
@@ -117,7 +240,30 @@ def _parse_search_stdout(stdout: str) -> GeminiSearchResult:
 
 
 def _run_search_sync(binary: str, query: str, timeout_s: float) -> str:
-    """Invoke the Gemini CLI synchronously and return raw stdout."""
+    """Invoke the Gemini CLI synchronously and return raw stdout.
+
+    LLM helpers isolate prompt, process, and schema handling so services can request structured
+    results without knowing the runner details.
+
+    Args:
+        binary: Runner executable path or binary name.
+        query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        timeout_s: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _run_search_sync(
+                binary="AI safety",
+                query="AI safety benchmarks",
+                timeout_s=0.75,
+            )
+        Output:
+            "AI safety"
+    """
     argv = [
         binary,
         GeminiCliFlag.GOOGLE_SEARCH,
@@ -138,6 +284,23 @@ async def gemini_search(
     """Run a google-search-grounded query through Gemini CLI.
 
     Returns None on any failure; caller treats None as "signal unavailable".
+
+    Args:
+        query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+               to a provider.
+        timeout_s: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Dictionary containing Gemini answer text and source citations.
+
+    Examples:
+        Input:
+            await gemini_search(
+                query="AI safety benchmarks",
+                timeout_s=0.75,
+            )
+        Output:
+            {"answer": "Supported by two sources.", "sources": []}
     """
     if not await gemini_cli_available():
         return None
@@ -155,7 +318,14 @@ async def gemini_search(
 
 @register
 class GeminiRunner(JsonCliRunner):
-    """Structured JSON runner for the Gemini CLI."""
+    """Structured JSON runner for the Gemini CLI.
+
+    Examples:
+        Input:
+            GeminiRunner
+        Output:
+            GeminiRunner
+    """
 
     name: ClassVar[str] = "gemini"
     binary_name: ClassVar[str] = "gemini"
@@ -167,15 +337,71 @@ class GeminiRunner(JsonCliRunner):
     supports_agentic_search: ClassVar[bool] = True
 
     def _prompt_args(self, prompt: str) -> list[str]:
-        """Gemini uses --prompt for non-interactive execution."""
+        """Gemini uses --prompt for non-interactive execution.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                    to a provider.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                _prompt_args(
+                    prompt="Summarize this source.",
+                )
+            Output:
+                ["AI safety", "model evaluation"]
+        """
         return [GeminiCliFlag.PROMPT, prompt]
 
     def _stdin_input(self, prompt: str) -> str | None:
-        """Gemini prompt mode should not also receive stdin input."""
+        """Gemini prompt mode should not also receive stdin input.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                    to a provider.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                _stdin_input(
+                    prompt="Summarize this source.",
+                )
+            Output:
+                "AI safety"
+        """
         return None
 
     def _parse_response(self, stdout: str) -> dict:
-        """Unwrap Gemini's envelope and parse the inner JSON."""
+        """Unwrap Gemini's envelope and parse the inner JSON.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            stdout: Captured standard output from the runner process.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                _parse_response(
+                    stdout="AI safety",
+                )
+            Output:
+                {"enabled": True}
+        """
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
@@ -193,7 +419,29 @@ class GeminiRunner(JsonCliRunner):
     async def summarize_media(
         self, url: str, *, word_limit: int = 100, timeout_s: float = 60.0
     ) -> str | None:
-        """Ask Gemini to summarise the video at ``url`` directly."""
+        """Ask Gemini to summarise the video at ``url`` directly.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            url: Stable source identifier or URL used to join records across stages and exports.
+            word_limit: Count, database id, index, or limit that bounds the work being performed.
+            timeout_s: Numeric score, threshold, prior, or confidence value.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await summarize_media(
+                    url="https://youtu.be/abc123",
+                    word_limit=3,
+                    timeout_s=0.75,
+                )
+            Output:
+                "AI safety"
+        """
         if not self.health_check():
             return None
         prompt = GEMINI_MEDIA_PROMPT.format(url=url, word_limit=word_limit)
@@ -221,7 +469,30 @@ class GeminiRunner(JsonCliRunner):
         max_results: int = 5,
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
-        """Run ``query`` through Gemini CLI's grounded-search mode."""
+        """Document the agentic search rule at the boundary where callers use it.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                   to a provider.
+            max_results: Count, database id, index, or limit that bounds the work being performed.
+            timeout_s: Numeric score, threshold, prior, or confidence value.
+
+        Returns:
+            AgenticSearchResult with the answer text, citations, and runner name.
+
+        Examples:
+            Input:
+                await agentic_search(
+                    query="AI safety benchmarks",
+                    max_results=3,
+                    timeout_s=0.75,
+                )
+            Output:
+                AgenticSearchResult(answer="Supported by two sources.", citations=[], runner_name="codex")
+        """
         raw = await gemini_search(query, timeout_s=timeout_s)
         citations = [
             AgenticSearchCitation(url=c.get("url", ""), title=c.get("title", ""))

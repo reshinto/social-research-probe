@@ -13,7 +13,27 @@ _MODEL_CACHE: dict[tuple[int, str], object] = {}
 
 
 def _load_model_cached(whisper_module: object, name: str) -> object:
-    """Load and cache a Whisper model by (module_id, name)."""
+    """Load model cached from disk or active configuration.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        whisper_module: Imported Whisper module or compatible object used for transcription.
+        name: Registry, config, or CLI name used to select the matching project value.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _load_model_cached(
+                whisper_module="AI safety",
+                name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     key = (id(whisper_module), name)
     cached = _MODEL_CACHE.get(key)
     if cached is None:
@@ -23,7 +43,27 @@ def _load_model_cached(whisper_module: object, name: str) -> object:
 
 
 def transcribe_audio(audio_path: Path, model_name: str = "base") -> str | None:
-    """Transcribe an audio file via Whisper; return text or None."""
+    """Transcribe an audio file via Whisper; return text or None.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        audio_path: Filesystem location used to read, write, or resolve project data.
+        model_name: Whisper model name requested for local transcription.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            transcribe_audio(
+                audio_path=Path("report.html"),
+                model_name="AI safety",
+            )
+        Output:
+            "AI safety"
+    """
     try:
         import whisper
     except ImportError:
@@ -37,8 +77,13 @@ def transcribe_audio(audio_path: Path, model_name: str = "base") -> str | None:
 class WhisperTranscript(BaseTechnology[Path, dict]):
     """Transcribe an audio file using OpenAI Whisper.
 
-    Input: Path to audio file.
-    Output: {filename: transcript_text} or None on failure.
+    Input: Path to audio file. Output: {filename: transcript_text} or None on failure.
+
+    Examples:
+        Input:
+            WhisperTranscript
+        Output:
+            WhisperTranscript
     """
 
     name: ClassVar[str] = "whisper"
@@ -46,7 +91,25 @@ class WhisperTranscript(BaseTechnology[Path, dict]):
     enabled_config_key: ClassVar[str] = "whisper"
 
     async def _execute(self, data: Path) -> dict:
-        """Transcribe audio at data path; return {filename: text}."""
+        """Transcribe audio at data path; return {filename: text}.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                {"enabled": True}
+        """
         import asyncio
 
         text = await asyncio.to_thread(transcribe_audio, data)

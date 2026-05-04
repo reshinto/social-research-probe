@@ -20,6 +20,15 @@ from social_research_probe.utils.llm.registry import register
 
 
 class ClaudeCliFlag(StrEnum):
+    """Claude CLI flag type.
+
+    Examples:
+        Input:
+            ClaudeCliFlag
+        Output:
+            ClaudeCliFlag
+    """
+
     PRINT = "--print"
     OUTPUT_FORMAT = "--output-format"
     JSON_SCHEMA = "--json-schema"
@@ -34,8 +43,21 @@ def _parse_claude_search_body(
 ) -> tuple[str, list[AgenticSearchCitation]]:
     """Extract ``answer`` + citations from Claude's reply body.
 
-    Primary path: body contains ``{"answer": ..., "citations": [...]}``.
-    Fallback: extract bare URLs from free text when the JSON block is missing.
+    bare URLs from free text when the JSON block is missing.
+
+    Args:
+        body: Raw bytes being packaged or forwarded.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _parse_claude_search_body(
+                body=b"payload",
+            )
+        Output:
+            ["AI safety", "model evaluation"]
     """
     stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", body.strip(), flags=re.DOTALL)
     try:
@@ -58,7 +80,14 @@ def _parse_claude_search_body(
 
 @register
 class ClaudeRunner(JsonCliRunner):
-    """Structured JSON runner for the Claude CLI."""
+    """Structured JSON runner for the Claude CLI.
+
+    Examples:
+        Input:
+            ClaudeRunner
+        Output:
+            ClaudeRunner
+    """
 
     name: ClassVar[str] = "claude"
     binary_name: ClassVar[str] = "claude"
@@ -73,7 +102,25 @@ class ClaudeRunner(JsonCliRunner):
     supports_agentic_search: ClassVar[bool] = True
 
     def _parse_response(self, stdout: str) -> dict:
-        """Unwrap the Claude CLI envelope to extract structured output."""
+        """Unwrap the Claude CLI envelope to extract structured output.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            stdout: Captured standard output from the runner process.
+
+        Returns:
+            Dictionary with stable keys consumed by downstream project code.
+
+        Examples:
+            Input:
+                _parse_response(
+                    stdout="AI safety",
+                )
+            Output:
+                {"enabled": True}
+        """
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
@@ -94,11 +141,49 @@ class ClaudeRunner(JsonCliRunner):
         return envelope
 
     def _prompt_args(self, prompt: str) -> list[str]:
-        """Claude expects the prompt as a positional arg in print mode."""
+        """Claude expects the prompt as a positional arg in print mode.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                    to a provider.
+
+        Returns:
+            List in the order expected by the next stage, renderer, or CLI formatter.
+
+        Examples:
+            Input:
+                _prompt_args(
+                    prompt="Summarize this source.",
+                )
+            Output:
+                ["AI safety", "model evaluation"]
+        """
         return [prompt]
 
     def _stdin_input(self, prompt: str) -> str | None:
-        """Claude print mode should not wait on stdin."""
+        """Claude print mode should not wait on stdin.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            prompt: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                    to a provider.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                _stdin_input(
+                    prompt="Summarize this source.",
+                )
+            Output:
+                "AI safety"
+        """
         return None
 
     async def agentic_search(
@@ -108,7 +193,30 @@ class ClaudeRunner(JsonCliRunner):
         max_results: int = 5,
         timeout_s: float = 60.0,
     ) -> AgenticSearchResult:
-        """Run ``query`` via Claude CLI with the ``web_search`` tool enabled."""
+        """Document the agentic search rule at the boundary where callers use it.
+
+        LLM helpers isolate prompt, process, and schema handling so services can request structured
+        results without knowing the runner details.
+
+        Args:
+            query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                   to a provider.
+            max_results: Count, database id, index, or limit that bounds the work being performed.
+            timeout_s: Numeric score, threshold, prior, or confidence value.
+
+        Returns:
+            AgenticSearchResult with the answer text, citations, and runner name.
+
+        Examples:
+            Input:
+                await agentic_search(
+                    query="AI safety benchmarks",
+                    max_results=3,
+                    timeout_s=0.75,
+                )
+            Output:
+                AgenticSearchResult(answer="Supported by two sources.", citations=[], runner_name="codex")
+        """
         prompt = CLAUDE_SEARCH_PROMPT.format(query=query)
         argv = [
             self._binary(),

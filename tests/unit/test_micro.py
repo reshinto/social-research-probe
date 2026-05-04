@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.platforms.youtube as yt
 import social_research_probe.technologies.corroborates as _filters
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_spearman,
 )

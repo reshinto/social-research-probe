@@ -71,6 +71,68 @@ max_items = 20
 # enrichment. This controls most of the expensive or slow downstream work.
 enrich_top_n = 5
 
+[platforms.youtube.comments]
+# Enables comment fetching for top-scored videos.
+enabled = true
+
+# Maximum number of videos to fetch comments for per run.
+max_videos = 5
+
+# Maximum number of top-level comments fetched per video.
+max_comments_per_video = 20
+
+# Comment sort order passed to YouTube Data API v3. "relevance" returns
+# top-liked comments; "time" returns newest first.
+order = "relevance" # relevance | time
+
+[platforms.youtube.claims]
+# Enables structured claim extraction from item primary text.
+enabled = true
+
+# Maximum number of claims extracted per source item.
+max_claims_per_source = 10
+
+# Use LLM-backed extraction first. When false, deterministic pattern-matching
+# is used exclusively. When true, srp falls back to deterministic extraction if
+# the configured runner is unavailable or returns invalid structured output.
+use_llm = false
+
+# Maximum character length for a single extracted claim sentence.
+max_claim_chars = 500
+
+[platforms.youtube.narratives]
+# Minimum claims to form a narrative cluster.
+min_cluster_size = 2
+
+# Split threshold for oversized clusters.
+max_cluster_size = 12
+
+# Optional LLM-generated cluster titles/summaries (disabled by default).
+llm_summarize = false
+
+[platforms.youtube.export]
+# Enables export artifact generation (CSV, markdown, JSON) alongside the HTML
+# report after each research run.
+enabled = true
+
+# Write a sources.csv with one row per ranked item (scores, evidence tier, etc.).
+sources_csv = true
+
+# Write a comments.csv with one row per fetched comment linked to its source.
+comments_csv = true
+
+# Write a claims.csv with one row per extracted claim across all sources.
+claims_csv = true
+
+# Write a narratives.csv with one row per narrative cluster.
+narratives_csv = true
+
+# Write a methodology.md documenting the pipeline configuration and coverage.
+methodology_md = true
+
+# Write a run_summary.json with machine-readable run metadata and artifact paths.
+run_summary_json = true
+
 [stages.youtube]
 # Stage gates are the highest-priority switches. If a stage is false, srp skips
 # that whole stage even if the service and technology gates below are true.
@@ -87,6 +149,11 @@ assemble = true              # Assemble stage outputs into the report packet.
 structured_synthesis = true  # Ask an LLM for structured report sections.
 report = true                # Render the HTML report.
 narration = true             # Render audio narration through Voicebox or fallback TTS.
+comments = true              # Fetch YouTube comments for top-scored videos.
+claims = true                # Extract structured claims from item primary text.
+narratives = true            # Group claims into narrative clusters.
+export = true                # Write export artifacts (CSV, MD, JSON) alongside the HTML report.
+persist = true               # Persist completed research runs to SQLite for compare/watch workflows.
 
 [services.youtube.sourcing]
 # Enables the YouTube sourcing service. Requires SRP_YOUTUBE_API_KEY or a
@@ -117,8 +184,19 @@ score = true
 # captions are unavailable and the required tools are installed.
 transcript = true
 
+# Enables deterministic text-surrogate construction. This preserves the best
+# available text evidence and its tier before LLM summaries are generated.
+text_surrogate = true
+
 # Enables LLM-generated per-item summaries for enriched items.
 summary = true
+
+# Enables YouTube comment fetching for top-scored videos. Requires
+# SRP_YOUTUBE_API_KEY or a youtube_api_key secret.
+comments = true
+
+# Enables structured claim extraction from item primary text.
+claims = true
 
 [services.youtube.corroborating]
 # Enables claim extraction and provider-based corroboration.
@@ -131,6 +209,9 @@ statistics = true
 # Enables chart rendering from the statistics and ranked result tables.
 charts = true
 
+# Enables narrative clustering of claims into higher-level themes.
+narratives = true
+
 [services.youtube.synthesizing]
 # Enables final narrative synthesis from the assembled research evidence.
 synthesis = true
@@ -141,6 +222,9 @@ html = true
 
 # Enables audio report generation through Voicebox or local fallback TTS.
 audio = true
+
+# Enables export artifact generation alongside the HTML report.
+export = true
 
 [services.corroborate]
 # Internal service gate still read by corroboration commands and health checks.
@@ -239,8 +323,19 @@ mac_tts = true
 # Enables the claim extractor technology for identifying verifiable claims.
 claim_extractor = true
 
+# Enables deterministic narrative clustering of claims into theme groups.
+narrative_clusterer = true
+
 # Enables the AI slop detector technology for filtering low-quality AI-generated content.
 ai_slop_detector = true
+
+# Enables YouTube comment fetching technology via Data API v3. Requires a
+# YouTube API key. Fetches top-level comments for top-scored videos.
+youtube_comments = true
+
+# Enables the export package technology for writing CSV, markdown, and JSON
+# artifacts alongside the HTML report.
+export_package = true
 
 [tunables]
 # Transcript-vs-URL summary divergence threshold that triggers a warning.
@@ -260,3 +355,51 @@ default_profile_name = "Jarvis"
 
 # Base URL for the local Voicebox API used by report playback and narration.
 api_base = "http://127.0.0.1:17493"
+
+[database]
+# Enable local SQLite persistence for research runs, watch definitions, watch
+# run history, and alert events.
+enabled = true
+
+# Path to srp.db. Empty -> <data_dir>/srp.db. Absolute path used as-is.
+# Relative path resolved against data_dir.
+path = ""
+
+# When false, transcripts.text is NULL in the DB; only status/char_count/digest stored.
+persist_transcript_text = false
+
+# When false, comments.text is NULL in the DB; only metadata and digest stored.
+persist_comment_text = true
+
+[notifications]
+# Enables local notification sending when a command explicitly passes --notify.
+enabled = true
+
+# Channels used by --notify when no --channel is provided.
+default_channels = ["file"]
+
+[notifications.console]
+# Prints a concise alert summary to stdout.
+enabled = true
+
+[notifications.file]
+# Writes one local Markdown file per notification. Empty -> <data_dir>/notifications.
+enabled = true
+output_dir = ""
+
+[notifications.telegram]
+# Optional and disabled by default. Only environment variable names are stored here.
+enabled = false
+bot_token_env = "TELEGRAM_BOT_TOKEN"
+chat_id_env = "TELEGRAM_CHAT_ID"
+timeout_seconds = 10
+
+[schedule]
+# Enables local schedule helper output. srp does not install or run a daemon.
+enabled = true
+default_interval = "daily" # hourly | daily | weekly
+
+[services.persistence]
+# Enables the persistence service that writes research runs to SQLite. Local
+# watch execution requires this to stay enabled.
+sqlite = true

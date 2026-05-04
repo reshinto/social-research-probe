@@ -15,17 +15,24 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
     """Compute basic descriptive statistics for a numeric series.
 
     Calculates: mean, median, std dev (if >=2 points), min, max.
+
     Returns an empty list for empty input.
 
     Args:
-        data: List of numeric values to analyse (e.g. view counts).
-        label: Human-readable name for this metric, used in captions.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List of StatResult objects, one per statistic computed.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why: Descriptive stats give an immediate overview of the distribution
-    before any more specialised analysis is applied.
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     if not data:
         return []

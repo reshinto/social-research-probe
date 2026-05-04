@@ -14,22 +14,28 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
     """Estimate growth rate from an ordered numeric series.
 
     Computes the average period-over-period percent change:
+
     sum((data[i] - data[i-1]) / max(1, abs(data[i-1])) for i in range(1, n)) / (n-1)
 
     Returns a single StatResult named 'growth_rate'.
+
     Returns empty list if fewer than 2 data points.
 
     Args:
-        data: Ordered numeric values (e.g. daily view counts, oldest first).
-        label: Human-readable name for this metric, used in captions.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List with a single StatResult for 'growth_rate', or empty list.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why period-over-period: absolute differences are not comparable across
-    different scales (e.g. a channel with 1M views vs 1K views). Dividing
-    by the previous value normalises scale; clamping the denominator to 1
-    avoids division-by-zero when a period had zero activity.
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     n = len(data)
     if n < 2:

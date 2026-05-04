@@ -125,7 +125,7 @@ def test_render_html_with_embedded_profiles(tmp_path, monkeypatch):
 
 def test_build_body():
     report = {"topic": "ai", "platform": "youtube"}
-    out = yt_html._build_body(report, ["a"] * 12)
+    out = yt_html._build_body(report, ["a"] * 13)
     assert "ai" in out
 
 

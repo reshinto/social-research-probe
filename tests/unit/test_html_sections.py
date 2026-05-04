@@ -51,6 +51,55 @@ def test_section3_with_items():
     assert "Ch" in out and "Transcript" in out and "summary-notice" in out
 
 
+def test_section3_evidence_tier_shown():
+    items = [
+        {
+            "channel": "Ch",
+            "url": "https://x",
+            "title": "T1",
+            "source_class": "primary",
+            "scores": {"trust": 0.9, "trend": 0.8, "opportunity": 0.7, "overall": 0.85},
+            "one_line_takeaway": "tk",
+            "evidence_tier": "metadata_transcript",
+        }
+    ]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "evidence-tier" in out
+    assert "[metadata_transcript]" in out
+
+
+def test_section3_evidence_tier_absent():
+    items = [
+        {
+            "channel": "Ch",
+            "url": "https://x",
+            "title": "T1",
+            "source_class": "primary",
+            "scores": {"trust": 0.9, "trend": 0.8, "opportunity": 0.7, "overall": 0.85},
+            "one_line_takeaway": "tk",
+        }
+    ]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "evidence-tier" not in out
+
+
+def test_section3_evidence_tier_escaped():
+    items = [
+        {
+            "channel": "Ch",
+            "url": "https://x",
+            "title": "T1",
+            "source_class": "primary",
+            "scores": {"trust": 0.9, "trend": 0.8, "opportunity": 0.7, "overall": 0.85},
+            "one_line_takeaway": "tk",
+            "evidence_tier": "<script>alert(1)</script>",
+        }
+    ]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "<script>" not in out
+    assert "&lt;script&gt;" in out
+
+
 def test_section4():
     out = sec.section_4_platform_engagement(_basic(platform_engagement_summary="a; b"))
     assert "<li>" in out
@@ -202,3 +251,43 @@ def test_section11():
 def test_section12():
     assert "unavailable" in sec.section_12_summary(None)
     assert "<p>" in sec.section_12_summary("Hello")
+
+
+def _comment_item(comments=None, include_key=True):
+    item = {
+        "channel": "Ch",
+        "url": "https://x",
+        "title": "T",
+        "source_class": "primary",
+        "scores": {"trust": 0.9, "trend": 0.8, "opportunity": 0.7, "overall": 0.85},
+        "one_line_takeaway": "tk",
+    }
+    if include_key:
+        item["comments"] = comments if comments is not None else []
+    return item
+
+
+def test_section3_comment_count_shown():
+    items = [_comment_item(comments=["Nice", "Great", "Wow", "Yes", "Cool"])]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "comment-count" in out
+    assert "(5 comments)" in out
+
+
+def test_section3_comment_count_omitted_when_empty():
+    items = [_comment_item(comments=[])]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "comment-count" not in out
+
+
+def test_section3_comment_count_omitted_when_absent():
+    items = [_comment_item(include_key=False)]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "comment-count" not in out
+
+
+def test_section3_comment_count_is_integer_no_injection():
+    items = [_comment_item(comments=["a", "b"])]
+    out = sec.section_3_top_items(_basic(items_top_n=items))
+    assert "(2 comments)" in out
+    assert "<script>" not in out

@@ -16,20 +16,28 @@ def run(data: list[float], label: str = "values") -> list[StatResult]:
     """Measure the spread (variability) of a numeric series.
 
     Returns StatResults for:
-      - 'iqr': interquartile range (75th percentile - 25th percentile)
-      - 'range': max - min
+
+    - 'iqr': interquartile range (75th percentile - 25th percentile)
+
+    - 'range': max - min
 
     Returns empty list for fewer than 4 data points (IQR needs quartiles).
 
     Args:
-        data: Numeric series to analyse.
-        label: Human-readable name for this metric, used in captions.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List of StatResult objects for iqr and range, or empty list.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why IQR: unlike the full range, IQR is robust to extreme outliers and
-    better captures where most of the data actually sits.
+    Examples:
+        Input:
+            run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     if len(data) < 4:
         return []

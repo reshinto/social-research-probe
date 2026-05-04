@@ -18,20 +18,27 @@ def select_and_render(
 ) -> ChartResult:
     """Choose the appropriate chart type and render it.
 
-    Selection rules:
-      - 1 to 5 data points: bar chart (individual values matter most)
-      - 6+ data points: line chart (trend over time is more useful)
+    Selection rules: - 1 to 5 data points: bar chart (individual values matter most)
+
+    - 6+ data points: line chart (trend over time is more useful)
 
     Args:
-        data: Numeric values to plot.
-        label: Chart title and axis label.
-        output_dir: Directory to save PNG (uses tempfile.gettempdir() if None).
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
+        output_dir: Filesystem location used to read, write, or resolve project data.
 
     Returns:
-        A ChartResult with path and caption.
+        ChartResult with the output path and the caption shown in reports.
 
-    Why lazy import: avoids circular imports and keeps startup overhead low
-    when the selector module is imported but no chart is rendered yet.
+    Examples:
+        Input:
+            select_and_render(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+                output_dir=Path(".skill-data"),
+            )
+        Output:
+            ChartResult(path="charts/engagement.png", caption="Engagement trend")
     """
     from social_research_probe.technologies.charts import bar, line
 

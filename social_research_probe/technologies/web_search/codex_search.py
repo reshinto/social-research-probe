@@ -12,6 +12,12 @@ class CodexWebSearch(CodexRunner):
     """Agentic web search via Codex CLI with the --search flag.
 
     Extends CodexRunner; shares health_check_key with CodexRunner.
+
+    Examples:
+        Input:
+            CodexWebSearch
+        Output:
+            CodexWebSearch
     """
 
     name: ClassVar[str] = "codex_web_search"
@@ -19,5 +25,22 @@ class CodexWebSearch(CodexRunner):
     enabled_config_key: ClassVar[str] = "codex"
 
     async def _execute(self, data: str) -> AgenticSearchResult:
-        """Run an agentic Codex web search for the given query string."""
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            AgenticSearchResult with the answer text, citations, and runner name.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                AgenticSearchResult(answer="Supported by two sources.", citations=[], runner_name="codex")
+        """
         return await self.agentic_search(data)

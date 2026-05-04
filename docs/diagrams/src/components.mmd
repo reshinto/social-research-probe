@@ -1,11 +1,18 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  CLI["cli/parsers.py and handlers.py"] --> Commands["commands/*"]
+  CLI["cli/parsers.py"] --> Handlers["cli/handlers.py"]
+  Handlers --> Commands["commands/*"]
   Commands --> Orchestrator["platforms/orchestrator.py"]
-  Orchestrator --> Pipeline["platforms/youtube/pipeline.py"]
-  Pipeline --> Services["services/* orchestration"]
-  Services --> Technologies["technologies/* adapters and pure algorithms"]
-  Services --> Utils["utils/* state, cache, IO, display"]
+  Orchestrator --> Pipelines["PIPELINES: youtube + all"]
+  Pipelines --> Stages["platforms/youtube/*_stage.py"]
+  Stages --> Services["services/*"]
+  Services --> Technologies["technologies/*"]
+  Technologies --> Utils["utils/*"]
+  Technologies --> SQLite["persistence/sqlite"]
+  class CLI,Handlers,Commands,Orchestrator,Pipelines,Stages process;
+  class Services analysis;
+  class Technologies,SQLite external;
+  class Utils config;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,7 +21,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class CLI,Commands,Orchestrator,Pipeline process;
-  class Services analysis;
-  class Technologies external;
-  class Utils config;

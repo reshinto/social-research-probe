@@ -32,13 +32,20 @@ from social_research_probe.utils.secrets import HTTP_USER_AGENT, read_runtime_se
 class ExaProvider(CorroborationProvider):
     """Corroboration provider using the Exa AI search API (exa.ai).
 
-    Purpose: Searches for semantically similar content to the claim text and
-    returns the URLs of matching sources as evidence.
+    Purpose: Searches for semantically similar content to the claim text and returns the
 
-    Lifecycle: Instantiated by get_provider("exa"); no constructor arguments
-    required — API key is read from the environment at call time.
+    URLs of matching sources as evidence.
+
+    Lifecycle: Instantiated by get_provider("exa"); no constructor arguments required — API
+    key is read from the environment at call time.
 
     ABC contract: implements health_check() and corroborate().
+
+    Examples:
+        Input:
+            ExaProvider
+        Output:
+            ExaProvider
     """
 
     name: ClassVar[str] = "exa"
@@ -48,18 +55,35 @@ class ExaProvider(CorroborationProvider):
         """Return True if an Exa API key is available.
 
         Returns:
-            True when the key is present and non-empty; False otherwise.
+            True when the condition is satisfied; otherwise False.
+
+        Examples:
+            Input:
+                health_check()
+            Output:
+                True
         """
         return bool(read_runtime_secret("exa_api_key"))
 
     def _api_key(self) -> str:
         """Retrieve the Exa API key from runtime secret sources.
 
+        Corroboration code deals with external evidence, so this keeps claim shape, provider calls, and
+        failure handling visible at the boundary.
+
         Returns:
-            The Exa API key as a string.
+            Normalized string used as a config key, provider value, or report field.
 
         Raises:
-            AdapterError: if no Exa API key is configured.
+                                    AdapterError: if no Exa API key is configured.
+
+
+
+        Examples:
+            Input:
+                _api_key()
+            Output:
+                "AI safety"
         """
         key = read_runtime_secret("exa_api_key")
         if not key:
@@ -71,15 +95,28 @@ class ExaProvider(CorroborationProvider):
     async def _search(self, query: str) -> list[dict]:
         """Call the Exa search API and return raw result items.
 
+        Corroboration code handles external evidence, so claim shape and provider failure handling stay
+        visible here.
+
         Args:
-            query: Free-text search query (typically the claim text).
+            query: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+                   to a provider.
 
         Returns:
-            List of result dicts as returned by the Exa API (each has at least
-            a "url" key).
+            List in the order expected by the next stage, renderer, or CLI formatter.
 
         Raises:
-            AdapterError: on network failures or non-200 responses.
+                                    AdapterError: on network failures or non-200 responses.
+
+
+
+        Examples:
+            Input:
+                await _search(
+                    query="AI safety benchmarks",
+                )
+            Output:
+                [{"title": "Example", "url": "https://youtu.be/demo"}]
         """
         try:
             async with httpx.AsyncClient() as client:
@@ -100,21 +137,29 @@ class ExaProvider(CorroborationProvider):
     def _build_result(self, claim, raw_results: list[dict]) -> CorroborationResult:
         """Convert Exa API result items into a CorroborationResult.
 
-        Pure function (no I/O) — kept separate from _search() so it can be
-        unit-tested with fixture data without making live HTTP calls.
+        Pure function (no I/O) — kept separate from _search() so it can be unit-tested
+        with fixture data without making live HTTP calls.
 
-        Confidence is capped at 1.0 and scales linearly with the number of
-        sources found (0.2 per source), reflecting that more corroborating
-        URLs = higher confidence.
+        Confidence is capped at 1.0 and scales linearly with the number of sources found
+
+        (0.2 per source), reflecting that more corroborating URLs = higher confidence.
 
         Args:
-            claim: The original Claim dataclass (not used directly here but
-                kept for consistency with other providers).
-            raw_results: List of result dicts from the Exa API response.
+            claim: Claim text or claim dictionary being extracted, classified, reviewed, or
+                   corroborated.
+            raw_results: Provider result records before project-level normalization.
 
         Returns:
-            A CorroborationResult with verdict='supported' when at least one
-            source URL is found, or 'inconclusive' when none are found.
+            CorroborationResult with verdict, confidence, reasoning, sources, and provider name.
+
+        Examples:
+            Input:
+                _build_result(
+                    claim={"text": "The model reduces latency by 30%."},
+                    raw_results=["AI safety"],
+                )
+            Output:
+                CorroborationResult(verdict="supported", confidence=0.82, reasoning="Sources agree.")
         """
         filtered, self_excluded, video_excluded = filter_results(
             raw_results, getattr(claim, "source_url", None)
@@ -137,14 +182,29 @@ class ExaProvider(CorroborationProvider):
     async def corroborate(self, claim) -> CorroborationResult:
         """Search Exa for evidence supporting or refuting the claim.
 
+        Corroboration code deals with external evidence, so this keeps claim shape, provider calls, and
+        failure handling visible at the boundary.
+
         Args:
-            claim: A Claim dataclass instance. Uses claim.text as the search query.
+            claim: Claim text or claim dictionary being extracted, classified, reviewed, or
+                   corroborated.
 
         Returns:
-            CorroborationResult built from the Exa API search results.
+            CorroborationResult with verdict, confidence, reasoning, sources, and provider name.
 
         Raises:
-            AdapterError: if the API key is missing or the HTTP call fails.
+                                            AdapterError: if the API key is missing or the HTTP call fails.
+
+
+
+
+        Examples:
+            Input:
+                await corroborate(
+                    claim={"text": "The model reduces latency by 30%."},
+                )
+            Output:
+                CorroborationResult(verdict="supported", confidence=0.82, reasoning="Sources agree.")
         """
         log(f"[srp] exa: searching for claim: {claim.text[:80]!r}")
         raw = await self._search(claim.text)

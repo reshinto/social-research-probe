@@ -50,6 +50,7 @@ coverage.xml
 .nyc_output
 cov*.txt
 test_output*.txt
+coverage*.json
 
 # Storybook
 storybook-static

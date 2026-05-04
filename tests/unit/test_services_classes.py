@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from social_research_probe.services import BaseService
 from social_research_probe.services.analyzing.charts import ChartsService
 from social_research_probe.services.analyzing.statistics import StatisticsService
 from social_research_probe.services.corroborating.corroborate import CorroborationService
@@ -58,18 +61,31 @@ class TestChartsService:
         svc_result = ServiceResult(
             service_name="charts", input_key="scored_items", tech_results=[failed_tr]
         )
-        with (
-            patch.object(ChartsService, "is_enabled", return_value=True),
-            patch.object(ChartsService, "execute_one", return_value=svc_result),
-        ):
-            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+        out = (
+            asyncio.run(
+                ChartsService().execute_service({"scored_items": [{"score": 1}]}, svc_result)
+            )
+            .tech_results[0]
+            .output
+        )
         assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+
+    def test_execute_service_with_empty_result_sets_input_key(self):
+        from social_research_probe.services import ServiceResult
+
+        result = asyncio.run(
+            ChartsService().execute_service(
+                {"scored_items": []},
+                ServiceResult(service_name="charts", input_key="x", tech_results=[]),
+            )
+        )
+        assert result.input_key == "scored_items"
 
     def test_render_charts_disabled(self, monkeypatch):
         monkeypatch.setenv("SRP_DISABLE_CACHE", "1")
         with patch.object(ChartsService, "is_enabled", return_value=False):
-            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
-        assert out == {"chart_outputs": [], "chart_captions": [], "chart_takeaways": []}
+            out = asyncio.run(ChartsService().execute_one({"scored_items": [{"score": 1}]}))
+        assert out.tech_results == []
 
     def test_render_charts_success(self, tmp_path, monkeypatch):
         from social_research_probe.technologies.charts import ChartResult
@@ -85,7 +101,8 @@ class TestChartsService:
                 return_value=[cr],
             ),
         ):
-            out = asyncio.run(ChartsService().render_charts([{"score": 1}]))
+            result = asyncio.run(ChartsService().execute_one({"scored_items": [{"score": 1}]}))
+            out = result.tech_results[0].output
         assert out["chart_outputs"] == [cr]
         assert out["chart_captions"] == ["Bar chart"]
         assert out["chart_takeaways"] == []
@@ -196,7 +213,7 @@ class TestSummaryService:
             "social_research_probe.technologies.llms.ensemble.multi_llm_prompt", fake
         )
         out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
-        assert out.tech_results[0].output == "summary text"
+        assert out.tech_results[0].output["summary"] == "summary text"
 
     def test_execute_uses_configured_word_limit(self, monkeypatch):
         cfg = MagicMock()
@@ -218,7 +235,7 @@ class TestSummaryService:
             out = asyncio.run(SummaryService().execute_one({"title": "t", "url": "https://x"}))
 
         assert "at most 3 words" in prompts[0]
-        assert out.tech_results[0].output == "one two three"
+        assert out.tech_results[0].output["summary"] == "one two three"
 
     def test_configured_word_limit_falls_back_on_bad_config(self):
         cfg = MagicMock()
@@ -264,7 +281,7 @@ class TestTranscriptService:
 
         monkeypatch.setattr(YoutubeTranscriptFetch, "execute", fake_exec)
         out = asyncio.run(TranscriptService().execute_one({"url": "u"}))
-        assert any(r.output == "transcript" for r in out.tech_results)
+        assert any(r.output.get("transcript") == "transcript" for r in out.tech_results)
 
     def test_execute_caption_failure(self, monkeypatch):
         from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (
@@ -294,6 +311,77 @@ class TestAudioReportService:
         out = asyncio.run(AudioReportService().execute_one({"text": "x"}))
         assert out.tech_results[0].success is False
 
+    def test_execute_fallback_exhausts_all_failing(self, monkeypatch):
+        from social_research_probe.services import ServiceResult
+
+        svc = AudioReportService()
+
+        class DummyTech:
+            def __init__(self, name):
+                self.name = name
+                self.caller_service = ""
+
+            async def execute(self, data):
+                return None
+
+        monkeypatch.setattr(svc, "_get_technologies", lambda: [DummyTech("t1"), DummyTech("t2")])
+        result = asyncio.run(
+            svc.execute_service(
+                "x", ServiceResult(service_name="audio", input_key="x", tech_results=[])
+            )
+        )
+        assert len(result.tech_results) == 2
+        assert not result.tech_results[0].success
+        assert not result.tech_results[1].success
+
+    def test_execute_fallback_no_technologies(self, monkeypatch):
+        from social_research_probe.services import ServiceResult
+
+        svc = AudioReportService()
+        monkeypatch.setattr(svc, "_get_technologies", lambda: [])
+        result = asyncio.run(
+            svc.execute_service(
+                "x", ServiceResult(service_name="audio", input_key="x", tech_results=[])
+            )
+        )
+        assert len(result.tech_results) == 0
+
+    def test_execute_fallback_success(self, monkeypatch):
+        from social_research_probe.services import ServiceResult
+
+        svc = AudioReportService()
+
+        class DummyTech:
+            def __init__(self, name):
+                self.name = name
+                self.caller_service = ""
+
+            async def execute(self, data):
+                return "audio_data"
+
+        monkeypatch.setattr(svc, "_get_technologies", lambda: [DummyTech("t1")])
+        result = asyncio.run(
+            svc.execute_service(
+                "x", ServiceResult(service_name="audio", input_key="x", tech_results=[])
+            )
+        )
+        assert result.tech_results[0].success
+        assert result.tech_results[0].output == "audio_data"
+
+    def test_execute_fallback_with_pre_populated_result(self):
+        from social_research_probe.services import ServiceResult, TechResult
+
+        svc = AudioReportService()
+        pre_tr = TechResult(tech_name="pre", input="x", output="audio", success=True)
+        result = asyncio.run(
+            svc.execute_service(
+                {"text": "x"},
+                ServiceResult(service_name="audio", input_key="x", tech_results=[pre_tr]),
+            )
+        )
+        assert len(result.tech_results) == 1
+        assert result.tech_results[0].tech_name == "pre"
+
 
 class TestHtmlReportService:
     def test_techs(self):
@@ -310,3 +398,98 @@ class TestHtmlReportService:
         )
         out = asyncio.run(HtmlReportService().execute_one({"report": {}}))
         assert out.tech_results[0].success is False
+
+
+class TestBaseService:
+    def _make_simple(self, *, concurrent=False):
+        class Simple(BaseService):
+            service_name = "simple"
+            enabled_config_key = ""
+            run_technologies_concurrently = concurrent
+
+            def _get_technologies(self):
+                return [None]
+
+            async def execute_service(self, data, result):
+                return result
+
+        return Simple
+
+    def test_subclass_cannot_override_execute_batch(self):
+        with pytest.raises(TypeError, match="execute_batch"):
+
+            class Bad(BaseService):
+                service_name = "bad"
+                enabled_config_key = ""
+
+                def _get_technologies(self):
+                    return [None]
+
+                async def execute_service(self, data, result):
+                    return result
+
+                async def execute_batch(self, inputs):  # forbidden
+                    return []
+
+    def test_subclass_cannot_override_execute_one(self):
+        with pytest.raises(TypeError, match="execute_one"):
+
+            class Bad(BaseService):
+                service_name = "bad"
+                enabled_config_key = ""
+
+                def _get_technologies(self):
+                    return [None]
+
+                async def execute_service(self, data, result):
+                    return result
+
+                async def execute_one(self, data):  # forbidden
+                    return None
+
+    def test_is_enabled_returns_true_when_no_key(self):
+        svc_class = self._make_simple()
+        assert svc_class.is_enabled() is True
+
+    def test_execute_batch_runs_all_inputs(self):
+        svc_class = self._make_simple()
+        results = asyncio.run(svc_class().execute_batch(["a", "b", "c"]))
+        assert len(results) == 3
+
+    def test_concurrent_raises_when_get_technologies_empty(self):
+        class BadTech(BaseService):
+            service_name = "bad"
+            enabled_config_key = ""
+            run_technologies_concurrently = True
+
+            def _get_technologies(self):
+                return []
+
+            async def execute_service(self, data, result):
+                return result
+
+        with pytest.raises(ValueError, match="_get_technologies"):
+            asyncio.run(BadTech().execute_one("x"))
+
+    def test_concurrent_catches_tech_exception(self):
+        class RaisingTech:
+            name = "raiser"
+            caller_service = ""
+
+            async def execute(self, data):
+                raise RuntimeError("tech error")
+
+        class ConcurrentSvc(BaseService):
+            service_name = "concurrent"
+            enabled_config_key = ""
+            run_technologies_concurrently = True
+
+            def _get_technologies(self):
+                return [RaisingTech()]
+
+            async def execute_service(self, data, result):
+                return result
+
+        result = asyncio.run(ConcurrentSvc().execute_one("x"))
+        assert result.tech_results[0].success is False
+        assert result.tech_results[0].error == "tech error"

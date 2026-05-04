@@ -52,3 +52,46 @@ NL_QUERY_CLASSIFICATION_SCHEMA = {
     "required": ["topic", "purpose_name", "purpose_method"],
     "additionalProperties": False,
 }
+
+CLAIM_EXTRACTION_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "claims": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "claim_text": {"type": "string", "minLength": 1},
+                    "claim_type": {
+                        "type": "string",
+                        "enum": [
+                            "fact_claim",
+                            "opinion",
+                            "prediction",
+                            "recommendation",
+                            "experience",
+                            "question",
+                            "objection",
+                            "pain_point",
+                            "market_signal",
+                        ],
+                    },
+                    "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "needs_corroboration": {"type": "boolean"},
+                    "uncertainty": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high"],
+                    },
+                },
+                "required": ["claim_text", "claim_type", "confidence"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["claims"],
+    "additionalProperties": False,
+}

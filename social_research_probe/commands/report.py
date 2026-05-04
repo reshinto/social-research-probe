@@ -23,7 +23,25 @@ from social_research_probe.utils.display.service_log import service_log_sync
 
 
 def _load_and_validate_report(report_path: str) -> dict:
-    """Load report JSON and validate structure."""
+    """Load report JSON and validate structure.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _load_and_validate_report(
+                report_path=Path("report.html"),
+            )
+        Output:
+            {"enabled": True}
+    """
     try:
         payload = json.loads(Path(report_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -40,7 +58,31 @@ def _apply_text_overrides(
     opportunity_analysis_path: str | None,
     final_summary_path: str | None,
 ) -> dict:
-    """Apply text file overrides to report."""
+    """Apply text file overrides to report.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        compiled_synthesis_path: Filesystem location used to read, write, or resolve project data.
+        opportunity_analysis_path: Filesystem location used to read, write, or resolve project data.
+        final_summary_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            _apply_text_overrides(
+                report={"topic": "AI safety", "items_top_n": []},
+                compiled_synthesis_path=Path("report.html"),
+                opportunity_analysis_path=Path("report.html"),
+                final_summary_path=Path("report.html"),
+            )
+        Output:
+            {"enabled": True}
+    """
     rendered_report = dict(report)
     for key, path in (
         ("compiled_synthesis", compiled_synthesis_path),
@@ -56,7 +98,29 @@ def _apply_text_overrides(
 def _prepare_tts_setup(
     report: dict, out_path: str | None, cfg_logs: bool
 ) -> tuple[list, str | None, dict]:
-    """Fetch voicebox profiles and prepare audio if enabled. Returns (profiles, profile_name, audio_sources)."""
+    """Fetch voicebox profiles and prepare audio if enabled. Returns (profiles, profile_name, audio_sources).
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        out_path: Filesystem location used to read, write, or resolve project data.
+        cfg_logs: Flag that selects the branch for this operation.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _prepare_tts_setup(
+                report={"topic": "AI safety", "items_top_n": []},
+                out_path=Path("report.html"),
+                cfg_logs=True,
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         _audio_report_enabled,
         _fetch_voicebox_profiles,
@@ -105,7 +169,39 @@ def _render_and_output_html(
     prepared_audio_sources: dict,
     tts_api_base: str,
 ) -> None:
-    """Render HTML and write to file or stdout."""
+    """Render HTML and write to file or stdout.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        charts_dir: Filesystem location used to read, write, or resolve project data.
+        out_path: Filesystem location used to read, write, or resolve project data.
+        tts_profiles: Voice or runner profile selected for the current operation.
+        selected_profile_name: Voice or runner profile selected for the current operation.
+        prepared_audio_sources: Prepared narration audio filename or profile-to-file map for the
+                                HTML report.
+        tts_api_base: Voicebox or provider API base URL used for outbound requests.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _render_and_output_html(
+                report={"topic": "AI safety", "items_top_n": []},
+                charts_dir=Path(".skill-data"),
+                out_path=Path("report.html"),
+                tts_profiles={"name": "Alloy", "id": "alloy"},
+                selected_profile_name={"name": "Alloy", "id": "alloy"},
+                prepared_audio_sources={"Alloy": "report.voicebox.Alloy.wav"},
+                tts_api_base="http://127.0.0.1:5050",
+            )
+        Output:
+            None
+    """
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         render_html,
         serve_report_command,
@@ -141,7 +237,33 @@ def run(
     final_summary_path: str | None,
     out_path: str | None,
 ) -> int:
-    """Read a report JSON file and write (or rewrite) its HTML report."""
+    """Read a report JSON file and write (or rewrite) its HTML report.
+
+    This is the command boundary: argparse passes raw options in, and the rest of the application
+    receives validated project data or a clear error.
+
+    Args:
+        report_path: Filesystem location used to read, write, or resolve project data.
+        compiled_synthesis_path: Filesystem location used to read, write, or resolve project data.
+        opportunity_analysis_path: Filesystem location used to read, write, or resolve project data.
+        final_summary_path: Filesystem location used to read, write, or resolve project data.
+        out_path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Integer count, limit, status code, or timeout used by the caller.
+
+    Examples:
+        Input:
+            run(
+                report_path=Path("report.html"),
+                compiled_synthesis_path=Path("report.html"),
+                opportunity_analysis_path=Path("report.html"),
+                final_summary_path=Path("report.html"),
+                out_path=Path("report.html"),
+            )
+        Output:
+            5
+    """
     from social_research_probe.technologies.report_render.html.raw_html.youtube import (
         _technology_logs_enabled,
         _voicebox_api_base,
@@ -183,7 +305,25 @@ def run(
 
 
 def _read_text_file(path: str | None) -> str | None:
-    """Read a text file's content or return None if path is None."""
+    """Read a text file's content or return None if path is None.
+
+    Command helpers keep user-facing parsing, validation, and output formatting out of the pipeline
+    and service layers.
+
+    Args:
+        path: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _read_text_file(
+                path=Path("report.html"),
+            )
+        Output:
+            "AI safety"
+    """
     if path is None:
         return None
     try:

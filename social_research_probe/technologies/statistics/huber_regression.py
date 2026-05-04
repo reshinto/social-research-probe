@@ -18,7 +18,33 @@ def run(
     k: float = 1.345,
     max_iter: int = 50,
 ) -> list[StatResult]:
-    """Fit ``y = b0 + b1·x`` using Huber weights and return StatResults."""
+    """Fit ``y = b0 + b1·x`` using Huber weights and return StatResults.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        label: Human-readable metric label included in statistical and chart outputs.
+        k: Numeric score, threshold, prior, or confidence value.
+        max_iter: Count, database id, index, or limit that bounds the work being performed.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            run(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                label="engagement",
+                k=0.75,
+                max_iter=3,
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     n = len(x)
     if n < 3 or n != len(y):
         return []
@@ -53,6 +79,31 @@ def run(
 def _build_results(
     x: list[float], y: list[float], beta: list[float], label: str
 ) -> list[StatResult]:
+    """Build the results structure consumed by the next step.
+
+    Statistics helpers return report-sized records, keeping the calculation and the label shown to
+    readers in one place.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        beta: Numeric vector, matrix, or intermediate value used by the statistical algorithm.
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            _build_results(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                beta=[[1.0, 2.0], [3.0, 4.0]],
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     predictions = [beta[0] + beta[1] * xi for xi in x]
     ss_res = sum((yi - pi) ** 2 for yi, pi in zip(y, predictions, strict=True))
     mean_y = sum(y) / len(y)
@@ -78,6 +129,22 @@ def _build_results(
 
 
 def _mad(residuals: list[float]) -> float:
+    """Return the mad.
+
+    Args:
+        residuals: Residual values from a fitted statistical model.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _mad(
+                residuals=["AI safety"],
+            )
+        Output:
+            0.75
+    """
     abs_res = sorted(abs(r) for r in residuals)
     n = len(abs_res)
     if n == 0:
@@ -87,6 +154,24 @@ def _mad(residuals: list[float]) -> float:
 
 
 def _huber_weight(scaled_residual: float, k: float) -> float:
+    """Return the huber weight.
+
+    Args:
+        scaled_residual: Numeric score, threshold, prior, or confidence value.
+        k: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            _huber_weight(
+                scaled_residual=0.75,
+                k=0.75,
+            )
+        Output:
+            0.75
+    """
     abs_r = abs(scaled_residual)
     if abs_r <= k:
         return 1.0

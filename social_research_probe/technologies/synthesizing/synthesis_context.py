@@ -19,7 +19,24 @@ from social_research_probe.utils.core.types import (
 
 
 def build_synthesis_context(report: ResearchReport) -> SynthesisContext:
-    """Return the compact report shape shown to the final synthesis LLM."""
+    """Build build synthesis context in the shape consumed by the next project step.
+
+    The helper keeps a small project rule named and documented at the boundary where it is used.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            build_synthesis_context(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
+    """
     items_top_n = list(report.get("items_top_n", []))
     return SynthesisContext(
         topic=str(report.get("topic", "")),
@@ -48,7 +65,26 @@ def build_synthesis_context(report: ResearchReport) -> SynthesisContext:
 
 
 def _build_coverage(report: ResearchReport, items_top_n: list[ScoredItem]) -> Coverage:
-    """Coverage block — fetched vs. deeply enriched counts and platform list."""
+    """Build the coverage structure consumed by the next step.
+
+    The helper keeps a small project rule named and documented at the boundary where it is used.
+
+    Args:
+        report: Research report dictionary being rendered, exported, or persisted.
+        items_top_n: Top-ranked source items carried into the final report.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _build_coverage(
+                report={"topic": "AI safety", "items_top_n": []},
+                items_top_n=["AI safety"],
+            )
+        Output:
+            "AI safety"
+    """
     platforms = [p for p in [str(report.get("platform", ""))] if p]
     stats = report.get("stats_summary", {})
     fetched_hint = _fetched_from_highlights(list(stats.get("highlights", []) or []))
@@ -60,7 +96,24 @@ def _build_coverage(report: ResearchReport, items_top_n: list[ScoredItem]) -> Co
 
 
 def _fetched_from_highlights(highlights: list[str]) -> int | None:
-    """Best-effort dig for an ``n=<int>`` token in stats highlights."""
+    """Best-effort dig for an ``n=<int>`` token in stats highlights.
+
+    The helper keeps a small project rule named and documented at the boundary where it is used.
+
+    Args:
+        highlights: HTML, caption, metric, or report text being formatted for the final report.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _fetched_from_highlights(
+                highlights="Engagement increased",
+            )
+        Output:
+            "AI safety"
+    """
     for line in highlights:
         for token in line.split():
             if token.startswith("n=") and token[2:].rstrip(",").isdigit():
@@ -69,7 +122,26 @@ def _fetched_from_highlights(highlights: list[str]) -> int | None:
 
 
 def _build_item(index: int, item: ScoredItem) -> SynthesisItem:
-    """One item card — only the fields the LLM needs to reason."""
+    """Build build item in the shape consumed by the next project step.
+
+    The helper keeps a small project rule named and documented at the boundary where it is used.
+
+    Args:
+        index: Count, database id, index, or limit that bounds the work being performed.
+        item: Single source item, database row, or registry entry being transformed.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _build_item(
+                index=3,
+                item={"title": "Example", "url": "https://youtu.be/demo"},
+            )
+        Output:
+            "AI safety"
+    """
     out: SynthesisItem = {
         "rank": index + 1,
         "title": str(item.get("title", "")),

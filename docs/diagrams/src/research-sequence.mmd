@@ -1,18 +1,23 @@
-%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","actorBkg":"#dbeafe","actorBorder":"#1d4ed8","actorTextColor":"#111111","activationBkgColor":"#fef3c7","activationBorderColor":"#d97706","noteBkgColor":"#dcfce7","noteBorderColor":"#15803d"}}}%%
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 sequenceDiagram
-  participant U as User
-  participant C as CLI
-  participant O as Orchestrator
+  participant U as Operator
+  participant C as CLI parser
+  participant R as research command
+  participant O as orchestrator
   participant P as YouTubePipeline
   participant S as Services
   participant T as Technologies
-  U->>C: srp research "topic" "purpose"
-  C->>O: ParsedRunResearch
+  participant D as Data directory
+  U->>C: srp research youtube TOPIC PURPOSES
+  C->>R: argparse Namespace
+  R->>R: parse platform, topic, purposes
+  R->>O: ParsedRunResearch
   O->>P: PipelineState
-  P->>S: execute stages
-  S->>T: adapter calls
-  T-->>S: results or isolated failures
-  S-->>P: stage outputs
-  P-->>O: report
-  O-->>C: JSON-like report dict
-  C-->>U: path or serve command
+  P->>S: stage service batches
+  S->>T: technology execute calls
+  T-->>S: TechResult output or None
+  S-->>P: ServiceResult
+  P->>D: reports exports sqlite cache
+  P-->>O: state.outputs.report
+  O-->>R: report dictionary
+  R-->>U: report path

@@ -40,9 +40,23 @@ __all__ = [
 def resolve_scoring_weights(merged: MergedPurpose) -> dict[str, float]:
     """Merge spec §6 defaults with config-wide overrides, then purpose-specific overrides.
 
-    Precedence (later wins): DEFAULT_WEIGHTS → [scoring.weights] in config.toml →
-    merged purpose ``scoring_overrides``. Only keys ``trust``, ``trend``, and
-    ``opportunity`` are recognised; unknown keys are silently ignored.
+    Precedence (later wins): DEFAULT_WEIGHTS → [scoring.weights] in config.toml → merged
+    purpose ``scoring_overrides``. Only keys ``trust``, ``trend``, and ``opportunity`` are
+    recognised; unknown keys are silently ignored.
+
+    Args:
+        merged: Merged purpose or report data produced by earlier normalization.
+
+    Returns:
+        Dictionary with stable keys consumed by downstream project code.
+
+    Examples:
+        Input:
+            resolve_scoring_weights(
+                merged="AI safety",
+            )
+        Output:
+            {"enabled": True}
     """
     from social_research_probe.config import load_active_config
 

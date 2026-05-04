@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -79,6 +80,12 @@ def test_load_merges_user_overrides(tmp_path):
     assert cfg.llm_runner == "claude"
 
 
+def test_example_config_is_valid_toml():
+    root = Path(__file__).parents[2]
+    data = tomllib.loads((root / "config.toml.example").read_text())
+    assert data["stages"]["youtube"]["persist"] is True
+
+
 def test_llm_settings_none_returns_empty(tmp_path):
     cfg = Config.load(tmp_path)
     assert cfg.llm_settings("none") == {}
@@ -141,6 +148,11 @@ def test_service_enabled_known(tmp_path):
     assert cfg.service_enabled("score") is True
 
 
+def test_text_surrogate_service_enabled_by_default(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.service_enabled("text_surrogate") is True
+
+
 def test_technology_enabled(tmp_path):
     cfg = Config.load(tmp_path)
     assert cfg.technology_enabled("yt_dlp") is True
@@ -170,3 +182,137 @@ def test_reset_config_cache():
     cfg = load_active_config()
     reset_config_cache()
     assert cfg is not load_active_config()
+
+
+def test_default_config_has_comments_platform(tmp_path):
+    cfg = Config.load(tmp_path)
+    comments = cfg.raw["platforms"]["youtube"]["comments"]
+    assert comments["enabled"] is True
+    assert comments["max_videos"] == 5
+    assert comments["max_comments_per_video"] == 20
+    assert comments["order"] == "relevance"
+
+
+def test_default_config_has_comments_stage(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["stages"]["youtube"]["comments"] is True
+
+
+def test_default_config_has_comments_service(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["services"]["youtube"]["enriching"]["comments"] is True
+
+
+def test_default_config_has_youtube_comments_tech(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["technologies"]["youtube_comments"] is True
+
+
+def test_stage_enabled_comments(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.stage_enabled("youtube", "comments") is True
+
+
+def test_technology_enabled_youtube_comments(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.technology_enabled("youtube_comments") is True
+
+
+# --- database config ---
+
+
+def test_database_path_defaults_to_data_dir_srp_db(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.database_path == tmp_path / "srp.db"
+
+
+def test_database_path_honours_absolute_override(tmp_path):
+    db_file = tmp_path / "custom" / "my.db"
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text(f'[database]\npath = "{db_file}"\n', encoding="utf-8")
+    cfg = Config.load(tmp_path)
+    assert cfg.database_path == db_file
+
+
+def test_database_path_resolves_relative_against_data_dir(tmp_path):
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text('[database]\npath = "sub/srp.db"\n', encoding="utf-8")
+    cfg = Config.load(tmp_path)
+    assert cfg.database_path == tmp_path / "sub" / "srp.db"
+
+
+def test_database_enabled_defaults_true(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["database"]["enabled"] is True
+
+
+def test_persist_transcript_text_defaults_false(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["database"]["persist_transcript_text"] is False
+
+
+def test_persist_comment_text_defaults_true(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["database"]["persist_comment_text"] is True
+
+
+def test_default_config_has_persistence_service(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["services"]["persistence"]["sqlite"] is True
+
+
+def test_default_config_has_sqlite_persist_tech(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["technologies"]["sqlite_persist"] is True
+
+
+def test_default_config_has_persist_stage(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["stages"]["youtube"]["persist"] is True
+
+
+def test_service_enabled_sqlite(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.service_enabled("sqlite") is True
+
+
+def test_technology_enabled_sqlite_persist(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.technology_enabled("sqlite_persist") is True
+
+
+def test_stage_enabled_persist(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.stage_enabled("youtube", "persist") is True
+
+
+def test_config_toml_example_has_database_section():
+    from pathlib import Path
+
+    example = Path(__file__).parent.parent.parent / "config.toml.example"
+    assert example.exists()
+    content = example.read_text(encoding="utf-8")
+    assert "[database]" in content
+    assert "persist_transcript_text" in content
+    assert "persist_comment_text" in content
+
+
+def test_database_property_returns_section(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.database["enabled"] is True
+
+
+def test_default_config_has_notifications(tmp_path):
+    cfg = Config.load(tmp_path)
+    notifications = cfg.raw["notifications"]
+    assert notifications["enabled"] is True
+    assert notifications["default_channels"] == ["file"]
+    assert notifications["console"]["enabled"] is True
+    assert notifications["file"]["output_dir"] == ""
+    assert notifications["telegram"]["enabled"] is False
+
+
+def test_default_config_has_schedule(tmp_path):
+    cfg = Config.load(tmp_path)
+    assert cfg.raw["schedule"]["enabled"] is True
+    assert cfg.raw["schedule"]["default_interval"] == "daily"

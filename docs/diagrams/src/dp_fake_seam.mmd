@@ -1,6 +1,9 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Test["test env SRP_TEST_USE_FAKE_YOUTUBE=1"] --> Import["import fake_youtube fixture"] --> Registry["platform registry"] --> Pipeline["normal pipeline uses fake client"]
+  Env["SRP_TEST_USE_FAKE_YOUTUBE"] --> Orchestrator["_maybe_register_fake"] --> Fake["tests.fixtures.fake_youtube"] --> Service["YouTubeSourcingService"]
+  class Env config;
+  class Orchestrator,Service process;
+  class Fake input;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -9,6 +12,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Test input;
-  class Import,Registry process;
-  class Pipeline output;

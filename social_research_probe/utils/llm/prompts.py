@@ -165,3 +165,46 @@ Use your native --search tool to find authoritative non-video sources about this
 
 Claim: {query}
 """
+
+CLAIM_EXTRACTION_PROMPT = """\
+You are a structured claim extractor. Given the source text below, extract up to \
+{max_claims} discrete claims. Each claim must be a single sentence directly \
+supported by the text.
+
+Source title: {source_title}
+
+Text:
+{text}
+
+Rules:
+- Extract only claims explicitly stated in or directly supported by the provided text.
+- Do not invent, infer, or hallucinate facts not present in the text.
+- Return JSON only. No markdown, no commentary, no explanation outside the JSON object.
+- Each claim_text must be at most {max_chars} characters.
+- Use only the following claim_type values:
+  - fact_claim: a verifiable factual assertion, often with numbers or citations
+  - opinion: a subjective belief or judgment (e.g. "I think", "I believe")
+  - prediction: a forward-looking statement about future events (e.g. "will", "expect")
+  - recommendation: an imperative or advisory statement (e.g. "should", "must", "need to")
+  - experience: a first-person account of past activity (e.g. "I've been", "we tried")
+  - question: an interrogative sentence
+  - objection: a counterargument or caveat (e.g. "however", "despite")
+  - pain_point: a statement about difficulty or struggle
+  - market_signal: a statement about market trends, adoption, or industry movement
+- Output a single top-level JSON object with a "claims" array.
+- Respect the max_claims limit of {max_claims}.
+
+Output schema:
+{{
+  "claims": [
+    {{
+      "claim_text": "<exact text of the claim, max {max_chars} chars>",
+      "claim_type": "<one of the 9 allowed types above>",
+      "confidence": <float 0.0-1.0, how confident you are this is a valid claim>,
+      "entities": ["<named entities or numbers mentioned in the claim>"],
+      "needs_corroboration": <true if claim makes a verifiable factual/predictive assertion>,
+      "uncertainty": "<low|medium|high>"
+    }}
+  ]
+}}
+"""

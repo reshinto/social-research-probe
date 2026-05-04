@@ -45,12 +45,12 @@ This means: find `social_research_probe/config.py` and import the object named
 
 Best practice in this repository:
 
-| Practice | Why |
-| --- | --- |
-| Use absolute imports from `social_research_probe...`. | They are clear and work reliably in tests. |
-| Import the narrow thing you need. | Readers can see where names come from. |
-| Avoid `from module import *`. | Wildcard imports hide dependencies. |
-| Keep imports cheap. | Importing a file should not call APIs, run subprocesses, or write files. |
+| Practice                                              | Why                                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| Use absolute imports from `social_research_probe...`. | They are clear and work reliably in tests.                               |
+| Import the narrow thing you need.                     | Readers can see where names come from.                                   |
+| Avoid `from module import *`.                         | Wildcard imports hide dependencies.                                      |
+| Keep imports cheap.                                   | Importing a file should not call APIs, run subprocesses, or write files. |
 
 Expensive work should happen inside functions or methods that are called
 deliberately.
@@ -86,17 +86,17 @@ expected, but the assignment itself is still dynamic.
 
 Common value types in this project:
 
-| Type | Example | Used for |
-| --- | --- | --- |
-| `str` | `"AI agents"` | Topics, URLs, config keys, captions. |
-| `int` | `20` | Counts, ranks, limits. |
-| `float` | `0.82` | Scores, ratios, statistics. |
-| `bool` | `True` | Gates and flags. |
-| `None` | `None` | Missing value or no result. |
-| `list` | `[item1, item2]` | Ordered collections. |
-| `dict` | `{"topic": "AI"}` | Structured JSON-like data. |
-| `tuple` | `("overall", "trust")` | Fixed grouped values. |
-| `Path` | `Path("report.html")` | Filesystem paths. |
+| Type    | Example                | Used for                             |
+| ------- | ---------------------- | ------------------------------------ |
+| `str`   | `"AI agents"`          | Topics, URLs, config keys, captions. |
+| `int`   | `20`                   | Counts, ranks, limits.               |
+| `float` | `0.82`                 | Scores, ratios, statistics.          |
+| `bool`  | `True`                 | Gates and flags.                     |
+| `None`  | `None`                 | Missing value or no result.          |
+| `list`  | `[item1, item2]`       | Ordered collections.                 |
+| `dict`  | `{"topic": "AI"}`      | Structured JSON-like data.           |
+| `tuple` | `("overall", "trust")` | Fixed grouped values.                |
+| `Path`  | `Path("report.html")`  | Filesystem paths.                    |
 
 ## Strings
 
@@ -261,14 +261,14 @@ def overall_score(*, trust: float, trend: float, opportunity: float) -> float:
 
 Important parts:
 
-| Part | Meaning |
-| --- | --- |
-| `def` | Defines a function. |
-| `overall_score` | Function name. |
-| `trust: float` | Parameter named `trust`, expected to be a float. |
-| `-> float` | Function should return a float. |
-| `return` | Sends a value back to the caller. |
-| `*` | Forces callers to use keyword arguments. |
+| Part            | Meaning                                          |
+| --------------- | ------------------------------------------------ |
+| `def`           | Defines a function.                              |
+| `overall_score` | Function name.                                   |
+| `trust: float`  | Parameter named `trust`, expected to be a float. |
+| `-> float`      | Function should return a float.                  |
+| `return`        | Sends a value back to the caller.                |
+| `*`             | Forces callers to use keyword arguments.         |
 
 The `*` matters:
 
@@ -311,18 +311,18 @@ linters, and tests.
 
 Common type hints in this repository:
 
-| Hint | Meaning |
-| --- | --- |
-| `str` | Text. |
-| `int` | Integer. |
-| `float` | Decimal number. |
-| `bool` | True or false. |
-| `Path` | Filesystem path object. |
-| `list[dict]` | List of dictionaries. |
-| `dict[str, list]` | Dictionary with string keys and list values. |
-| `object` | Any Python value, intentionally broad. |
-| `str | None` | String or missing value. |
-| `list[StatResult]` | List containing `StatResult` objects. |
+| Hint               | Meaning                                      |
+| ------------------ | -------------------------------------------- | ------------------------ |
+| `str`              | Text.                                        |
+| `int`              | Integer.                                     |
+| `float`            | Decimal number.                              |
+| `bool`             | True or false.                               |
+| `Path`             | Filesystem path object.                      |
+| `list[dict]`       | List of dictionaries.                        |
+| `dict[str, list]`  | Dictionary with string keys and list values. |
+| `object`           | Any Python value, intentionally broad.       |
+| `str               | None`                                        | String or missing value. |
+| `list[StatResult]` | List containing `StatResult` objects.        |
 
 Use a specific type when the function has a specific contract. Use `object` at
 boundaries where the service intentionally validates unknown input.
@@ -386,7 +386,7 @@ A class defines a kind of object with data and behavior:
 class StatisticsService(BaseService):
     service_name = "youtube.analyzing.statistics"
 
-    async def execute_one(self, data: object) -> ServiceResult:
+    async def execute_service(self, data: object, result: ServiceResult) -> ServiceResult:
         ...
 ```
 
@@ -396,12 +396,12 @@ class StatisticsService(BaseService):
 Use classes in this project when there is a stable interface with multiple
 implementations:
 
-| Interface | Implementations |
-| --- | --- |
-| `BaseService` | scoring, transcript, summary, statistics, charts, reporting. |
-| `BaseTechnology` | provider adapters, LLM runners, chart renderers. |
-| `PlatformClient` | platform source adapters. |
-| `BaseStage` | pipeline stages. |
+| Interface        | Implementations                                              |
+| ---------------- | ------------------------------------------------------------ |
+| `BaseService`    | scoring, transcript, summary, statistics, charts, reporting. |
+| `BaseTechnology` | provider adapters, LLM runners, chart renderers.             |
+| `PlatformClient` | platform source adapters.                                    |
+| `BaseStage`      | pipeline stages.                                             |
 
 Do not create a class just to group one small function. Use a function for pure
 logic unless shared interface behavior is needed.
@@ -611,11 +611,11 @@ interface while the blocking work runs outside the event loop thread.
 
 Use `to_thread` for:
 
-| Good use | Why |
-| --- | --- |
-| Rendering charts with synchronous plotting code. | Plotting can block. |
+| Good use                                                  | Why                                    |
+| --------------------------------------------------------- | -------------------------------------- |
+| Rendering charts with synchronous plotting code.          | Plotting can block.                    |
 | Running local transcription helpers that are synchronous. | The event loop should stay responsive. |
-| Writing a report with a synchronous renderer. | File/render work can be isolated. |
+| Writing a report with a synchronous renderer.             | File/render work can be isolated.      |
 
 Do not use `to_thread` just because a function is slow. First ask whether it is
 blocking IO, CPU-heavy work, or code that should be refactored into a pure helper
@@ -646,27 +646,27 @@ Calling `asyncio.run` from inside an already-running event loop is an error.
 The project uses async at orchestration boundaries and keeps math mostly
 synchronous:
 
-| Code area | Async? | Why |
-| --- | --- | --- |
-| Platform pipeline stages | Yes | Stages may fetch data or run services. |
-| Services | Yes | Services may call providers, runners, or blocking work through `to_thread`. |
-| Technology adapters | Often yes | Adapters may wrap external systems. |
-| Scoring math | No | Pure calculation is simpler synchronously. |
-| Statistics formulas | No | Pure calculations are deterministic and easy to test. |
-| CLI parser setup | No | Argument parsing is local and immediate. |
+| Code area                | Async?    | Why                                                                         |
+| ------------------------ | --------- | --------------------------------------------------------------------------- |
+| Platform pipeline stages | Yes       | Stages may fetch data or run services.                                      |
+| Services                 | Yes       | Services may call providers, runners, or blocking work through `to_thread`. |
+| Technology adapters      | Often yes | Adapters may wrap external systems.                                         |
+| Scoring math             | No        | Pure calculation is simpler synchronously.                                  |
+| Statistics formulas      | No        | Pure calculations are deterministic and easy to test.                       |
+| CLI parser setup         | No        | Argument parsing is local and immediate.                                    |
 
 This split keeps the code understandable. Async is used where waiting can
 overlap. Plain functions are used where values can be computed immediately.
 
 ## Common async mistakes
 
-| Mistake | Symptom | Fix |
-| --- | --- | --- |
-| Forgetting `await`. | You see a coroutine object instead of a result. | Add `await` at the call site. |
-| Calling `asyncio.run` inside async code. | Runtime error about an active event loop. | Use `await` instead. |
-| Letting one gathered task raise unexpectedly. | A whole batch fails. | Catch inside the per-task wrapper if partial results are valid. |
-| Blocking inside async code. | Other async work stalls. | Use an async API or `asyncio.to_thread`. |
-| Making pure math async. | Tests and callers become more complex for no benefit. | Keep pure calculations synchronous. |
+| Mistake                                       | Symptom                                               | Fix                                                             |
+| --------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| Forgetting `await`.                           | You see a coroutine object instead of a result.       | Add `await` at the call site.                                   |
+| Calling `asyncio.run` inside async code.      | Runtime error about an active event loop.             | Use `await` instead.                                            |
+| Letting one gathered task raise unexpectedly. | A whole batch fails.                                  | Catch inside the per-task wrapper if partial results are valid. |
+| Blocking inside async code.                   | Other async work stalls.                              | Use an async API or `asyncio.to_thread`.                        |
+| Making pure math async.                       | Tests and callers become more complex for no benefit. | Keep pure calculations synchronous.                             |
 
 ## Exceptions
 
@@ -684,12 +684,12 @@ provider failure does not crash the whole research run.
 
 Guidelines:
 
-| Situation | What to do |
-| --- | --- |
-| Invalid programmer input in a pure helper. | Let it raise or raise a clear exception. |
-| Optional provider fails. | Catch at the adapter/service boundary and return structured failure. |
-| Missing config or secret. | Report unavailable provider rather than making a bad call. |
-| Test expects failure. | Assert the exception or failed result explicitly. |
+| Situation                                  | What to do                                                           |
+| ------------------------------------------ | -------------------------------------------------------------------- |
+| Invalid programmer input in a pure helper. | Let it raise or raise a clear exception.                             |
+| Optional provider fails.                   | Catch at the adapter/service boundary and return structured failure. |
+| Missing config or secret.                  | Report unavailable provider rather than making a bad call.           |
+| Test expects failure.                      | Assert the exception or failed result explicitly.                    |
 
 Avoid broad `except Exception` deep inside pure logic. It can hide real bugs.
 
@@ -709,14 +709,14 @@ concatenation.
 
 Common methods:
 
-| Method | Meaning |
-| --- | --- |
-| `path.exists()` | Does this path exist? |
+| Method                                    | Meaning                                 |
+| ----------------------------------------- | --------------------------------------- |
+| `path.exists()`                           | Does this path exist?                   |
 | `path.mkdir(parents=True, exist_ok=True)` | Create a directory and missing parents. |
-| `path.read_text(encoding="utf-8")` | Read a text file. |
-| `path.write_text(text, encoding="utf-8")` | Write a text file. |
-| `path.name` | Final filename. |
-| `path.parent` | Parent directory. |
+| `path.read_text(encoding="utf-8")`        | Read a text file.                       |
+| `path.write_text(text, encoding="utf-8")` | Write a text file.                      |
+| `path.name`                               | Final filename.                         |
+| `path.parent`                             | Parent directory.                       |
 
 ## JSON
 
@@ -787,12 +787,12 @@ integration tests of the CLI.
 
 Best practices:
 
-| Practice | Why |
-| --- | --- |
-| Pass argv as a list. | Avoids shell quoting problems. |
-| Use `timeout`. | Prevents hung external commands. |
-| Capture output when testing. | Lets tests assert stdout/stderr. |
-| Handle `FileNotFoundError`. | External binaries may not be installed. |
+| Practice                     | Why                                     |
+| ---------------------------- | --------------------------------------- |
+| Pass argv as a list.         | Avoids shell quoting problems.          |
+| Use `timeout`.               | Prevents hung external commands.        |
+| Capture output when testing. | Lets tests assert stdout/stderr.        |
+| Handle `FileNotFoundError`.  | External binaries may not be installed. |
 
 ## Generators and comprehensions
 
@@ -842,15 +842,15 @@ variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
 
 Important operators:
 
-| Operator | Meaning |
-| --- | --- |
-| `+` | Add. |
-| `-` | Subtract. |
-| `*` | Multiply. |
-| `/` | Divide and return float. |
-| `//` | Floor division. |
-| `%` | Remainder. |
-| `**` | Power. |
+| Operator | Meaning                  |
+| -------- | ------------------------ |
+| `+`      | Add.                     |
+| `-`      | Subtract.                |
+| `*`      | Multiply.                |
+| `/`      | Divide and return float. |
+| `//`     | Floor division.          |
+| `%`      | Remainder.               |
+| `**`     | Power.                   |
 
 Always handle empty lists before dividing by `len(values)`.
 
@@ -878,25 +878,66 @@ subprocesses can fail.
 
 This repository separates orchestration from concrete work.
 
-| Concept | Meaning |
-| --- | --- |
-| Service | Coordinates a task in the pipeline. |
-| Technology | Performs one concrete operation or algorithm. |
-| Platform | Fetches source-specific data and owns source stage order. |
+| Concept    | Meaning                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| Platform   | Owns source-specific stage order and maps platform data into shared pipeline state.           |
+| Stage      | Reads and writes `PipelineState` for one named step such as `summary`, `claims`, or `report`. |
+| Service    | Coordinates one task and normalizes success, skipped work, and failures.                      |
+| Technology | Performs one concrete operation, provider call, renderer call, or algorithm.                  |
 
-Example:
+Services inherit from `BaseService`. A service subclass sets `service_name`,
+sets `enabled_config_key`, returns technology instances from `_get_technologies`,
+and implements `execute_service`.
 
 ```python
-class ChartsService(BaseService):
-    async def execute_one(self, data: object) -> ServiceResult:
+from typing import ClassVar
+
+from social_research_probe.services import BaseService, ServiceResult
+
+
+class ExampleService(BaseService[dict, dict]):
+    service_name: ClassVar[str] = "youtube.example"
+    enabled_config_key: ClassVar[str] = "services.youtube.enriching.example"
+
+    def _get_technologies(self) -> list[object]:
+        return [ExampleTechnology()]
+
+    async def execute_service(self, data: dict, result: ServiceResult) -> ServiceResult:
         ...
 ```
 
-The service decides when and how charting runs. Chart technology modules create
-specific chart outputs.
+Do not override `execute_batch` or `execute_one` in a service subclass. The base
+class owns those methods so all services share the same disabled-service
+behavior, concurrent execution, timing logs, and per-technology error isolation.
+If a service has no technology layer, `_get_technologies()` returns `[None]` and
+`execute_service()` performs the work directly.
+
+Technologies inherit from `BaseTechnology`. A technology subclass sets `name`,
+`health_check_key`, and `enabled_config_key`, then implements `_execute`.
+
+```python
+from typing import ClassVar
+
+from social_research_probe.technologies import BaseTechnology
+
+
+class ExampleTechnology(BaseTechnology[dict, dict]):
+    name: ClassVar[str] = "example"
+    health_check_key: ClassVar[str] = "example"
+    enabled_config_key: ClassVar[str] = "example"
+
+    async def _execute(self, data: dict) -> dict:
+        return {"ok": True, "input": data}
+```
+
+The base technology checks `[technologies]`, applies cache rules when
+`cacheable` is true, times the call, catches provider errors, and returns
+`None` when the adapter is disabled or fails.
 
 Why not put everything in one function: one large function is hard to test and
-hard to extend. Services and technologies keep failure boundaries clear.
+hard to extend. Services and technologies keep failure boundaries clear: stages
+decide order, services decide coordination, and technologies decide concrete
+provider or algorithm behavior.
 
 ## Config gates
 
@@ -906,15 +947,29 @@ Many services and technologies have an `enabled_config_key`:
 enabled_config_key: ClassVar[str] = "services.youtube.analyzing.charts"
 ```
 
-The base class can check config before running the implementation. This lets
-users disable expensive or unavailable work without editing code.
+For services, the full dotted key documents ownership, while
+`Config.service_enabled()` currently checks the final leaf name. For example,
+`services.youtube.reporting.html` maps to the `html` service flag.
+
+Technology keys are flat leaves under `[technologies]`:
+
+```python
+enabled_config_key: ClassVar[str] = "youtube_comments"
+```
+
+This lets users disable expensive or unavailable work without editing code.
+Stage gates under `[stages.youtube]` sit above service and technology gates. If
+`stages.youtube.comments = false`, the comments stage does not run even if
+`services.youtube.enriching.comments` and `technologies.youtube_comments` are
+true.
 
 When adding a provider or service, add a clear config key and document what it
-controls.
+controls in `config.toml.example`, [Configuration](configuration.md), and the
+skill reference.
 
 ## Caching
 
-Caching stores outputs so repeated runs can reuse work:
+Technology caching stores outputs so repeated runs can reuse work:
 
 ```python
 cached = get_json(cache, key)
@@ -925,9 +980,18 @@ set_json(cache, key, result)
 return result
 ```
 
+`BaseTechnology` writes cache files below `cache/technologies/<technology-name>`
+inside the active data directory. Cache entries include the input representation
+and the output. Technologies that write local files or perform intentionally
+fresh work should set `cacheable = False`.
+
 Cache keys must represent the input that affects the output. If the key is too
 broad, stale data can be reused incorrectly. If the key is too narrow, the cache
 will miss too often.
+
+The environment variable `SRP_DISABLE_CACHE=1` bypasses technology cache reads
+and writes for the process. Tests often use this when they need to prove that a
+real code path executes.
 
 ## Testing with pytest
 
@@ -989,15 +1053,15 @@ handler should focus on behavior.
 
 ## Common repository patterns
 
-| Pattern | What it looks like | Why it is used |
-| --- | --- | --- |
-| Small pure helper | `def _numeric_series(...): ...` | Easy to test and reason about. |
-| Service class | `class StatisticsService(BaseService)` | Shared execution and failure behavior. |
-| Technology adapter | `class GeminiRunner(...)` | Isolates external tool behavior. |
-| Dataclass record | `@dataclass class PipelineState` | Makes structured data explicit. |
-| Config key | `enabled_config_key = "..."` | Lets users disable behavior. |
-| Cache wrapper | `get_json` / `set_json` | Avoids repeated expensive work. |
-| Fake in tests | `tests/fixtures/fake_youtube.py` | Keeps tests deterministic. |
+| Pattern            | What it looks like                                              | Why it is used                         |
+| ------------------ | --------------------------------------------------------------- | -------------------------------------- |
+| Small pure helper  | `def _numeric_series(...): ...`                                 | Easy to test and reason about.         |
+| Service class      | `class StatisticsService(BaseService)` with `execute_service()` | Shared execution and failure behavior. |
+| Technology adapter | `class GeminiRunner(...)` or `class YouTubeCommentsTech(...)`   | Isolates external tool behavior.       |
+| Dataclass record   | `@dataclass class PipelineState`                                | Makes structured data explicit.        |
+| Config key         | `enabled_config_key = "..."`                                    | Lets users disable behavior.           |
+| Cache wrapper      | `get_json` / `set_json` under `cache/technologies/*`            | Avoids repeated expensive work.        |
+| Fake in tests      | `tests/fixtures/fake_youtube.py`                                | Keeps tests deterministic.             |
 
 ## How to read a new file
 
@@ -1016,27 +1080,27 @@ other code from calling it, but contributors should treat it as internal.
 
 ## How to make a safe change
 
-| Change type | Best first step |
-| --- | --- |
-| Pure calculation | Add or update a unit test around the function. |
-| Service behavior | Test success, disabled config, and failure output. |
-| Provider adapter | Test parsing and unavailable-provider behavior. |
-| CLI output | Test command input and exact expected stdout shape. |
-| Docs or diagrams | Run docs contract tests. |
+| Change type      | Best first step                                     |
+| ---------------- | --------------------------------------------------- |
+| Pure calculation | Add or update a unit test around the function.      |
+| Service behavior | Test success, disabled config, and failure output.  |
+| Provider adapter | Test parsing and unavailable-provider behavior.     |
+| CLI output       | Test command input and exact expected stdout shape. |
+| Docs or diagrams | Run docs contract tests.                            |
 
 Keep edits near the behavior being changed. Do not move code across layers just
 because it is convenient for one call site.
 
 ## Common beginner mistakes
 
-| Mistake | Why it hurts | Better approach |
-| --- | --- | --- |
-| Using a mutable default like `items=[]`. | The same list can be reused across calls. | Use `items: list | None = None`. |
-| Catching every exception too early. | Real bugs become silent empty output. | Catch at service/provider boundaries. |
-| Building paths with string concatenation. | Breaks across platforms and edge cases. | Use `Path` and `/`. |
-| Calling external APIs during import. | Tests and imports become slow or flaky. | Call APIs inside explicit functions. |
-| Returning inconsistent dictionaries. | Later stages fail or need defensive code everywhere. | Use dataclasses or documented dict shapes. |
-| Adding provider logic to services. | Vendor details leak into orchestration. | Put provider specifics in technologies. |
+| Mistake                                   | Why it hurts                                         | Better approach                            |
+| ----------------------------------------- | ---------------------------------------------------- | ------------------------------------------ | ------------- |
+| Using a mutable default like `items=[]`.  | The same list can be reused across calls.            | Use `items: list                           | None = None`. |
+| Catching every exception too early.       | Real bugs become silent empty output.                | Catch at service/provider boundaries.      |
+| Building paths with string concatenation. | Breaks across platforms and edge cases.              | Use `Path` and `/`.                        |
+| Calling external APIs during import.      | Tests and imports become slow or flaky.              | Call APIs inside explicit functions.       |
+| Returning inconsistent dictionaries.      | Later stages fail or need defensive code everywhere. | Use dataclasses or documented dict shapes. |
+| Adding provider logic to services.        | Vendor details leak into orchestration.              | Put provider specifics in technologies.    |
 
 ## Minimal example in project style
 
@@ -1065,14 +1129,14 @@ def chart_caption(request: ChartRequest) -> str:
 
 This example uses concepts from the codebase:
 
-| Concept | Where it appears |
-| --- | --- |
+| Concept                  | Where it appears                   |
+| ------------------------ | ---------------------------------- |
 | `dataclass(frozen=True)` | Structured immutable request data. |
-| `Path` | Filesystem output directory. |
-| `list[float]` | Numeric series. |
-| Empty-list guard | Prevents division by zero. |
-| Small pure functions | Easy unit tests. |
-| f-string formatting | Human-readable caption. |
+| `Path`                   | Filesystem output directory.       |
+| `list[float]`            | Numeric series.                    |
+| Empty-list guard         | Prevents division by zero.         |
+| Small pure functions     | Easy unit tests.                   |
+| f-string formatting      | Human-readable caption.            |
 
 If you can understand this example, you can start reading the service,
 statistics, chart, and reporting modules in this repository.

@@ -13,7 +13,26 @@ _TOKEN_RE = re.compile(r"\w+")
 
 
 def _tokens(text: str) -> frozenset[str]:
-    """Return the set of lowercase word tokens in ``text``."""
+    """Document the tokens rule at the boundary where callers use it.
+
+    This utility is shared across commands, services, and stages, so the rule lives here instead of
+    being reimplemented differently at each call site.
+
+    Args:
+        text: Source text, prompt text, or raw value being parsed, normalized, classified, or sent
+              to a provider.
+
+    Returns:
+        Set of names found while walking the input structure.
+
+    Examples:
+        Input:
+            _tokens(
+                text="This tool reduces latency by 30%.",
+            )
+        Output:
+            {"comments", "html"}
+    """
     return frozenset(_TOKEN_RE.findall(text.lower()))
 
 
@@ -22,6 +41,22 @@ def jaccard_divergence(a: str, b: str) -> float:
 
     Output is in [0.0, 1.0]: 0.0 means identical token sets, 1.0 means
     disjoint. Whitespace, punctuation, and case are normalised away.
+
+    Args:
+        a: Numeric series used by the statistical calculation.
+        b: Numeric series used by the statistical calculation.
+
+    Returns:
+        Numeric score, threshold, or measurement used by analysis and reporting code.
+
+    Examples:
+        Input:
+            jaccard_divergence(
+                a=[1.0, 2.0, 3.0],
+                b=[1.0, 2.0, 3.0],
+            )
+        Output:
+            0.75
     """
     ta, tb = _tokens(a), _tokens(b)
     union = ta | tb

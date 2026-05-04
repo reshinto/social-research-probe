@@ -1,39 +1,18 @@
-%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryTextColor": "#111827", "lineColor": "#6b7280", "fontFamily": "Arial"}}}%%
-flowchart TD
-    user(["Human user"])
-    srp{{"srp research run"}}
-    local["Local work<br/>scoring, stats, charts, cache, HTML"]
-    youtube[/"YouTube Data API<br/>SRP_YOUTUBE_API_KEY<br/>quota units"/]
-    transcript["Transcript fetch<br/>no SRP key<br/>may be rate-limited"]
-    paidSearch[("Search API accounts<br/>Brave / Exa / Tavily<br/>free credits then paid")]
-    runner{{"LLM runner CLI<br/>Claude / Gemini / Codex"}}
-    localLlm["Local LLM wrapper<br/>SRP_LOCAL_LLM_BIN<br/>local compute"]
-    output[/"Reports, charts,<br/>corroboration verdicts"/]
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
+flowchart TB
+  Run["srp run"] --> Local["local scoring stats charts exports"]
+  Run --> YouTube["YouTube API quota"]
+  Run --> Runners["runner CLI account"]
+  Run --> Search["search provider account"]
+  Run --> TTS["Voicebox/macOS TTS"]
+  class Run input;
+  class Local output;
+  class YouTube,Runners,Search,TTS external;
 
-    user --> srp
-    srp --> local
-    srp --> youtube
-    srp --> transcript
-    srp --> paidSearch
-    srp --> runner
-    srp --> localLlm
-    local --> output
-    youtube --> output
-    transcript --> output
-    paidSearch --> output
-    runner --> output
-    localLlm --> output
-
-    classDef person fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#111827
-    classDef core fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#111827
-    classDef free fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#111827
-    classDef quota fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#111827
-    classDef paid fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#111827
-    classDef out fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#111827
-
-    class user person
-    class srp core
-    class local,transcript,localLlm free
-    class youtube quota
-    class paidSearch,runner paid
-    class output out
+  classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
+  classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
+  classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
+  classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;

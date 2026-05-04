@@ -16,20 +16,30 @@ def select_and_run(data: list[float], label: str = "values") -> list[StatResult]
     Selection rules (additive — every applicable analysis runs):
 
     - descriptive: always (for any non-empty series)
+
     - spread: requires 2+ points (variance / IQR)
+
     - regression: requires 2+ points (linear fit over index)
+
     - growth: requires 3+ points (period-over-period change)
+
     - outliers: requires 3+ points (z-score detection)
 
     Args:
-        data: List of numeric values to analyse (e.g. overall scores).
-        label: Human-readable name for this metric, used in captions.
+        data: Input payload at this service, technology, or pipeline boundary.
+        label: Human-readable metric label included in statistical and chart outputs.
 
     Returns:
-        List of StatResult objects, one per analysis run.
+        List in the order expected by the next stage, renderer, or CLI formatter.
 
-    Why lazy import: avoids circular dependencies since each sub-module also
-    imports from this package, and keeps startup cost low.
+    Examples:
+        Input:
+            select_and_run(
+                data={"title": "Example", "url": "https://youtu.be/demo"},
+                label="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
     """
     from social_research_probe.technologies.statistics import (
         descriptive,
@@ -55,7 +65,31 @@ def select_and_run_correlation(
     label_a: str = "a",
     label_b: str = "b",
 ) -> list[StatResult]:
-    """Run correlation between two numeric series when both have 2+ points."""
+    """Run correlation between two numeric series when both have 2+ points.
+
+    Statistics helpers return compact report records, keeping mathematical details close to the
+    label and interpretation shown in reports.
+
+    Args:
+        series_a: Numeric series used by the statistical calculation.
+        series_b: Numeric series used by the statistical calculation.
+        label_a: Human-readable metric label included in statistical and chart outputs.
+        label_b: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        List in the order expected by the next stage, renderer, or CLI formatter.
+
+    Examples:
+        Input:
+            select_and_run_correlation(
+                series_a=[1.0, 2.0, 3.0],
+                series_b=[1.0, 2.0, 3.0],
+                label_a="engagement",
+                label_b="engagement",
+            )
+        Output:
+            [{"title": "Example", "url": "https://youtu.be/demo"}]
+    """
     from social_research_probe.technologies.statistics import correlation
 
     if len(series_a) < 2 or len(series_b) < 2:

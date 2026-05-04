@@ -1,11 +1,14 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Defaults["DEFAULT_CONFIG in config.py"] --> Merge["merge config.toml"]
-  Env["SRP_DATA_DIR"] --> Resolve["resolve data dir"] --> Merge
-  Merge --> Gates["stage, service, technology gates"]
-  Secrets["secrets.toml or SRP_* env"] --> Providers["provider health checks"]
-  Gates --> Pipeline["runtime decisions"]
-  Providers --> Pipeline
+  Defaults["DEFAULT_CONFIG"] --> Merge["Config.load deep merge"]
+  File["data_dir/config.toml"] --> Merge
+  Env["SRP_DATA_DIR"] --> DataDir["active data dir"]
+  Flag["--data-dir"] --> DataDir
+  Merge --> Gates["stage service technology gates"]
+  Secrets["secrets.toml"] --> SecretRead["read_secret"]
+  SecretEnv["SRP_* env"] --> SecretRead
+  class Defaults,File,Env,Flag,Secrets,SecretEnv config;
+  class Merge,DataDir,Gates,SecretRead process;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -14,6 +17,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Defaults,Env,Secrets config;
-  class Resolve,Merge,Gates,Pipeline process;
-  class Providers external;

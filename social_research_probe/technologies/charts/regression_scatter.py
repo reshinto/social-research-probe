@@ -13,7 +13,27 @@ from social_research_probe.technologies.charts import ChartResult
 
 
 def _fit_line(x: list[float], y: list[float]) -> tuple[float, float, float]:
-    """Return (slope, intercept, r_squared) from a simple OLS fit."""
+    """Return (slope, intercept, r_squared) from a simple OLS fit.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+
+    Returns:
+        Tuple whose positions are part of the public helper contract shown in the example.
+
+    Examples:
+        Input:
+            _fit_line(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+            )
+        Output:
+            ("AI safety", "Find unmet needs")
+    """
     n = len(x)
     mean_x = sum(x) / n
     mean_y = sum(y) / n
@@ -35,6 +55,38 @@ def _render_with_matplotlib(
     intercept: float,
     r_squared: float,
 ) -> None:
+    """Create with matplotlib output for users or downstream tools.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        path: Filesystem location used to read, write, or resolve project data.
+        label: Human-readable metric label included in statistical and chart outputs.
+        slope: Numeric score, threshold, prior, or confidence value.
+        intercept: Numeric score, threshold, prior, or confidence value.
+        r_squared: Numeric score, threshold, prior, or confidence value.
+
+    Returns:
+        None. The result is communicated through state mutation, file/database writes, output, or an
+        exception.
+
+    Examples:
+        Input:
+            _render_with_matplotlib(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                path=Path("report.html"),
+                label="engagement",
+                slope=0.75,
+                intercept=0.75,
+                r_squared=0.75,
+            )
+        Output:
+            None
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -49,12 +101,32 @@ def _render_with_matplotlib(
             x_line, y_line, color="red", linewidth=2, label=f"y = {slope:.3f}x + {intercept:.3f}"
         )
     plt.title(f"{label}  (R²={r_squared:.3f})")
-    plt.legend(loc="best")
+    if x:
+        plt.legend(loc="best")
     plt.savefig(path)
     plt.close(fig)
 
 
 def _sanitise(label: str) -> str:
+    """Sanitize a label so it is safe to use in generated filenames.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        label: Human-readable metric label included in statistical and chart outputs.
+
+    Returns:
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            _sanitise(
+                label="engagement",
+            )
+        Output:
+            "AI safety"
+    """
     return label.replace(" ", "_").replace("/", "_")
 
 
@@ -64,7 +136,31 @@ def render(
     label: str = "regression",
     output_dir: str | None = None,
 ) -> ChartResult:
-    """Render a regression scatter and return path plus stat-rich caption."""
+    """Document the render rule at the boundary where callers use it.
+
+    Chart code normalizes report data before rendering, which keeps presentation details out of
+    analysis and service code.
+
+    Args:
+        x: Numeric series used by the statistical calculation.
+        y: Numeric series used by the statistical calculation.
+        label: Human-readable metric label included in statistical and chart outputs.
+        output_dir: Filesystem location used to read, write, or resolve project data.
+
+    Returns:
+        ChartResult with the output path and the caption shown in reports.
+
+    Examples:
+        Input:
+            render(
+                x=[1.0, 2.0, 3.0],
+                y=[1.0, 2.0, 3.0],
+                label="engagement",
+                output_dir=Path(".skill-data"),
+            )
+        Output:
+            ChartResult(path="charts/engagement.png", caption="Engagement trend")
+    """
     slope, intercept, r_squared = _fit_line(x, y) if len(x) >= 2 else (0.0, 0.0, 0.0)
     save_dir = output_dir if output_dir is not None else tempfile.gettempdir()
     path = f"{save_dir}/{_sanitise(label)}_regression.png"

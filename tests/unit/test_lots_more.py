@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import social_research_probe.platforms.youtube as yt
 from social_research_probe.commands import ConfigSubcommand
 from social_research_probe.commands import config as cfg_cmd
 from social_research_probe.commands import report as report_cmd
 from social_research_probe.config import _active_data_dir
 from social_research_probe.platforms.state import PipelineState
-from social_research_probe.platforms.youtube import pipeline as yt
 from social_research_probe.services.analyzing import charts as charts_svc
 from social_research_probe.services.synthesizing.synthesis.helpers.contextual_models import (
     explain_kaplan_meier,

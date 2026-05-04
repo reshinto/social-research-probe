@@ -50,6 +50,19 @@ def test_global_parser_known_commands():
     assert args.output == OutputFormat.TEXT
 
 
+def test_global_parser_notify_schedule_and_run_due():
+    parser = global_parser()
+    notify = parser.parse_args(["notify", "test", "--channel", "file"])
+    due = parser.parse_args(["watch", "run-due", "--notify", "--channel", "console"])
+    cron = parser.parse_args(["schedule", "cron", "--interval", "hourly"])
+    assert notify.command == "notify"
+    assert notify.notify_cmd == "test"
+    assert due.watch_cmd == "run-due"
+    assert due.notify is True
+    assert due.channels == ["console"]
+    assert cron.schedule_cmd == "cron"
+
+
 def test_global_parser_data_dir():
     parser = global_parser()
     args = parser.parse_args(["--data-dir", "/tmp/srp", "show-topics"])
@@ -80,6 +93,27 @@ class TestHandlersFactory:
         assert Command.SHOW_TOPICS in h
         assert Command.RESEARCH in h
         assert Command.CONFIG in h
+        assert Command.WATCH in h
+        assert Command.NOTIFY in h
+        assert Command.SCHEDULE in h
+
+
+def test_dispatch_watch_handler():
+    ns = argparse.Namespace(command=Command.WATCH)
+    with patch("social_research_probe.commands.watch.run", return_value=0) as mock:
+        assert handlers_factory()[Command.WATCH](ns) == 0
+    mock.assert_called_once_with(ns)
+
+
+def test_dispatch_notify_and_schedule_handlers():
+    notify_ns = argparse.Namespace(command=Command.NOTIFY)
+    schedule_ns = argparse.Namespace(command=Command.SCHEDULE)
+    with patch("social_research_probe.commands.notify.run", return_value=0) as notify_mock:
+        assert handlers_factory()[Command.NOTIFY](notify_ns) == 0
+    with patch("social_research_probe.commands.schedule.run", return_value=0) as schedule_mock:
+        assert handlers_factory()[Command.SCHEDULE](schedule_ns) == 0
+    notify_mock.assert_called_once_with(notify_ns)
+    schedule_mock.assert_called_once_with(schedule_ns)
 
 
 class TestDispatch:

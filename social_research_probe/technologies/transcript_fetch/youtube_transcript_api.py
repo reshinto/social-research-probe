@@ -11,13 +11,11 @@ Any failure returns None so callers can fall back gracefully.
 from __future__ import annotations
 
 import os
-import re
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
+from social_research_probe.utils.core.youtube import youtube_video_id_from_url
 from social_research_probe.utils.display.progress import log
-
-_VIDEO_ID_RE = re.compile(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})")
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
@@ -28,26 +26,33 @@ except ImportError:
     _API_AVAILABLE = False
 
 
-def _extract_video_id(url: str) -> str | None:
-    """Return the 11-character YouTube video ID from a URL, or None."""
-    m = _VIDEO_ID_RE.search(url)
-    return m.group(1) if m else None
-
-
 def fetch_transcript(url: str) -> str | None:
     """Return the cleaned English transcript text for *url*, or None on failure.
 
-    Uses youtube-transcript-api to access YouTube's public timedtext
-    endpoint. Does not require cookies or yt-dlp for the caption path.
+    Uses youtube-transcript-api to access YouTube's public timedtext endpoint. Does not
+    require cookies or yt-dlp for the caption path.
 
-    Cache lookup is skipped for fake-test URLs so integration tests remain
-    deterministic.
+    Cache lookup is skipped for fake-test URLs so integration tests remain deterministic.
+
+    Args:
+        url: Stable source identifier or URL used to join records across stages and exports.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            fetch_transcript(
+                url="https://youtu.be/abc123",
+            )
+        Output:
+            "AI safety"
     """
     if fake := _fake_test_transcript(url):
         return fake
     if not _API_AVAILABLE:
         return None
-    video_id = _extract_video_id(url)
+    video_id = youtube_video_id_from_url(url)
     if not video_id:
         log(f"[srp] captions: cannot parse video id from {url}")
         return None
@@ -64,7 +69,25 @@ def fetch_transcript(url: str) -> str | None:
 
 
 def _fake_test_transcript(url: str) -> str | None:
-    """Return a deterministic transcript for subprocess integration tests."""
+    """Return a deterministic transcript for subprocess integration tests.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        url: Stable source identifier or URL used to join records across stages and exports.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            _fake_test_transcript(
+                url="https://youtu.be/abc123",
+            )
+        Output:
+            "AI safety"
+    """
     if os.environ.get("SRP_TEST_USE_FAKE_YOUTUBE") != "1":
         return None
     if "watch?v=fake" not in url:
@@ -74,15 +97,39 @@ def _fake_test_transcript(url: str) -> str | None:
 
 
 def get_transcript(video_id: str) -> str | None:
-    """Return the English transcript for a YouTube video ID."""
+    """Return the English transcript for a YouTube video ID.
+
+    Fetch adapters hide provider response details and give services the stable source-item shape the
+    rest of the project expects.
+
+    Args:
+        video_id: YouTube video id whose metadata, transcript, comments, or claims are being
+                  fetched.
+
+    Returns:
+        Normalized value needed by the next operation.
+
+    Examples:
+        Input:
+            get_transcript(
+                video_id="abc123",
+            )
+        Output:
+            "AI safety"
+    """
     return fetch_transcript(f"https://www.youtube.com/watch?v={video_id}")
 
 
 class YoutubeTranscriptFetch(BaseTechnology[str, str]):
     """Fetch YouTube video transcript via youtube-transcript-api.
 
-    Input: video URL or video ID string.
-    Output: transcript text string, or None on failure.
+    Input: video URL or video ID string. Output: transcript text string, or None on failure.
+
+    Examples:
+        Input:
+            YoutubeTranscriptFetch
+        Output:
+            YoutubeTranscriptFetch
     """
 
     name: ClassVar[str] = "youtube_transcript_api"
@@ -90,7 +137,25 @@ class YoutubeTranscriptFetch(BaseTechnology[str, str]):
     enabled_config_key: ClassVar[str] = "youtube_transcript_api"
 
     async def _execute(self, data: str) -> str:
-        """Fetch transcript for the given YouTube URL or video ID."""
+        """Fetch transcript for the given YouTube URL or video ID.
+
+        Fetch adapters hide provider response details and give services the stable source-item shape the
+        rest of the project expects.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized string used as a config key, provider value, or report field.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         import asyncio
 
         result = await asyncio.to_thread(fetch_transcript, data)

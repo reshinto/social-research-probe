@@ -20,9 +20,16 @@ from social_research_probe.utils.core.errors import SrpError
 class ResearchCommand(StrEnum):
     """Research DSL command names.
 
-    These values identify actions inside the research pipeline's internal
-    command language. They are distinct from top-level CLI command names and are
-    parsed from research workflow input.
+    These values identify actions inside the research pipeline's internal command language.
+
+    They are distinct from top-level CLI command names and are parsed from research workflow
+    input.
+
+    Examples:
+        Input:
+            ResearchCommand
+        Output:
+            ResearchCommand
     """
 
     UPDATE_TOPICS = "update-topics"
@@ -41,8 +48,14 @@ class ResearchCommand(StrEnum):
 class ParseError(SrpError):
     """Error raised when research DSL input cannot be parsed.
 
-    The exit code maps parse failures to invalid command usage so callers can
-    report malformed input consistently.
+    The exit code maps parse failures to invalid command usage so callers can report
+    malformed input consistently.
+
+    Examples:
+        Input:
+            ParseError
+        Output:
+            ParseError
     """
 
     exit_code = 2
@@ -52,12 +65,11 @@ class ParseError(SrpError):
 class ParsedRunResearch:
     """Parsed representation of a run-research command.
 
-    Attributes:
-        platform: Platform where research should run, such as a social-media
-            source name.
-
-        topics: Topic and purpose pairs to research. Each tuple contains the
-            topic string and a list of purposes associated with that topic.
+    Examples:
+        Input:
+            ParsedRunResearch
+        Output:
+            ParsedRunResearch
     """
 
     platform: str

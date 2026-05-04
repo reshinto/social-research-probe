@@ -47,15 +47,22 @@ SYNTHESIS_JSON_SCHEMA: Final[dict] = {
 def build_synthesis_prompt(report: dict) -> str:
     """Build the LLM prompt for synthesising an evidence report.
 
-    Formats SYNTHESIS_PROMPT with topic, platform, a JSON summary of the
-    top-N items as evidence, and the structured JSON schema expected back from
-    the runner.
+    Formats SYNTHESIS_PROMPT with topic, platform, a JSON summary of the top-N items as evidence,
+    and the structured JSON schema expected back from the runner.
 
     Args:
-        report: A dict produced by services.synthesizing.helpers.formatter.build_report.
+        report: Research report dictionary being rendered, exported, or persisted.
 
     Returns:
-        A formatted prompt string ready to send to an LLMRunner.
+        Normalized string used as a config key, provider value, or report field.
+
+    Examples:
+        Input:
+            build_synthesis_prompt(
+                report={"topic": "AI safety", "items_top_n": []},
+            )
+        Output:
+            "AI safety"
     """
     context = build_synthesis_context(report)
     evidence = json.dumps(context, indent=2)
@@ -71,15 +78,28 @@ def build_synthesis_prompt(report: dict) -> str:
 def parse_synthesis_response(raw: dict) -> dict:
     """Validate and extract the LLM's synthesis response.
 
+    The helper keeps a small project rule named and documented at the boundary where it is used.
+
     Args:
-        raw: The dict returned by LLMRunner.run().
+        raw: Source text, prompt text, or raw value being parsed, normalized, classified, or sent to
+             a provider.
 
     Returns:
-        Dict with exactly three keys: 'compiled_synthesis',
-        'opportunity_analysis', and 'report_summary', all strings.
+        Dictionary with stable keys consumed by downstream project code.
 
     Raises:
-        ValidationError: If either required key is missing or not a string.
+                        ValidationError: If either required key is missing or not a string.
+
+
+
+
+    Examples:
+        Input:
+            parse_synthesis_response(
+                raw="42",
+            )
+        Output:
+            {"enabled": True}
     """
     out = {}
     for key in ("compiled_synthesis", "opportunity_analysis", "report_summary"):

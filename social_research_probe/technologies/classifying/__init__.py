@@ -18,154 +18,51 @@ caches results per channel within a single run.
 
 from __future__ import annotations
 
-import re
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
-
-SourceClass = str  # one of: "primary" | "secondary" | "commentary" | "unknown"
-
-VALID_CLASSES: tuple[str, ...] = ("primary", "secondary", "commentary", "unknown")
-
-# Curated mapping of channel-name fragments to source class. Match is
-# case-insensitive substring on the channel name. First-match wins, so order
-# entries from most-specific to least-specific.
-_CURATED_CHANNEL_MAP: tuple[tuple[str, str], ...] = (
-    # Primary — major news outlets and official channels
-    ("reuters", "primary"),
-    ("associated press", "primary"),
-    ("ap news", "primary"),
-    ("bbc news", "primary"),
-    ("cnn", "primary"),
-    ("bloomberg", "primary"),
-    ("wall street journal", "primary"),
-    ("the new york times", "primary"),
-    ("the washington post", "primary"),
-    ("financial times", "primary"),
-    ("the guardian", "primary"),
-    ("nbc news", "primary"),
-    ("cbs news", "primary"),
-    ("abc news", "primary"),
-    ("al jazeera", "primary"),
-    ("npr", "primary"),
-    ("pbs newshour", "primary"),
-    ("the economist", "primary"),
-    # Secondary — analysis, explainers, aggregators
-    ("vox", "secondary"),
-    ("wendover productions", "secondary"),
-    ("real engineering", "secondary"),
-    ("polymatter", "secondary"),
-    ("kurzgesagt", "secondary"),
-    ("johnny harris", "secondary"),
-    ("cnbc", "secondary"),
-    ("tldr news", "secondary"),
-    # Commentary — opinion, reaction, podcasts
-    ("podcast", "commentary"),
-    ("reacts", "commentary"),
-    ("reaction", "commentary"),
-    ("hasanabi", "commentary"),
+from social_research_probe.utils.core.classifying import (
+    VALID_CLASSES,
+    SourceClass,
+    classify_by_channel_name_signal,
+    classify_by_curated_map,
+    classify_by_title_signal,
+    coerce_class,
 )
-
-_COMMENTARY_TITLE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(p, re.IGNORECASE)
-    for p in (
-        r"\breact(s|ion|ing)\b",
-        r"\bopinion\b",
-        r"\bmy take\b",
-        r"\bpodcast\b",
-    )
-)
-
-_PRIMARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(p, re.IGNORECASE)
-    for p in (
-        r"\bnews\b",
-        r"\bofficial\b",
-        r"\breport(s|ing)?\b",
-    )
-)
-
-_SECONDARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(p, re.IGNORECASE)
-    for p in (
-        r"\bexplain(s|ed|er)?\b",
-        r"\banalys[it]s\b",
-        r"\breview(s)?\b",
-        r"\btech\b",
-        r"\bacademy\b",
-        r"\blearning\b",
-        r"\btutorial(s)?\b",
-    )
-)
-
-_COMMENTARY_NAME_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(p, re.IGNORECASE)
-    for p in (
-        r"\bpodcast\b",
-        r"\breact(s|ion)?\b",
-        r"\bshow\b",
-        r"\btalk(s)?\b",
-        r"\brant(s)?\b",
-    )
-)
-
-
-def classify_by_curated_map(channel: str) -> SourceClass:
-    """Return curated class for ``channel`` or ``"unknown"`` when no match."""
-    if not channel:
-        return "unknown"
-    needle = channel.lower()
-    for fragment, cls in _CURATED_CHANNEL_MAP:
-        if fragment in needle:
-            return cls
-    return "unknown"
-
-
-def classify_by_title_signal(title: str) -> SourceClass:
-    """Return ``"commentary"`` when the title signals reaction/opinion content.
-
-    Returns ``"unknown"`` when no commentary pattern is present, so callers
-    can use this as an item-level override that does not promote primary or
-    secondary classifications.
-    """
-    if not title:
-        return "unknown"
-    for pattern in _COMMENTARY_TITLE_PATTERNS:
-        if pattern.search(title):
-            return "commentary"
-    return "unknown"
-
-
-def classify_by_channel_name_signal(channel: str) -> SourceClass:
-    """Return a class when channel name contains recognisable tokens."""
-    if not channel:
-        return "unknown"
-    for pattern in _PRIMARY_NAME_PATTERNS:
-        if pattern.search(channel):
-            return "primary"
-    for pattern in _SECONDARY_NAME_PATTERNS:
-        if pattern.search(channel):
-            return "secondary"
-    for pattern in _COMMENTARY_NAME_PATTERNS:
-        if pattern.search(channel):
-            return "commentary"
-    return "unknown"
-
-
-def coerce_class(value: object) -> SourceClass:
-    """Coerce arbitrary input to a valid ``source_class`` string."""
-    if isinstance(value, str) and value.lower() in VALID_CLASSES:
-        return value.lower()
-    return "unknown"
 
 
 class HeuristicClassifier(BaseTechnology[dict, SourceClass]):
-    """Curated channel map plus title/name regex signals; zero cost."""
+    """Curated channel map plus title/name regex signals; zero cost.
+
+    Examples:
+        Input:
+            HeuristicClassifier
+        Output:
+            HeuristicClassifier
+    """
 
     name: ClassVar[str] = "classifying.heuristic"
     enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         channel = str(data.get("channel") or data.get("author_name") or "")
         title = str(data.get("title") or "")
         curated = classify_by_curated_map(channel)
@@ -201,12 +98,38 @@ _LLM_PROMPT_TEMPLATE = (
 
 
 class LLMClassifier(BaseTechnology[dict, SourceClass]):
-    """Asks the configured LLM runner to classify the channel into the enum."""
+    """Asks the configured LLM runner to classify the channel into the enum.
+
+    Examples:
+        Input:
+            LLMClassifier
+        Output:
+            LLMClassifier
+    """
 
     name: ClassVar[str] = "classifying.llm"
     enabled_config_key: ClassVar[str] = "classifying"
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Return the execute.
+
+        The caller gets one stable method even when this component needs fallbacks or provider-specific
+        handling.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         from social_research_probe.config import load_active_config
         from social_research_probe.utils.display.progress import log
         from social_research_probe.utils.llm.registry import run_with_fallback
@@ -234,17 +157,54 @@ class LLMClassifier(BaseTechnology[dict, SourceClass]):
 
 
 class HybridClassifier(BaseTechnology[dict, SourceClass]):
-    """Heuristic first, LLM fallback when curated map yields ``unknown``."""
+    """Heuristic first, LLM fallback when curated map yields ``unknown``.
+
+    Examples:
+        Input:
+            HybridClassifier
+        Output:
+            HybridClassifier
+    """
 
     name: ClassVar[str] = "classifying.hybrid"
     enabled_config_key: ClassVar[str] = "classifying"
 
     def __init__(self) -> None:
+        """Store constructor options used by later method calls.
+
+        Returns:
+            None. The result is communicated through state mutation, file/database writes, output, or an
+            exception.
+
+        Examples:
+            Input:
+                __init__()
+            Output:
+                None
+        """
         super().__init__()
         self._heuristic = HeuristicClassifier()
         self._llm = LLMClassifier()
 
     async def _execute(self, data: dict) -> SourceClass:
+        """Run this component and return the project-shaped output expected by its service.
+
+        The helper keeps a small project rule named and documented at the boundary where it is used.
+
+        Args:
+            data: Input payload at this service, technology, or pipeline boundary.
+
+        Returns:
+            Normalized value needed by the next operation.
+
+        Examples:
+            Input:
+                await _execute(
+                    data={"title": "Example", "url": "https://youtu.be/demo"},
+                )
+            Output:
+                "AI safety"
+        """
         result = await self._heuristic._execute(data)
         if result != "unknown":
             return result
