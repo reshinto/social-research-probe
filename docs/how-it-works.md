@@ -1,67 +1,46 @@
 [Back to docs index](README.md)
 
+
 # How It Works
 
-A research run starts with `srp research` and ends with a report path or local serve command. Internally, the command becomes a parsed command object, then a `PipelineState`, then a sequence of stage outputs. The same shape is intended to work for multiple platforms: the first implemented platform is YouTube, but scoring, analysis, synthesis, reporting, cache, and config are shared concepts.
+![Research sequence](diagrams/research-sequence.svg)
 
-![Research data flow](diagrams/data-flow.svg)
+The research path starts in `cli/parsers.py`, enters `commands/research.py`, then calls `platforms/orchestrator.py`. The orchestrator loads purposes, builds `PipelineState`, and invokes the selected platform pipeline from `PIPELINES`.
 
-## One run in plain English
+## YouTube Stage Order
 
-1. The CLI parses the topic and purpose names.
-2. The orchestrator loads purposes, merges the selected purpose definitions, and builds platform config.
-3. **Fetch** — pulls candidate items and engagement metrics from the platform adapter.
-4. **Classify** — assigns a `source_class` label (`primary`, `secondary`, `commentary`, or `unknown`) to each item.
-5. **Score** — ranks items by trust, trend, opportunity, and overall score stored under `scores.*`.
-6. **Transcript** — fetches transcripts for the top-N scored items.
-7. **Summary** — generates LLM summaries of transcript-enriched items when a runner is available.
-8. **Corroborate** — checks extracted claims through healthy configured search providers.
-9. **Stats** — computes aggregate statistics on the scored dataset.
-10. **Charts** — renders visualisations of score distributions and engagement metrics.
-11. **Synthesis** — produces a free-form LLM narrative combining all evidence.
-12. **Assemble** — merges every stage output into the final report dictionary.
-13. **Structured Synthesis** — runs a structured LLM pass over the assembled report.
-14. **Report** — writes Markdown and HTML files to disk.
-15. **Narration** — reads the evidence summary aloud via TTS when enabled.
+`YouTubePipeline.stages()` returns ordered stage groups. A group with one stage runs sequentially. A group with multiple stages runs through `asyncio.gather`.
 
-The topic is the subject being investigated. The purpose is the lens used to interpret that subject. For example, the same topic can be researched as `latest-news`, `trend-analysis`, or `risk-review`; the platform fetch may start from similar search results, but the ranking and final narrative should emphasize different evidence.
+| Order | Stage group | Reads | Writes |
+| --- | --- | --- | --- |
+| 1 | `fetch` | topic and platform config | `fetch.items`, `fetch.engagement_metrics` |
+| 2 | `classify` | fetched items | classified items and updated fetch output |
+| 3 | `score` | fetch output and merged purpose weights | `score.all_scored`, `score.top_n` |
+| 4 | `transcript`, `stats`, `charts` | scored items | transcripts, stats summary, chart results |
+| 5 | `comments` | transcript top-N | comment-enriched top-N |
+| 6 | `summary` | comments top-N | text surrogates and summaries |
+| 7 | `claims` | summary top-N | extracted claims per item |
+| 8 | `corroborate` | claims top-N | corroboration status per claim |
+| 9 | `narratives` | corroborated claims | narrative clusters |
+| 10 | `synthesis` | narratives, corroboration, score, fetch, stats, charts | synthesis text |
+| 11 | `assemble` | accumulated stage outputs | report dictionary |
+| 12 | `structured_synthesis` | report dictionary | structured report sections |
+| 13 | `report`, `narration` | report dictionary | HTML path and optional audio |
+| 14 | `export` | report dictionary | export paths |
+| 15 | `persist` | report dictionary and config | SQLite row ids and DB path |
 
-![Runtime sequence](diagrams/research-sequence.svg)
+## Failure Model
 
-## Why the order matters
+`BaseTechnology.execute()` checks the technology flag, uses the cache when allowed, catches exceptions, and returns `None` on disabled or failed work. `BaseService.execute_one()` converts technology outputs into `TechResult` records. Stages then decide whether missing output means an empty result, a fallback, or a skipped downstream field.
 
-Fetch and score happen before expensive enrichment. That lets the project spend transcript, LLM, and corroboration work on the most relevant items instead of every search result.
+This is why a run can still produce rankings, statistics, charts, and a basic report when transcripts, LLM runners, or corroboration providers are unavailable.
 
-Statistics and charts use the scored dataset and can run without LLM access. This gives a usable analytical report even when runner CLIs or paid providers are unavailable.
+## Mental Model
 
-This order also makes failures easier to understand. If transcript fetching fails, the user can still inspect fetched items, scores, statistics, and charts. If an LLM runner is not configured, the system can still produce a report with local evidence and empty generated sections rather than losing the whole run.
+A run is not one long function. It is a state machine over `PipelineState`:
 
-## Failure model
+```text
+CLI args -> ParsedRunResearch -> PipelineState -> named stage outputs -> report -> exports -> SQLite
+```
 
-Most technology calls are isolated. A transcript provider, chart renderer, LLM runner, or corroboration backend can fail without forcing the whole process to crash. Failed technology calls become empty outputs or unsuccessful `TechResult` entries, and later stages use the best available data.
-
-![Parallel stage fan-out](diagrams/async-fanout.svg)
-
-When a run looks incomplete, read it stage by stage. First confirm that candidate items were fetched. Then check whether scoring produced top-ranked items. After that, inspect transcript, summary, corroboration, charts, and report stages. This mirrors how the pipeline is built and avoids debugging the final report before knowing which upstream stage supplied missing data.
-
-## Example mental model
-
-Imagine the topic is `"AI agents"` and the purpose is `"latest-news"`.
-
-| Stage | What it contributes |
-| --- | --- |
-| Fetch | Candidate platform items and engagement metrics. |
-| Classify | Source type labels (`primary`, `secondary`, `commentary`, or `unknown`) per item. |
-| Score | A ranked list based on trust, trend, opportunity, and overall score. |
-| Transcript | Full transcripts for the top-N scored items. |
-| Summary | Short item-level summaries when a runner is available. |
-| Corroborate | External evidence checks for extracted claims. |
-| Stats | Aggregate statistics across the scored dataset. |
-| Charts | Visualisations of score distributions and engagement metrics. |
-| Synthesis | Free-form LLM narrative combining all evidence. |
-| Assemble | Merged report dictionary from every stage output. |
-| Structured Synthesis | Structured LLM pass over the assembled report. |
-| Report | Markdown, HTML, and chart PNG files. |
-| Narration | Audio readout of the evidence summary via TTS. |
-
-If you understand those stages, you can usually diagnose any run. Missing charts point to analysis or rendering. Missing summaries point to transcript or runner configuration. Weak final synthesis points to missing source text, weak summaries, or limited corroboration evidence.
+When debugging, find the stage that first lost the data. Then inspect that stage's service and technology adapters.

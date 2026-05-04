@@ -1,69 +1,60 @@
 [Back to docs index](README.md)
 
+
 # Usage
 
-![CLI command surface](diagrams/command-surface.svg)
-
-Use `srp research` for the main workflow:
+The command parser builds this general shape:
 
 ```bash
-srp research "model collapse" "latest-news"
-srp research youtube "AI agents" "latest-news,trends"
-srp --data-dir ./.skill-data research "climate tech" "emerging-research"
+srp [--data-dir PATH] [--verbose] [--version] COMMAND ...
 ```
 
-The simple form is `srp research [platform] TOPIC PURPOSES`. `PURPOSES` is comma-separated. If the platform is omitted, YouTube is used.
+## Research Inputs
 
-Think of a research command as three decisions:
+`commands/research.py` accepts two research forms:
 
-| Decision | Example | Meaning |
-| --- | --- | --- |
-| Platform | `youtube` | Which source adapter should fetch candidate items. |
-| Topic | `"AI agents"` | What subject to investigate. |
-| Purpose | `"latest-news,trends"` | What research lens should guide ranking and synthesis. |
+```bash
+srp research [PLATFORM] TOPIC PURPOSES
+srp research [PLATFORM] "NATURAL LANGUAGE QUERY"
+```
 
-The current default platform is YouTube because it is the first implemented adapter. The command shape includes a platform position so future adapters can use the same workflow.
+`PLATFORM` is recognized only if the first positional argument matches a key in `PIPELINES`. Current keys are `youtube` and `all`. If no platform is given, the parser sets `platform = "all"`.
 
-Claude Code uses the same command arguments through the `/srp` skill prefix.
-For example, `srp research "model collapse" "latest-news"` becomes
-`/srp research "model collapse" "latest-news"`. See [Commands](commands.md) for
-the side-by-side terminal and Claude Code forms.
+`PURPOSES` is comma-separated:
 
-Useful flags:
+```bash
+srp research youtube "AI coding agents" "latest-news,trends"
+```
 
-| Flag | Effect |
+When only one argument remains after platform parsing, the code treats it as a natural-language query and calls the query classifier to produce a topic and purpose name.
+
+## Useful Flags
+
+| Flag | Code effect |
 | --- | --- |
-| `--no-shorts` | Exclude YouTube Shorts under 90 seconds. |
-| `--no-transcripts` | Skip transcript fetching for speed. |
-| `--no-html` | Skip writing the HTML report. |
-| `--data-dir PATH` | Use a specific data directory for config, cache, and outputs. |
-| `--verbose` | Show more runtime output. |
+| `--no-shorts` | Sets platform override `include_shorts = False`. |
+| `--no-transcripts` | Sets `fetch_transcripts = False`. |
+| `--no-html` | Sets `allow_html = False`. |
+| `--data-dir PATH` | Resolves config, secrets, cache, reports, exports, and SQLite under that path. |
 
-Topic and purpose state is local JSON. Use topics when you want reusable subject
-names, and use purposes when you want reusable research lenses. The exact
-commands are listed in [Commands](commands.md).
+## Reading Outputs
 
-The suggestion workflow stages generated ideas before applying them:
+A successful research command prints the report path or a `srp serve-report --report ...` command. Export paths are attached to the report dictionary by `export_stage.py` and written beside the HTML report under `reports/`.
 
-1. generate topic or purpose suggestions.
-2. inspect pending suggestions.
-3. apply the ones you want or discard the rest.
+Use these commands after a run:
 
-This avoids letting generated ideas silently modify saved research state.
+```bash
+srp db stats
+srp claims list --limit 20
+srp claims stats --output json
+srp serve-report --report PATH_TO_HTML
+```
 
-Reports can also be rebuilt or served. Use `report` when you already have a
-saved packet and want to regenerate HTML after changing authoring sections or
-report formatting. Use `serve-report` when you want to inspect an HTML report in
-a browser without moving files around.
+## Workflow
 
-## Reading a run
-
-After a run, inspect the output in this order:
-
-1. Confirm the report path printed by the command.
-2. Open the HTML report for the human-readable view.
-3. Check chart PNGs when you need visual evidence.
-4. Check the packet or cached stage outputs when a section looks incomplete.
-5. Check config and provider health if summaries or corroboration are missing.
-
-Missing generated text does not always mean the run failed. It can mean the selected runner was `none`, a provider was disabled, a secret was missing, or the relevant item did not make the top-N enrichment cutoff.
+1. Pick a data directory for the project or let srp use the default.
+2. Configure the YouTube key and optional runner/provider keys.
+3. Add or choose purpose names.
+4. Run research.
+5. Inspect the HTML report, CSV exports, claims, and database rows.
+6. If an output is missing, check config gates and technology availability before changing code.

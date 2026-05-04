@@ -1,10 +1,10 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Adapter["platform adapter"] --> Raw["RawItem list"]
-  Adapter --> Metrics["EngagementMetrics list"]
-  Raw --> Score["shared scorer"]
-  Metrics --> Score
-  Score --> Shared["shared enrichment, analysis, reports"]
+  Platform["new platform pipeline"] --> Stages["BaseStage classes"] --> Items["normalized item dicts"]
+  Items --> Shared["shared scoring enrichment analysis"] --> Outputs["report export persist"]
+  class Platform input;
+  class Stages,Items,Shared process;
+  class Outputs output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -13,7 +13,3 @@ flowchart TB
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Adapter input;
-  class Raw,Metrics config;
-  class Score process;
-  class Shared output;

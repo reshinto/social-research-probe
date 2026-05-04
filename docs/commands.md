@@ -1,339 +1,83 @@
 [Back to docs index](README.md)
 
+
 # Commands
 
 ![Command surface](diagrams/command-surface.svg)
 
-`srp` is the command-line entry point. Every command follows this shape:
+The command list comes from `Command` in `commands/__init__.py` and parser registration in `cli/parsers.py`.
 
-```bash
-srp [GLOBAL_FLAGS] COMMAND [COMMAND_FLAGS] [ARGUMENTS]
-```
+## Global Flags
 
-Use `srp --help` or `srp COMMAND --help` when you need the parser's exact flag list.
+| Flag | Meaning |
+| --- | --- |
+| `--data-dir PATH` | Resolve and set `SRP_DATA_DIR` before command dispatch. |
+| `--verbose` | Parsed and passed through the top-level namespace. |
+| `--version` | Print package version and path, then exit. |
 
-## Terminal vs Claude Code skill
-
-The Claude Code skill uses the same command surface with a different prefix.
-Everything after `/srp` is the same argument list you would pass after `srp` in
-a terminal.
-
-| Task | Terminal CLI | Claude Code skill |
-| --- | --- | --- |
-| Run research | `srp research "AI safety" "latest-news"` | `/srp research "AI safety" "latest-news"` |
-| Show config | `srp config show` | `/srp config show` |
-| Show topics as JSON | `srp show-topics --output json` | `/srp show-topics --output json` |
-| Use a data directory | `srp --data-dir ./.skill-data config path` | `/srp --data-dir ./.skill-data config path` |
-
-The skill does not define a separate language. It tells Claude Code to operate
-the local `srp` CLI, surface stdout on success, and show stderr plus exit code
-on failure. The CLI remains the source of truth.
-
-For workflow examples and how to decide which command to use, see
-[Usage](usage.md).
-
-## Global flags
-
-| Flag | How to use it | Example |
-| --- | --- | --- |
-| `--data-dir PATH` | Put config, secrets, state, cache, charts, and reports under a specific directory. | `srp --data-dir ./.skill-data config path` |
-| `--verbose` | Print more runtime detail. | `srp --verbose research "AI agents" "latest-news"` |
-| `--version` | Print the installed package version and path. | `srp --version` |
-
-Example output for `--data-dir` with `config path`:
-
-```text
-config: /absolute/path/.skill-data/config.toml
-secrets: /absolute/path/.skill-data/secrets.toml
-```
-
-## Output formats
-
-State and config commands usually accept `--output text`, `--output json`, or `--output markdown`.
-
-```bash
-srp show-topics --output text
-srp show-topics --output json
-srp show-topics --output markdown
-```
-
-Representative outputs:
-
-```text
-AI safety
-model collapse
-```
-
-```json
-{"topics":["AI safety","model collapse"]}
-```
-
-````markdown
-```
-AI safety
-model collapse
-```
-````
-
-## Research
-
-Run the full research pipeline.
+## Research And Reports
 
 ```bash
 srp research [platform] TOPIC PURPOSES [--no-shorts] [--no-transcripts] [--no-html]
+srp corroborate-claims --input claims.json [--providers llm_search,exa,brave,tavily] [--output out.json]
+srp render --packet packet.json [--output-dir charts]
+srp report --packet packet.json [--compiled-synthesis file] [--opportunity-analysis file] [--final-summary file] [--out report.html]
+srp serve-report --report report.html [--host 127.0.0.1] [--port 8000] [--voicebox-base URL]
+srp demo-report
 ```
 
-`platform` is optional. If it is omitted, the parser targets all registered platforms. In the current codebase, the implemented concrete platform is YouTube.
+`render` is for chart/stat output from a saved packet. `report` re-renders HTML from a packet. `serve-report` starts a local HTTP server and Voicebox proxy for an existing HTML report.
 
-`PURPOSES` is a comma-separated list of saved purpose names.
-
-Example input:
+## Config
 
 ```bash
-srp research youtube "AI agents" "latest-news,trends" --no-shorts
+srp config show [--output text|json|markdown]
+srp config path [--output text|json|markdown]
+srp config set KEY VALUE [--output text|json|markdown]
+srp config set-secret NAME [--from-stdin] [--output text|json|markdown]
+srp config unset-secret NAME [--output text|json|markdown]
+srp config check-secrets [--needed-for research] [--platform youtube] [--corroboration exa|brave|tavily] [--output text|json|markdown]
 ```
 
-Expected output shape:
+Regular config values go to `config.toml`. Secrets go to `secrets.toml` or environment variables.
 
-```text
-srp serve-report --report /Users/example/.social-research-probe/reports/ai_agents.html
-```
+## State Commands
 
-If HTML is disabled or cannot be written, the output is a Markdown report path:
-
-```text
-/Users/example/.social-research-probe/report.md
-```
-
-Use `--no-transcripts` when you only want scoring, statistics, charts, and report structure without transcript fetching. Use `--no-html` when you do not want the HTML file written.
-
-## Topics
-
-Topics are saved strings used to organize repeat research.
-
-### Show topics
+The parser also registers state-management commands. Some have no help text in the root help output, but they are valid commands.
 
 ```bash
-srp show-topics
+srp show-topics [--output text|json|markdown]
+srp update-topics --add TOPIC... [--output text|json|markdown]
+srp update-topics --remove TOPIC... [--force]
+srp update-topics --rename OLD NEW
+
+srp show-purposes [--output text|json|markdown]
+srp update-purposes --add PURPOSE... [--output text|json|markdown]
+srp update-purposes --remove PURPOSE... [--force]
+srp update-purposes --rename OLD NEW
+
+srp suggest-topics [--count N] [--output text|json|markdown]
+srp suggest-purposes [--count N] [--output text|json|markdown]
+srp stage-suggestions [--from-stdin] [--output text|json|markdown]
+srp show-pending [--output text|json|markdown]
+srp apply-pending [--topics IDS] [--purposes IDS] [--output text|json|markdown]
+srp discard-pending [--topics IDS] [--purposes IDS] [--output text|json|markdown]
 ```
 
-Example output:
+The state files use JSON schemas and migration helpers in `utils/state`.
 
-```text
-AI safety
-model collapse
-```
-
-If none exist:
-
-```text
-(no topics)
-```
-
-### Add topics
+## Database And Claims
 
 ```bash
-srp update-topics --add "AI safety" "model collapse"
-```
+srp db path
+srp db init
+srp db stats
 
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-Near-duplicate topics are rejected unless you pass `--force`.
-
-### Remove topics
-
-```bash
-srp update-topics --remove "model collapse"
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-### Rename a topic
-
-```bash
-srp update-topics --rename "AI safety" "AI governance"
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-## Purposes
-
-A purpose tells the pipeline how to frame the research question and can influence scoring.
-
-### Show purposes
-
-```bash
-srp show-purposes
-```
-
-Example output:
-
-```text
-latest-news: Find recent reporting and claims
-trends: Find rising topics and momentum signals
-```
-
-If none exist:
-
-```text
-(no purposes)
-```
-
-### Add a purpose
-
-```bash
-srp update-purposes --add 'latest-news=Find recent reporting and claims'
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-The input format is `name=method`. The name is what you pass to `srp research`; the method is the plain-language instruction used by the pipeline.
-
-### Remove purposes
-
-```bash
-srp update-purposes --remove latest-news trends
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-### Rename a purpose
-
-```bash
-srp update-purposes --rename latest-news recent-claims
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-## Suggestions
-
-Suggestion commands create pending topic or purpose candidates. They do not change active topics or purposes until you apply them.
-
-### Suggest topics
-
-```bash
-srp suggest-topics --count 3
-```
-
-Expected output shape:
-
-```json
-{
-  "staged_topic_suggestions": [
-    {
-      "value": "on-device LLMs",
-      "reason": "seed pool (no LLM runner configured)"
-    }
-  ]
-}
-```
-
-If an LLM runner is configured, suggestions come from that runner. If no runner is configured, `suggest-topics` uses a deterministic seed pool.
-
-### Suggest purposes
-
-```bash
-srp suggest-purposes --count 2
-```
-
-Expected output shape:
-
-```json
-{
-  "staged_purpose_suggestions": [
-    {
-      "name": "market-map",
-      "method": "Map active channels, claims, and opportunity signals"
-    }
-  ]
-}
-```
-
-This command requires an LLM runner. If `llm.runner` resolves to `none`, it exits with a validation error.
-
-### Stage suggestions from stdin
-
-```bash
-printf '%s\n' '{
-  "topic_candidates": [{"value": "AI hardware", "reason": "important infrastructure topic"}],
-  "purpose_candidates": [{"name": "claims", "method": "Track repeated claims and evidence"}]
-}' | srp stage-suggestions --from-stdin
-```
-
-Expected output:
-
-```json
-{
-  "ok": true
-}
-```
-
-### Show pending suggestions
-
-```bash
-srp show-pending --output json
-```
-
-Expected output shape:
-
-```json
-{
-  "schema_version": 1,
-  "pending_topic_suggestions": [
-    {
-      "id": 1,
-      "value": "AI hardware",
-      "reason": "important infrastructure topic",
-      "duplicate_status": "new",
-      "matches": []
-    }
-  ],
-  "pending_purpose_suggestions": []
-}
-```
-
-### Apply or discard pending suggestions
-
-Apply all pending topic suggestions:
-
-```bash
-srp apply-pending --topics all
+srp claims list [--run-id ID] [--topic TEXT] [--claim-type TYPE] [--needs-review] [--needs-corroboration] [--corroboration-status STATUS] [--extraction-method METHOD] [--limit N] [--output text|json|markdown]
+srp claims show CLAIM_ID [--output text|json|markdown]
+srp claims stats [--output text|json|markdown]
+srp claims review CLAIM_ID --status verified|rejected|disputed|ignored|unreviewed [--importance low|medium|high|critical] [--notes TEXT] [--output text|json|markdown]
+srp claims note CLAIM_ID TEXT [--output text|json|markdown]
 ```
 
 Apply selected pending purpose IDs:

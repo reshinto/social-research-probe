@@ -1,25 +1,43 @@
 [Back to docs index](README.md)
 
+
 # Configuration
+
+`config.py` owns non-secret runtime configuration. It starts from `DEFAULT_CONFIG`, merges `config.toml` from the active data directory when present, and exposes typed accessors through `Config`.
 
 ![Configuration lifecycle](diagrams/config_lifecycle.svg)
 
-Configuration is loaded from `DEFAULT_CONFIG` in `social_research_probe/config.py`, then merged with `config.toml` in the active data directory. Secrets are separate. This split matters because normal configuration can be shown, copied, and committed as examples, while API keys should stay masked and local.
+## Main Sections
 
-The configuration system is intentionally boring: it is a layered set of TOML values and environment variables. That makes it easy to answer "why did this run behave this way?" by checking the active data directory, the config file, and any environment overrides.
+| Section | Source use |
+| --- | --- |
+| `[llm]` | Selects `none`, `claude`, `gemini`, `codex`, or `local`; stores timeout and runner flags. |
+| `[corroboration]` | Selects provider and max claim budgets. |
+| `[platforms.youtube]` | YouTube limits, comments, claims, narratives, export options. |
+| `[scoring.weights]` | Optional global trust/trend/opportunity weights. |
+| `[stages.youtube]` | Highest-level stage gates. |
+| `[services]` | Service-level gates read by `BaseService.is_enabled()`. |
+| `[technologies]` | Flat technology gates read by `BaseTechnology.execute()`. |
+| `[tunables]` | Summary divergence threshold and per-item summary word target. |
+| `[debug]` | Technology log control. |
+| `[voicebox]` | HTML narration and playback settings. |
+| `[database]` | SQLite path and text-persistence settings. |
 
-## Data directory resolution
+## Stage Gates
 
-Order:
+Current YouTube stage gates are:
 
-1. `--data-dir PATH`
-2. `SRP_DATA_DIR`
-3. local `.skill-data` if that directory exists
-4. `~/.social-research-probe`
+```text
+fetch, classify, score, transcript, summary, corroborate, stats, charts,
+synthesis, assemble, structured_synthesis, report, narration, comments,
+claims, narratives, export, persist
+```
 
-Use `--data-dir` when you want one command to use a specific workspace. Use `SRP_DATA_DIR` when a shell session, CI job, or scripted workflow should consistently use the same directory. Use `.skill-data` when a project should carry its own local state during development. Use the home directory default for personal long-lived settings.
+If a stage gate is false, the stage skips before service or technology work.
 
-## Main sections
+## Service Gates
+
+Service classes declare dotted `enabled_config_key` values such as `services.youtube.reporting.html`. The current compatibility lookup checks the final leaf name against known service names. Unknown service names are disabled by default.
 
 | Section | Controls |
 | --- | --- |
@@ -47,7 +65,7 @@ srp config set platforms.youtube.enrich_top_n 3
 srp config set technologies.tavily false
 ```
 
-Think of gates as switches at different heights. A stage gate disables a whole part of the pipeline. A service gate disables one service inside that part. A technology gate disables one concrete provider or implementation. Prefer the narrowest gate that solves the problem: turn off `technologies.tavily` if only Tavily should be skipped, but turn off a service when the entire category should be skipped.
+Technology gates are flat names under `[technologies]`, for example `youtube_search`, `llm_ensemble`, `corroboration_host`, `export_package`, and `sqlite_persist`. Unknown technology names are disabled.
 
 `srp watch run` requires SQLite persistence. It fails clearly if `database.enabled=false`, `services.persistence.sqlite=false`, `technologies.sqlite_persist=false`, or the platform persist stage is disabled. Watch tests should monkeypatch the research runner and use temporary data directories; they should not make network calls.
 
@@ -57,6 +75,13 @@ Think of gates as switches at different heights. A stage gate disables a whole p
 
 ## Secrets
 
-Secrets can come from environment variables such as `SRP_YOUTUBE_API_KEY` or from `secrets.toml`. Environment variables win. The secrets file is written with `0600` permissions.
+`commands/config.py` maps logical secret names to environment variables by uppercasing and prefixing `SRP_`.
 
-Use environment variables for CI, temporary shells, and secrets managed by another tool. Use `srp config set-secret` for local development when you want the value stored in the data directory. If a provider is configured but its secret is missing, the provider should be treated as unavailable rather than silently making unauthenticated calls.
+| Logical name | Environment variable |
+| --- | --- |
+| `youtube_api_key` | `SRP_YOUTUBE_API_KEY` |
+| `exa_api_key` | `SRP_EXA_API_KEY` |
+| `brave_api_key` | `SRP_BRAVE_API_KEY` |
+| `tavily_api_key` | `SRP_TAVILY_API_KEY` |
+
+Secret file values live in `[secrets]` in `secrets.toml`. Environment variables win over file values.

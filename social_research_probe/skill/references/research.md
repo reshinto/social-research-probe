@@ -6,7 +6,7 @@ Forms:
 
 Current platform parse:
 - First arg matching registered pipeline is platform (`youtube`, `all`).
-- No platform => `all`.
+- No platform => `all`; current concrete registered platform is YouTube.
 - `PURPOSES` is comma-separated.
 
 Flags:

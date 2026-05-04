@@ -1,6 +1,6 @@
-# Installation
+[Back to docs index](README.md)
 
-[Home](README.md) → Installation
+# Installation
 
 This guide walks you through installing `srp`, storing your API keys, choosing an LLM runner, and verifying that everything works before your first research run.
 
@@ -140,7 +140,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # any OS
 
 uvx --from social-research-probe srp install-skill
 ```
+
 or
+
 ```bash
 uv tool install social-research-probe
 srp install-skill
@@ -345,13 +347,13 @@ In skill mode, Claude uses the host model for the language-only steps when `llm.
 
 ## Troubleshooting
 
-| Problem                                      | Fix                                                           |
-| -------------------------------------------- | ------------------------------------------------------------- |
-| `ffmpeg not found`                           | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
-| `youtube_api_key missing`                    | Run `srp config set-secret youtube_api_key`                   |
-| Compiled Synthesis / Opportunity Analysis / Final Summary show placeholder text | Set `llm.runner` to a configured provider (Step 3) |
-| Corroboration skipped                        | Add at least one corroboration key (Step 4)                   |
-| `ModuleNotFoundError: social_research_probe` | Run `pip install -e .` from the repo root                     |
+| Problem                                                                         | Fix                                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `ffmpeg not found`                                                              | `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux) |
+| `youtube_api_key missing`                                                       | Run `srp config set-secret youtube_api_key`                   |
+| Compiled Synthesis / Opportunity Analysis / Final Summary show placeholder text | Set `llm.runner` to a configured provider (Step 3)            |
+| Corroboration skipped                                                           | Add at least one corroboration key (Step 4)                   |
+| `ModuleNotFoundError: social_research_probe`                                    | Run `pip install -e .` from the repo root                     |
 
 ---
 

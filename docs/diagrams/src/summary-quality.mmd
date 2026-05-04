@@ -1,10 +1,12 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart LR
-  Transcript["transcript or description"] --> Prompt["bounded summary prompt"]
-  Prompt --> Runner["configured runner"]
-  Runner --> Validate["empty/error handling"]
-  Validate --> Cache["cache/summaries"]
-  Cache --> Report["one-line takeaway and summary"]
+  Item["scored item"] --> Surrogate["TextSurrogateService"] --> Prompt["bounded prompt"]
+  Prompt --> Ensemble["SummaryEnsembleTech"] --> Validate["empty/error fallback"] --> Report["summary fields"]
+  Ensemble --> Cache["cache/technologies/llm_ensemble"]
+  class Item input;
+  class Surrogate,Prompt,Ensemble,Validate process;
+  class Cache config;
+  class Report output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
@@ -13,8 +15,3 @@ flowchart LR
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
   classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
   classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;
-  class Transcript input;
-  class Prompt,Validate process;
-  class Runner external;
-  class Cache config;
-  class Report output;

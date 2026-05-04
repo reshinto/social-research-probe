@@ -1,30 +1,21 @@
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryTextColor":"#111111","lineColor":"#333333","fontFamily":"Arial, sans-serif","clusterBkg":"#ffffff","clusterBorder":"#d0d7de"}}}%%
 flowchart TB
-  Items["scored_items"] --> Scores["overall/trust/trend/opportunity"]
-  Items --> Features["velocity/engagement/age"]
-  Scores --> Bars["overall score bar"]
-  Scores --> Line["overall by rank line"]
-  Scores --> Histogram["overall score histogram"]
-  Scores --> Regression["trust relationship regressions"]
-  Scores --> Scatter["trust relationship scatter plots"]
-  Scores --> Residuals["overall rank residuals"]
-  Scores --> Table["top 10 score table"]
-  Features --> Heatmap["feature correlation heatmap"]
-  Bars --> PNG["data_dir/charts/*.png"]
-  Line --> PNG
-  Histogram --> PNG
-  Regression --> PNG
-  Scatter --> PNG
-  Residuals --> PNG
-  Table --> PNG
-  Heatmap --> PNG
+  Items["scored items"] --> Fields["scores and features"]
+  Fields --> Bar["bar"]
+  Fields --> Line["line"]
+  Fields --> Hist["histogram"]
+  Fields --> Scatter["scatter regression"]
+  Fields --> Heatmap["heatmap"]
+  Fields --> Residuals["residuals"]
+  Fields --> Table["top 10 table"]
+  class Items input;
+  class Fields process;
+  class Bar,Line,Hist,Scatter,Heatmap,Residuals,Table output;
 
   classDef input fill:#dcfce7,stroke:#15803d,color:#111111,stroke-width:2px;
   classDef process fill:#dbeafe,stroke:#1d4ed8,color:#111111,stroke-width:2px;
   classDef analysis fill:#fef3c7,stroke:#d97706,color:#111111,stroke-width:2px;
+  classDef external fill:#ccfbf1,stroke:#0f766e,color:#111111,stroke-width:2px;
   classDef output fill:#ede9fe,stroke:#7c3aed,color:#111111,stroke-width:2px;
-
-  class Items input;
-  class Scores,Features process;
-  class Bars,Line,Histogram,Regression,Scatter,Residuals,Table,Heatmap analysis;
-  class PNG output;
+  classDef config fill:#ffedd5,stroke:#ea580c,color:#111111,stroke-width:2px;
+  classDef risk fill:#fee2e2,stroke:#dc2626,color:#111111,stroke-width:2px;

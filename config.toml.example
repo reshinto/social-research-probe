@@ -92,8 +92,9 @@ enabled = true
 # Maximum number of claims extracted per source item.
 max_claims_per_source = 10
 
-# Use LLM-backed extraction (Phase 5B). When false, deterministic pattern-
-# matching is used exclusively. LLM extraction is not yet implemented.
+# Use LLM-backed extraction first. When false, deterministic pattern-matching
+# is used exclusively. When true, srp falls back to deterministic extraction if
+# the configured runner is unavailable or returns invalid structured output.
 use_llm = false
 
 # Maximum character length for a single extracted claim sentence.

@@ -1,92 +1,93 @@
 # Documentation
 
-Start here if you have never used Social Research Probe before. The docs are organized like a small system design guide: begin with the problem, then the workflow, architecture, tradeoffs, commands, and extension points. The goal is that a reader can understand what the project does, why the code is shaped this way, and how to run or extend it without having to infer missing context from source files.
+This directory is the operating manual for the code in `social_research_probe/`. The content is organized as a learning path, then reference material for specific subsystems.
 
-The project is platform-oriented, not YouTube-oriented. YouTube is the first implemented source adapter. The shared pipeline is intentionally written so future adapters can support TikTok, Instagram, X, web search, RSS, forums, and other public sources while reusing scoring, statistics, corroboration, synthesis, reporting, cache, and configuration behavior.
+## Learning Path
 
-## Learning path
-
-| Step | Read | Purpose |
+| Step | Document | Source-code anchor |
 | --- | --- | --- |
-| 1 | [Objective](objective.md) | Why the project exists and what problem it solves. |
-| 2 | [How it works](how-it-works.md) | Plain-English walkthrough of one research run. |
-| 3 | [Usage](usage.md) | Commands for daily use. |
-| 4 | [Configuration](configuration.md) | How config, secrets, gates, and data directories work. |
-| 5 | [Architecture](architecture.md) | System design, diagrams, and tradeoffs. |
-| 6 | [Design patterns](design-patterns.md) | The code patterns used in the repository. |
+| 1 | [Objective](objective.md) | `README.md`, `commands/research.py`, `platforms/orchestrator.py` |
+| 2 | [How it works](how-it-works.md) | `platforms/youtube/__init__.py` |
+| 3 | [Installation](installation.md) | `pyproject.toml`, `commands/setup.py`, `commands/config.py` |
+| 4 | [Usage](usage.md) | `cli/parsers.py`, `commands/research.py` |
+| 5 | [Commands](commands.md) | `commands/__init__.py`, `cli/parsers.py` |
+| 6 | [Configuration](configuration.md) | `config.py`, `config.toml.example` |
+| 7 | [Data directory](data-directory.md) | `config.py`, `utils/caching/pipeline_cache.py`, export and persistence technologies |
+| 8 | [Architecture](architecture.md) | `platforms`, `services`, `technologies`, `utils` |
+| 9 | [Python language guide](python-language-guide.md) | Python constructs used across the package |
 
-After those six pages, read the reference pages only when you need the matching task. For example, read [Commands](commands.md) when you need exact input and output examples, [Charts](charts.md) when you need to interpret PNG outputs, and [Adding a platform](adding-a-platform.md) when you want to add a new source.
-
-## Reference
+## User Reference
 
 | Topic | Document |
 | --- | --- |
-| Install | [Installation](installation.md) |
-| Commands | [Commands](commands.md) |
-| Classification | [Source classification](classifying.md) |
-| Corroboration | [Corroboration](corroboration.md) |
-| LLM runners | [LLM runners](llm-runners.md) |
-| API costs and keys | [API costs and keys](api-costs-and-keys.md) |
-| Data directory | [Data directory](data-directory.md) |
-| Runtime dependencies | [Runtime dependencies](runtime-dependencies.md) |
-| Root files | [Root files](root-files.md) |
-| Scoring | [Scoring](scoring.md) |
+| API keys and cost boundaries | [API costs and keys](api-costs-and-keys.md) |
+| Runtime model runners | [LLM runners](llm-runners.md) |
+| Source classification | [Source classification](classifying.md) |
+| Claim corroboration | [Corroboration](corroboration.md) |
+| Scoring math | [Scoring](scoring.md) |
 | Statistics | [Statistics](statistics.md) |
 | Charts | [Charts](charts.md) |
-| Synthesis | [Synthesis authoring](synthesis-authoring.md) |
-| Summary quality | [Summary quality](summary-quality-report.md) |
-| Reliability harness | [LLM reliability harness](llm-reliability-harness.md) |
-| Model applicability | [Model applicability](model-applicability.md) |
-| Cost optimization | [Cost optimization](cost-optimization.md) |
-| Module map | [Module reference](module-reference.md) |
+| Summary behavior | [Summary quality](summary-quality-report.md) |
+| Synthesis editing | [Synthesis authoring](synthesis-authoring.md) |
+| Security | [Security](security.md) |
+| Runtime dependencies | [Runtime dependencies](runtime-dependencies.md) |
+| Model selection | [Model applicability](model-applicability.md) |
+| Cost control | [Cost optimization](cost-optimization.md) |
+
+## Developer Reference
+
+| Topic | Document |
+| --- | --- |
+| Package map | [Module reference](module-reference.md) |
+| Design patterns | [Design patterns](design-patterns.md) |
+| Root files | [Root files](root-files.md) |
+| Testing | [Testing](testing.md) |
+| Evaluation harness | [LLM reliability harness](llm-reliability-harness.md) |
 | Add a platform | [Adding a platform](adding-a-platform.md) |
 | Add a service | [Adding a service](adding-a-service.md) |
 | Add a technology | [Adding a technology](adding-a-technology.md) |
-| Python primer | [Python language guide](python-language-guide.md) |
-| Testing | [Testing](testing.md) |
-| Security | [Security](security.md) |
 
-## Diagram index
+## Diagram Index
 
-These SVGs are rendered from `docs/diagrams/src/*.mmd` with a white background for readability in dark-mode viewers.
+Every diagram below is checked in as SVG so Markdown renderers can display it directly. Every SVG has a Mermaid source under `docs/diagrams/src/`.
 
-| Diagram | Used for |
+| Diagram | Source concept |
 | --- | --- |
-| ![System context](diagrams/context.svg) | System boundary |
-| ![Component map](diagrams/components.svg) | Package layout |
-| ![Data flow](diagrams/data-flow.svg) | Research data path |
-| ![Research sequence](diagrams/research-sequence.svg) | Runtime call order |
-| ![Async fan-out](diagrams/async-fanout.svg) | Parallel stage behavior |
-| ![Configuration lifecycle](diagrams/config_lifecycle.svg) | Config and gates |
-| ![Cost control flow](diagrams/cost_flow.svg) | Cache and LLM budget |
-| ![Corroboration flow](diagrams/corroboration_flow.svg) | Claim checks |
-| ![Runner agnostic search](diagrams/corroboration-runner-agnostic.svg) | LLM search contract |
-| ![Runner selection](diagrams/runner_choice.svg) | LLM runner fallback |
-| ![Reliability harness](diagrams/reliability-harness.svg) | Evaluation flow |
-| ![Summary quality flow](diagrams/summary-quality.svg) | Summary generation |
-| ![Testing pyramid](diagrams/testing-pyramid.svg) | Test strategy |
-| ![Release pipeline](diagrams/release-pipeline.svg) | CI/release shape |
-| ![Extension map](diagrams/roadmap.svg) | How new sources fit |
-| ![Platform contract](diagrams/add_platform_contract.svg) | Adapter boundary |
-| ![Add platform flow](diagrams/add_platform_flow.svg) | Extension steps |
-| ![Strategy pattern](diagrams/dp_strategy.svg) | Design pattern |
-| ![Adapter pattern](diagrams/dp_adapter.svg) | Design pattern |
-| ![Registry pattern](diagrams/dp_registry.svg) | Design pattern |
-| ![Pipeline pattern](diagrams/dp_pipeline.svg) | Design pattern |
-| ![Fake seam](diagrams/dp_fake_seam.svg) | Test seam |
-| ![Scoring model](diagrams/scoring-model.svg) | Ranking math |
-| ![Cache layout](diagrams/cache-layout.svg) | Filesystem state |
-| ![Python flow](diagrams/python-flow.svg) | Python primer |
-| ![Service technology](diagrams/service-technology.svg) | Service execution |
-| ![Command surface](diagrams/command-surface.svg) | CLI overview |
-| ![Security boundaries](diagrams/security-boundaries.svg) | Secrets and trust |
-| ![Report outputs](diagrams/report-outputs.svg) | Output artifacts |
-| ![System tradeoffs](diagrams/system-tradeoffs.svg) | Architecture choices |
-| ![Chart suite](diagrams/chart-suite.svg) | Chart-specific data flow |
-| ![Statistics suite](diagrams/statistics-suite.svg) | Statistics data flow |
-| ![Statistics interpretation](diagrams/statistics-interpretation.svg) | Statistics interpretation |
-| ![API cost map](diagrams/api-cost-map.svg) | API keys, free paths, and paid paths |
-| ![Architecture interaction](diagrams/architecture_interaction.svg) | Platform/Service/Technology flow |
-| ![Add service interaction](diagrams/add_service_interaction.svg) | Adding a new service |
-| ![Classification flow](diagrams/classifying_flow.svg) | Source classification pipeline |
-| ![Narration flow](diagrams/narration_flow.svg) | TTS narration pipeline |
+| ![System context](diagrams/context.svg) | Users, local files, YouTube, runners, evidence providers. |
+| ![Component map](diagrams/components.svg) | Package-level responsibilities. |
+| ![Data flow](diagrams/data-flow.svg) | YouTube research packet flow. |
+| ![Research sequence](diagrams/research-sequence.svg) | CLI to platform to outputs. |
+| ![Async fanout](diagrams/async-fanout.svg) | Concurrent stage and service execution. |
+| ![Config lifecycle](diagrams/config_lifecycle.svg) | Defaults, config file, secrets, environment. |
+| ![Cost flow](diagrams/cost_flow.svg) | Cost gates before provider calls. |
+| ![Corroboration flow](diagrams/corroboration_flow.svg) | Claims through provider verdicts. |
+| ![Runner agnostic search](diagrams/corroboration-runner-agnostic.svg) | Runner-backed search provider. |
+| ![Runner choice](diagrams/runner_choice.svg) | Runner registry and fallback. |
+| ![Reliability harness](diagrams/reliability-harness.svg) | Evaluation files and reports. |
+| ![Summary quality](diagrams/summary-quality.svg) | Text surrogate to summary. |
+| ![Testing pyramid](diagrams/testing-pyramid.svg) | Contract, unit, integration, eval tests. |
+| ![Release pipeline](diagrams/release-pipeline.svg) | Version, tests, package, publish. |
+| ![Extension map](diagrams/roadmap.svg) | Future platform expansion points. |
+| ![Platform contract](diagrams/add_platform_contract.svg) | Required platform behavior. |
+| ![Add platform flow](diagrams/add_platform_flow.svg) | Platform implementation steps. |
+| ![Strategy pattern](diagrams/dp_strategy.svg) | Runtime provider choice. |
+| ![Adapter pattern](diagrams/dp_adapter.svg) | Technology boundaries. |
+| ![Registry pattern](diagrams/dp_registry.svg) | Platform and runner lookup. |
+| ![Pipeline pattern](diagrams/dp_pipeline.svg) | PipelineState stage handoff. |
+| ![Fake seam](diagrams/dp_fake_seam.svg) | Test replacement points. |
+| ![Scoring model](diagrams/scoring-model.svg) | Trust, trend, opportunity, overall. |
+| ![Cache layout](diagrams/cache-layout.svg) | Data directory and cache tree. |
+| ![Python flow](diagrams/python-flow.svg) | Python concepts used by the repo. |
+| ![Service technology](diagrams/service-technology.svg) | BaseService and BaseTechnology lifecycle. |
+| ![Command surface](diagrams/command-surface.svg) | Top-level and hidden command groups. |
+| ![Security boundaries](diagrams/security-boundaries.svg) | Secret and data movement. |
+| ![Report outputs](diagrams/report-outputs.svg) | HTML, exports, SQLite. |
+| ![System tradeoffs](diagrams/system-tradeoffs.svg) | Main architecture tradeoffs. |
+| ![Chart suite](diagrams/chart-suite.svg) | Chart renderers. |
+| ![Statistics suite](diagrams/statistics-suite.svg) | Statistical selector. |
+| ![Statistics interpretation](diagrams/statistics-interpretation.svg) | How to read generated statistics. |
+| ![API cost map](diagrams/api-cost-map.svg) | Provider cost categories. |
+| ![Architecture interaction](diagrams/architecture_interaction.svg) | Platform, service, technology interaction. |
+| ![Add service interaction](diagrams/add_service_interaction.svg) | Service extension lifecycle. |
+| ![Classification flow](diagrams/classifying_flow.svg) | Heuristic, LLM, and hybrid classifiers. |
+| ![Narration flow](diagrams/narration_flow.svg) | Audio report path. |
