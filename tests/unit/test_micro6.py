@@ -118,7 +118,7 @@ class TestTranscriptWhisperException:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(
-            "social_research_probe.technologies.media_fetch.yt_dlp.download_audio", boom
+            "social_research_probe.technologies.media_fetch.yt_dlp._download_audio", boom
         )
         out = asyncio.run(transcript_svc.TranscriptService().execute_one({"url": "u"}))
         assert any(not r.success for r in out.tech_results)

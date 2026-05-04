@@ -117,7 +117,7 @@ def test_yt_dlp_browser_none(monkeypatch, tmp_path):
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     (tmp_path / "audio.mp3").write_bytes(b"x")
-    yt_dlp.download_audio("u", str(tmp_path))
+    yt_dlp._download_audio("u", str(tmp_path))
     # browser=none → no --cookies-from-browser flag
     assert "--cookies-from-browser" not in captured["cmd"]
 
@@ -132,7 +132,7 @@ def test_yt_dlp_cookies_file(monkeypatch, tmp_path):
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     (tmp_path / "audio.mp3").write_bytes(b"x")
-    yt_dlp.download_audio("u", str(tmp_path))
+    yt_dlp._download_audio("u", str(tmp_path))
     assert "--cookies" in captured["cmd"]
 
 

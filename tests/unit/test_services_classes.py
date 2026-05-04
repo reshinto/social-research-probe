@@ -269,7 +269,11 @@ class TestSummaryService:
 class TestTranscriptService:
     def test_techs(self):
         techs = TranscriptService()._get_technologies()
-        assert techs and techs[0].name == "youtube_transcript_api"
+        assert [tech.name for tech in techs] == [
+            "youtube_transcript_api",
+            "yt_dlp",
+            "whisper_fallback",
+        ]
 
     def test_execute_captions_path(self, monkeypatch):
         from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (

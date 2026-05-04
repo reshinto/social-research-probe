@@ -64,37 +64,74 @@ class TestTranscriptServiceExecuteService:
         assert "transcript" not in out
 
     @pytest.mark.asyncio
-    async def test_fallback_execution_calls_techs(self, svc, monkeypatch):
+    async def test_fallback_execution_calls_techs(self, svc, monkeypatch, tmp_path):
         class DummyTech:
             def __init__(self, name, result, should_raise=False):
                 self.name = name
                 self.result = result
                 self.should_raise = should_raise
                 self.caller_service = ""
+                self.inputs = []
 
-            async def execute(self, url):
+            async def execute(self, data):
+                self.inputs.append(data)
                 if self.should_raise:
                     raise RuntimeError("boom")
                 return self.result
 
-        tech1 = DummyTech("t1", None, should_raise=True)
-        tech2 = DummyTech("t2", "success text")
-        monkeypatch.setattr(svc, "_get_technologies", lambda: [tech1, tech2])
+        audio_path = tmp_path / "audio.mp3"
+        tech1 = DummyTech("youtube_transcript_api", None, should_raise=True)
+        tech2 = DummyTech("yt_dlp", audio_path)
+        tech3 = DummyTech("whisper_fallback", "success text")
+        monkeypatch.setattr(svc, "_get_technologies", lambda: [tech1, tech2, tech3])
+
+        result = await svc.execute_service(
+            {"url": "u1"},
+            ServiceResult(service_name=svc.service_name, input_key="key", tech_results=[]),
+        )
+        assert len(result.tech_results) == 3
+        # Note: TranscriptService overrides tech_results[0] with the final combined output and success state.
+        assert result.tech_results[0].success
+        assert result.tech_results[0].error == "boom"
+        assert result.tech_results[1].success
+        assert result.tech_results[1].output == audio_path
+        assert tech3.inputs == [audio_path]
+        assert result.tech_results[2].success
+        assert result.tech_results[2].output == "success text"
+
+        out = result.tech_results[0].output
+        assert out["transcript"] == "success text"
+        assert out["transcript_status"] == "available"
+
+    @pytest.mark.asyncio
+    async def test_fallback_execution_breaks_on_success_with_few_techs(self, svc, monkeypatch):
+        class DummyTech:
+            def __init__(self, name, output=None, success=True):
+                self.name = name
+                self.output = output
+                self.success = success
+                self.caller_service = ""
+
+            async def execute(self, data):
+                if not self.success:
+                    return None
+                return self.output
+
+        tech1 = DummyTech("t1", success=False)
+        # Name should not be "yt_dlp" to satisfy tr.tech_name != YtDlpFetch.name
+        tech2 = DummyTech("t2", output="found transcript", success=True)
+        tech3 = DummyTech("t3", output="should not run", success=True)
+
+        monkeypatch.setattr(svc, "_get_technologies", lambda: [tech1, tech2, tech3][:2])
 
         result = await svc.execute_service(
             {"url": "u1"},
             ServiceResult(service_name=svc.service_name, input_key="key", tech_results=[]),
         )
         assert len(result.tech_results) == 2
-        # Note: TranscriptService overrides tech_results[0] with the final combined output and success state.
-        assert result.tech_results[0].success
-        assert result.tech_results[0].error == "boom"
-        assert result.tech_results[1].success
-        assert result.tech_results[1].output == "success text"
-
-        out = result.tech_results[0].output
-        assert out["transcript"] == "success text"
-        assert out["transcript_status"] == "available"
+        assert result.tech_results[1].tech_name == "t2"
+        assert result.tech_results[1].output == "found transcript"
+        assert result.tech_results[1].success is True
 
     @pytest.mark.asyncio
     async def test_fallback_execution_exhausts_all_failing(self, svc, monkeypatch):

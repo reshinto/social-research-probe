@@ -48,7 +48,7 @@ class TestYtDlpBrowser:
         monkeypatch.setenv("SRP_YTDLP_BROWSER", "chrome")
         monkeypatch.delenv("SRP_YTDLP_COOKIES_FILE", raising=False)
         monkeypatch.setattr(subprocess, "run", fake_run)
-        yt_dlp.download_audio("u", str(tmp_path))
+        yt_dlp._download_audio("u", str(tmp_path))
         assert "--cookies-from-browser" in captured["cmd"]
 
 

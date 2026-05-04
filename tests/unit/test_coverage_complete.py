@@ -922,9 +922,11 @@ def test_transcript_whisper_fallback(monkeypatch, tmp_path):
         "social_research_probe.technologies.transcript_fetch.youtube_transcript_api.fetch_transcript",
         lambda url: None,
     )
+    audio_path = tmp_path / "audio.mp3"
+    audio_path.write_bytes(b"audio")
     monkeypatch.setattr(
-        "social_research_probe.technologies.media_fetch.yt_dlp.download_audio",
-        lambda url, dest: str(tmp_path / "audio.mp3"),
+        "social_research_probe.technologies.media_fetch.yt_dlp._download_audio",
+        lambda url, dest: audio_path,
     )
     monkeypatch.setattr(
         "social_research_probe.technologies.transcript_fetch.whisper.transcribe_audio",
@@ -940,3 +942,4 @@ def test_transcript_whisper_fallback(monkeypatch, tmp_path):
             )
         )
     assert result is not None
+    assert any(tr.tech_name == "whisper_fallback" and tr.success for tr in result.tech_results)

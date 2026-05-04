@@ -177,11 +177,11 @@ class TestTranscriptServiceWhisperFallbackRuns:
 
         monkeypatch.setattr(YoutubeTranscriptFetch, "execute", fake_exec)
         monkeypatch.setattr(
-            "social_research_probe.technologies.media_fetch.yt_dlp.download_audio",
+            "social_research_probe.technologies.media_fetch.yt_dlp._download_audio",
             lambda u, t: None,
         )
         out = asyncio.run(transcript_svc.TranscriptService().execute_one({"url": "u"}))
-        assert any(r.tech_name == "whisper_fallback" for r in out.tech_results)
+        assert any(r.tech_name == "yt_dlp" for r in out.tech_results)
 
 
 class TestFormatterEnsureSentence:
