@@ -224,3 +224,88 @@ def list_alert_events(
     else:
         cur = conn.execute("SELECT * FROM alert_events ORDER BY created_at DESC LIMIT ?", (limit,))
     return _rows_to_dicts(cur)
+
+
+def insert_notification_delivery(
+    conn: sqlite3.Connection,
+    *,
+    delivery_id: str,
+    alert_id: str | None,
+    watch_id: str | None,
+    channel: str,
+    status: str,
+    error_message: str | None,
+    sent_at: str,
+    message_title: str,
+    artifact_paths: dict[str, str],
+) -> int:
+    cur = conn.execute(
+        """
+        INSERT INTO notification_deliveries (
+            delivery_id, alert_id, watch_id, channel, status, error_message,
+            sent_at, message_title, artifact_paths_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            delivery_id,
+            alert_id,
+            watch_id,
+            channel,
+            status,
+            error_message,
+            sent_at,
+            message_title,
+            dumps(artifact_paths),
+        ),
+    )
+    return cur.lastrowid  # type: ignore[return-value]
+
+
+def has_successful_delivery(conn: sqlite3.Connection, *, alert_id: str, channel: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1 FROM notification_deliveries
+        WHERE alert_id = ? AND channel = ? AND status = 'sent'
+        LIMIT 1
+        """,
+        (alert_id, channel),
+    ).fetchone()
+    return row is not None
+
+
+def list_notification_deliveries(
+    conn: sqlite3.Connection,
+    *,
+    alert_id: str | None = None,
+    watch_id: str | None = None,
+    channel: str | None = None,
+    status: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    where, params = _delivery_filters(alert_id, watch_id, channel, status)
+    sql = "SELECT * FROM notification_deliveries"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY sent_at DESC, id DESC LIMIT ?"
+    cur = conn.execute(sql, (*params, limit))
+    return _rows_to_dicts(cur)
+
+
+def _delivery_filters(
+    alert_id: str | None,
+    watch_id: str | None,
+    channel: str | None,
+    status: str | None,
+) -> tuple[list[str], list[str]]:
+    filters: list[str] = []
+    params: list[str] = []
+    for name, value in [
+        ("alert_id", alert_id),
+        ("watch_id", watch_id),
+        ("channel", channel),
+        ("status", status),
+    ]:
+        if value is not None:
+            filters.append(f"{name} = ?")
+            params.append(value)
+    return filters, params

@@ -68,6 +68,8 @@ class Command(StrEnum):
     CLAIMS = "claims"
     COMPARE = "compare"
     WATCH = "watch"
+    NOTIFY = "notify"
+    SCHEDULE = "schedule"
 
 
 class ClaimsSubcommand(StrEnum):
@@ -144,7 +146,21 @@ class WatchSubcommand(StrEnum):
     LIST = "list"
     REMOVE = "remove"
     RUN = "run"
+    RUN_DUE = "run-due"
     ALERTS = "alerts"
+
+
+class NotifySubcommand(StrEnum):
+    """Notification subcommand names dispatched within notify.run()."""
+
+    TEST = "test"
+
+
+class ScheduleSubcommand(StrEnum):
+    """Schedule helper subcommand names dispatched within schedule.run()."""
+
+    CRON = "cron"
+    LAUNCHD = "launchd"
 
 
 class SpecialCommand(StrEnum):

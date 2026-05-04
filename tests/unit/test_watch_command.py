@@ -37,7 +37,20 @@ class _Cfg:
     ) -> None:
         self.data_dir = tmp_path
         self.database_path = tmp_path / "srp.db"
-        self.raw = {"database": {"enabled": db_enabled}}
+        self.raw = {
+            "database": {"enabled": db_enabled},
+            "notifications": {
+                "enabled": True,
+                "default_channels": ["file"],
+                "file": {"enabled": True, "output_dir": "notifications"},
+                "telegram": {
+                    "enabled": True,
+                    "bot_token_env": "TELEGRAM_BOT_TOKEN",
+                    "chat_id_env": "TELEGRAM_CHAT_ID",
+                    "timeout_seconds": 10,
+                },
+            },
+        }
         self._tech_enabled = tech_enabled
         self._service_enabled = service_enabled
         self._stage_enabled = stage_enabled
@@ -245,12 +258,138 @@ def test_watch_run_compares_and_persists_alert(tmp_path: Path) -> None:
 
     with patch("social_research_probe.config.load_active_config", return_value=cfg):
         with patch("social_research_probe.commands.research.run_research_for_watch", fake_research):
-            assert run(_args(watch_cmd=WatchSubcommand.RUN, watch_id="watch-ai")) == 0
+            with patch(
+                "social_research_probe.utils.notifications.dispatcher.dispatch_alert_notifications"
+            ) as notify_mock:
+                assert run(_args(watch_cmd=WatchSubcommand.RUN, watch_id="watch-ai")) == 0
 
     conn = _conn(cfg.database_path)
     assert conn.execute("SELECT COUNT(*) FROM alert_events").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM notification_deliveries").fetchone()[0] == 0
     assert list((tmp_path / "out").glob("alert-*.json"))
+    notify_mock.assert_not_called()
     conn.close()
+
+
+def test_watch_run_notify_sends_file_delivery(tmp_path: Path) -> None:
+    cfg = _Cfg(tmp_path)
+    _seed_watch(cfg.database_path, "watch-ai", "AI agents", output_dir=str(tmp_path / "out"))
+    _insert_run(cfg.database_path, "run-base", "AI agents")
+    _set_last_target(cfg.database_path, "watch-ai", "run-base")
+
+    def fake_research(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
+        _insert_run(cfg.database_path, "run-target", topic, with_source=True)
+        return {"run_id": "run-target"}
+
+    with patch("social_research_probe.config.load_active_config", return_value=cfg):
+        with patch("social_research_probe.commands.research.run_research_for_watch", fake_research):
+            assert (
+                run(
+                    _args(
+                        watch_cmd=WatchSubcommand.RUN,
+                        watch_id="watch-ai",
+                        notify=True,
+                        channels=["file"],
+                    )
+                )
+                == 0
+            )
+
+    conn = _conn(cfg.database_path)
+    row = conn.execute(
+        "SELECT status, channel, artifact_paths_json FROM notification_deliveries"
+    ).fetchone()
+    assert row[0] == "sent"
+    assert row[1] == "file"
+    assert "notification_markdown" in row[2]
+    conn.close()
+
+
+def test_watch_run_notify_failure_does_not_fail_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg = _Cfg(tmp_path)
+    _seed_watch(cfg.database_path, "watch-ai", "AI agents", output_dir=str(tmp_path / "out"))
+    _insert_run(cfg.database_path, "run-base", "AI agents")
+    _set_last_target(cfg.database_path, "watch-ai", "run-base")
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+
+    def fake_research(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
+        _insert_run(cfg.database_path, "run-target", topic, with_source=True)
+        return {"run_id": "run-target"}
+
+    with patch("social_research_probe.config.load_active_config", return_value=cfg):
+        with patch("social_research_probe.commands.research.run_research_for_watch", fake_research):
+            assert (
+                run(
+                    _args(
+                        watch_cmd=WatchSubcommand.RUN,
+                        watch_id="watch-ai",
+                        notify=True,
+                        channels=["telegram"],
+                    )
+                )
+                == 0
+            )
+
+    conn = _conn(cfg.database_path)
+    assert conn.execute("SELECT status FROM watch_runs").fetchone()[0] == "success"
+    delivery = conn.execute("SELECT status, error_message FROM notification_deliveries").fetchone()
+    assert delivery[0] == "failed"
+    assert "TELEGRAM_BOT_TOKEN" in delivery[1]
+    conn.close()
+
+
+def test_watch_notify_dispatch_exception_is_swallowed(tmp_path: Path) -> None:
+    cfg = _Cfg(tmp_path)
+    conn = _conn(cfg.database_path)
+
+    def boom(
+        conn_arg: object, cfg_arg: object, alerts: list[dict], channels: list[str] | None
+    ) -> list:
+        raise RuntimeError("dispatcher failed")
+
+    try:
+        with patch(
+            "social_research_probe.utils.notifications.dispatcher.dispatch_alert_notifications",
+            boom,
+        ):
+            result = watch_cmd._notify_alerts(
+                conn, cfg, [{"alert_id": "alert-1"}], _args(notify=True, channels=["file"])
+            )
+    finally:
+        conn.close()
+    assert result == []
+
+
+def test_watch_run_due_runs_only_due_enabled_watches(tmp_path: Path, capsys: object) -> None:
+    cfg = _Cfg(tmp_path)
+    _seed_interval_watch(cfg.database_path, "watch-due", "due topic", "daily", None)
+    _seed_interval_watch(
+        cfg.database_path, "watch-future", "future topic", "daily", "2999-01-01T00:00:00+00:00"
+    )
+    _seed_interval_watch(cfg.database_path, "watch-manual", "manual topic", None, None)
+    _seed_interval_watch(cfg.database_path, "watch-invalid", "bad topic", "fortnightly", None)
+    _seed_interval_watch(
+        cfg.database_path, "watch-disabled", "disabled topic", "daily", None, False
+    )
+
+    def fake_research(platform: str, topic: str, purposes: tuple[str, ...]) -> dict:
+        _insert_run(cfg.database_path, "run-due", topic)
+        return {"run_id": "run-due"}
+
+    with patch("social_research_probe.config.load_active_config", return_value=cfg):
+        with patch("social_research_probe.commands.research.run_research_for_watch", fake_research):
+            assert run(_args(watch_cmd=WatchSubcommand.RUN_DUE, notify=False)) == 0
+
+    conn = _conn(cfg.database_path)
+    assert conn.execute("SELECT COUNT(*) FROM watch_runs").fetchone()[0] == 1
+    conn.close()
+    out = capsys.readouterr().out
+    assert "watch-due ok" in out
+    assert "watch-manual skipped: manual-only interval" in out
+    assert "watch-invalid skipped: unsupported interval: fortnightly" in out
 
 
 def test_watch_run_records_missing_run_id_and_missing_target(tmp_path: Path) -> None:
@@ -294,7 +433,7 @@ def test_watch_compare_without_output_dir_and_no_matching_alert(tmp_path: Path) 
     )
     assert comparison is not None
     assert artifacts == {}
-    assert watch_cmd._persist_alerts(conn, cfg, watch, comparison, artifacts) == 0
+    assert watch_cmd._persist_alerts(conn, cfg, watch, comparison, artifacts) == []
     conn.close()
 
 
@@ -494,6 +633,9 @@ def test_watch_result_output_formats(capsys: object) -> None:
     assert watch_cmd._format_watch_markdown(watch) == watch_cmd._format_watch_text(watch)
     assert watch_cmd._format_alert_text([]) == "No alerts found."
     assert watch_cmd._format_run_text([]) == "No enabled watches found."
+    assert "skipped" in watch_cmd._format_run_text(
+        [{"watch_id": "watch-ai", "status": "skipped", "reason": "manual-only interval"}]
+    )
     assert "watch-ai" in capsys.readouterr().out
 
 
@@ -522,6 +664,37 @@ def _seed_watch(db_path: Path, watch_id: str, topic: str, output_dir: str | None
             created_at="2026-01-01T00:00:00",
             updated_at="2026-01-01T00:00:00",
         )
+    conn.close()
+
+
+def _seed_interval_watch(
+    db_path: Path,
+    watch_id: str,
+    topic: str,
+    interval: str | None,
+    last_run_at: str | None,
+    enabled: bool = True,
+) -> None:
+    conn = _conn(db_path)
+    with conn:
+        insert_watch(
+            conn,
+            watch_id=watch_id,
+            topic=topic,
+            platform="youtube",
+            purposes=["latest-news"],
+            enabled=enabled,
+            interval=interval,
+            alert_rules=[],
+            output_dir=None,
+            created_at="2026-01-01T00:00:00",
+            updated_at="2026-01-01T00:00:00",
+        )
+        if last_run_at is not None:
+            conn.execute(
+                "UPDATE watches SET last_run_at = ?, last_target_run_id = 'run-old' WHERE watch_id = ?",
+                (last_run_at, watch_id),
+            )
     conn.close()
 
 

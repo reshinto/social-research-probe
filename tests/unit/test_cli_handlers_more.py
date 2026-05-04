@@ -160,3 +160,12 @@ def test_dispatch_claims():
 def test_dispatch_compare():
     with patch("social_research_probe.commands.compare.run", return_value=0):
         assert handlers._dispatch_compare(_ns()) == 0
+
+
+def test_dispatch_watch_notify_schedule():
+    with patch("social_research_probe.commands.watch.run", return_value=0):
+        assert handlers._dispatch_watch(_ns()) == 0
+    with patch("social_research_probe.commands.notify.run", return_value=0):
+        assert handlers._dispatch_notify(_ns()) == 0
+    with patch("social_research_probe.commands.schedule.run", return_value=0):
+        assert handlers._dispatch_schedule(_ns()) == 0

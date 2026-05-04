@@ -40,6 +40,7 @@ EXPECTED_TABLES = {
     "watches",
     "watch_runs",
     "alert_events",
+    "notification_deliveries",
 }
 
 EXPECTED_INDEXES = {
@@ -76,6 +77,10 @@ EXPECTED_INDEXES = {
     "idx_alert_events_target",
     "idx_alert_events_created",
     "idx_alert_events_ack",
+    "idx_notification_deliveries_alert",
+    "idx_notification_deliveries_watch",
+    "idx_notification_deliveries_channel",
+    "idx_notification_deliveries_status",
 }
 
 
@@ -139,7 +144,7 @@ def test_schema_ddl_creates_indexes():
 
 
 def test_schema_version_constant():
-    assert SCHEMA_VERSION == 5
+    assert SCHEMA_VERSION == 6
 
 
 def test_ensure_schema_backs_up_on_version_crossing(
