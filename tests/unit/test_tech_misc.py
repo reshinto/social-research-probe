@@ -69,21 +69,21 @@ class TestYtDlp:
         monkeypatch.setattr(yt_dlp, "_bot_hint_shown", False)
         yt_dlp._log_ytdlp_failure("Sign in to confirm you are not a bot")
 
-    def test_download_audio_subprocess_failure(self, tmp_path, monkeypatch):
+    def test_private_download_audio_subprocess_failure(self, tmp_path, monkeypatch):
         result = MagicMock(returncode=1, stderr="boom")
         monkeypatch.setattr(subprocess, "run", lambda *a, **kw: result)
-        assert yt_dlp.download_audio("u", str(tmp_path)) is None
+        assert yt_dlp._download_audio("u", str(tmp_path)) is None
 
-    def test_download_audio_no_mp3(self, tmp_path, monkeypatch):
+    def test_private_download_audio_no_mp3(self, tmp_path, monkeypatch):
         result = MagicMock(returncode=0, stderr="")
         monkeypatch.setattr(subprocess, "run", lambda *a, **kw: result)
-        assert yt_dlp.download_audio("u", str(tmp_path)) is None
+        assert yt_dlp._download_audio("u", str(tmp_path)) is None
 
-    def test_download_audio_returns_mp3(self, tmp_path, monkeypatch):
+    def test_private_download_audio_returns_mp3(self, tmp_path, monkeypatch):
         (tmp_path / "audio.mp3").write_text("x")
         result = MagicMock(returncode=0, stderr="")
         monkeypatch.setattr(subprocess, "run", lambda *a, **kw: result)
-        out = yt_dlp.download_audio("u", str(tmp_path))
+        out = yt_dlp._download_audio("u", str(tmp_path))
         assert out and out.name == "audio.mp3"
 
 

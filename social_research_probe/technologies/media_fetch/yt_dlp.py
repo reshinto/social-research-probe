@@ -65,17 +65,17 @@ def _log_ytdlp_failure(stderr: str) -> None:
         if not _bot_hint_shown:
             _bot_hint_shown = True
             log(
-                "[srp] whisper: yt-dlp hit YouTube bot-check — audio transcription unavailable.\n"
+                "[srp] yt-dlp: hit YouTube bot-check — audio transcription unavailable.\n"
                 "  Fix: export SRP_YTDLP_COOKIES_FILE=/path/to/cookies.txt"
                 " or SRP_YTDLP_BROWSER=chrome"
             )
     else:
         first_line = stderr.strip().splitlines()[0] if stderr.strip() else ""
         if first_line:
-            log(f"[srp] whisper: yt-dlp failed: {first_line}")
+            log(f"[srp] yt-dlp: failed: {first_line}")
 
 
-def download_audio(url: str, tmpdir: str) -> Path | None:
+def _download_audio(url: str, tmpdir: str) -> Path | None:
     """Download audio from url into tmpdir; return path to mp3 file or None.
 
     Fetch adapters hide provider response details and give services the stable source-item shape the
@@ -90,7 +90,7 @@ def download_audio(url: str, tmpdir: str) -> Path | None:
 
     Examples:
         Input:
-            download_audio(
+            _download_audio(
                 url="https://youtu.be/abc123",
                 tmpdir=Path(".skill-data"),
             )
@@ -132,8 +132,8 @@ def download_audio(url: str, tmpdir: str) -> Path | None:
 class YtDlpFetch(BaseTechnology[str, Path]):
     """Download audio from a video URL via yt-dlp; return local audio file path.
 
-    Input: video URL string. Output: Path to the downloaded mp3 file (inside a temp dir
-    managed by caller), or None on failure.
+    Input: video URL string. Output: Path to the downloaded mp3 file in a stable temp
+    directory, or None on failure.
 
     Examples:
         Input:
@@ -145,15 +145,16 @@ class YtDlpFetch(BaseTechnology[str, Path]):
     name: ClassVar[str] = "yt_dlp"
     health_check_key: ClassVar[str] = "yt_dlp"
     enabled_config_key: ClassVar[str] = "yt_dlp"
+    cacheable: ClassVar[bool] = False
 
     async def _execute(self, data: str) -> Path:
-        """Download audio from data (video URL) to a temp dir.
+        """Download audio from data (video URL) to a stable temp file.
 
         Fetch adapters hide provider response details and give services the stable source-item shape the
         rest of the project expects.
 
         Args:
-            data: Input payload at this service, technology, or pipeline boundary.
+            data: Video URL to download audio from.
 
         Returns:
             Resolved filesystem path, or None when the optional path is intentionally absent.
@@ -169,10 +170,11 @@ class YtDlpFetch(BaseTechnology[str, Path]):
         import asyncio
 
         with tempfile.TemporaryDirectory(prefix="srp-ytdlp-") as tmpdir:
-            result = await asyncio.to_thread(download_audio, data, tmpdir)
+            result = await asyncio.to_thread(_download_audio, data, tmpdir)
             if result is None:
                 raise RuntimeError(f"yt-dlp failed to download: {data}")
             # Copy to a stable location since TemporaryDirectory cleans up on exit
-            stable = Path(tempfile.mkdtemp(prefix="srp-audio-")) / result.name
-            stable.write_bytes(result.read_bytes())
+            result_path = Path(result)
+            stable = Path(tempfile.mkdtemp(prefix="srp-audio-")) / result_path.name
+            stable.write_bytes(result_path.read_bytes())
             return stable

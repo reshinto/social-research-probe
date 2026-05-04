@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import ClassVar
 
 from social_research_probe.technologies import BaseTechnology
@@ -116,8 +117,8 @@ class SummaryEnsembleTech(BaseTechnology[object, str]):
         return summary if summary else None
 
 
-class TranscriptWhisperTech(BaseTechnology[str, str]):
-    """Fallback technology using yt-dlp to download audio and Whisper to transcribe.
+class TranscriptWhisperTech(BaseTechnology[Path, str]):
+    """Fallback technology using Whisper to transcribe a downloaded audio file.
 
     Examples:
         Input:
@@ -129,13 +130,13 @@ class TranscriptWhisperTech(BaseTechnology[str, str]):
     name: ClassVar[str] = "whisper_fallback"
     enabled_config_key: ClassVar[str] = "whisper"
 
-    async def _execute(self, input_data: str) -> str | None:
+    async def _execute(self, input_data: Path) -> str | None:
         """Run this component and return the project-shaped output expected by its service.
 
         The helper keeps a small project rule named and documented at the boundary where it is used.
 
         Args:
-            input_data: Input payload at this service, technology, or pipeline boundary.
+            input_data: Local audio file to transcribe.
 
         Returns:
             Normalized value needed by the next operation.
@@ -143,18 +144,13 @@ class TranscriptWhisperTech(BaseTechnology[str, str]):
         Examples:
             Input:
                 await _execute(
-                    input_data={"title": "Example", "url": "https://youtu.be/demo"},
+                    input_data=Path("audio.mp3"),
                 )
             Output:
                 "AI safety"
         """
         import asyncio
-        import tempfile
 
-        from social_research_probe.technologies.media_fetch.yt_dlp import download_audio
         from social_research_probe.technologies.transcript_fetch.whisper import transcribe_audio
 
-        with tempfile.TemporaryDirectory(prefix="srp-ytdlp-") as tmpdir:
-            audio_path = await asyncio.to_thread(download_audio, input_data, tmpdir)
-            if audio_path is not None:
-                return await asyncio.to_thread(transcribe_audio, audio_path)
+        return await asyncio.to_thread(transcribe_audio, Path(input_data))

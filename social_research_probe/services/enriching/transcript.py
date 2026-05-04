@@ -6,13 +6,14 @@ from typing import ClassVar
 
 from social_research_probe.services import BaseService, ServiceResult, TechResult
 from social_research_probe.technologies.enriching import TranscriptWhisperTech
+from social_research_probe.technologies.media_fetch.yt_dlp import YtDlpFetch
 from social_research_probe.technologies.transcript_fetch.youtube_transcript_api import (
     YoutubeTranscriptFetch,
 )
 
 
 class TranscriptService(BaseService):
-    """Fetch transcripts for video items: captions API first, Whisper as fallback.
+    """Fetch transcripts for video items: captions API first, yt-dlp plus Whisper fallback.
 
     Input per item: a string URL or dict with "url" key.
 
@@ -42,7 +43,36 @@ class TranscriptService(BaseService):
             Output:
                 "AI safety"
         """
-        return [YoutubeTranscriptFetch(), TranscriptWhisperTech()]
+        return [YoutubeTranscriptFetch(), YtDlpFetch(), TranscriptWhisperTech()]
+
+    def _transcript_from_results(self, tech_results: list[TechResult]) -> str | None:
+        """Return the first transcript text produced by transcript technologies.
+
+        Services translate platform data into adapter calls and normalize the result so stages can
+        handle success, skip, and failure consistently.
+
+        Args:
+            tech_results: Technology result object carrying adapter output and success diagnostics.
+
+        Returns:
+            Normalized string used as a config key, provider value, or report field.
+
+        Examples:
+            Input:
+                _transcript_from_results(
+                    tech_results=[TechResult(tech_name="youtube", input="u", output="text", success=True)],
+                )
+            Output:
+                "AI safety"
+        """
+        return next(
+            (
+                tr.output
+                for tr in tech_results
+                if tr.success and tr.tech_name != YtDlpFetch.name and isinstance(tr.output, str)
+            ),
+            None,
+        )
 
     async def _run_with_fallback(self, url: str) -> list[TechResult]:
         """Try each technology in order, stopping on the first success.
@@ -64,31 +94,31 @@ class TranscriptService(BaseService):
             Output:
                 TechResult(tech_name="youtube", input={"video_id": "abc123"}, output={"comments_status": "available"}, success=True)
         """
+        techs = self._get_technologies()
         tech_results: list[TechResult] = []
-        for tech in self._get_technologies():
-            tech.caller_service = self.service_name
-            try:
-                output = await tech.execute(url)
-                tech_results.append(
-                    TechResult(
-                        tech_name=tech.name,
-                        input=url,
-                        output=output,
-                        success=output is not None,
-                    )
-                )
-                if output is not None:
+        if not techs:
+            return tech_results
+
+        captions_result = await self._run_technology(techs[0], url)
+        tech_results.append(captions_result)
+        if self._transcript_from_results([captions_result]):
+            return tech_results
+
+        if len(techs) < 3:
+            for tech in techs[1:]:
+                fallback_result = await self._run_technology(tech, url)
+                tech_results.append(fallback_result)
+                if self._transcript_from_results([fallback_result]):
                     break
-            except Exception as exc:
-                tech_results.append(
-                    TechResult(
-                        tech_name=tech.name,
-                        input=url,
-                        output=None,
-                        success=False,
-                        error=str(exc),
-                    )
-                )
+            return tech_results
+
+        audio_result = await self._run_technology(techs[1], url)
+        tech_results.append(audio_result)
+        if not audio_result.success or not audio_result.output:
+            return tech_results
+
+        whisper_result = await self._run_technology(techs[2], audio_result.output)
+        tech_results.append(whisper_result)
         return tech_results
 
     def _build_item_output(
@@ -150,7 +180,7 @@ class TranscriptService(BaseService):
         tech_results: list[TechResult] = result.tech_results
         if not tech_results:
             tech_results = await self._run_with_fallback(url)
-        transcript = next((tr.output for tr in tech_results if tr.success and tr.output), None)
+        transcript = self._transcript_from_results(tech_results)
         if isinstance(data, dict):
             output = self._build_item_output(data, tech_results, transcript)
             if tech_results:

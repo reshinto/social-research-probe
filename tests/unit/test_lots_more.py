@@ -137,7 +137,7 @@ class TestYoutubeApiHydrate:
 
 class TestYtDlpExecute:
     def test_failure_raises(self, monkeypatch):
-        monkeypatch.setattr(yt_dlp, "download_audio", lambda url, tmp: None)
+        monkeypatch.setattr(yt_dlp, "_download_audio", lambda url, tmp: None)
         with pytest.raises(RuntimeError):
             asyncio.run(yt_dlp.YtDlpFetch()._execute("u"))
 
@@ -147,7 +147,7 @@ class TestYtDlpExecute:
             p.write_bytes(b"audio")
             return p
 
-        monkeypatch.setattr(yt_dlp, "download_audio", fake_dl)
+        monkeypatch.setattr(yt_dlp, "_download_audio", fake_dl)
         out = asyncio.run(yt_dlp.YtDlpFetch()._execute("u"))
         assert out.exists()
 

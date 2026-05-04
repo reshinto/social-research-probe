@@ -239,11 +239,8 @@ class TestTranscriptStringInput:
 
         monkeypatch.setattr(YoutubeTranscriptFetch, "execute", fake_exec)
 
-        async def fake_dl(*a, **kw):
-            return None
-
         monkeypatch.setattr(
-            "social_research_probe.technologies.media_fetch.yt_dlp.download_audio",
+            "social_research_probe.technologies.media_fetch.yt_dlp._download_audio",
             lambda u, t: None,
         )
         out = asyncio.run(transcript_svc.TranscriptService().execute_one("u-string"))
